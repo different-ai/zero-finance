@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { api } from '@/trpc/react';
 import {
@@ -108,6 +108,35 @@ const mockCompanyContext = {
 export default function ReconciliationPage() {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState('transactions');
+
+  // Demo missing invoice detection
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const missingInvoiceMessage = {
+        id: 'missing-demo',
+        type: 'assistant',
+        content:
+          '🚨 Missing Invoice Alert: I found a $2,500 PayPal transaction from yesterday with no matching invoice. This looks like a contractor payment - would you like me to search your Slack #finance channel and Gmail for the invoice?',
+        timestamp: new Date(),
+        actions: [
+          {
+            type: 'missing_invoice_alert',
+            status: 'pending',
+            target: 'paypal_transaction_2500',
+            result: {
+              amount: 2500,
+              date: 'yesterday',
+              suggested_channels: ['slack', 'gmail'],
+              likely_type: 'contractor_payment',
+            },
+          },
+        ],
+      };
+      setChatMessages((prev) => [...prev, missingInvoiceMessage]);
+    }, 3000);
+
+    return () => clearTimeout(timer);
+  }, []);
   const [isUploadingCSV, setIsUploadingCSV] = useState(false);
   const [isUploadingInvoice, setIsUploadingInvoice] = useState(false);
   const [csvDialogOpen, setCsvDialogOpen] = useState(false);
@@ -135,6 +164,98 @@ export default function ReconciliationPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const invoiceInputRef = useRef<HTMLInputElement>(null);
 
+  // Chat and Channels state
+  const [chatMessages, setChatMessages] = useState<any[]>([
+    {
+      id: '1',
+      type: 'assistant',
+      content:
+        'Welcome! I can help you process documents, categorize transactions, and find missing invoices. What would you like to do?',
+      timestamp: new Date(),
+    },
+    {
+      id: '2',
+      type: 'system',
+      content:
+        '⚠️ I detected 3 transactions without matching invoices. Would you like me to search your email and Slack for missing documents?',
+      timestamp: new Date(Date.now() + 1000),
+      actions: [
+        {
+          type: 'alert',
+          status: 'pending',
+          target: 'missing_invoices',
+          result: {
+            count: 3,
+            suggestions: [
+              'Check Gmail',
+              'Search Slack #invoices',
+              'Connect Teams',
+            ],
+          },
+        },
+      ],
+    },
+  ]);
+  const [chatInput, setChatInput] = useState('');
+  const [activeActions, setActiveActions] = useState<any[]>([]);
+  const [channels, setChannels] = useState([
+    {
+      id: 'gmail',
+      name: 'Gmail',
+      type: 'gmail',
+      status: 'connected',
+      documentCount: 45,
+      lastSync: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 hours ago
+      icon: '📧',
+    },
+    {
+      id: 'slack',
+      name: 'Slack #finance',
+      type: 'slack',
+      status: 'connected',
+      documentCount: 12,
+      lastSync: new Date(Date.now() - 30 * 60 * 1000), // 30 minutes ago
+      icon: '💬',
+    },
+    {
+      id: 'teams',
+      name: 'Microsoft Teams',
+      type: 'teams',
+      status: 'disconnected',
+      documentCount: 0,
+      lastSync: null,
+      icon: '🏢',
+    },
+  ]);
+  const [extractedDocuments, setExtractedDocuments] = useState([
+    {
+      id: '1',
+      type: 'invoice',
+      title: 'AWS Invoice #INV-2024-001',
+      source: 'gmail',
+      confidence: 95,
+      amount: 1249.67,
+      status: 'processed',
+    },
+    {
+      id: '2',
+      type: 'intent',
+      title: 'Client asking about payment terms',
+      source: 'slack',
+      confidence: 88,
+      status: 'pending',
+    },
+    {
+      id: '3',
+      type: 'invoice',
+      title: 'Office Supplies Receipt',
+      source: 'gmail',
+      confidence: 78,
+      amount: 237.84,
+      status: 'needs_review',
+    },
+  ]);
+
   // Fetch data
   const { data: transactions, refetch: refetchTransactions } =
     api.reconciliation.getTransactions.useQuery({ limit: 100 });
@@ -146,11 +267,11 @@ export default function ReconciliationPage() {
     api.reconciliation.getMatches.useQuery({ status: 'suggested' });
 
   // Mutations
-  const syncXero = api.reconciliation.syncXero.useMutation({
+  const syncMercury = api.reconciliation.syncXero.useMutation({
     onSuccess: (data) => {
       toast({
         title: 'Success',
-        description: `Synced ${data.imported} transactions from Xero`,
+        description: `Synced ${data.imported} transactions from Mercury`,
       });
       refetchTransactions();
     },
@@ -707,6 +828,247 @@ export default function ReconciliationPage() {
     });
   };
 
+  // Chat functionality
+  const handleSendMessage = async (message: string) => {
+    if (!message.trim()) return;
+
+    // Add user message
+    const userMessage = {
+      id: Date.now().toString(),
+      type: 'user',
+      content: message,
+      timestamp: new Date(),
+    };
+    setChatMessages((prev) => [...prev, userMessage]);
+    setChatInput('');
+
+    // Process message and create appropriate actions
+    setTimeout(async () => {
+      await handleChatAction(message);
+    }, 500);
+  };
+
+  const handleChatAction = async (message: string) => {
+    const lowerMessage = message.toLowerCase();
+
+    if (
+      lowerMessage.includes('missing invoice') ||
+      lowerMessage.includes('find invoice')
+    ) {
+      await handleMissingInvoiceAction();
+    } else if (
+      lowerMessage.includes('categorize') ||
+      lowerMessage.includes('category')
+    ) {
+      await handleCategorizeAction(message);
+    } else if (
+      lowerMessage.includes('sync') ||
+      lowerMessage.includes('connect')
+    ) {
+      await handleSyncAction(message);
+    } else if (
+      lowerMessage.includes('match') ||
+      lowerMessage.includes('reconcile')
+    ) {
+      await handleMatchAction();
+    } else {
+      // Generic response
+      const assistantMessage = {
+        id: Date.now().toString(),
+        type: 'assistant',
+        content:
+          'I can help you with:\n• Finding missing invoices\n• Categorizing transactions\n• Syncing data sources\n• Matching invoices to transactions\n\nWhat would you like me to do?',
+        timestamp: new Date(),
+      };
+      setChatMessages((prev) => [...prev, assistantMessage]);
+    }
+  };
+
+  const handleMissingInvoiceAction = async () => {
+    // Add processing message
+    const processingMessage = {
+      id: Date.now().toString(),
+      type: 'assistant',
+      content:
+        '🔍 Searching for missing invoices across your connected channels...',
+      timestamp: new Date(),
+      actions: [
+        {
+          type: 'search',
+          status: 'executing',
+          target: 'missing_invoices',
+        },
+      ],
+    };
+    setChatMessages((prev) => [...prev, processingMessage]);
+
+    // Simulate search
+    setTimeout(() => {
+      const resultMessage = {
+        id: (Date.now() + 1).toString(),
+        type: 'assistant',
+        content:
+          '✅ Found 3 transactions without matching invoices:\n• AWS payment ($1,249.67)\n• Office supplies ($237.84)\n• Contractor payment ($2,500.00)\n\nWould you like me to search Gmail and Slack for these invoices?',
+        timestamp: new Date(),
+        actions: [
+          {
+            type: 'search',
+            status: 'completed',
+            target: 'missing_invoices',
+            result: { found: 3, channels: ['gmail', 'slack'] },
+          },
+        ],
+      };
+      setChatMessages((prev) => [...prev, resultMessage]);
+    }, 2000);
+  };
+
+  const handleCategorizeAction = async (message: string) => {
+    const processingMessage = {
+      id: Date.now().toString(),
+      type: 'assistant',
+      content: '🤖 Analyzing transactions and applying AI categorization...',
+      timestamp: new Date(),
+      actions: [
+        {
+          type: 'categorize',
+          status: 'executing',
+          target: 'transactions',
+        },
+      ],
+    };
+    setChatMessages((prev) => [...prev, processingMessage]);
+
+    // Simulate categorization
+    setTimeout(() => {
+      // Actually update some transaction GL codes
+      if (transactions && transactions.length > 0) {
+        const tx = transactions[0];
+        setTransactionGLCodes((prev) => ({
+          ...prev,
+          [tx.id]: {
+            code: '5200',
+            confidence: 95,
+            reason: 'AI categorized based on vendor pattern',
+          },
+        }));
+      }
+
+      const resultMessage = {
+        id: (Date.now() + 1).toString(),
+        type: 'assistant',
+        content:
+          '✅ Categorized 8 transactions:\n• 3 as Software & Subscriptions (GL 5200)\n• 2 as Marketing (GL 5100)\n• 3 as Operating Expenses (GL 5000)\n\nCheck the transactions tab to see the updates!',
+        timestamp: new Date(),
+        actions: [
+          {
+            type: 'categorize',
+            status: 'completed',
+            target: 'transactions',
+            result: { categorized: 8 },
+          },
+        ],
+      };
+      setChatMessages((prev) => [...prev, resultMessage]);
+
+      // Show toast for UI update
+      toast({
+        title: '📊 Transactions Categorized',
+        description: 'AI has updated GL codes for 8 transactions',
+      });
+    }, 3000);
+  };
+
+  const handleSyncAction = async (message: string) => {
+    const processingMessage = {
+      id: Date.now().toString(),
+      type: 'assistant',
+      content: '🔄 Syncing data from connected channels...',
+      timestamp: new Date(),
+      actions: [
+        {
+          type: 'sync',
+          status: 'executing',
+          target: 'channels',
+        },
+      ],
+    };
+    setChatMessages((prev) => [...prev, processingMessage]);
+
+    // Simulate sync
+    setTimeout(() => {
+      const resultMessage = {
+        id: (Date.now() + 1).toString(),
+        type: 'assistant',
+        content:
+          '✅ Sync completed:\n• Gmail: 12 new documents\n• Slack: 3 new messages\n• Found 2 new invoices that match existing transactions',
+        timestamp: new Date(),
+        actions: [
+          {
+            type: 'sync',
+            status: 'completed',
+            target: 'channels',
+            result: { newDocuments: 15, newMatches: 2 },
+          },
+        ],
+      };
+      setChatMessages((prev) => [...prev, resultMessage]);
+
+      // Update channel counts
+      setChannels((prev) =>
+        prev.map((channel) => ({
+          ...channel,
+          documentCount:
+            channel.status === 'connected'
+              ? channel.documentCount + Math.floor(Math.random() * 5)
+              : channel.documentCount,
+          lastSync:
+            channel.status === 'connected' ? new Date() : channel.lastSync,
+        })),
+      );
+    }, 2500);
+  };
+
+  const handleMatchAction = async () => {
+    const processingMessage = {
+      id: Date.now().toString(),
+      type: 'assistant',
+      content: '🔗 Running AI matching algorithm...',
+      timestamp: new Date(),
+      actions: [
+        {
+          type: 'match',
+          status: 'executing',
+          target: 'invoices_transactions',
+        },
+      ],
+    };
+    setChatMessages((prev) => [...prev, processingMessage]);
+
+    // Simulate matching
+    setTimeout(() => {
+      // Trigger actual match proposal
+      proposeMatches.mutate({});
+
+      const resultMessage = {
+        id: (Date.now() + 1).toString(),
+        type: 'assistant',
+        content:
+          '✅ Found 5 potential matches with 85%+ confidence:\n• AWS invoice ↔ Transaction $1,249.67\n• Office supplies ↔ Transaction $237.84\n• 3 more matches pending review\n\nCheck the Matches tab!',
+        timestamp: new Date(),
+        actions: [
+          {
+            type: 'match',
+            status: 'completed',
+            target: 'invoices_transactions',
+            result: { matches: 5, highConfidence: 2 },
+          },
+        ],
+      };
+      setChatMessages((prev) => [...prev, resultMessage]);
+    }, 3000);
+  };
+
   // Mock client response with REAL UI updates
   const handleMockClientResponse = async (requestId: string) => {
     // Show loading state
@@ -946,9 +1308,10 @@ export default function ReconciliationPage() {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold">Invoice Reconciliation</h1>
+          <h1 className="text-3xl font-bold">AI Document Processing Hub</h1>
           <p className="text-muted-foreground mt-1">
-            Match invoices with transactions using AI-powered categorization
+            Connect channels, extract documents, and automate financial
+            workflows with AI
           </p>
         </div>
 
@@ -1170,10 +1533,13 @@ export default function ReconciliationPage() {
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Invoices</CardTitle>
+            <CardTitle className="text-sm font-medium">Channels</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{invoices?.length || 0}</div>
+            <div className="text-2xl font-bold">
+              {channels.filter((c) => c.status === 'connected').length}/3
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">Connected</p>
           </CardContent>
         </Card>
 
@@ -1203,654 +1569,787 @@ export default function ReconciliationPage() {
         </Card>
       </div>
 
-      {/* Main Content */}
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="transactions">
-            Raw Transactions
-            {transactions && transactions.length > 0 && (
-              <Badge className="ml-2" variant="secondary">
-                {transactions.length}
-              </Badge>
-            )}
-          </TabsTrigger>
-          <TabsTrigger value="invoices">
-            Invoices
-            {invoices && invoices.length > 0 && (
-              <Badge className="ml-2" variant="secondary">
-                {invoices.length}
-              </Badge>
-            )}
-          </TabsTrigger>
-          <TabsTrigger value="matches">
-            Matches
-            {matches && matches.length > 0 && (
-              <Badge className="ml-2" variant="secondary">
-                {matches.length}
-              </Badge>
-            )}
-          </TabsTrigger>
-        </TabsList>
+      {/* Main Content with Chat */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left Content - 2/3 width */}
+        <div className="lg:col-span-2">
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="transactions">
+                Raw Transactions
+                {transactions && transactions.length > 0 && (
+                  <Badge className="ml-2" variant="secondary">
+                    {transactions.length}
+                  </Badge>
+                )}
+              </TabsTrigger>
+              <TabsTrigger value="invoices">
+                Channels
+                <Badge className="ml-2" variant="secondary">
+                  {channels.filter((c) => c.status === 'connected').length}
+                </Badge>
+              </TabsTrigger>
+              <TabsTrigger value="matches">
+                Matches
+                {matches && matches.length > 0 && (
+                  <Badge className="ml-2" variant="secondary">
+                    {matches.length}
+                  </Badge>
+                )}
+              </TabsTrigger>
+            </TabsList>
 
-        {/* Transactions Tab */}
-        <TabsContent value="transactions" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <div className="flex justify-between items-center">
-                <div>
-                  <CardTitle>Bank Transactions</CardTitle>
-                  <CardDescription>
-                    Import transactions from your bank CSV export
-                  </CardDescription>
-                </div>
+            {/* Transactions Tab */}
+            <TabsContent value="transactions" className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <CardTitle>Bank Transactions</CardTitle>
+                      <CardDescription>
+                        Import transactions from your bank CSV export
+                      </CardDescription>
+                    </div>
 
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    onClick={() => syncXero.mutate()}
-                    disabled={syncXero.isPending}
-                  >
-                    {syncXero.isPending ? (
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    ) : (
-                      <Image
-                        src="https://upload.wikimedia.org/wikipedia/en/9/9f/Xero_software_logo.svg"
-                        alt="Xero"
-                        width={16}
-                        height={16}
-                        className="mr-2"
-                      />
-                    )}
-                    Sync Xero
-                  </Button>
-
-                  <Dialog open={csvDialogOpen} onOpenChange={setCsvDialogOpen}>
-                    <DialogTrigger asChild>
-                      <Button>
-                        <Upload className="h-4 w-4 mr-2" />
-                        Import CSV
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        onClick={() => syncMercury.mutate()}
+                        disabled={syncMercury.isPending}
+                      >
+                        {syncMercury.isPending ? (
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        ) : (
+                          <div className="w-4 h-4 mr-2 bg-black rounded-sm flex items-center justify-center">
+                            <span className="text-white text-xs font-bold">
+                              M
+                            </span>
+                          </div>
+                        )}
+                        Sync Mercury
                       </Button>
-                    </DialogTrigger>
-                    <DialogContent className="max-w-2xl">
-                      <DialogHeader>
-                        <DialogTitle>Import Transactions from CSV</DialogTitle>
-                        <DialogDescription>
-                          Paste your CSV content or upload a file. The system
-                          will automatically detect columns.
-                        </DialogDescription>
-                      </DialogHeader>
 
-                      <div className="space-y-4">
-                        <div>
-                          <Label>CSV Content</Label>
-                          <Textarea
-                            placeholder="Paste your CSV content here..."
-                            value={csvContent}
-                            onChange={(e) => setCsvContent(e.target.value)}
-                            className="h-48 font-mono text-sm"
-                          />
-                        </div>
-
-                        <div className="flex items-center gap-4">
-                          <Button
-                            variant="outline"
-                            onClick={() => fileInputRef.current?.click()}
-                          >
-                            <FileUp className="h-4 w-4 mr-2" />
-                            Upload File
-                          </Button>
-
-                          <Button
-                            variant="outline"
-                            onClick={() => setCsvContent(sampleCSV)}
-                          >
-                            Use Sample Data
-                          </Button>
-
-                          <input
-                            ref={fileInputRef}
-                            type="file"
-                            accept=".csv"
-                            onChange={handleCSVFile}
-                            className="hidden"
-                          />
-                        </div>
-
-                        <Button
-                          onClick={handleImportCSV}
-                          disabled={isUploadingCSV || !csvContent}
-                          className="w-full"
-                        >
-                          {isUploadingCSV ? (
-                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                          ) : (
+                      <Dialog
+                        open={csvDialogOpen}
+                        onOpenChange={setCsvDialogOpen}
+                      >
+                        <DialogTrigger asChild>
+                          <Button>
                             <Upload className="h-4 w-4 mr-2" />
-                          )}
-                          Import Transactions
-                        </Button>
-                      </div>
-                    </DialogContent>
-                  </Dialog>
-                </div>
-              </div>
-            </CardHeader>
-
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Counterparty</TableHead>
-                    <TableHead>Description</TableHead>
-                    <TableHead className="text-right">Amount</TableHead>
-                    <TableHead>GL Code</TableHead>
-                    <TableHead>Source</TableHead>
-                    <TableHead></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {transactions?.map((tx) => {
-                    const suggestedGL = getSuggestedGLCode(
-                      tx.counterparty || undefined,
-                      tx.memo || undefined,
-                    );
-                    const assignedGL = transactionGLCodes[tx.id];
-                    const isObjectGL =
-                      typeof assignedGL === 'object' && assignedGL !== null;
-                    const assignedGLCode = isObjectGL
-                      ? (assignedGL as any).code
-                      : assignedGL;
-                    const glConfidence = isObjectGL
-                      ? (assignedGL as any).confidence
-                      : null;
-
-                    return (
-                      <TableRow key={tx.id}>
-                        <TableCell>
-                          {new Date(tx.txnDate).toLocaleDateString()}
-                        </TableCell>
-                        <TableCell>{tx.counterparty || '-'}</TableCell>
-                        <TableCell className="max-w-xs truncate">
-                          {tx.memo || '-'}
-                        </TableCell>
-                        <TableCell className="text-right font-mono">
-                          ${Number(tx.amount).toFixed(2)}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            {assignedGLCode ? (
-                              <Badge variant="default" className="gap-1">
-                                <Hash className="h-3 w-3" />
-                                {assignedGLCode}
-                                {typeof assignedGL === 'object' &&
-                                  assignedGL.confidence && (
-                                    <span className="text-xs ml-1">
-                                      ({assignedGL.confidence}%)
-                                    </span>
-                                  )}
-                              </Badge>
-                            ) : suggestedGL ? (
-                              <Badge variant="secondary" className="gap-1">
-                                <Sparkles className="h-3 w-3" />
-                                {suggestedGL.code}
-                                <span className="text-xs">
-                                  ({suggestedGL.confidence}%)
-                                </span>
-                              </Badge>
-                            ) : null}
-
-                            <Select
-                              value={assignedGLCode || ''}
-                              onValueChange={(value) =>
-                                handleAssignGLCode(tx.id, value, 'transaction')
-                              }
-                            >
-                              <SelectTrigger className="w-[120px] h-7">
-                                <SelectValue placeholder="Assign" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {mockGLCodes.map((gl) => (
-                                  <SelectItem key={gl.code} value={gl.code}>
-                                    <div className="flex items-center gap-2">
-                                      <span className="font-mono text-xs">
-                                        {gl.code}
-                                      </span>
-                                      <span className="text-xs">{gl.name}</span>
-                                    </div>
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline">{tx.source}</Badge>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex gap-1">
-                            <Button
-                              variant={
-                                clarifiedItems.has(`tx-${tx.id}`)
-                                  ? 'default'
-                                  : 'ghost'
-                              }
-                              size="icon"
-                              onClick={() =>
-                                handleCreateContextRequest(tx, 'transaction')
-                              }
-                              title={
-                                clarifiedItems.has(`tx-${tx.id}`)
-                                  ? 'Client has clarified this item'
-                                  : 'Request Context'
-                              }
-                            >
-                              {clarifiedItems.has(`tx-${tx.id}`) ? (
-                                <CheckCircle className="h-4 w-4" />
-                              ) : (
-                                <MessageSquare className="h-4 w-4" />
-                              )}
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() =>
-                                deleteTransaction.mutate({ id: tx.id })
-                              }
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-
-                  {(!transactions || transactions.length === 0) && (
-                    <TableRow>
-                      <TableCell
-                        colSpan={7}
-                        className="text-center py-8 text-muted-foreground"
-                      >
-                        No transactions yet. Import a CSV to get started.
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Invoices Tab */}
-        <TabsContent value="invoices" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <div className="flex justify-between items-center">
-                <div>
-                  <CardTitle>Invoices</CardTitle>
-                  <CardDescription>
-                    Upload PDF or image invoices for AI parsing
-                  </CardDescription>
-                </div>
-
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    onClick={() => syncGmail.mutate()}
-                    disabled={syncGmail.isPending}
-                  >
-                    {syncGmail.isPending ? (
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    ) : (
-                      <svg
-                        className="h-4 w-4 mr-2"
-                        viewBox="0 0 24 24"
-                        fill="currentColor"
-                      >
-                        <path d="M24 5.457v13.909c0 .904-.732 1.636-1.636 1.636h-3.819V11.73L12 16.64l-6.545-4.91v9.273H1.636A1.636 1.636 0 0 1 0 19.366V5.457c0-2.023 2.309-3.178 3.927-1.964L5.455 4.64 12 9.548l6.545-4.91 1.528-1.145C21.69 2.28 24 3.434 24 5.457z" />
-                      </svg>
-                    )}
-                    Sync Gmail
-                  </Button>
-
-                  <Dialog
-                    open={invoiceDialogOpen}
-                    onOpenChange={setInvoiceDialogOpen}
-                  >
-                    <DialogTrigger asChild>
-                      <Button>
-                        <FileText className="h-4 w-4 mr-2" />
-                        Upload Invoice
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                      <DialogHeader>
-                        <DialogTitle>Upload Invoice</DialogTitle>
-                        <DialogDescription>
-                          Upload a PDF or image file of your invoice. Our AI
-                          will extract the details automatically.
-                        </DialogDescription>
-                      </DialogHeader>
-
-                      <div className="space-y-4">
-                        <div className="border-2 border-dashed rounded-lg p-8 text-center">
-                          <FileText className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                          <Button
-                            variant="outline"
-                            onClick={() => invoiceInputRef.current?.click()}
-                            disabled={isUploadingInvoice}
-                          >
-                            {isUploadingInvoice ? (
-                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                            ) : (
-                              <FileUp className="h-4 w-4 mr-2" />
-                            )}
-                            Choose File
+                            Import CSV
                           </Button>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-2xl">
+                          <DialogHeader>
+                            <DialogTitle>
+                              Import Transactions from CSV
+                            </DialogTitle>
+                            <DialogDescription>
+                              Paste your CSV content or upload a file. The
+                              system will automatically detect columns.
+                            </DialogDescription>
+                          </DialogHeader>
 
-                          <input
-                            ref={invoiceInputRef}
-                            type="file"
-                            accept=".pdf,image/*"
-                            onChange={handleInvoiceFile}
-                            className="hidden"
-                          />
+                          <div className="space-y-4">
+                            <div>
+                              <Label>CSV Content</Label>
+                              <Textarea
+                                placeholder="Paste your CSV content here..."
+                                value={csvContent}
+                                onChange={(e) => setCsvContent(e.target.value)}
+                                className="h-48 font-mono text-sm"
+                              />
+                            </div>
 
-                          <p className="text-sm text-muted-foreground mt-2">
-                            Supports PDF, PNG, JPG formats
-                          </p>
-                        </div>
-                      </div>
-                    </DialogContent>
-                  </Dialog>
-                </div>
-              </div>
-            </CardHeader>
+                            <div className="flex items-center gap-4">
+                              <Button
+                                variant="outline"
+                                onClick={() => fileInputRef.current?.click()}
+                              >
+                                <FileUp className="h-4 w-4 mr-2" />
+                                Upload File
+                              </Button>
 
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Invoice #</TableHead>
-                    <TableHead>Vendor</TableHead>
-                    <TableHead>Issue Date</TableHead>
-                    <TableHead>Due Date</TableHead>
-                    <TableHead className="text-right">Amount</TableHead>
-                    <TableHead>GL Code</TableHead>
-                    <TableHead>Confidence</TableHead>
-                    <TableHead></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {invoices?.map((invoice) => {
-                    const suggestedGL = getSuggestedGLCode(
-                      invoice.vendor || undefined,
-                      invoice.invoiceNumber || undefined,
-                    );
-                    const assignedGL = invoiceGLCodes[invoice.id];
-                    const assignedGLCode =
-                      typeof assignedGL === 'string'
-                        ? assignedGL
-                        : (
-                            assignedGL as
-                              | { code: string; confidence?: number }
-                              | undefined
-                          )?.code;
+                              <Button
+                                variant="outline"
+                                onClick={() => setCsvContent(sampleCSV)}
+                              >
+                                Use Sample Data
+                              </Button>
 
-                    return (
-                      <TableRow key={invoice.id}>
-                        <TableCell className="font-mono">
-                          {invoice.invoiceNumber || '-'}
-                        </TableCell>
-                        <TableCell>{invoice.vendor || '-'}</TableCell>
-                        <TableCell>
-                          {invoice.issueDate
-                            ? new Date(invoice.issueDate).toLocaleDateString()
-                            : '-'}
-                        </TableCell>
-                        <TableCell>
-                          {invoice.dueDate
-                            ? new Date(invoice.dueDate).toLocaleDateString()
-                            : '-'}
-                        </TableCell>
-                        <TableCell className="text-right font-mono">
-                          ${Number(invoice.totalAmount).toFixed(2)}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            {assignedGLCode ? (
-                              <Badge variant="default" className="gap-1">
-                                <Hash className="h-3 w-3" />
-                                {assignedGLCode}
-                                {typeof assignedGL === 'object' &&
-                                  assignedGL.confidence && (
-                                    <span className="text-xs ml-1">
-                                      ({assignedGL.confidence}%)
-                                    </span>
-                                  )}
-                              </Badge>
-                            ) : suggestedGL ? (
-                              <Badge variant="secondary" className="gap-1">
-                                <Sparkles className="h-3 w-3" />
-                                {suggestedGL.code}
-                              </Badge>
-                            ) : null}
+                              <input
+                                ref={fileInputRef}
+                                type="file"
+                                accept=".csv"
+                                onChange={handleCSVFile}
+                                className="hidden"
+                              />
+                            </div>
 
-                            <Select
-                              value={assignedGLCode || ''}
-                              onValueChange={(value) =>
-                                handleAssignGLCode(invoice.id, value, 'invoice')
-                              }
+                            <Button
+                              onClick={handleImportCSV}
+                              disabled={isUploadingCSV || !csvContent}
+                              className="w-full"
                             >
-                              <SelectTrigger className="w-[100px] h-7">
-                                <SelectValue placeholder="Assign" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {mockGLCodes.map((gl) => (
-                                  <SelectItem key={gl.code} value={gl.code}>
-                                    <div className="flex items-center gap-2">
-                                      <span className="font-mono text-xs">
-                                        {gl.code}
-                                      </span>
-                                      <span className="text-xs">{gl.name}</span>
-                                    </div>
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
+                              {isUploadingCSV ? (
+                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              ) : (
+                                <Upload className="h-4 w-4 mr-2" />
+                              )}
+                              Import Transactions
+                            </Button>
                           </div>
-                        </TableCell>
-                        <TableCell>
-                          {invoice.parsedConfidence ? (
+                        </DialogContent>
+                      </Dialog>
+                    </div>
+                  </div>
+                </CardHeader>
+
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Date</TableHead>
+                        <TableHead>Counterparty</TableHead>
+                        <TableHead>Description</TableHead>
+                        <TableHead className="text-right">Amount</TableHead>
+                        <TableHead>GL Code</TableHead>
+                        <TableHead>Source</TableHead>
+                        <TableHead></TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {transactions?.map((tx) => {
+                        const suggestedGL = getSuggestedGLCode(
+                          tx.counterparty || undefined,
+                          tx.memo || undefined,
+                        );
+                        const assignedGL = transactionGLCodes[tx.id];
+                        const isObjectGL =
+                          typeof assignedGL === 'object' && assignedGL !== null;
+                        const assignedGLCode = isObjectGL
+                          ? (assignedGL as any).code
+                          : assignedGL;
+                        const glConfidence = isObjectGL
+                          ? (assignedGL as any).confidence
+                          : null;
+
+                        return (
+                          <TableRow key={tx.id}>
+                            <TableCell>
+                              {new Date(tx.txnDate).toLocaleDateString()}
+                            </TableCell>
+                            <TableCell>{tx.counterparty || '-'}</TableCell>
+                            <TableCell className="max-w-xs truncate">
+                              {tx.memo || '-'}
+                            </TableCell>
+                            <TableCell className="text-right font-mono">
+                              ${Number(tx.amount).toFixed(2)}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                {assignedGLCode ? (
+                                  <Badge variant="default" className="gap-1">
+                                    <Hash className="h-3 w-3" />
+                                    {assignedGLCode}
+                                    {typeof assignedGL === 'object' &&
+                                      assignedGL.confidence && (
+                                        <span className="text-xs ml-1">
+                                          ({assignedGL.confidence}%)
+                                        </span>
+                                      )}
+                                  </Badge>
+                                ) : suggestedGL ? (
+                                  <Badge variant="secondary" className="gap-1">
+                                    <Sparkles className="h-3 w-3" />
+                                    {suggestedGL.code}
+                                    <span className="text-xs">
+                                      ({suggestedGL.confidence}%)
+                                    </span>
+                                  </Badge>
+                                ) : null}
+
+                                <Select
+                                  value={assignedGLCode || ''}
+                                  onValueChange={(value) =>
+                                    handleAssignGLCode(
+                                      tx.id,
+                                      value,
+                                      'transaction',
+                                    )
+                                  }
+                                >
+                                  <SelectTrigger className="w-[120px] h-7">
+                                    <SelectValue placeholder="Assign" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {mockGLCodes.map((gl) => (
+                                      <SelectItem key={gl.code} value={gl.code}>
+                                        <div className="flex items-center gap-2">
+                                          <span className="font-mono text-xs">
+                                            {gl.code}
+                                          </span>
+                                          <span className="text-xs">
+                                            {gl.name}
+                                          </span>
+                                        </div>
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="outline">{tx.source}</Badge>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex gap-1">
+                                <Button
+                                  variant={
+                                    clarifiedItems.has(`tx-${tx.id}`)
+                                      ? 'default'
+                                      : 'ghost'
+                                  }
+                                  size="icon"
+                                  onClick={() =>
+                                    handleCreateContextRequest(
+                                      tx,
+                                      'transaction',
+                                    )
+                                  }
+                                  title={
+                                    clarifiedItems.has(`tx-${tx.id}`)
+                                      ? 'Client has clarified this item'
+                                      : 'Request Context'
+                                  }
+                                >
+                                  {clarifiedItems.has(`tx-${tx.id}`) ? (
+                                    <CheckCircle className="h-4 w-4" />
+                                  ) : (
+                                    <MessageSquare className="h-4 w-4" />
+                                  )}
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() =>
+                                    deleteTransaction.mutate({ id: tx.id })
+                                  }
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+
+                      {(!transactions || transactions.length === 0) && (
+                        <TableRow>
+                          <TableCell
+                            colSpan={7}
+                            className="text-center py-8 text-muted-foreground"
+                          >
+                            No transactions yet. Import a CSV to get started.
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Channels Tab */}
+            <TabsContent value="invoices" className="space-y-4">
+              {/* Channels Overview */}
+              <Card>
+                <CardHeader>
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <CardTitle>Connected Channels</CardTitle>
+                      <CardDescription>
+                        Manage your data sources and sync documents
+                        automatically
+                      </CardDescription>
+                    </div>
+                    <Button
+                      variant="outline"
+                      onClick={() => handleSendMessage('Sync all channels')}
+                    >
+                      <RefreshCw className="h-4 w-4 mr-2" />
+                      Sync All
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {channels.map((channel) => (
+                      <Card key={channel.id} className="relative">
+                        <CardHeader className="pb-3">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <span className="text-2xl">{channel.icon}</span>
+                              <div>
+                                <CardTitle className="text-base">
+                                  {channel.name}
+                                </CardTitle>
+                                <Badge
+                                  variant={
+                                    channel.status === 'connected'
+                                      ? 'default'
+                                      : 'secondary'
+                                  }
+                                  className="text-xs"
+                                >
+                                  {channel.status}
+                                </Badge>
+                              </div>
+                            </div>
+                            <div
+                              className={`w-3 h-3 rounded-full ${
+                                channel.status === 'connected'
+                                  ? 'bg-green-500'
+                                  : 'bg-gray-400'
+                              }`}
+                            />
+                          </div>
+                        </CardHeader>
+                        <CardContent className="pt-0">
+                          <div className="space-y-2">
+                            <div className="flex justify-between items-center">
+                              <span className="text-sm text-muted-foreground">
+                                Documents
+                              </span>
+                              <span className="font-semibold">
+                                {channel.documentCount}
+                              </span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span className="text-sm text-muted-foreground">
+                                Last Sync
+                              </span>
+                              <span className="text-sm">
+                                {channel.lastSync
+                                  ? channel.lastSync.toLocaleTimeString()
+                                  : 'Never'}
+                              </span>
+                            </div>
+                            <div className="flex gap-2 mt-3">
+                              {channel.status === 'connected' ? (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="flex-1"
+                                  onClick={() =>
+                                    handleSendMessage(`Sync ${channel.name}`)
+                                  }
+                                >
+                                  Sync
+                                </Button>
+                              ) : (
+                                <Button size="sm" className="flex-1">
+                                  Connect
+                                </Button>
+                              )}
+                              <Button size="sm" variant="ghost">
+                                <Settings className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Extracted Documents */}
+              <Card>
+                <CardHeader>
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <CardTitle>Extracted Documents</CardTitle>
+                      <CardDescription>
+                        AI-processed documents from your connected channels
+                      </CardDescription>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() =>
+                          handleSendMessage('Find missing invoices')
+                        }
+                      >
+                        <AlertTriangle className="h-4 w-4 mr-2" />
+                        Find Missing
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() =>
+                          handleSendMessage(
+                            'Show me all invoices from this month',
+                          )
+                        }
+                      >
+                        <MessageSquare className="h-4 w-4 mr-2" />
+                        Chat with Data
+                      </Button>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Document</TableHead>
+                        <TableHead>Type</TableHead>
+                        <TableHead>Source</TableHead>
+                        <TableHead>Amount</TableHead>
+                        <TableHead>Confidence</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead></TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {extractedDocuments.map((doc) => (
+                        <TableRow key={doc.id}>
+                          <TableCell>
+                            <div className="font-medium">{doc.title}</div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className="capitalize">
+                              {doc.type === 'invoice' ? '📄' : '💬'} {doc.type}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <span>
+                                {
+                                  channels.find((c) => c.id === doc.source)
+                                    ?.icon
+                                }
+                              </span>
+                              <span className="text-sm">{doc.source}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            {doc.amount ? (
+                              <span className="font-mono">
+                                ${doc.amount.toFixed(2)}
+                              </span>
+                            ) : (
+                              '-'
+                            )}
+                          </TableCell>
+                          <TableCell>
                             <Badge
                               variant={
-                                Number(invoice.parsedConfidence) > 80
-                                  ? 'default'
-                                  : 'secondary'
+                                doc.confidence > 80 ? 'default' : 'secondary'
                               }
                             >
-                              {Number(invoice.parsedConfidence).toFixed(0)}%
+                              {doc.confidence}%
                             </Badge>
-                          ) : (
-                            '-'
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex gap-1">
-                            <Button
+                          </TableCell>
+                          <TableCell>
+                            <Badge
                               variant={
-                                clarifiedItems.has(`inv-${invoice.id}`)
+                                doc.status === 'processed'
                                   ? 'default'
-                                  : 'ghost'
-                              }
-                              size="icon"
-                              onClick={() =>
-                                handleCreateContextRequest(invoice, 'invoice')
-                              }
-                              title={
-                                clarifiedItems.has(`inv-${invoice.id}`)
-                                  ? 'Client has clarified this item'
-                                  : 'Request Context'
+                                  : doc.status === 'pending'
+                                    ? 'secondary'
+                                    : 'outline'
                               }
                             >
-                              {clarifiedItems.has(`inv-${invoice.id}`) ? (
-                                <CheckCircle className="h-4 w-4" />
-                              ) : (
+                              {doc.status.replace('_', ' ')}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex gap-1">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() =>
+                                  handleSendMessage(
+                                    `Tell me about ${doc.title}`,
+                                  )
+                                }
+                                title="Chat about this document"
+                              >
                                 <MessageSquare className="h-4 w-4" />
+                              </Button>
+                              {doc.type === 'invoice' && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() =>
+                                    handleSendMessage(
+                                      `Match ${doc.title} to transactions`,
+                                    )
+                                  }
+                                  title="Find matching transaction"
+                                >
+                                  <Link2 className="h-4 w-4" />
+                                </Button>
                               )}
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() =>
-                                deleteInvoice.mutate({ id: invoice.id })
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Matches Tab */}
+            <TabsContent value="matches" className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <CardTitle>Suggested Matches</CardTitle>
+                      <CardDescription>
+                        Review and confirm AI-proposed invoice-to-transaction
+                        matches
+                      </CardDescription>
+                    </div>
+
+                    <Button variant="outline" onClick={() => refetchMatches()}>
+                      <RefreshCw className="h-4 w-4 mr-2" />
+                      Refresh
+                    </Button>
+                  </div>
+                </CardHeader>
+
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Invoice</TableHead>
+                        <TableHead>Transaction</TableHead>
+                        <TableHead>Score</TableHead>
+                        <TableHead>Rationale</TableHead>
+                        <TableHead>Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {matches?.map((item) => (
+                        <TableRow key={item.match.id}>
+                          <TableCell>
+                            <div className="space-y-1">
+                              <div className="font-medium">
+                                {item.invoice?.invoiceNumber || 'N/A'}
+                              </div>
+                              <div className="text-sm text-muted-foreground">
+                                {item.invoice?.vendor} - $
+                                {Number(item.invoice?.totalAmount || 0).toFixed(
+                                  2,
+                                )}
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="space-y-1">
+                              <div className="font-medium">
+                                {item.transaction?.counterparty || 'N/A'}
+                              </div>
+                              <div className="text-sm text-muted-foreground">
+                                {item.transaction?.txnDate
+                                  ? new Date(
+                                      item.transaction.txnDate,
+                                    ).toLocaleDateString()
+                                  : ''}{' '}
+                                - $
+                                {Number(item.transaction?.amount || 0).toFixed(
+                                  2,
+                                )}
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge
+                              variant={
+                                Number(item.match.score) >= 90
+                                  ? 'default'
+                                  : Number(item.match.score) >= 70
+                                    ? 'secondary'
+                                    : 'outline'
                               }
                             >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
+                              {Math.round(Number(item.match.score))}%
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="max-w-xs">
+                            <span className="text-sm text-muted-foreground">
+                              {item.match.rationale || '-'}
+                            </span>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() =>
+                                  confirmMatch.mutate({
+                                    matchId: item.match.id,
+                                  })
+                                }
+                              >
+                                <Check className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() =>
+                                  rejectMatch.mutate({ matchId: item.match.id })
+                                }
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
 
-                  {(!invoices || invoices.length === 0) && (
-                    <TableRow>
-                      <TableCell
-                        colSpan={8}
-                        className="text-center py-8 text-muted-foreground"
-                      >
-                        No invoices yet. Upload a PDF or image to get started.
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        </TabsContent>
+                      {(!matches || matches.length === 0) && (
+                        <TableRow>
+                          <TableCell
+                            colSpan={5}
+                            className="text-center py-8 text-muted-foreground"
+                          >
+                            No matches proposed yet. Add some transactions and
+                            invoices, then click "Propose Matches".
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
+        </div>
 
-        {/* Matches Tab */}
-        <TabsContent value="matches" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <div className="flex justify-between items-center">
-                <div>
-                  <CardTitle>Suggested Matches</CardTitle>
-                  <CardDescription>
-                    Review and confirm AI-proposed invoice-to-transaction
-                    matches
-                  </CardDescription>
-                </div>
-
-                <Button variant="outline" onClick={() => refetchMatches()}>
-                  <RefreshCw className="h-4 w-4 mr-2" />
-                  Refresh
-                </Button>
-              </div>
+        {/* Right Side - Chat Interface */}
+        <div className="lg:col-span-1">
+          <Card className="h-[800px] flex flex-col">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Brain className="h-5 w-5" />
+                AI Assistant
+              </CardTitle>
+              <CardDescription>
+                Chat with your financial data and automate tasks
+              </CardDescription>
             </CardHeader>
 
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Invoice</TableHead>
-                    <TableHead>Transaction</TableHead>
-                    <TableHead>Score</TableHead>
-                    <TableHead>Rationale</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {matches?.map((item) => (
-                    <TableRow key={item.match.id}>
-                      <TableCell>
-                        <div className="space-y-1">
-                          <div className="font-medium">
-                            {item.invoice?.invoiceNumber || 'N/A'}
-                          </div>
-                          <div className="text-sm text-muted-foreground">
-                            {item.invoice?.vendor} - $
-                            {Number(item.invoice?.totalAmount || 0).toFixed(2)}
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="space-y-1">
-                          <div className="font-medium">
-                            {item.transaction?.counterparty || 'N/A'}
-                          </div>
-                          <div className="text-sm text-muted-foreground">
-                            {item.transaction?.txnDate
-                              ? new Date(
-                                  item.transaction.txnDate,
-                                ).toLocaleDateString()
-                              : ''}{' '}
-                            - $
-                            {Number(item.transaction?.amount || 0).toFixed(2)}
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge
-                          variant={
-                            Number(item.match.score) >= 90
-                              ? 'default'
-                              : Number(item.match.score) >= 70
-                                ? 'secondary'
-                                : 'outline'
-                          }
-                        >
-                          {Math.round(Number(item.match.score))}%
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="max-w-xs">
-                        <span className="text-sm text-muted-foreground">
-                          {item.match.rationale || '-'}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() =>
-                              confirmMatch.mutate({ matchId: item.match.id })
-                            }
-                          >
-                            <Check className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() =>
-                              rejectMatch.mutate({ matchId: item.match.id })
-                            }
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+            <CardContent className="flex-1 flex flex-col p-0">
+              {/* Messages */}
+              <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                {chatMessages.map((message) => (
+                  <div
+                    key={message.id}
+                    className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
+                  >
+                    <div
+                      className={`max-w-[80%] rounded-lg p-3 ${
+                        message.type === 'user'
+                          ? 'bg-blue-500 text-white'
+                          : 'bg-gray-100 dark:bg-gray-800'
+                      }`}
+                    >
+                      <div className="text-sm whitespace-pre-wrap">
+                        {message.content}
+                      </div>
 
-                  {(!matches || matches.length === 0) && (
-                    <TableRow>
-                      <TableCell
-                        colSpan={5}
-                        className="text-center py-8 text-muted-foreground"
-                      >
-                        No matches proposed yet. Add some transactions and
-                        invoices, then click "Propose Matches".
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
+                      {/* Action indicators */}
+                      {message.actions && (
+                        <div className="mt-2 space-y-1">
+                          {message.actions.map((action: any, idx: number) => (
+                            <div
+                              key={idx}
+                              className="flex items-center gap-2 text-xs"
+                            >
+                              {action.status === 'executing' && (
+                                <Loader2 className="h-3 w-3 animate-spin" />
+                              )}
+                              {action.status === 'completed' && (
+                                <CheckCircle className="h-3 w-3 text-green-500" />
+                              )}
+                              <span className="capitalize">
+                                {action.type}: {action.target}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      <div className="text-xs opacity-70 mt-1">
+                        {message.timestamp.toLocaleTimeString()}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Input */}
+              <div className="border-t p-4">
+                <div className="flex gap-2">
+                  <Input
+                    value={chatInput}
+                    onChange={(e) => setChatInput(e.target.value)}
+                    placeholder="Ask me anything about your finances..."
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter') {
+                        handleSendMessage(chatInput);
+                      }
+                    }}
+                  />
+                  <Button
+                    size="icon"
+                    onClick={() => handleSendMessage(chatInput)}
+                    disabled={!chatInput.trim()}
+                  >
+                    <Send className="h-4 w-4" />
+                  </Button>
+                </div>
+
+                {/* Quick actions */}
+                <div className="flex flex-wrap gap-1 mt-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleSendMessage('Find missing invoices')}
+                  >
+                    Find Missing Invoices
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() =>
+                      handleSendMessage('Categorize all transactions')
+                    }
+                  >
+                    Auto-Categorize
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() =>
+                      handleSendMessage('Match invoices to transactions')
+                    }
+                  >
+                    Match All
+                  </Button>
+                </div>
+              </div>
             </CardContent>
           </Card>
-        </TabsContent>
-      </Tabs>
+        </div>
+      </div>
 
       {/* Request Context Dialog - Shows actual message draft */}
       <Dialog open={requestDialogOpen} onOpenChange={setRequestDialogOpen}>
