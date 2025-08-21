@@ -230,11 +230,22 @@ export default function ReconciliationPage() {
   const [activeThreadId, setActiveThreadId] = useState('main');
   const [chatInput, setChatInput] = useState('');
   const [activeActions, setActiveActions] = useState<any[]>([]);
-  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [isChatOpen, setIsChatOpen] = useState(true); // Open by default
+  const chatScrollRef = useRef<HTMLDivElement>(null);
 
   // Get current thread messages
   const currentThread = chatThreads.find((t) => t.id === activeThreadId);
   const chatMessages = currentThread?.messages || [];
+
+  // Auto-scroll to bottom when new messages arrive
+  useEffect(() => {
+    if (chatScrollRef.current) {
+      chatScrollRef.current.scrollTo({
+        top: chatScrollRef.current.scrollHeight,
+        behavior: 'smooth',
+      });
+    }
+  }, [chatMessages]);
   const [channels, setChannels] = useState([
     {
       id: 'gmail',
@@ -339,24 +350,14 @@ export default function ReconciliationPage() {
   });
 
   const importCSV = api.reconciliation.importTransactionsCSV.useMutation({
-    onSuccess: async (data) => {
+    onSuccess: async (data: any) => {
       toast({
         title: 'Success',
         description: `Imported ${data.imported} transactions`,
       });
 
-      // Refetch and pre-categorize transactions
-      const result = await refetchTransactions();
-      setTimeout(() => {
-        if (result.data) {
-          const categorizations = preCategorizeTransactions(result.data);
-          setTransactionGLCodes(categorizations);
-          toast({
-            title: '✅ AI Categorization Complete',
-            description: 'Most transactions categorized automatically',
-          });
-        }
-      }, 1000);
+      // Just refetch - categorization is now done in backend
+      await refetchTransactions();
 
       setCsvDialogOpen(false);
       setCsvContent('');
@@ -497,15 +498,24 @@ export default function ReconciliationPage() {
       },
     });
 
-  // Mutation to create a match between transaction and invoice
-  // TODO: Implement createManualMatch mutation in reconciliation router
-  // const createManualMatch = api.reconciliation.createManualMatch.useMutation({
-  //   onSuccess: () => {
-  //     refetchMatches();
-  //     refetchTransactions();
-  //     refetchInvoices();
-  //   },
-  // });
+  // Mutation to update transaction GL code
+  const updateTransactionGLCode =
+    api.reconciliation.updateTransactionGLCode.useMutation({
+      onSuccess: () => {
+        refetchTransactions();
+        toast({
+          title: '✅ Transaction Categorized',
+          description: 'GL code has been updated',
+        });
+      },
+      onError: (error) => {
+        toast({
+          title: 'Error',
+          description: error.message,
+          variant: 'destructive',
+        });
+      },
+    });
 
   const { data: pendingRequests } =
     api.reconciliation.getContextRequests.useQuery({
@@ -566,20 +576,31 @@ export default function ReconciliationPage() {
   };
 
   // Handle GL code assignment
-  const handleAssignGLCode = (
+  const handleAssignGLCode = async (
     entityId: string,
     glCode: string,
     type: 'transaction' | 'invoice',
   ) => {
     if (type === 'transaction') {
+      // Update local state immediately for UI responsiveness
       setTransactionGLCodes((prev) => ({ ...prev, [entityId]: glCode }));
+
+      // Get GL code name for the reason
+      const glCodeName =
+        mockGLCodes.find((gl) => gl.code === glCode)?.name ||
+        'Manual assignment';
+
+      // Persist to database
+      await updateTransactionGLCode.mutateAsync({
+        id: entityId,
+        glCode: glCode,
+        confidence: 100, // Manual assignment has 100% confidence
+        reason: `Manually assigned: ${glCodeName}`,
+        status: 'manual',
+      });
     } else {
       setInvoiceGLCodes((prev) => ({ ...prev, [entityId]: glCode }));
     }
-    toast({
-      title: 'GL Code Assigned',
-      description: `Assigned GL ${glCode} to ${type}`,
-    });
   };
 
   // Get suggested GL code based on vendor/description
@@ -1995,18 +2016,27 @@ export default function ReconciliationPage() {
     if (selectedRequestItem?.itemType === 'transaction') {
       const transactionId = selectedRequestItem.item.id;
 
-      // 1. Mark as clarified
+      // 1. Mark the item as clarified
       setClarifiedItems((prev) => new Set([...prev, `tx-${transactionId}`]));
 
-      // 2. UPDATE THE GL CODE WITH HIGH CONFIDENCE
+      // 2. Update the transaction's categorization in UI and database
       setTransactionGLCodes((prev) => ({
         ...prev,
-        [transactionId]: {
+        [request.item.id]: {
           code: glCode,
           confidence: 95,
           reason: `Client confirmed: ${responses.q1}`,
         },
       }));
+
+      // Persist to database
+      await updateTransactionGLCode.mutateAsync({
+        id: request.item.id,
+        glCode: glCode,
+        confidence: 95,
+        reason: `Client confirmed: ${responses.q1}`,
+        status: 'confirmed',
+      });
 
       // 3. If we found a matching invoice, create a match
       if (matchInvoiceId) {
@@ -2143,24 +2173,25 @@ export default function ReconciliationPage() {
     return categorizations;
   };
 
-  // Enhanced demo data for various scenarios
+  // Enhanced demo data showcasing 4 categorization scenarios
   const sampleCSV = `Date,Description,Amount,Currency
-2024-01-15,STRIPE TRANSFER 12345,2847.93,USD
+2024-01-15,STRIPE TRANSFER 12345,28479.93,USD
 2024-01-16,AWS AMAZON WEB SERV,-1249.67,USD
 2024-01-17,GOOGLE*GSUITE_ACME,-450.00,USD
-2024-01-18,CHK 2341,-8500.00,USD
-2024-01-19,AWS AMAZON WEB SERV,-1249.67,USD
-2024-01-20,PAYPAL *CONTRACTOR,-3500.00,USD
-2024-01-22,AMZN Mktp US*RT4Y6,-237.84,USD
-2024-01-23,STRIPE TRANSFER 67890,-5234.50,USD
+2024-01-18,CHK 2341 JOHNSON CONSTRUCTION,-8500.00,USD
+2024-01-19,SHOPIFY MONTHLY SUB,-299.00,USD
+2024-01-20,PAYPAL *SARAH CHEN DESIGN,-2500.00,USD
+2024-01-21,AMZN Mktp US*RT4Y6,-237.84,USD
+2024-01-22,MICROSOFT 365 BUSINESS,-360.00,USD
+2024-01-23,STRIPE TRANSFER 67890,15234.50,USD
 2024-01-24,WIRE OUT 823744,-15000.00,USD
-2024-01-25,VENMO PAYMENT,-5000.00,USD
-2024-01-26,POS DEBIT - 4829 OFFICE D,-1847.23,USD
-2024-01-27,ACH DEBIT UNKNOWN,-892.45,USD
-2024-01-28,TST* DROPBOX 4KJ3M2,-199.00,USD
-2024-01-29,DEPOSIT MOBILE CHECK,25000.00,USD
-2024-01-30,WIRE OUT CAYMAN ISLANDS,-10000.00,USD
-2024-01-31,TECHSTART SOLUTIONS,-3500.00,USD`;
+2024-01-25,VENMO PAYMENT MIKE R,-1500.00,USD
+2024-01-26,OFFICE DEPOT #4829,-847.23,USD
+2024-01-27,ACH DEBIT UNKNOWN VENDOR,-892.45,USD
+2024-01-28,TST* DROPBOX BUSINESS,-199.00,USD
+2024-01-29,DEPOSIT CLIENT PAYMENT,25000.00,USD
+2024-01-30,ZOOM VIDEO COMM,-149.90,USD
+2024-01-31,TECHSTART SOLUTIONS CONSULTING,-3500.00,USD`;
 
   // Mock pending bills for payment flow
   const mockPendingBills = [
@@ -2209,7 +2240,7 @@ export default function ReconciliationPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-neutral-50 to-neutral-100 dark:from-neutral-950 dark:to-neutral-900">
       {/* WIP Banner */}
-      <div className="bg-yellow-400 dark:bg-yellow-600 text-black dark:text-white">
+      {/* <div className="bg-yellow-400 dark:bg-yellow-600 text-black dark:text-white">
         <div className="px-6 py-2 flex items-center justify-center gap-2">
           <AlertTriangle className="h-4 w-4" />
           <span className="text-sm font-medium">
@@ -2217,7 +2248,7 @@ export default function ReconciliationPage() {
           </span>
           <AlertTriangle className="h-4 w-4" />
         </div>
-      </div>
+      </div> */}
 
       {/* Animated gradient background */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
@@ -2545,6 +2576,64 @@ export default function ReconciliationPage() {
             </div>
           </div>
 
+          {/* Stats Cards */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <Card className="bg-white/50 dark:bg-neutral-800/50 backdrop-blur-sm border-neutral-200/50 dark:border-neutral-700/50">
+              <CardHeader className="pb-2">
+                <CardDescription className="text-xs">
+                  Total Transactions
+                </CardDescription>
+                <CardTitle className="text-2xl font-bold">
+                  {transactions?.length || 0}
+                </CardTitle>
+              </CardHeader>
+            </Card>
+
+            <Card className="bg-white/50 dark:bg-neutral-800/50 backdrop-blur-sm border-neutral-200/50 dark:border-neutral-700/50">
+              <CardHeader className="pb-2">
+                <CardDescription className="text-xs">
+                  Categorized
+                </CardDescription>
+                <CardTitle className="text-2xl font-bold text-green-600">
+                  {transactions?.filter(
+                    (t) => (t as any).glCode || transactionGLCodes[t.id],
+                  ).length || 0}
+                </CardTitle>
+              </CardHeader>
+            </Card>
+
+            <Card className="bg-white/50 dark:bg-neutral-800/50 backdrop-blur-sm border-neutral-200/50 dark:border-neutral-700/50">
+              <CardHeader className="pb-2">
+                <CardDescription className="text-xs">
+                  Uncategorized
+                </CardDescription>
+                <CardTitle className="text-2xl font-bold text-amber-600">
+                  {transactions?.filter(
+                    (t) =>
+                      !(t as any).glCode &&
+                      !transactionGLCodes[t.id] &&
+                      !contextRequests.some(
+                        (req) =>
+                          req.itemId === t.id && req.status === 'pending',
+                      ),
+                  ).length || 0}
+                </CardTitle>
+              </CardHeader>
+            </Card>
+
+            <Card className="bg-white/50 dark:bg-neutral-800/50 backdrop-blur-sm border-neutral-200/50 dark:border-neutral-700/50">
+              <CardHeader className="pb-2">
+                <CardDescription className="text-xs">
+                  Pending Context
+                </CardDescription>
+                <CardTitle className="text-2xl font-bold text-blue-600">
+                  {contextRequests.filter((req) => req.status === 'pending')
+                    .length || 0}
+                </CardTitle>
+              </CardHeader>
+            </Card>
+          </div>
+
           {/* Main Content */}
           <div>
             <Tabs value={activeTab} onValueChange={setActiveTab}>
@@ -2691,6 +2780,9 @@ export default function ReconciliationPage() {
                             Amount
                           </TableHead>
                           <TableHead className="w-[200px]">GL Code</TableHead>
+                          <TableHead className="w-[150px]">
+                            Supporting Doc
+                          </TableHead>
                           <TableHead className="w-[150px]">Status</TableHead>
                           <TableHead className="w-[100px]">Actions</TableHead>
                         </TableRow>
@@ -2701,16 +2793,21 @@ export default function ReconciliationPage() {
                             tx.counterparty || undefined,
                             tx.memo || undefined,
                           );
-                          const assignedGL = transactionGLCodes[tx.id];
-                          const isObjectGL =
-                            typeof assignedGL === 'object' &&
-                            assignedGL !== null;
-                          const assignedGLCode = isObjectGL
-                            ? (assignedGL as any).code
-                            : assignedGL;
-                          const glConfidence = isObjectGL
-                            ? (assignedGL as any).confidence
-                            : null;
+                          // Use GL code from database if available, otherwise from local state
+                          const dbGLCode = (tx as any).glCode;
+                          const dbGLConfidence = (tx as any).glCodeConfidence;
+                          const localGL = transactionGLCodes[tx.id];
+
+                          const assignedGLCode =
+                            dbGLCode ||
+                            (typeof localGL === 'object'
+                              ? (localGL as any).code
+                              : localGL);
+                          const glConfidence =
+                            dbGLConfidence ||
+                            (typeof localGL === 'object'
+                              ? (localGL as any).confidence
+                              : null);
 
                           // Determine status
                           const hasContextRequest = contextRequests.some(
@@ -2756,12 +2853,11 @@ export default function ReconciliationPage() {
                                       <span className="font-mono">
                                         {assignedGLCode}
                                       </span>
-                                      {typeof assignedGL === 'object' &&
-                                        assignedGL.confidence && (
-                                          <span className="opacity-70">
-                                            {assignedGL.confidence}%
-                                          </span>
-                                        )}
+                                      {glConfidence && (
+                                        <span className="opacity-70">
+                                          {glConfidence}%
+                                        </span>
+                                      )}
                                     </Badge>
                                   ) : suggestedGL ? (
                                     <Badge
@@ -2818,6 +2914,74 @@ export default function ReconciliationPage() {
                                     </SelectContent>
                                   </Select>
                                 </div>
+                              </TableCell>
+                              <TableCell className="min-w-[150px]">
+                                {/* Supporting Document Status */}
+                                {(() => {
+                                  // Check if we have a matching invoice
+                                  const matchingInvoice = invoices?.find(
+                                    (inv) => {
+                                      const invAmount = Math.abs(
+                                        Number(inv.totalAmount),
+                                      );
+                                      const txAmount = Math.abs(
+                                        Number(tx.amount),
+                                      );
+                                      return (
+                                        Math.abs(invAmount - txAmount) < 1 &&
+                                        inv.vendor
+                                          ?.toLowerCase()
+                                          .includes(
+                                            tx.counterparty?.toLowerCase() ||
+                                              '',
+                                          )
+                                      );
+                                    },
+                                  );
+
+                                  if (matchingInvoice) {
+                                    return (
+                                      <Badge
+                                        variant="outline"
+                                        className="gap-1 text-xs"
+                                      >
+                                        <FileText className="h-3 w-3" />
+                                        {matchingInvoice.invoiceNumber ||
+                                          'Matched'}
+                                      </Badge>
+                                    );
+                                  } else if (
+                                    tx.counterparty
+                                      ?.toLowerCase()
+                                      .includes('stripe')
+                                  ) {
+                                    return (
+                                      <Badge
+                                        variant="secondary"
+                                        className="gap-1 text-xs"
+                                      >
+                                        <FileText className="h-3 w-3" />
+                                        Auto-generated
+                                      </Badge>
+                                    );
+                                  } else {
+                                    return (
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-7 text-xs"
+                                        onClick={() =>
+                                          handleSendMessage(
+                                            `Find invoice for transaction: ${tx.counterparty} - $${Math.abs(Number(tx.amount)).toFixed(2)}`,
+                                          )
+                                        }
+                                      >
+                                        <AlertTriangle className="h-3 w-3 mr-1" />
+                                        Fetch Invoice
+                                      </Button>
+                                    );
+                                  }
+                                })()}
                               </TableCell>
                               <TableCell className="min-w-[150px]">
                                 <div className="flex flex-col gap-1">
@@ -2929,15 +3093,93 @@ export default function ReconciliationPage() {
 
               {/* Documents Tab */}
               <TabsContent value="documents" className="space-y-4">
+                {/* Connection Sources */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {channels.map((channel) => (
+                    <Card key={channel.id} className="relative">
+                      <CardHeader className="pb-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className="text-2xl">{channel.icon}</span>
+                            <div>
+                              <CardTitle className="text-base">
+                                {channel.name}
+                              </CardTitle>
+                              <Badge
+                                variant={
+                                  channel.status === 'connected'
+                                    ? 'default'
+                                    : 'secondary'
+                                }
+                                className="text-xs mt-1"
+                              >
+                                {channel.status}
+                              </Badge>
+                            </div>
+                          </div>
+                          <div
+                            className={`w-3 h-3 rounded-full ${
+                              channel.status === 'connected'
+                                ? 'bg-green-500'
+                                : 'bg-gray-400'
+                            }`}
+                          />
+                        </div>
+                      </CardHeader>
+                      <CardContent className="pt-0">
+                        <div className="space-y-2">
+                          <div className="flex justify-between items-center text-sm">
+                            <span className="text-muted-foreground">
+                              Documents
+                            </span>
+                            <span className="font-semibold">
+                              {channel.documentCount}
+                            </span>
+                          </div>
+                          <div className="flex justify-between items-center text-sm">
+                            <span className="text-muted-foreground">
+                              Last Sync
+                            </span>
+                            <span className="text-xs">
+                              {channel.lastSync
+                                ? channel.lastSync.toLocaleTimeString()
+                                : 'Never'}
+                            </span>
+                          </div>
+                          <div className="flex gap-2 mt-3">
+                            {channel.status === 'connected' ? (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="flex-1"
+                                onClick={() =>
+                                  handleSendMessage(`Sync ${channel.name}`)
+                                }
+                              >
+                                <RefreshCw className="h-3 w-3 mr-1" />
+                                Sync
+                              </Button>
+                            ) : (
+                              <Button size="sm" className="flex-1">
+                                Connect
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+
                 {/* Supporting Documents */}
                 <Card>
                   <CardHeader>
                     <div className="flex justify-between items-center">
                       <div>
-                        <CardTitle>Supporting Documents</CardTitle>
+                        <CardTitle>Extracted Documents</CardTitle>
                         <CardDescription>
-                          Invoices, receipts, and documents needed for
-                          reconciliation
+                          AI-processed invoices and receipts from connected
+                          sources
                         </CardDescription>
                       </div>
                       <div className="flex gap-2">
@@ -3217,7 +3459,10 @@ export default function ReconciliationPage() {
               {/* Chat Messages and Input */}
               <div className="flex-1 flex flex-col overflow-hidden">
                 {/* Messages */}
-                <div className="flex-1 overflow-y-auto p-4 space-y-4 max-h-[calc(100vh-450px)]">
+                <div
+                  ref={chatScrollRef}
+                  className="flex-1 overflow-y-auto p-4 space-y-4 max-h-[calc(100vh-450px)]"
+                >
                   {chatMessages.map((message: any) => (
                     <div
                       key={message.id}

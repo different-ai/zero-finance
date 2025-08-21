@@ -708,6 +708,20 @@
       "when": 1755578494988,
       "tag": "0100_spotty_psylocke",
       "breakpoints": true
+    },
+    {
+      "idx": 101,
+      "version": "7",
+      "when": 1755806920414,
+      "tag": "0101_rich_black_panther",
+      "breakpoints": true
+    },
+    {
+      "idx": 102,
+      "version": "7",
+      "when": 1755806953369,
+      "tag": "0102_cute_sway",
+      "breakpoints": true
     }
   ]
 }

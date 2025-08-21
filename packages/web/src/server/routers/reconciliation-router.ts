@@ -92,12 +92,99 @@ export const reconciliationRouter = router({
           parsedDate = new Date(date);
         }
 
+        // Pre-categorize transactions based on description/counterparty
+        const desc = (description || counterparty || '').toLowerCase();
+        let glCode: string | undefined;
+        let glCodeConfidence: number | undefined;
+        let glCodeReason: string | undefined;
+        let categorizationStatus = 'pending';
+
+        // Only pre-categorize for demo data
+        if (input.source === 'demo_data') {
+          // Scenario 1: High confidence with matching invoice (90%+)
+          if (desc.includes('stripe transfer')) {
+            glCode = '3000';
+            glCodeConfidence = 95;
+            glCodeReason = 'Revenue from Stripe payments';
+            categorizationStatus = 'auto_categorized';
+          } else if (desc.includes('aws')) {
+            glCode = '5200';
+            glCodeConfidence = 92;
+            glCodeReason = 'Cloud Infrastructure - AWS';
+            categorizationStatus = 'auto_categorized';
+          } else if (desc.includes('google') || desc.includes('gsuite')) {
+            glCode = '5200';
+            glCodeConfidence = 94;
+            glCodeReason = 'Google Workspace subscription';
+            categorizationStatus = 'auto_categorized';
+          } else if (desc.includes('microsoft 365')) {
+            glCode = '5200';
+            glCodeConfidence = 93;
+            glCodeReason = 'Microsoft 365 Business subscription';
+            categorizationStatus = 'auto_categorized';
+          } else if (desc.includes('shopify')) {
+            glCode = '5200';
+            glCodeConfidence = 91;
+            glCodeReason = 'E-commerce platform subscription';
+            categorizationStatus = 'auto_categorized';
+          } else if (desc.includes('zoom')) {
+            glCode = '5200';
+            glCodeConfidence = 90;
+            glCodeReason = 'Video conferencing subscription';
+            categorizationStatus = 'auto_categorized';
+          }
+          // Scenario 2: Medium confidence - matched but needs verification (70-89%)
+          else if (desc.includes('office depot')) {
+            glCode = '5400';
+            glCodeConfidence = 85;
+            glCodeReason = 'Office supplies purchase';
+            categorizationStatus = 'auto_categorized';
+          } else if (desc.includes('amzn')) {
+            glCode = '5400';
+            glCodeConfidence = 75;
+            glCodeReason = 'Amazon purchase - likely office supplies';
+            categorizationStatus = 'auto_categorized';
+          } else if (desc.includes('dropbox')) {
+            glCode = '5200';
+            glCodeConfidence = 88;
+            glCodeReason = 'Cloud storage subscription';
+            categorizationStatus = 'auto_categorized';
+          } else if (desc.includes('techstart')) {
+            glCode = '5300';
+            glCodeConfidence = 82;
+            glCodeReason = 'Professional services - consulting';
+            categorizationStatus = 'auto_categorized';
+          }
+          // Scenario 3: Low confidence - partial match (<70%)
+          else if (desc.includes('paypal') && desc.includes('sarah chen')) {
+            glCode = '5100';
+            glCodeConfidence = 65;
+            glCodeReason = 'Likely contractor payment - needs verification';
+            categorizationStatus = 'auto_categorized';
+          } else if (desc.includes('deposit')) {
+            glCode = '3000';
+            glCodeConfidence = 60;
+            glCodeReason = 'Customer payment - needs confirmation';
+            categorizationStatus = 'auto_categorized';
+          }
+          // Scenario 4: No match - needs human input
+          // Leave these uncategorized for demo:
+          // - CHK 2341 (check to Johnson Construction)
+          // - WIRE OUT
+          // - VENMO PAYMENT
+          // - ACH DEBIT UNKNOWN
+        }
+
         const transaction = await ctx.db
           .insert(rawTransactions)
           .values({
             userId,
             source: input.source,
             externalId: row.id || row['Transaction ID'] || undefined,
+            glCode,
+            glCodeConfidence: glCodeConfidence?.toString(),
+            glCodeReason,
+            categorizationStatus,
             txnDate: parsedDate,
             amount: Math.abs(parseFloat(amount)).toString(),
             currency: row.Currency || row.currency || 'USD',
@@ -790,6 +877,41 @@ Return JSON only for the schema.`;
         );
 
       return { success: true };
+    }),
+
+  // Update transaction GL code
+  updateTransactionGLCode: protectedProcedure
+    .input(
+      z.object({
+        id: z.string(),
+        glCode: z.string(),
+        confidence: z.number().min(0).max(100),
+        reason: z.string(),
+        status: z
+          .enum(['auto_categorized', 'manual', 'confirmed', 'pending'])
+          .optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.userId!;
+
+      const updated = await ctx.db
+        .update(rawTransactions)
+        .set({
+          glCode: input.glCode,
+          glCodeConfidence: input.confidence.toString(),
+          glCodeReason: input.reason,
+          categorizationStatus: input.status || 'manual',
+        })
+        .where(
+          and(
+            eq(rawTransactions.id, input.id),
+            eq(rawTransactions.userId, userId),
+          ),
+        )
+        .returning();
+
+      return updated[0];
     }),
 
   // Delete an invoice

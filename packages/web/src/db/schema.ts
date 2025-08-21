@@ -1876,6 +1876,10 @@ export const rawTransactionsTable = pgTable(
     currency: text('currency').notNull().default('USD'),
     counterparty: text('counterparty'),
     memo: text('memo'),
+    glCode: text('gl_code'), // General Ledger code for categorization
+    glCodeConfidence: numeric('gl_code_confidence', { precision: 5, scale: 2 }), // Confidence percentage 0-100
+    glCodeReason: text('gl_code_reason'), // Explanation for the categorization
+    categorizationStatus: text('categorization_status').default('pending'), // pending, auto_categorized, manual, confirmed
     raw: jsonb('raw').notNull().default({}),
     createdAt: timestamp('created_at', { withTimezone: true })
       .defaultNow()
