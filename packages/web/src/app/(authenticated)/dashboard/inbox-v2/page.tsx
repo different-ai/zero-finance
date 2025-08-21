@@ -975,8 +975,10 @@ export default function ReconciliationPage() {
 
   // Create a new thread for context requests
   const createNewThread = (title: string, type: string, relatedItem?: any) => {
+    // Add random suffix to ensure unique IDs even when called rapidly
+    const uniqueId = `thread-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     const newThread = {
-      id: `thread-${Date.now()}`,
+      id: uniqueId,
       title,
       type,
       unread: 0,
@@ -1130,10 +1132,14 @@ export default function ReconciliationPage() {
         ],
       });
 
-      // Create the 3 sub-threads
+      // Create the 3 sub-threads with slight delays to ensure unique IDs
       const wire = createNewThread('Context: Wire $15,000', 'email');
-      const ach = createNewThread('Context: ACH $892.45', 'email');
-      const check = createNewThread('Context: Check #2341', 'email');
+      setTimeout(() => {
+        const ach = createNewThread('Context: ACH $892.45', 'email');
+      }, 50);
+      setTimeout(() => {
+        const check = createNewThread('Context: Check #2341', 'email');
+      }, 100);
     }, 5000);
 
     // Final resolution
