@@ -165,6 +165,8 @@ export default function ReconciliationPage() {
   const [companyContextOpen, setCompanyContextOpen] = useState(false);
   const [companyContext, setCompanyContext] = useState(mockCompanyContext);
   const [isLoadingContext, setIsLoadingContext] = useState(false);
+  // Pre-populate most transactions as already categorized (matched with invoices)
+  // Leave only demo transactions uncategorized for context request demo
   const [transactionGLCodes, setTransactionGLCodes] = useState<
     Record<
       string,
@@ -230,7 +232,6 @@ export default function ReconciliationPage() {
   const [activeThreadId, setActiveThreadId] = useState('main');
   const [chatInput, setChatInput] = useState('');
   const [activeActions, setActiveActions] = useState<any[]>([]);
-  const [isChatOpen, setIsChatOpen] = useState(false);
 
   // Get current thread messages
   const currentThread = chatThreads.find((t) => t.id === activeThreadId);
@@ -347,16 +348,10 @@ export default function ReconciliationPage() {
 
       // Refetch and pre-categorize transactions
       const result = await refetchTransactions();
-      setTimeout(() => {
-        if (result.data) {
-          const categorizations = preCategorizeTransactions(result.data);
-          setTransactionGLCodes(categorizations);
-          toast({
-            title: '✅ AI Categorization Complete',
-            description: 'Most transactions categorized automatically',
-          });
-        }
-      }, 1000);
+      if (result.data) {
+        const categorizations = preCategorizeTransactions(result.data);
+        setTransactionGLCodes(categorizations);
+      }
 
       setCsvDialogOpen(false);
       setCsvContent('');
@@ -2075,11 +2070,30 @@ export default function ReconciliationPage() {
     }
   };
 
-  // Pre-categorize most transactions when loaded (except demo ones)
-  const preCategorizeTransactions = (txList: any[]) => {
+  // Enhanced demo data for various scenarios
+  const sampleCSV = `Date,Description,Amount,Currency
+2024-01-15,STRIPE TRANSFER 12345,2847.93,USD
+2024-01-16,AWS AMAZON WEB SERV,-1249.67,USD
+2024-01-17,GOOGLE*GSUITE_ACME,-450.00,USD
+2024-01-18,CHK 2341,-8500.00,USD
+2024-01-19,AWS AMAZON WEB SERV,-1249.67,USD
+2024-01-20,PAYPAL *CONTRACTOR,-3500.00,USD
+2024-01-22,AMZN Mktp US*RT4Y6,-237.84,USD
+2024-01-23,STRIPE TRANSFER 67890,5234.50,USD
+2024-01-24,WIRE OUT 823744,-15000.00,USD
+2024-01-25,VENMO PAYMENT,-5000.00,USD
+2024-01-26,POS DEBIT - 4829 OFFICE D,-1847.23,USD
+2024-01-27,ACH DEBIT UNKNOWN,-892.45,USD
+2024-01-28,TST* DROPBOX 4KJ3M2,-199.00,USD
+2024-01-29,DEPOSIT MOBILE CHECK,25000.00,USD
+2024-01-30,SLACK TECHNOLOGIES,-12.99,USD
+2024-01-31,MICROSOFT 365,-99.99,USD`;
+
+  // Pre-categorize most transactions when they're loaded
+  const preCategorizeTransactions = (transactions: any[]) => {
     const categorizations: Record<string, any> = {};
 
-    txList.forEach((tx) => {
+    transactions.forEach((tx) => {
       const desc = (tx.memo || tx.counterparty || '').toLowerCase();
 
       // Pre-categorize most transactions with high confidence
@@ -2132,6 +2146,18 @@ export default function ReconciliationPage() {
           confidence: 95,
           reason: 'Customer Deposit',
         };
+      } else if (desc.includes('slack')) {
+        categorizations[tx.id] = {
+          code: '5200',
+          confidence: 93,
+          reason: 'Team Communication',
+        };
+      } else if (desc.includes('microsoft')) {
+        categorizations[tx.id] = {
+          code: '5200',
+          confidence: 94,
+          reason: 'Microsoft Office Suite',
+        };
       }
       // Leave these uncategorized for demo:
       // - CHK 2341 (check)
@@ -2142,25 +2168,6 @@ export default function ReconciliationPage() {
 
     return categorizations;
   };
-
-  // Enhanced demo data for various scenarios
-  const sampleCSV = `Date,Description,Amount,Currency
-2024-01-15,STRIPE TRANSFER 12345,2847.93,USD
-2024-01-16,AWS AMAZON WEB SERV,-1249.67,USD
-2024-01-17,GOOGLE*GSUITE_ACME,-450.00,USD
-2024-01-18,CHK 2341,-8500.00,USD
-2024-01-19,AWS AMAZON WEB SERV,-1249.67,USD
-2024-01-20,PAYPAL *CONTRACTOR,-3500.00,USD
-2024-01-22,AMZN Mktp US*RT4Y6,-237.84,USD
-2024-01-23,STRIPE TRANSFER 67890,-5234.50,USD
-2024-01-24,WIRE OUT 823744,-15000.00,USD
-2024-01-25,VENMO PAYMENT,-5000.00,USD
-2024-01-26,POS DEBIT - 4829 OFFICE D,-1847.23,USD
-2024-01-27,ACH DEBIT UNKNOWN,-892.45,USD
-2024-01-28,TST* DROPBOX 4KJ3M2,-199.00,USD
-2024-01-29,DEPOSIT MOBILE CHECK,25000.00,USD
-2024-01-30,WIRE OUT CAYMAN ISLANDS,-10000.00,USD
-2024-01-31,TECHSTART SOLUTIONS,-3500.00,USD`;
 
   // Mock pending bills for payment flow
   const mockPendingBills = [
@@ -2273,10 +2280,23 @@ export default function ReconciliationPage() {
                     csvContent: sampleCSV,
                     source: 'demo_data',
                   });
+
+                  // Pre-categorize most transactions after loading
+                  setTimeout(async () => {
+                    await refetchTransactions();
+                    // Use the transactions from the query directly
+                    if (transactions) {
+                      const categorizations =
+                        preCategorizeTransactions(transactions);
+                      setTransactionGLCodes(categorizations);
+                    }
+                  }, 1000);
+
                   await syncGmail.mutateAsync();
                   toast({
                     title: '✅ Demo Data Loaded',
-                    description: 'Sample transactions and invoices ready',
+                    description:
+                      'Sample transactions loaded with AI categorization',
                   });
                 }}
                 className="h-8 px-3 hover:bg-primary/10 hover:text-primary"
@@ -2527,25 +2547,79 @@ export default function ReconciliationPage() {
           </div>
         </div>
 
-        {/* Main Content */}
-        <div>
-          {/* Full width content since chat is now floating */}
-          <div>
+        {/* Stats Cards with modern design */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <Card className="bg-white/50 dark:bg-neutral-800/50 backdrop-blur-sm border-neutral-200/50 dark:border-neutral-700/50">
+            <CardHeader className="pb-2">
+              <CardDescription className="text-xs">
+                Total Transactions
+              </CardDescription>
+              <CardTitle className="text-2xl font-bold">
+                {transactions?.length || 0}
+              </CardTitle>
+            </CardHeader>
+          </Card>
+
+          <Card className="bg-white/50 dark:bg-neutral-800/50 backdrop-blur-sm border-neutral-200/50 dark:border-neutral-700/50">
+            <CardHeader className="pb-2">
+              <CardDescription className="text-xs">Categorized</CardDescription>
+              <CardTitle className="text-2xl font-bold text-green-600">
+                {Object.keys(transactionGLCodes).length}
+              </CardTitle>
+            </CardHeader>
+          </Card>
+
+          <Card className="bg-white/50 dark:bg-neutral-800/50 backdrop-blur-sm border-neutral-200/50 dark:border-neutral-700/50">
+            <CardHeader className="pb-2">
+              <CardDescription className="text-xs">
+                Uncategorized
+              </CardDescription>
+              <CardTitle className="text-2xl font-bold text-orange-600">
+                {(transactions?.length || 0) -
+                  Object.keys(transactionGLCodes).length}
+              </CardTitle>
+            </CardHeader>
+          </Card>
+
+          <Card className="bg-white/50 dark:bg-neutral-800/50 backdrop-blur-sm border-neutral-200/50 dark:border-neutral-700/50">
+            <CardHeader className="pb-2">
+              <CardDescription className="text-xs">
+                Pending Context
+              </CardDescription>
+              <CardTitle className="text-2xl font-bold text-yellow-600">
+                {contextRequests.filter((r) => r.status === 'pending').length}
+              </CardTitle>
+            </CardHeader>
+          </Card>
+        </div>
+
+        {/* Main Content with Split View */}
+        <div className="flex gap-6 h-[calc(100vh-300px)]">
+          {/* Left side - Transactions (resizable) */}
+          <div className="flex-1 min-w-0 overflow-auto">
             <Tabs value={activeTab} onValueChange={setActiveTab}>
-              <TabsList className="grid w-full grid-cols-2">
+              <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="transactions">
-                  Transactions
+                  Raw Transactions
                   {transactions && transactions.length > 0 && (
                     <Badge className="ml-2" variant="secondary">
                       {transactions.length}
                     </Badge>
                   )}
                 </TabsTrigger>
-                <TabsTrigger value="documents">
-                  Supporting Documents
+                <TabsTrigger value="invoices">
+                  Channels
                   <Badge className="ml-2" variant="secondary">
-                    {invoices?.length || 0}
+                    {channels.filter((c) => c.status === 'connected').length}
                   </Badge>
+                </TabsTrigger>
+                <TabsTrigger value="matches">
+                  Matches
+                  {matches && matches.length > 0 && (
+                    <Badge className="ml-2" variant="secondary">
+                      {matches.length}
+                    </Badge>
+                  )}
                 </TabsTrigger>
               </TabsList>
 
@@ -2570,6 +2644,20 @@ export default function ReconciliationPage() {
                               csvContent: sampleCSV,
                               source: 'demo_data',
                             });
+
+                            // Apply pre-categorizations after a delay
+                            setTimeout(() => {
+                              if (transactions) {
+                                const categorizations =
+                                  preCategorizeTransactions(transactions);
+                                setTransactionGLCodes(categorizations);
+                                toast({
+                                  title: '✅ AI Categorization Complete',
+                                  description:
+                                    'Most transactions categorized with high confidence',
+                                });
+                              }
+                            }, 1000);
                           }}
                           disabled={importCSV.isPending}
                           className="hover:bg-primary/10 hover:text-primary"
@@ -2911,22 +2999,124 @@ export default function ReconciliationPage() {
                 </Card>
               </TabsContent>
 
-              {/* Documents Tab */}
-              <TabsContent value="documents" className="space-y-4">
-                {/* Supporting Documents */}
+              {/* Channels Tab */}
+              <TabsContent value="invoices" className="space-y-4">
+                {/* Channels Overview */}
                 <Card>
                   <CardHeader>
                     <div className="flex justify-between items-center">
                       <div>
-                        <CardTitle>Supporting Documents</CardTitle>
+                        <CardTitle>Connected Channels</CardTitle>
                         <CardDescription>
-                          Invoices, receipts, and documents needed for
-                          reconciliation
+                          Manage your data sources and sync documents
+                          automatically
+                        </CardDescription>
+                      </div>
+                      <Button
+                        variant="outline"
+                        onClick={() => handleSendMessage('Sync all channels')}
+                      >
+                        <RefreshCw className="h-4 w-4 mr-2" />
+                        Sync All
+                      </Button>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      {channels.map((channel) => (
+                        <Card key={channel.id} className="relative">
+                          <CardHeader className="pb-3">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <span className="text-2xl">{channel.icon}</span>
+                                <div>
+                                  <CardTitle className="text-base">
+                                    {channel.name}
+                                  </CardTitle>
+                                  <Badge
+                                    variant={
+                                      channel.status === 'connected'
+                                        ? 'default'
+                                        : 'secondary'
+                                    }
+                                    className="text-xs"
+                                  >
+                                    {channel.status}
+                                  </Badge>
+                                </div>
+                              </div>
+                              <div
+                                className={`w-3 h-3 rounded-full ${
+                                  channel.status === 'connected'
+                                    ? 'bg-green-500'
+                                    : 'bg-gray-400'
+                                }`}
+                              />
+                            </div>
+                          </CardHeader>
+                          <CardContent className="pt-0">
+                            <div className="space-y-2">
+                              <div className="flex justify-between items-center">
+                                <span className="text-sm text-muted-foreground">
+                                  Documents
+                                </span>
+                                <span className="font-semibold">
+                                  {channel.documentCount}
+                                </span>
+                              </div>
+                              <div className="flex justify-between items-center">
+                                <span className="text-sm text-muted-foreground">
+                                  Last Sync
+                                </span>
+                                <span className="text-sm">
+                                  {channel.lastSync
+                                    ? channel.lastSync.toLocaleTimeString()
+                                    : 'Never'}
+                                </span>
+                              </div>
+                              <div className="flex gap-2 mt-3">
+                                {channel.status === 'connected' ? (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="flex-1"
+                                    onClick={() =>
+                                      handleSendMessage(`Sync ${channel.name}`)
+                                    }
+                                  >
+                                    Sync
+                                  </Button>
+                                ) : (
+                                  <Button size="sm" className="flex-1">
+                                    Connect
+                                  </Button>
+                                )}
+                                <Button size="sm" variant="ghost">
+                                  <Settings className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Extracted Documents */}
+                <Card>
+                  <CardHeader>
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <CardTitle>Extracted Documents</CardTitle>
+                        <CardDescription>
+                          AI-processed documents from your connected channels
                         </CardDescription>
                       </div>
                       <div className="flex gap-2">
                         <Button
                           variant="outline"
+                          size="sm"
                           onClick={() =>
                             handleSendMessage('Find missing invoices')
                           }
@@ -2934,70 +3124,18 @@ export default function ReconciliationPage() {
                           <AlertTriangle className="h-4 w-4 mr-2" />
                           Find Missing
                         </Button>
-                        <Dialog
-                          open={invoiceDialogOpen}
-                          onOpenChange={setInvoiceDialogOpen}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() =>
+                            handleSendMessage(
+                              'Show me all invoices from this month',
+                            )
+                          }
                         >
-                          <DialogTrigger asChild>
-                            <Button>
-                              <Upload className="h-4 w-4 mr-2" />
-                              Upload Document
-                            </Button>
-                          </DialogTrigger>
-                          <DialogContent>
-                            <DialogHeader>
-                              <DialogTitle>
-                                Upload Supporting Document
-                              </DialogTitle>
-                              <DialogDescription>
-                                Upload an invoice, receipt, or other supporting
-                                document
-                              </DialogDescription>
-                            </DialogHeader>
-                            <div className="space-y-4">
-                              <div>
-                                <Label>Document Type</Label>
-                                <Select>
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Select document type" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="invoice">
-                                      Invoice
-                                    </SelectItem>
-                                    <SelectItem value="receipt">
-                                      Receipt
-                                    </SelectItem>
-                                    <SelectItem value="contract">
-                                      Contract
-                                    </SelectItem>
-                                    <SelectItem value="statement">
-                                      Statement
-                                    </SelectItem>
-                                    <SelectItem value="other">Other</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                              </div>
-                              <div>
-                                <Label>Upload File</Label>
-                                <Input
-                                  type="file"
-                                  accept=".pdf,.png,.jpg,.jpeg,.csv,.xlsx"
-                                  onChange={(e) => {
-                                    if (e.target.files?.[0]) {
-                                      toast({
-                                        title: 'Document uploaded',
-                                        description:
-                                          'Processing document with AI...',
-                                      });
-                                      setInvoiceDialogOpen(false);
-                                    }
-                                  }}
-                                />
-                              </div>
-                            </div>
-                          </DialogContent>
-                        </Dialog>
+                          <MessageSquare className="h-4 w-4 mr-2" />
+                          Chat with Data
+                        </Button>
                       </div>
                     </div>
                   </CardHeader>
@@ -3105,40 +3243,149 @@ export default function ReconciliationPage() {
                   </CardContent>
                 </Card>
               </TabsContent>
+
+              {/* Matches Tab */}
+              <TabsContent value="matches" className="space-y-4">
+                <Card>
+                  <CardHeader>
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <CardTitle>Suggested Matches</CardTitle>
+                        <CardDescription>
+                          Review and confirm AI-proposed invoice-to-transaction
+                          matches
+                        </CardDescription>
+                      </div>
+
+                      <Button
+                        variant="outline"
+                        onClick={() => refetchMatches()}
+                      >
+                        <RefreshCw className="h-4 w-4 mr-2" />
+                        Refresh
+                      </Button>
+                    </div>
+                  </CardHeader>
+
+                  <CardContent>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Invoice</TableHead>
+                          <TableHead>Transaction</TableHead>
+                          <TableHead>Score</TableHead>
+                          <TableHead>Rationale</TableHead>
+                          <TableHead>Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {matches?.map((item) => (
+                          <TableRow key={item.match.id}>
+                            <TableCell>
+                              <div className="space-y-1">
+                                <div className="font-medium">
+                                  {item.invoice?.invoiceNumber || 'N/A'}
+                                </div>
+                                <div className="text-sm text-muted-foreground">
+                                  {item.invoice?.vendor} - $
+                                  {Number(
+                                    item.invoice?.totalAmount || 0,
+                                  ).toFixed(2)}
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="space-y-1">
+                                <div className="font-medium">
+                                  {item.transaction?.counterparty || 'N/A'}
+                                </div>
+                                <div className="text-sm text-muted-foreground">
+                                  {item.transaction?.txnDate
+                                    ? new Date(
+                                        item.transaction.txnDate,
+                                      ).toLocaleDateString()
+                                    : ''}{' '}
+                                  - $
+                                  {Number(
+                                    item.transaction?.amount || 0,
+                                  ).toFixed(2)}
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <Badge
+                                variant={
+                                  Number(item.match.score) >= 90
+                                    ? 'default'
+                                    : Number(item.match.score) >= 70
+                                      ? 'secondary'
+                                      : 'outline'
+                                }
+                              >
+                                {Math.round(Number(item.match.score))}%
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="max-w-xs">
+                              <span className="text-sm text-muted-foreground">
+                                {item.match.rationale || '-'}
+                              </span>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex gap-2">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() =>
+                                    confirmMatch.mutate({
+                                      matchId: item.match.id,
+                                    })
+                                  }
+                                >
+                                  <Check className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() =>
+                                    rejectMatch.mutate({
+                                      matchId: item.match.id,
+                                    })
+                                  }
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+
+                        {(!matches || matches.length === 0) && (
+                          <TableRow>
+                            <TableCell
+                              colSpan={5}
+                              className="text-center py-8 text-muted-foreground"
+                            >
+                              No matches proposed yet. Add some transactions and
+                              invoices, then click "Propose Matches".
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+              </TabsContent>
             </Tabs>
           </div>
-        </div>
+          </div>
 
-        {/* Floating Chat Interface - Intercom Style */}
-        <div className="fixed bottom-6 right-6 z-50">
-          {/* Chat Toggle Button */}
-          {!isChatOpen && (
-            <Button
-              onClick={() => setIsChatOpen(true)}
-              className="h-14 w-14 rounded-full shadow-lg bg-primary hover:bg-primary/90"
-              size="icon"
-            >
-              <MessageSquare className="h-6 w-6" />
-            </Button>
-          )}
-
-          {/* Chat Window */}
-          {isChatOpen && (
-            <Card className="w-[400px] h-[600px] flex flex-col shadow-2xl">
+          {/* Right side - AI Chat (always visible) */}
+          <div className="w-[450px] flex-shrink-0">
+            <Card className="h-full flex flex-col shadow-xl">
               <CardHeader className="pb-2 border-b">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Brain className="h-5 w-5" />
-                    <CardTitle className="text-lg">AI Assistant</CardTitle>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={() => setIsChatOpen(false)}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
+                <div className="flex items-center gap-2">
+                  <Brain className="h-5 w-5" />
+                  <CardTitle className="text-lg">AI Assistant</CardTitle>
                 </div>
                 <CardDescription className="text-xs">
                   Multi-thread conversations
@@ -3375,7 +3622,7 @@ export default function ReconciliationPage() {
                 </div>
               </CardContent>
             </Card>
-          )}
+          </div>
         </div>
 
         {/* Request Context Dialog - Shows actual message draft */}
