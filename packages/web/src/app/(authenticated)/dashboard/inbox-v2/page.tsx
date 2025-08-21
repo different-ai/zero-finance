@@ -1968,1589 +1968,1604 @@ export default function ReconciliationPage() {
   ];
 
   return (
-    <div className="p-6 space-y-6">
-      {/* Demo Controls Bar */}
-      <Card className="mb-4 bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-950/20 dark:to-blue-950/20 border-purple-200 dark:border-purple-800">
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Sparkles className="h-5 w-5 text-purple-600" />
-              <CardTitle className="text-lg">Demo Scenarios</CardTitle>
-              <Badge variant="secondary">Click to trigger flows</Badge>
-            </div>
-            <Badge variant="outline" className="text-xs">
-              For demonstration purposes
-            </Badge>
-          </div>
-        </CardHeader>
-        <CardContent className="pb-4">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={startMonthEndReconciliation}
-              className="justify-start"
-            >
-              <CheckCircle className="h-4 w-4 mr-2" />
-              Month-End Close
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={startDocumentDiscovery}
-              className="justify-start"
-            >
-              <FileText className="h-4 w-4 mr-2" />
-              Find Invoice
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={startComplexCategorization}
-              className="justify-start"
-            >
-              <MessageSquare className="h-4 w-4 mr-2" />
-              Venmo Context
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={startBillPayment}
-              className="justify-start"
-            >
-              <DollarSign className="h-4 w-4 mr-2" />
-              Pay Bills
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={startDuplicateDetection}
-              className="justify-start"
-            >
-              <AlertTriangle className="h-4 w-4 mr-2" />
-              Duplicate Alert
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={startFraudDetection}
-              className="justify-start"
-            >
-              <AlertCircle className="h-4 w-4 mr-2 text-red-500" />
-              Fraud Detection
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={async () => {
-                // Load comprehensive demo data
-                await importCSV.mutateAsync({
-                  csvContent: sampleCSV,
-                  source: 'demo_data',
-                });
-                await syncGmail.mutateAsync();
-                toast({
-                  title: '📊 Demo Data Loaded',
-                  description: 'Sample transactions and invoices ready',
-                });
-              }}
-              className="justify-start"
-            >
-              <Database className="h-4 w-4 mr-2" />
-              Load All Data
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                // Reset to clean state
-                setActiveThreadId('main');
-                setChatThreads([
-                  {
-                    id: 'main',
-                    title: 'Main Chat',
-                    type: 'main',
-                    unread: 0,
-                    lastMessage: 'Welcome! How can I help you today?',
-                    timestamp: new Date(),
-                    status: 'active',
-                    messages: [
-                      {
-                        id: '1',
-                        type: 'assistant',
-                        content:
-                          'Welcome! Select a demo scenario above to see the AI in action.',
-                        timestamp: new Date(),
-                      },
-                    ],
-                  },
-                ]);
-                toast({
-                  title: '🔄 Reset Complete',
-                  description: 'Chat threads cleared',
-                });
-              }}
-              className="justify-start"
-            >
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Reset Chat
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold">AI Document Processing Hub</h1>
-          <p className="text-muted-foreground mt-1">
-            Connect channels, extract documents, and automate financial
-            workflows with AI
-          </p>
-        </div>
-
-        <div className="flex gap-2">
-          {/* Load Demo Data Button */}
-          <Button
-            variant="outline"
-            onClick={async () => {
-              // Import the CSV transactions
-              await importCSV.mutateAsync({
-                csvContent: sampleCSV,
-                source: 'demo_data',
-              });
-
-              // Sync Gmail to get matching invoices
-              await syncGmail.mutateAsync();
-
-              toast({
-                title: 'Demo Data Loaded',
-                description:
-                  'Messy bank transactions and invoices ready for reconciliation',
-              });
-            }}
-          >
-            <Database className="h-4 w-4 mr-2" />
-            Load Demo Data
-          </Button>
-
-          {/* AI Context Button */}
-          <Dialog
-            open={companyContextOpen}
-            onOpenChange={setCompanyContextOpen}
-          >
-            <DialogTrigger asChild>
-              <Button variant="outline">
-                <Brain className="h-4 w-4 mr-2" />
-                AI Context
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-2xl">
-              <DialogHeader>
-                <DialogTitle>AI Context & Learning</DialogTitle>
-                <DialogDescription>
-                  Train the AI with your company's accounting preferences and
-                  patterns
-                </DialogDescription>
-              </DialogHeader>
-
-              <div className="space-y-4">
-                <div className="flex justify-end">
-                  <Button
-                    onClick={handleRequestContext}
-                    disabled={isLoadingContext}
-                    variant="outline"
-                  >
-                    {isLoadingContext ? (
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    ) : (
-                      <Sparkles className="h-4 w-4 mr-2" />
-                    )}
-                    AI Learn From History
-                  </Button>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label>Company Name</Label>
-                    <Input
-                      value={companyContext.companyName}
-                      onChange={(e) =>
-                        setCompanyContext((prev) => ({
-                          ...prev,
-                          companyName: e.target.value,
-                        }))
-                      }
-                      placeholder="Enter company name..."
-                    />
-                  </div>
-
-                  <div>
-                    <Label>Industry</Label>
-                    <Input
-                      value={companyContext.industry}
-                      onChange={(e) =>
-                        setCompanyContext((prev) => ({
-                          ...prev,
-                          industry: e.target.value,
-                        }))
-                      }
-                      placeholder="e.g., Software, Healthcare..."
-                    />
-                  </div>
-
-                  <div>
-                    <Label>Fiscal Year End</Label>
-                    <Input
-                      value={companyContext.fiscalYearEnd}
-                      onChange={(e) =>
-                        setCompanyContext((prev) => ({
-                          ...prev,
-                          fiscalYearEnd: e.target.value,
-                        }))
-                      }
-                      placeholder="e.g., December 31"
-                    />
-                  </div>
-
-                  <div>
-                    <Label>Accounting Method</Label>
-                    <Select
-                      value={companyContext.accountingMethod}
-                      onValueChange={(value) =>
-                        setCompanyContext((prev) => ({
-                          ...prev,
-                          accountingMethod: value,
-                        }))
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="cash">Cash</SelectItem>
-                        <SelectItem value="accrual">Accrual</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                {companyContext.automationRules.length > 0 && (
-                  <div>
-                    <Label>Automation Rules</Label>
-                    <div className="mt-2 space-y-2">
-                      {companyContext.automationRules.map((rule, idx) => (
-                        <div
-                          key={idx}
-                          className="flex items-center justify-between p-2 border rounded"
-                        >
-                          <span className="text-sm">
-                            {rule.vendor} → GL {rule.glCode}
-                          </span>
-                          <Badge
-                            variant={rule.autoApprove ? 'default' : 'secondary'}
-                          >
-                            {rule.autoApprove ? 'Auto' : 'Manual'}
-                          </Badge>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {companyContext.preferredVendors.length > 0 && (
-                  <div>
-                    <Label>Preferred Vendors</Label>
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      {companyContext.preferredVendors.map((vendor, idx) => (
-                        <Badge key={idx} variant="outline">
-                          {vendor}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </DialogContent>
-          </Dialog>
-
-          <Button
-            onClick={() => proposeMatches.mutate({})}
-            disabled={proposeMatches.isPending}
-          >
-            {proposeMatches.isPending ? (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            ) : (
-              <Link2 className="h-4 w-4 mr-2" />
-            )}
-            Propose Matches
-          </Button>
-
-          {/* Delete All Button */}
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button variant="destructive" size="icon">
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Delete All Data?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  This will permanently delete all transactions, invoices, and
-                  matches. This action cannot be undone.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={handleDeleteAll}>
-                  Delete Everything
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-        </div>
+    <div className="min-h-screen bg-gradient-to-br from-neutral-50 to-neutral-100 dark:from-neutral-950 dark:to-neutral-900">
+      {/* Animated gradient background */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-1/2 -left-1/2 w-full h-full bg-gradient-to-br from-primary/5 via-transparent to-transparent rounded-full blur-3xl animate-pulse" />
+        <div className="absolute -bottom-1/2 -right-1/2 w-full h-full bg-gradient-to-tl from-primary/5 via-transparent to-transparent rounded-full blur-3xl animate-pulse delay-1000" />
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Transactions</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {transactions?.length || 0}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Channels</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {channels.filter((c) => c.status === 'connected').length}/3
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">Connected</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">
-              Suggested Matches
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{matches?.length || 0}</div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Total Amount</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              $
-              {transactions
-                ?.reduce((sum, t) => sum + Number(t.amount), 0)
-                .toFixed(2) || '0.00'}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Main Content with Chat */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left Content - 2/3 width */}
-        <div className="lg:col-span-2">
-          <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="transactions">
-                Raw Transactions
-                {transactions && transactions.length > 0 && (
-                  <Badge className="ml-2" variant="secondary">
-                    {transactions.length}
-                  </Badge>
-                )}
-              </TabsTrigger>
-              <TabsTrigger value="invoices">
-                Channels
-                <Badge className="ml-2" variant="secondary">
-                  {channels.filter((c) => c.status === 'connected').length}
+      <div className="relative z-10 p-6 space-y-6">
+        {/* Demo Controls Bar - Streamlined */}
+        <div className="relative overflow-hidden rounded-xl bg-gradient-to-r from-primary/5 via-transparent to-primary/5 backdrop-blur-sm border border-neutral-200/50 dark:border-neutral-800/50 p-4">
+          <div className="relative z-10">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-3">
+                <div className="relative">
+                  <div className="absolute inset-0 bg-primary/20 blur-xl animate-pulse" />
+                  <Sparkles className="h-5 w-5 text-primary relative z-10" />
+                </div>
+                <h3 className="font-semibold text-sm">Demo Scenarios</h3>
+                <Badge
+                  variant="outline"
+                  className="text-xs bg-white/50 dark:bg-neutral-800/50"
+                >
+                  Interactive Demo
                 </Badge>
-              </TabsTrigger>
-              <TabsTrigger value="matches">
-                Matches
-                {matches && matches.length > 0 && (
-                  <Badge className="ml-2" variant="secondary">
-                    {matches.length}
-                  </Badge>
-                )}
-              </TabsTrigger>
-            </TabsList>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={startDocumentDiscovery}
+                className="h-8 px-3 hover:bg-primary/10 hover:text-primary"
+              >
+                <FileText className="h-3.5 w-3.5 mr-2" />
+                <span className="text-xs">Find Invoice</span>
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={startBillPayment}
+                className="h-8 px-3 hover:bg-primary/10 hover:text-primary"
+              >
+                <DollarSign className="h-3.5 w-3.5 mr-2" />
+                <span className="text-xs">Pay Bills</span>
+              </Button>
+              <div className="h-6 w-px bg-neutral-200 dark:bg-neutral-700 mx-1" />
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={async () => {
+                  // Load comprehensive demo data
+                  await importCSV.mutateAsync({
+                    csvContent: sampleCSV,
+                    source: 'demo_data',
+                  });
+                  await syncGmail.mutateAsync();
+                  toast({
+                    title: '✅ Demo Data Loaded',
+                    description: 'Sample transactions and invoices ready',
+                  });
+                }}
+                className="h-8 px-3 hover:bg-primary/10 hover:text-primary"
+              >
+                <Database className="h-3.5 w-3.5 mr-2" />
+                <span className="text-xs">Load All Data</span>
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  // Reset to clean state
+                  setActiveThreadId('main');
+                  setChatThreads([
+                    {
+                      id: 'main',
+                      title: 'Main Chat',
+                      type: 'main',
+                      unread: 0,
+                      lastMessage: 'Welcome! How can I help you today?',
+                      timestamp: new Date(),
+                      status: 'active',
+                      messages: [
+                        {
+                          id: '1',
+                          type: 'assistant',
+                          content:
+                            'Welcome! I can help you process documents, categorize transactions, and find missing invoices. What would you like to do?',
+                          timestamp: new Date(),
+                        },
+                      ],
+                    },
+                  ]);
+                  toast({
+                    title: '✅ Reset Complete',
+                    description: 'Chat threads cleared',
+                  });
+                }}
+                className="h-8 px-3 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/20"
+              >
+                <RefreshCw className="h-3.5 w-3.5 mr-2" />
+                <span className="text-xs">Reset</span>
+              </Button>
+            </div>
+          </div>
+          {/* Animated gradient overlay */}
+          <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-primary/5 animate-pulse" />
+        </div>
 
-            {/* Transactions Tab */}
-            <TabsContent value="transactions" className="space-y-4">
-              <Card>
-                <CardHeader>
-                  <div className="flex justify-between items-center">
+        {/* Header */}
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-neutral-900 to-neutral-600 dark:from-white dark:to-neutral-400 bg-clip-text text-transparent">
+              AI Document Processing
+            </h1>
+            <p className="text-muted-foreground mt-1 text-sm">
+              Intelligent reconciliation and document processing with AI
+              assistance
+            </p>
+          </div>
+
+          <div className="flex gap-2">
+            {/* AI Context Button */}
+            <Dialog
+              open={companyContextOpen}
+              onOpenChange={setCompanyContextOpen}
+            >
+              <DialogTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="h-9 bg-white/50 dark:bg-neutral-800/50 backdrop-blur-sm hover:bg-primary/10 hover:text-primary"
+                >
+                  <Brain className="h-3.5 w-3.5 mr-2" />
+                  <span className="text-sm">AI Context</span>
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-2xl">
+                <DialogHeader>
+                  <DialogTitle>AI Context & Learning</DialogTitle>
+                  <DialogDescription>
+                    Train the AI with your company's accounting preferences and
+                    patterns
+                  </DialogDescription>
+                </DialogHeader>
+
+                <div className="space-y-4">
+                  <div className="flex justify-end">
+                    <Button
+                      onClick={handleRequestContext}
+                      disabled={isLoadingContext}
+                      variant="outline"
+                    >
+                      {isLoadingContext ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <Sparkles className="h-4 w-4 mr-2" />
+                      )}
+                      AI Learn From History
+                    </Button>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <CardTitle>Bank Transactions</CardTitle>
-                      <CardDescription>
-                        Import transactions from your bank CSV export
-                      </CardDescription>
+                      <Label>Company Name</Label>
+                      <Input
+                        value={companyContext.companyName}
+                        onChange={(e) =>
+                          setCompanyContext((prev) => ({
+                            ...prev,
+                            companyName: e.target.value,
+                          }))
+                        }
+                        placeholder="Enter company name..."
+                      />
                     </div>
 
-                    <div className="flex gap-2">
+                    <div>
+                      <Label>Industry</Label>
+                      <Input
+                        value={companyContext.industry}
+                        onChange={(e) =>
+                          setCompanyContext((prev) => ({
+                            ...prev,
+                            industry: e.target.value,
+                          }))
+                        }
+                        placeholder="e.g., Software, Healthcare..."
+                      />
+                    </div>
+
+                    <div>
+                      <Label>Fiscal Year End</Label>
+                      <Input
+                        value={companyContext.fiscalYearEnd}
+                        onChange={(e) =>
+                          setCompanyContext((prev) => ({
+                            ...prev,
+                            fiscalYearEnd: e.target.value,
+                          }))
+                        }
+                        placeholder="e.g., December 31"
+                      />
+                    </div>
+
+                    <div>
+                      <Label>Accounting Method</Label>
+                      <Select
+                        value={companyContext.accountingMethod}
+                        onValueChange={(value) =>
+                          setCompanyContext((prev) => ({
+                            ...prev,
+                            accountingMethod: value,
+                          }))
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="cash">Cash</SelectItem>
+                          <SelectItem value="accrual">Accrual</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  {companyContext.automationRules.length > 0 && (
+                    <div>
+                      <Label>Automation Rules</Label>
+                      <div className="mt-2 space-y-2">
+                        {companyContext.automationRules.map((rule, idx) => (
+                          <div
+                            key={idx}
+                            className="flex items-center justify-between p-2 border rounded"
+                          >
+                            <span className="text-sm">
+                              {rule.vendor} → GL {rule.glCode}
+                            </span>
+                            <Badge
+                              variant={
+                                rule.autoApprove ? 'default' : 'secondary'
+                              }
+                            >
+                              {rule.autoApprove ? 'Auto' : 'Manual'}
+                            </Badge>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {companyContext.preferredVendors.length > 0 && (
+                    <div>
+                      <Label>Preferred Vendors</Label>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {companyContext.preferredVendors.map((vendor, idx) => (
+                          <Badge key={idx} variant="outline">
+                            {vendor}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </DialogContent>
+            </Dialog>
+
+            <Button
+              onClick={() => proposeMatches.mutate({})}
+              disabled={proposeMatches.isPending}
+              variant="outline"
+              className="h-9 bg-white/50 dark:bg-neutral-800/50 backdrop-blur-sm hover:bg-primary/10 hover:text-primary"
+            >
+              {proposeMatches.isPending ? (
+                <Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" />
+              ) : (
+                <Link2 className="h-3.5 w-3.5 mr-2" />
+              )}
+              <span className="text-sm">Propose Matches</span>
+            </Button>
+
+            {/* Delete All Button */}
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-9 w-9 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/20"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Delete All Data?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This will permanently delete all transactions, invoices, and
+                    matches. This action cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleDeleteAll}>
+                    Delete Everything
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
+        </div>
+
+        {/* Stats Cards with modern design */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <Card className="bg-white/50 dark:bg-neutral-800/50 backdrop-blur-sm border-neutral-200/50 dark:border-neutral-700/50">
+            <CardHeader className="pb-2">
+              <CardDescription className="text-xs">
+                Transactions
+              </CardDescription>
+              <CardTitle className="text-2xl font-bold">
+                {transactions?.length || 0}
+              </CardTitle>
+            </CardHeader>
+          </Card>
+
+          <Card className="bg-white/50 dark:bg-neutral-800/50 backdrop-blur-sm border-neutral-200/50 dark:border-neutral-700/50">
+            <CardHeader className="pb-2">
+              <CardDescription className="text-xs">Channels</CardDescription>
+              <CardTitle className="text-2xl font-bold">
+                {channels.filter((c) => c.status === 'connected').length}/3
+              </CardTitle>
+            </CardHeader>
+          </Card>
+
+          <Card className="bg-white/50 dark:bg-neutral-800/50 backdrop-blur-sm border-neutral-200/50 dark:border-neutral-700/50">
+            <CardHeader className="pb-2">
+              <CardDescription className="text-xs">Matches</CardDescription>
+              <CardTitle className="text-2xl font-bold">
+                {matches?.length || 0}
+              </CardTitle>
+            </CardHeader>
+          </Card>
+
+          <Card className="bg-white/50 dark:bg-neutral-800/50 backdrop-blur-sm border-neutral-200/50 dark:border-neutral-700/50">
+            <CardHeader className="pb-2">
+              <CardDescription className="text-xs">
+                Total Amount
+              </CardDescription>
+              <CardTitle className="text-2xl font-bold">
+                $
+                {transactions
+                  ?.reduce((sum, t) => sum + Number(t.amount), 0)
+                  .toFixed(2) || '0.00'}
+              </CardTitle>
+            </CardHeader>
+          </Card>
+        </div>
+
+        {/* Main Content with Chat */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Left Content - 2/3 width */}
+          <div className="lg:col-span-2">
+            <Tabs value={activeTab} onValueChange={setActiveTab}>
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="transactions">
+                  Raw Transactions
+                  {transactions && transactions.length > 0 && (
+                    <Badge className="ml-2" variant="secondary">
+                      {transactions.length}
+                    </Badge>
+                  )}
+                </TabsTrigger>
+                <TabsTrigger value="invoices">
+                  Channels
+                  <Badge className="ml-2" variant="secondary">
+                    {channels.filter((c) => c.status === 'connected').length}
+                  </Badge>
+                </TabsTrigger>
+                <TabsTrigger value="matches">
+                  Matches
+                  {matches && matches.length > 0 && (
+                    <Badge className="ml-2" variant="secondary">
+                      {matches.length}
+                    </Badge>
+                  )}
+                </TabsTrigger>
+              </TabsList>
+
+              {/* Transactions Tab */}
+              <TabsContent value="transactions" className="space-y-4">
+                <Card>
+                  <CardHeader>
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <CardTitle>Bank Transactions</CardTitle>
+                        <CardDescription>
+                          Import transactions from your bank CSV export
+                        </CardDescription>
+                      </div>
+
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          onClick={async () => {
+                            // Load demo transactions
+                            await importCSV.mutateAsync({
+                              csvContent: sampleCSV,
+                              source: 'demo_data',
+                            });
+                          }}
+                          disabled={importCSV.isPending}
+                          className="hover:bg-primary/10 hover:text-primary"
+                        >
+                          {importCSV.isPending ? (
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          ) : (
+                            <Database className="h-4 w-4 mr-2" />
+                          )}
+                          Load Demo Data
+                        </Button>
+
+                        <Dialog
+                          open={csvDialogOpen}
+                          onOpenChange={setCsvDialogOpen}
+                        >
+                          <DialogTrigger asChild>
+                            <Button>
+                              <Upload className="h-4 w-4 mr-2" />
+                              Import CSV
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent className="max-w-2xl">
+                            <DialogHeader>
+                              <DialogTitle>
+                                Import Transactions from CSV
+                              </DialogTitle>
+                              <DialogDescription>
+                                Paste your CSV content or upload a file. The
+                                system will automatically detect columns.
+                              </DialogDescription>
+                            </DialogHeader>
+
+                            <div className="space-y-4">
+                              <div>
+                                <Label>CSV Content</Label>
+                                <Textarea
+                                  placeholder="Paste your CSV content here..."
+                                  value={csvContent}
+                                  onChange={(e) =>
+                                    setCsvContent(e.target.value)
+                                  }
+                                  className="h-48 font-mono text-sm"
+                                />
+                              </div>
+
+                              <div className="flex items-center gap-4">
+                                <Button
+                                  variant="outline"
+                                  onClick={() => fileInputRef.current?.click()}
+                                >
+                                  <FileUp className="h-4 w-4 mr-2" />
+                                  Upload File
+                                </Button>
+
+                                <Button
+                                  variant="outline"
+                                  onClick={() => setCsvContent(sampleCSV)}
+                                >
+                                  Use Sample Data
+                                </Button>
+
+                                <input
+                                  ref={fileInputRef}
+                                  type="file"
+                                  accept=".csv"
+                                  onChange={handleCSVFile}
+                                  className="hidden"
+                                />
+                              </div>
+
+                              <Button
+                                onClick={handleImportCSV}
+                                disabled={isUploadingCSV || !csvContent}
+                                className="w-full"
+                              >
+                                {isUploadingCSV ? (
+                                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                ) : (
+                                  <Upload className="h-4 w-4 mr-2" />
+                                )}
+                                Import Transactions
+                              </Button>
+                            </div>
+                          </DialogContent>
+                        </Dialog>
+                      </div>
+                    </div>
+                  </CardHeader>
+
+                  <CardContent>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-[100px]">Date</TableHead>
+                          <TableHead className="w-[150px]">
+                            Counterparty
+                          </TableHead>
+                          <TableHead className="min-w-[200px]">
+                            Description
+                          </TableHead>
+                          <TableHead className="text-right w-[120px]">
+                            Amount
+                          </TableHead>
+                          <TableHead className="w-[200px]">GL Code</TableHead>
+                          <TableHead className="w-[150px]">Status</TableHead>
+                          <TableHead className="w-[100px]">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {transactions?.map((tx) => {
+                          const suggestedGL = getSuggestedGLCode(
+                            tx.counterparty || undefined,
+                            tx.memo || undefined,
+                          );
+                          const assignedGL = transactionGLCodes[tx.id];
+                          const isObjectGL =
+                            typeof assignedGL === 'object' &&
+                            assignedGL !== null;
+                          const assignedGLCode = isObjectGL
+                            ? (assignedGL as any).code
+                            : assignedGL;
+                          const glConfidence = isObjectGL
+                            ? (assignedGL as any).confidence
+                            : null;
+
+                          // Determine status
+                          const hasContextRequest = contextRequests.some(
+                            (r) => r.itemId === tx.id,
+                          );
+                          const isWaitingForResponse =
+                            hasContextRequest &&
+                            contextRequests.find((r) => r.itemId === tx.id)
+                              ?.status === 'pending';
+                          const hasResponse = clarifiedItems.has(`tx-${tx.id}`);
+
+                          return (
+                            <TableRow
+                              key={tx.id}
+                              className={
+                                hasResponse
+                                  ? 'bg-green-50 dark:bg-green-950/20'
+                                  : isWaitingForResponse
+                                    ? 'bg-yellow-50 dark:bg-yellow-950/20'
+                                    : !assignedGLCode
+                                      ? 'bg-red-50 dark:bg-red-950/20'
+                                      : ''
+                              }
+                            >
+                              <TableCell>
+                                {new Date(tx.txnDate).toLocaleDateString()}
+                              </TableCell>
+                              <TableCell>{tx.counterparty || '-'}</TableCell>
+                              <TableCell className="max-w-xs truncate">
+                                {tx.memo || '-'}
+                              </TableCell>
+                              <TableCell className="text-right font-mono">
+                                ${Number(tx.amount).toFixed(2)}
+                              </TableCell>
+                              <TableCell className="min-w-[200px]">
+                                <div className="flex flex-col gap-1.5">
+                                  {assignedGLCode ? (
+                                    <Badge
+                                      variant="default"
+                                      className="gap-1 w-fit text-xs"
+                                    >
+                                      <Hash className="h-3 w-3 flex-shrink-0" />
+                                      <span className="font-mono">
+                                        {assignedGLCode}
+                                      </span>
+                                      {typeof assignedGL === 'object' &&
+                                        assignedGL.confidence && (
+                                          <span className="opacity-70">
+                                            {assignedGL.confidence}%
+                                          </span>
+                                        )}
+                                    </Badge>
+                                  ) : suggestedGL ? (
+                                    <Badge
+                                      variant="secondary"
+                                      className="gap-1 w-fit text-xs"
+                                    >
+                                      <Sparkles className="h-3 w-3 flex-shrink-0" />
+                                      <span className="font-mono">
+                                        {suggestedGL.code}
+                                      </span>
+                                      <span className="opacity-70">
+                                        {suggestedGL.confidence}%
+                                      </span>
+                                    </Badge>
+                                  ) : null}
+
+                                  <Select
+                                    value={assignedGLCode || ''}
+                                    onValueChange={(value) =>
+                                      handleAssignGLCode(
+                                        tx.id,
+                                        value,
+                                        'transaction',
+                                      )
+                                    }
+                                  >
+                                    <SelectTrigger className="w-full max-w-[180px] h-8 text-xs">
+                                      <SelectValue placeholder="Select GL Code" />
+                                    </SelectTrigger>
+                                    <SelectContent className="max-h-[300px]">
+                                      {mockGLCodes.map((gl) => (
+                                        <SelectItem
+                                          key={gl.code}
+                                          value={gl.code}
+                                        >
+                                          <div className="flex flex-col items-start">
+                                            <div className="flex items-center gap-2">
+                                              <span className="font-mono font-semibold text-xs">
+                                                {gl.code}
+                                              </span>
+                                              <Badge
+                                                variant="outline"
+                                                className="text-[10px] py-0 px-1"
+                                              >
+                                                {gl.category}
+                                              </Badge>
+                                            </div>
+                                            <span className="text-[11px] text-muted-foreground">
+                                              {gl.name}
+                                            </span>
+                                          </div>
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                              </TableCell>
+                              <TableCell className="min-w-[150px]">
+                                <div className="flex flex-col gap-1">
+                                  <Badge variant="outline" className="w-fit">
+                                    {tx.source}
+                                  </Badge>
+                                  {/* Show only one status badge at a time, in priority order */}
+                                  {hasResponse ? (
+                                    <Badge
+                                      variant="default"
+                                      className="gap-1 w-fit"
+                                    >
+                                      <CheckCircle className="h-3 w-3" />
+                                      Clarified
+                                    </Badge>
+                                  ) : isWaitingForResponse ? (
+                                    <Badge
+                                      variant="secondary"
+                                      className="gap-1 w-fit"
+                                    >
+                                      <Clock className="h-3 w-3" />
+                                      Waiting
+                                    </Badge>
+                                  ) : !assignedGLCode ? (
+                                    <Badge
+                                      variant="destructive"
+                                      className="gap-1 w-fit"
+                                    >
+                                      <AlertCircle className="h-3 w-3" />
+                                      Needs Review
+                                    </Badge>
+                                  ) : null}
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex gap-1">
+                                  <Button
+                                    variant={
+                                      clarifiedItems.has(`tx-${tx.id}`)
+                                        ? 'default'
+                                        : 'ghost'
+                                    }
+                                    size="icon"
+                                    onClick={() =>
+                                      handleCreateContextRequest(
+                                        tx,
+                                        'transaction',
+                                      )
+                                    }
+                                    title={
+                                      clarifiedItems.has(`tx-${tx.id}`)
+                                        ? 'Client has clarified this item'
+                                        : 'Request Context'
+                                    }
+                                  >
+                                    {clarifiedItems.has(`tx-${tx.id}`) ? (
+                                      <CheckCircle className="h-4 w-4" />
+                                    ) : (
+                                      <MessageSquare className="h-4 w-4" />
+                                    )}
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() =>
+                                      deleteTransaction.mutate({ id: tx.id })
+                                    }
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+
+                        {(!transactions || transactions.length === 0) && (
+                          <TableRow>
+                            <TableCell
+                              colSpan={7}
+                              className="text-center py-8 text-muted-foreground"
+                            >
+                              No transactions yet. Import a CSV to get started.
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              {/* Channels Tab */}
+              <TabsContent value="invoices" className="space-y-4">
+                {/* Channels Overview */}
+                <Card>
+                  <CardHeader>
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <CardTitle>Connected Channels</CardTitle>
+                        <CardDescription>
+                          Manage your data sources and sync documents
+                          automatically
+                        </CardDescription>
+                      </div>
                       <Button
                         variant="outline"
-                        onClick={() => syncMercury.mutate()}
-                        disabled={syncMercury.isPending}
+                        onClick={() => handleSendMessage('Sync all channels')}
                       >
-                        {syncMercury.isPending ? (
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        ) : (
-                          <div className="w-4 h-4 mr-2 bg-black rounded-sm flex items-center justify-center">
-                            <span className="text-white text-xs font-bold">
-                              M
-                            </span>
-                          </div>
-                        )}
-                        Sync Mercury
+                        <RefreshCw className="h-4 w-4 mr-2" />
+                        Sync All
                       </Button>
-
-                      <Dialog
-                        open={csvDialogOpen}
-                        onOpenChange={setCsvDialogOpen}
-                      >
-                        <DialogTrigger asChild>
-                          <Button>
-                            <Upload className="h-4 w-4 mr-2" />
-                            Import CSV
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent className="max-w-2xl">
-                          <DialogHeader>
-                            <DialogTitle>
-                              Import Transactions from CSV
-                            </DialogTitle>
-                            <DialogDescription>
-                              Paste your CSV content or upload a file. The
-                              system will automatically detect columns.
-                            </DialogDescription>
-                          </DialogHeader>
-
-                          <div className="space-y-4">
-                            <div>
-                              <Label>CSV Content</Label>
-                              <Textarea
-                                placeholder="Paste your CSV content here..."
-                                value={csvContent}
-                                onChange={(e) => setCsvContent(e.target.value)}
-                                className="h-48 font-mono text-sm"
-                              />
-                            </div>
-
-                            <div className="flex items-center gap-4">
-                              <Button
-                                variant="outline"
-                                onClick={() => fileInputRef.current?.click()}
-                              >
-                                <FileUp className="h-4 w-4 mr-2" />
-                                Upload File
-                              </Button>
-
-                              <Button
-                                variant="outline"
-                                onClick={() => setCsvContent(sampleCSV)}
-                              >
-                                Use Sample Data
-                              </Button>
-
-                              <input
-                                ref={fileInputRef}
-                                type="file"
-                                accept=".csv"
-                                onChange={handleCSVFile}
-                                className="hidden"
-                              />
-                            </div>
-
-                            <Button
-                              onClick={handleImportCSV}
-                              disabled={isUploadingCSV || !csvContent}
-                              className="w-full"
-                            >
-                              {isUploadingCSV ? (
-                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                              ) : (
-                                <Upload className="h-4 w-4 mr-2" />
-                              )}
-                              Import Transactions
-                            </Button>
-                          </div>
-                        </DialogContent>
-                      </Dialog>
                     </div>
-                  </div>
-                </CardHeader>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      {channels.map((channel) => (
+                        <Card key={channel.id} className="relative">
+                          <CardHeader className="pb-3">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <span className="text-2xl">{channel.icon}</span>
+                                <div>
+                                  <CardTitle className="text-base">
+                                    {channel.name}
+                                  </CardTitle>
+                                  <Badge
+                                    variant={
+                                      channel.status === 'connected'
+                                        ? 'default'
+                                        : 'secondary'
+                                    }
+                                    className="text-xs"
+                                  >
+                                    {channel.status}
+                                  </Badge>
+                                </div>
+                              </div>
+                              <div
+                                className={`w-3 h-3 rounded-full ${
+                                  channel.status === 'connected'
+                                    ? 'bg-green-500'
+                                    : 'bg-gray-400'
+                                }`}
+                              />
+                            </div>
+                          </CardHeader>
+                          <CardContent className="pt-0">
+                            <div className="space-y-2">
+                              <div className="flex justify-between items-center">
+                                <span className="text-sm text-muted-foreground">
+                                  Documents
+                                </span>
+                                <span className="font-semibold">
+                                  {channel.documentCount}
+                                </span>
+                              </div>
+                              <div className="flex justify-between items-center">
+                                <span className="text-sm text-muted-foreground">
+                                  Last Sync
+                                </span>
+                                <span className="text-sm">
+                                  {channel.lastSync
+                                    ? channel.lastSync.toLocaleTimeString()
+                                    : 'Never'}
+                                </span>
+                              </div>
+                              <div className="flex gap-2 mt-3">
+                                {channel.status === 'connected' ? (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="flex-1"
+                                    onClick={() =>
+                                      handleSendMessage(`Sync ${channel.name}`)
+                                    }
+                                  >
+                                    Sync
+                                  </Button>
+                                ) : (
+                                  <Button size="sm" className="flex-1">
+                                    Connect
+                                  </Button>
+                                )}
+                                <Button size="sm" variant="ghost">
+                                  <Settings className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
 
-                <CardContent>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="w-[100px]">Date</TableHead>
-                        <TableHead className="w-[150px]">
-                          Counterparty
-                        </TableHead>
-                        <TableHead className="min-w-[200px]">
-                          Description
-                        </TableHead>
-                        <TableHead className="text-right w-[120px]">
-                          Amount
-                        </TableHead>
-                        <TableHead className="w-[200px]">GL Code</TableHead>
-                        <TableHead className="w-[150px]">Status</TableHead>
-                        <TableHead className="w-[100px]">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {transactions?.map((tx) => {
-                        const suggestedGL = getSuggestedGLCode(
-                          tx.counterparty || undefined,
-                          tx.memo || undefined,
-                        );
-                        const assignedGL = transactionGLCodes[tx.id];
-                        const isObjectGL =
-                          typeof assignedGL === 'object' && assignedGL !== null;
-                        const assignedGLCode = isObjectGL
-                          ? (assignedGL as any).code
-                          : assignedGL;
-                        const glConfidence = isObjectGL
-                          ? (assignedGL as any).confidence
-                          : null;
-
-                        // Determine status
-                        const hasContextRequest = contextRequests.some(
-                          (r) => r.itemId === tx.id,
-                        );
-                        const isWaitingForResponse =
-                          hasContextRequest &&
-                          contextRequests.find((r) => r.itemId === tx.id)
-                            ?.status === 'pending';
-                        const hasResponse = clarifiedItems.has(`tx-${tx.id}`);
-
-                        return (
-                          <TableRow
-                            key={tx.id}
-                            className={
-                              hasResponse
-                                ? 'bg-green-50 dark:bg-green-950/20'
-                                : isWaitingForResponse
-                                  ? 'bg-yellow-50 dark:bg-yellow-950/20'
-                                  : !assignedGLCode
-                                    ? 'bg-red-50 dark:bg-red-950/20'
-                                    : ''
-                            }
-                          >
+                {/* Extracted Documents */}
+                <Card>
+                  <CardHeader>
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <CardTitle>Extracted Documents</CardTitle>
+                        <CardDescription>
+                          AI-processed documents from your connected channels
+                        </CardDescription>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() =>
+                            handleSendMessage('Find missing invoices')
+                          }
+                        >
+                          <AlertTriangle className="h-4 w-4 mr-2" />
+                          Find Missing
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() =>
+                            handleSendMessage(
+                              'Show me all invoices from this month',
+                            )
+                          }
+                        >
+                          <MessageSquare className="h-4 w-4 mr-2" />
+                          Chat with Data
+                        </Button>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Document</TableHead>
+                          <TableHead>Type</TableHead>
+                          <TableHead>Source</TableHead>
+                          <TableHead>Amount</TableHead>
+                          <TableHead>Confidence</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead></TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {extractedDocuments.map((doc) => (
+                          <TableRow key={doc.id}>
                             <TableCell>
-                              {new Date(tx.txnDate).toLocaleDateString()}
+                              <div className="font-medium">{doc.title}</div>
                             </TableCell>
-                            <TableCell>{tx.counterparty || '-'}</TableCell>
-                            <TableCell className="max-w-xs truncate">
-                              {tx.memo || '-'}
+                            <TableCell>
+                              <Badge variant="outline" className="capitalize">
+                                {doc.type === 'invoice' ? '📄' : '💬'}{' '}
+                                {doc.type}
+                              </Badge>
                             </TableCell>
-                            <TableCell className="text-right font-mono">
-                              ${Number(tx.amount).toFixed(2)}
-                            </TableCell>
-                            <TableCell className="min-w-[200px]">
-                              <div className="flex flex-col gap-2">
-                                {assignedGLCode ? (
-                                  <Badge
-                                    variant="default"
-                                    className="gap-1 w-fit"
-                                  >
-                                    <Hash className="h-3 w-3 flex-shrink-0" />
-                                    <span>{assignedGLCode}</span>
-                                    {typeof assignedGL === 'object' &&
-                                      assignedGL.confidence && (
-                                        <span className="text-xs">
-                                          ({assignedGL.confidence}%)
-                                        </span>
-                                      )}
-                                  </Badge>
-                                ) : suggestedGL ? (
-                                  <Badge
-                                    variant="secondary"
-                                    className="gap-1 w-fit"
-                                  >
-                                    <Sparkles className="h-3 w-3 flex-shrink-0" />
-                                    <span>{suggestedGL.code}</span>
-                                    <span className="text-xs">
-                                      ({suggestedGL.confidence}%)
-                                    </span>
-                                  </Badge>
-                                ) : null}
-
-                                <Select
-                                  value={assignedGLCode || ''}
-                                  onValueChange={(value) =>
-                                    handleAssignGLCode(
-                                      tx.id,
-                                      value,
-                                      'transaction',
-                                    )
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <span>
+                                  {
+                                    channels.find((c) => c.id === doc.source)
+                                      ?.icon
                                   }
-                                >
-                                  <SelectTrigger className="w-[140px] h-7">
-                                    <SelectValue placeholder="Assign GL" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {mockGLCodes.map((gl) => (
-                                      <SelectItem key={gl.code} value={gl.code}>
-                                        <div className="flex items-center gap-2">
-                                          <span className="font-mono text-xs">
-                                            {gl.code}
-                                          </span>
-                                          <span className="text-xs truncate max-w-[150px]">
-                                            {gl.name}
-                                          </span>
-                                        </div>
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
+                                </span>
+                                <span className="text-sm">{doc.source}</span>
                               </div>
                             </TableCell>
-                            <TableCell className="min-w-[150px]">
-                              <div className="flex flex-col gap-1">
-                                <Badge variant="outline" className="w-fit">
-                                  {tx.source}
-                                </Badge>
-                                {/* Show only one status badge at a time, in priority order */}
-                                {hasResponse ? (
-                                  <Badge
-                                    variant="default"
-                                    className="gap-1 w-fit"
-                                  >
-                                    <CheckCircle className="h-3 w-3" />
-                                    Clarified
-                                  </Badge>
-                                ) : isWaitingForResponse ? (
-                                  <Badge
-                                    variant="secondary"
-                                    className="gap-1 w-fit"
-                                  >
-                                    <Clock className="h-3 w-3" />
-                                    Waiting
-                                  </Badge>
-                                ) : !assignedGLCode ? (
-                                  <Badge
-                                    variant="destructive"
-                                    className="gap-1 w-fit"
-                                  >
-                                    <AlertCircle className="h-3 w-3" />
-                                    Needs Review
-                                  </Badge>
-                                ) : null}
-                              </div>
+                            <TableCell>
+                              {doc.amount ? (
+                                <span className="font-mono">
+                                  ${doc.amount.toFixed(2)}
+                                </span>
+                              ) : (
+                                '-'
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <Badge
+                                variant={
+                                  doc.confidence > 80 ? 'default' : 'secondary'
+                                }
+                              >
+                                {doc.confidence}%
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <Badge
+                                variant={
+                                  doc.status === 'processed'
+                                    ? 'default'
+                                    : doc.status === 'pending'
+                                      ? 'secondary'
+                                      : 'outline'
+                                }
+                              >
+                                {doc.status.replace('_', ' ')}
+                              </Badge>
                             </TableCell>
                             <TableCell>
                               <div className="flex gap-1">
-                                <Button
-                                  variant={
-                                    clarifiedItems.has(`tx-${tx.id}`)
-                                      ? 'default'
-                                      : 'ghost'
-                                  }
-                                  size="icon"
-                                  onClick={() =>
-                                    handleCreateContextRequest(
-                                      tx,
-                                      'transaction',
-                                    )
-                                  }
-                                  title={
-                                    clarifiedItems.has(`tx-${tx.id}`)
-                                      ? 'Client has clarified this item'
-                                      : 'Request Context'
-                                  }
-                                >
-                                  {clarifiedItems.has(`tx-${tx.id}`) ? (
-                                    <CheckCircle className="h-4 w-4" />
-                                  ) : (
-                                    <MessageSquare className="h-4 w-4" />
-                                  )}
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() =>
-                                    deleteTransaction.mutate({ id: tx.id })
-                                  }
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })}
-
-                      {(!transactions || transactions.length === 0) && (
-                        <TableRow>
-                          <TableCell
-                            colSpan={7}
-                            className="text-center py-8 text-muted-foreground"
-                          >
-                            No transactions yet. Import a CSV to get started.
-                          </TableCell>
-                        </TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            {/* Channels Tab */}
-            <TabsContent value="invoices" className="space-y-4">
-              {/* Channels Overview */}
-              <Card>
-                <CardHeader>
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <CardTitle>Connected Channels</CardTitle>
-                      <CardDescription>
-                        Manage your data sources and sync documents
-                        automatically
-                      </CardDescription>
-                    </div>
-                    <Button
-                      variant="outline"
-                      onClick={() => handleSendMessage('Sync all channels')}
-                    >
-                      <RefreshCw className="h-4 w-4 mr-2" />
-                      Sync All
-                    </Button>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    {channels.map((channel) => (
-                      <Card key={channel.id} className="relative">
-                        <CardHeader className="pb-3">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              <span className="text-2xl">{channel.icon}</span>
-                              <div>
-                                <CardTitle className="text-base">
-                                  {channel.name}
-                                </CardTitle>
-                                <Badge
-                                  variant={
-                                    channel.status === 'connected'
-                                      ? 'default'
-                                      : 'secondary'
-                                  }
-                                  className="text-xs"
-                                >
-                                  {channel.status}
-                                </Badge>
-                              </div>
-                            </div>
-                            <div
-                              className={`w-3 h-3 rounded-full ${
-                                channel.status === 'connected'
-                                  ? 'bg-green-500'
-                                  : 'bg-gray-400'
-                              }`}
-                            />
-                          </div>
-                        </CardHeader>
-                        <CardContent className="pt-0">
-                          <div className="space-y-2">
-                            <div className="flex justify-between items-center">
-                              <span className="text-sm text-muted-foreground">
-                                Documents
-                              </span>
-                              <span className="font-semibold">
-                                {channel.documentCount}
-                              </span>
-                            </div>
-                            <div className="flex justify-between items-center">
-                              <span className="text-sm text-muted-foreground">
-                                Last Sync
-                              </span>
-                              <span className="text-sm">
-                                {channel.lastSync
-                                  ? channel.lastSync.toLocaleTimeString()
-                                  : 'Never'}
-                              </span>
-                            </div>
-                            <div className="flex gap-2 mt-3">
-                              {channel.status === 'connected' ? (
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  className="flex-1"
-                                  onClick={() =>
-                                    handleSendMessage(`Sync ${channel.name}`)
-                                  }
-                                >
-                                  Sync
-                                </Button>
-                              ) : (
-                                <Button size="sm" className="flex-1">
-                                  Connect
-                                </Button>
-                              )}
-                              <Button size="sm" variant="ghost">
-                                <Settings className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Extracted Documents */}
-              <Card>
-                <CardHeader>
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <CardTitle>Extracted Documents</CardTitle>
-                      <CardDescription>
-                        AI-processed documents from your connected channels
-                      </CardDescription>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() =>
-                          handleSendMessage('Find missing invoices')
-                        }
-                      >
-                        <AlertTriangle className="h-4 w-4 mr-2" />
-                        Find Missing
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() =>
-                          handleSendMessage(
-                            'Show me all invoices from this month',
-                          )
-                        }
-                      >
-                        <MessageSquare className="h-4 w-4 mr-2" />
-                        Chat with Data
-                      </Button>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Document</TableHead>
-                        <TableHead>Type</TableHead>
-                        <TableHead>Source</TableHead>
-                        <TableHead>Amount</TableHead>
-                        <TableHead>Confidence</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead></TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {extractedDocuments.map((doc) => (
-                        <TableRow key={doc.id}>
-                          <TableCell>
-                            <div className="font-medium">{doc.title}</div>
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant="outline" className="capitalize">
-                              {doc.type === 'invoice' ? '📄' : '💬'} {doc.type}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              <span>
-                                {
-                                  channels.find((c) => c.id === doc.source)
-                                    ?.icon
-                                }
-                              </span>
-                              <span className="text-sm">{doc.source}</span>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            {doc.amount ? (
-                              <span className="font-mono">
-                                ${doc.amount.toFixed(2)}
-                              </span>
-                            ) : (
-                              '-'
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            <Badge
-                              variant={
-                                doc.confidence > 80 ? 'default' : 'secondary'
-                              }
-                            >
-                              {doc.confidence}%
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <Badge
-                              variant={
-                                doc.status === 'processed'
-                                  ? 'default'
-                                  : doc.status === 'pending'
-                                    ? 'secondary'
-                                    : 'outline'
-                              }
-                            >
-                              {doc.status.replace('_', ' ')}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex gap-1">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() =>
-                                  handleSendMessage(
-                                    `Tell me about ${doc.title}`,
-                                  )
-                                }
-                                title="Chat about this document"
-                              >
-                                <MessageSquare className="h-4 w-4" />
-                              </Button>
-                              {doc.type === 'invoice' && (
                                 <Button
                                   variant="ghost"
                                   size="icon"
                                   onClick={() =>
                                     handleSendMessage(
-                                      `Match ${doc.title} to transactions`,
+                                      `Tell me about ${doc.title}`,
                                     )
                                   }
-                                  title="Find matching transaction"
+                                  title="Chat about this document"
                                 >
-                                  <Link2 className="h-4 w-4" />
+                                  <MessageSquare className="h-4 w-4" />
                                 </Button>
+                                {doc.type === 'invoice' && (
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() =>
+                                      handleSendMessage(
+                                        `Match ${doc.title} to transactions`,
+                                      )
+                                    }
+                                    title="Find matching transaction"
+                                  >
+                                    <Link2 className="h-4 w-4" />
+                                  </Button>
+                                )}
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              {/* Matches Tab */}
+              <TabsContent value="matches" className="space-y-4">
+                <Card>
+                  <CardHeader>
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <CardTitle>Suggested Matches</CardTitle>
+                        <CardDescription>
+                          Review and confirm AI-proposed invoice-to-transaction
+                          matches
+                        </CardDescription>
+                      </div>
+
+                      <Button
+                        variant="outline"
+                        onClick={() => refetchMatches()}
+                      >
+                        <RefreshCw className="h-4 w-4 mr-2" />
+                        Refresh
+                      </Button>
+                    </div>
+                  </CardHeader>
+
+                  <CardContent>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Invoice</TableHead>
+                          <TableHead>Transaction</TableHead>
+                          <TableHead>Score</TableHead>
+                          <TableHead>Rationale</TableHead>
+                          <TableHead>Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {matches?.map((item) => (
+                          <TableRow key={item.match.id}>
+                            <TableCell>
+                              <div className="space-y-1">
+                                <div className="font-medium">
+                                  {item.invoice?.invoiceNumber || 'N/A'}
+                                </div>
+                                <div className="text-sm text-muted-foreground">
+                                  {item.invoice?.vendor} - $
+                                  {Number(
+                                    item.invoice?.totalAmount || 0,
+                                  ).toFixed(2)}
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="space-y-1">
+                                <div className="font-medium">
+                                  {item.transaction?.counterparty || 'N/A'}
+                                </div>
+                                <div className="text-sm text-muted-foreground">
+                                  {item.transaction?.txnDate
+                                    ? new Date(
+                                        item.transaction.txnDate,
+                                      ).toLocaleDateString()
+                                    : ''}{' '}
+                                  - $
+                                  {Number(
+                                    item.transaction?.amount || 0,
+                                  ).toFixed(2)}
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <Badge
+                                variant={
+                                  Number(item.match.score) >= 90
+                                    ? 'default'
+                                    : Number(item.match.score) >= 70
+                                      ? 'secondary'
+                                      : 'outline'
+                                }
+                              >
+                                {Math.round(Number(item.match.score))}%
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="max-w-xs">
+                              <span className="text-sm text-muted-foreground">
+                                {item.match.rationale || '-'}
+                              </span>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex gap-2">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() =>
+                                    confirmMatch.mutate({
+                                      matchId: item.match.id,
+                                    })
+                                  }
+                                >
+                                  <Check className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() =>
+                                    rejectMatch.mutate({
+                                      matchId: item.match.id,
+                                    })
+                                  }
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+
+                        {(!matches || matches.length === 0) && (
+                          <TableRow>
+                            <TableCell
+                              colSpan={5}
+                              className="text-center py-8 text-muted-foreground"
+                            >
+                              No matches proposed yet. Add some transactions and
+                              invoices, then click "Propose Matches".
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </Tabs>
+          </div>
+
+          {/* Right Side - Chat Interface */}
+          <div className="lg:col-span-1 h-full">
+            <Card className="h-[calc(100vh-200px)] flex flex-col">
+              <CardHeader className="pb-2 border-b">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Brain className="h-5 w-5" />
+                  AI Assistant
+                </CardTitle>
+                <CardDescription className="text-xs">
+                  Multi-thread conversations for financial operations
+                </CardDescription>
+              </CardHeader>
+
+              {/* Thread Switcher */}
+              <div className="border-b p-2 bg-gray-50 dark:bg-gray-900">
+                <div className="flex gap-1 overflow-x-auto">
+                  {chatThreads.map((thread) => (
+                    <Button
+                      key={thread.id}
+                      variant={
+                        activeThreadId === thread.id ? 'default' : 'ghost'
+                      }
+                      size="sm"
+                      className="relative whitespace-nowrap"
+                      onClick={() => setActiveThreadId(thread.id)}
+                    >
+                      {thread.type === 'email' && '📧 '}
+                      {thread.type === 'context' && '💬 '}
+                      {thread.type === 'main' && '🏠 '}
+                      {thread.title}
+                      {thread.unread > 0 && (
+                        <Badge className="ml-2 h-5 px-1" variant="destructive">
+                          {thread.unread}
+                        </Badge>
+                      )}
+                      {thread.status === 'waiting' && (
+                        <Loader2 className="ml-2 h-3 w-3 animate-spin" />
+                      )}
+                    </Button>
+                  ))}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      const newThreadId = createNewThread(
+                        'New Chat',
+                        'context',
+                      );
+                      handleSendMessage('How can I help you?', newThreadId);
+                    }}
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+
+              <CardContent className="flex-1 flex flex-col p-0 overflow-hidden">
+                {/* Messages */}
+                <div className="flex-1 overflow-y-auto p-4 space-y-4 max-h-[calc(100vh-450px)]">
+                  {chatMessages.map((message: any) => (
+                    <div
+                      key={message.id}
+                      className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
+                    >
+                      <div className="max-w-[80%] space-y-1">
+                        {/* Sender Label */}
+                        <div
+                          className={`text-xs font-medium ${
+                            message.type === 'user'
+                              ? 'text-right text-blue-600'
+                              : message.type === 'client'
+                                ? 'text-orange-600'
+                                : message.type === 'system'
+                                  ? 'text-purple-600'
+                                  : 'text-gray-600'
+                          }`}
+                        >
+                          {message.type === 'user'
+                            ? '👤 You'
+                            : message.type === 'client'
+                              ? '🏢 Client (John from Acme Corp)'
+                              : message.type === 'system'
+                                ? '⚠️ System Alert'
+                                : '🤖 AI Assistant'}
+                        </div>
+
+                        {/* Message Bubble */}
+                        <div
+                          className={`rounded-lg p-3 ${
+                            message.type === 'user'
+                              ? 'bg-blue-500 text-white ml-auto'
+                              : message.type === 'client'
+                                ? 'bg-orange-50 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-800'
+                                : message.type === 'system'
+                                  ? 'bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-800'
+                                  : 'bg-gray-100 dark:bg-gray-800'
+                          }`}
+                        >
+                          <div className="text-sm whitespace-pre-wrap">
+                            {message.content}
+                          </div>
+
+                          {/* Action indicators */}
+                          {message.actions && (
+                            <div className="mt-2 space-y-1">
+                              {message.actions.map(
+                                (action: any, idx: number) => (
+                                  <div
+                                    key={idx}
+                                    className="flex items-center gap-2 text-xs"
+                                  >
+                                    {action.status === 'executing' && (
+                                      <Loader2 className="h-3 w-3 animate-spin" />
+                                    )}
+                                    {action.status === 'completed' && (
+                                      <CheckCircle className="h-3 w-3 text-green-500" />
+                                    )}
+                                    <span className="capitalize">
+                                      {action.type}: {action.target}
+                                    </span>
+                                  </div>
+                                ),
                               )}
                             </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
-            </TabsContent>
+                          )}
 
-            {/* Matches Tab */}
-            <TabsContent value="matches" className="space-y-4">
-              <Card>
-                <CardHeader>
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <CardTitle>Suggested Matches</CardTitle>
-                      <CardDescription>
-                        Review and confirm AI-proposed invoice-to-transaction
-                        matches
-                      </CardDescription>
+                          <div className="text-xs opacity-70 mt-1">
+                            {message.timestamp.toLocaleTimeString()}
+                          </div>
+                        </div>
+                      </div>
                     </div>
+                  ))}
+                </div>
 
-                    <Button variant="outline" onClick={() => refetchMatches()}>
-                      <RefreshCw className="h-4 w-4 mr-2" />
-                      Refresh
+                {/* Input */}
+                <div className="border-t p-4">
+                  <div className="flex gap-2">
+                    <Input
+                      value={chatInput}
+                      onChange={(e) => setChatInput(e.target.value)}
+                      placeholder="Ask me anything about your finances..."
+                      onKeyPress={(e) => {
+                        if (e.key === 'Enter') {
+                          handleSendMessage(chatInput);
+                        }
+                      }}
+                    />
+                    <Button
+                      size="icon"
+                      onClick={() => handleSendMessage(chatInput)}
+                      disabled={!chatInput.trim()}
+                    >
+                      <Send className="h-4 w-4" />
                     </Button>
                   </div>
-                </CardHeader>
 
-                <CardContent>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Invoice</TableHead>
-                        <TableHead>Transaction</TableHead>
-                        <TableHead>Score</TableHead>
-                        <TableHead>Rationale</TableHead>
-                        <TableHead>Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {matches?.map((item) => (
-                        <TableRow key={item.match.id}>
-                          <TableCell>
-                            <div className="space-y-1">
-                              <div className="font-medium">
-                                {item.invoice?.invoiceNumber || 'N/A'}
-                              </div>
-                              <div className="text-sm text-muted-foreground">
-                                {item.invoice?.vendor} - $
-                                {Number(item.invoice?.totalAmount || 0).toFixed(
-                                  2,
-                                )}
-                              </div>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div className="space-y-1">
-                              <div className="font-medium">
-                                {item.transaction?.counterparty || 'N/A'}
-                              </div>
-                              <div className="text-sm text-muted-foreground">
-                                {item.transaction?.txnDate
-                                  ? new Date(
-                                      item.transaction.txnDate,
-                                    ).toLocaleDateString()
-                                  : ''}{' '}
-                                - $
-                                {Number(item.transaction?.amount || 0).toFixed(
-                                  2,
-                                )}
-                              </div>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <Badge
-                              variant={
-                                Number(item.match.score) >= 90
-                                  ? 'default'
-                                  : Number(item.match.score) >= 70
-                                    ? 'secondary'
-                                    : 'outline'
-                              }
-                            >
-                              {Math.round(Number(item.match.score))}%
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="max-w-xs">
-                            <span className="text-sm text-muted-foreground">
-                              {item.match.rationale || '-'}
-                            </span>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex gap-2">
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() =>
-                                  confirmMatch.mutate({
-                                    matchId: item.match.id,
-                                  })
-                                }
-                              >
-                                <Check className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() =>
-                                  rejectMatch.mutate({ matchId: item.match.id })
-                                }
-                              >
-                                <X className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-
-                      {(!matches || matches.length === 0) && (
-                        <TableRow>
-                          <TableCell
-                            colSpan={5}
-                            className="text-center py-8 text-muted-foreground"
-                          >
-                            No matches proposed yet. Add some transactions and
-                            invoices, then click "Propose Matches".
-                          </TableCell>
-                        </TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
-        </div>
-
-        {/* Right Side - Chat Interface */}
-        <div className="lg:col-span-1 h-full">
-          <Card className="h-[calc(100vh-200px)] flex flex-col">
-            <CardHeader className="pb-2 border-b">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Brain className="h-5 w-5" />
-                AI Assistant
-              </CardTitle>
-              <CardDescription className="text-xs">
-                Multi-thread conversations for financial operations
-              </CardDescription>
-            </CardHeader>
-
-            {/* Thread Switcher */}
-            <div className="border-b p-2 bg-gray-50 dark:bg-gray-900">
-              <div className="flex gap-1 overflow-x-auto">
-                {chatThreads.map((thread) => (
-                  <Button
-                    key={thread.id}
-                    variant={activeThreadId === thread.id ? 'default' : 'ghost'}
-                    size="sm"
-                    className="relative whitespace-nowrap"
-                    onClick={() => setActiveThreadId(thread.id)}
-                  >
-                    {thread.type === 'email' && '📧 '}
-                    {thread.type === 'context' && '💬 '}
-                    {thread.type === 'main' && '🏠 '}
-                    {thread.title}
-                    {thread.unread > 0 && (
-                      <Badge className="ml-2 h-5 px-1" variant="destructive">
-                        {thread.unread}
-                      </Badge>
-                    )}
-                    {thread.status === 'waiting' && (
-                      <Loader2 className="ml-2 h-3 w-3 animate-spin" />
-                    )}
-                  </Button>
-                ))}
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    const newThreadId = createNewThread('New Chat', 'context');
-                    handleSendMessage('How can I help you?', newThreadId);
-                  }}
-                >
-                  <Plus className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-
-            <CardContent className="flex-1 flex flex-col p-0 overflow-hidden">
-              {/* Messages */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-4 max-h-[calc(100vh-450px)]">
-                {chatMessages.map((message: any) => (
-                  <div
-                    key={message.id}
-                    className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
-                  >
-                    <div className="max-w-[80%] space-y-1">
-                      {/* Sender Label */}
-                      <div
-                        className={`text-xs font-medium ${
-                          message.type === 'user'
-                            ? 'text-right text-blue-600'
-                            : message.type === 'client'
-                              ? 'text-orange-600'
-                              : message.type === 'system'
-                                ? 'text-purple-600'
-                                : 'text-gray-600'
-                        }`}
-                      >
-                        {message.type === 'user'
-                          ? '👤 You'
-                          : message.type === 'client'
-                            ? '🏢 Client (John from Acme Corp)'
-                            : message.type === 'system'
-                              ? '⚠️ System Alert'
-                              : '🤖 AI Assistant'}
-                      </div>
-
-                      {/* Message Bubble */}
-                      <div
-                        className={`rounded-lg p-3 ${
-                          message.type === 'user'
-                            ? 'bg-blue-500 text-white ml-auto'
-                            : message.type === 'client'
-                              ? 'bg-orange-50 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-800'
-                              : message.type === 'system'
-                                ? 'bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-800'
-                                : 'bg-gray-100 dark:bg-gray-800'
-                        }`}
-                      >
-                        <div className="text-sm whitespace-pre-wrap">
-                          {message.content}
-                        </div>
-
-                        {/* Action indicators */}
-                        {message.actions && (
-                          <div className="mt-2 space-y-1">
-                            {message.actions.map((action: any, idx: number) => (
-                              <div
-                                key={idx}
-                                className="flex items-center gap-2 text-xs"
-                              >
-                                {action.status === 'executing' && (
-                                  <Loader2 className="h-3 w-3 animate-spin" />
-                                )}
-                                {action.status === 'completed' && (
-                                  <CheckCircle className="h-3 w-3 text-green-500" />
-                                )}
-                                <span className="capitalize">
-                                  {action.type}: {action.target}
-                                </span>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-
-                        <div className="text-xs opacity-70 mt-1">
-                          {message.timestamp.toLocaleTimeString()}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Input */}
-              <div className="border-t p-4">
-                <div className="flex gap-2">
-                  <Input
-                    value={chatInput}
-                    onChange={(e) => setChatInput(e.target.value)}
-                    placeholder="Ask me anything about your finances..."
-                    onKeyPress={(e) => {
-                      if (e.key === 'Enter') {
-                        handleSendMessage(chatInput);
+                  {/* Quick actions */}
+                  <div className="flex flex-wrap gap-1 mt-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleSendMessage('Find missing invoices')}
+                    >
+                      Find Missing Invoices
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        handleSendMessage('Categorize all transactions')
                       }
-                    }}
-                  />
-                  <Button
-                    size="icon"
-                    onClick={() => handleSendMessage(chatInput)}
-                    disabled={!chatInput.trim()}
-                  >
-                    <Send className="h-4 w-4" />
-                  </Button>
-                </div>
-
-                {/* Quick actions */}
-                <div className="flex flex-wrap gap-1 mt-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleSendMessage('Find missing invoices')}
-                  >
-                    Find Missing Invoices
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() =>
-                      handleSendMessage('Categorize all transactions')
-                    }
-                  >
-                    Auto-Categorize
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() =>
-                      handleSendMessage('Match invoices to transactions')
-                    }
-                  >
-                    Match All
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-
-      {/* Request Context Dialog - Shows actual message draft */}
-      <Dialog open={requestDialogOpen} onOpenChange={setRequestDialogOpen}>
-        <DialogContent className="max-w-3xl">
-          <DialogHeader>
-            <DialogTitle>Quick Clarification Needed</DialogTitle>
-            <DialogDescription>
-              AI has drafted a message to send to your client
-            </DialogDescription>
-          </DialogHeader>
-
-          {selectedRequestItem && (
-            <>
-              <div className="space-y-4">
-                {/* Email Draft */}
-                <div className="border rounded-lg p-4 bg-white dark:bg-gray-950">
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <span className="font-medium">To:</span>
-                      <span>john@acmecorp.com</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <span className="font-medium">Subject:</span>
-                      <span>
-                        Quick question about{' '}
-                        {new Date(
-                          selectedRequestItem.item.txnDate ||
-                            selectedRequestItem.item.issueDate,
-                        ).toLocaleDateString()}{' '}
-                        transaction
-                      </span>
-                    </div>
-                    <div className="border-t pt-4">
-                      <div className="prose prose-sm max-w-none">
-                        {(() => {
-                          const item = selectedRequestItem.item;
-                          const desc = (
-                            item.memo ||
-                            item.counterparty ||
-                            ''
-                          ).toLowerCase();
-                          const amount = Math.abs(
-                            Number(item.amount || item.totalAmount),
-                          );
-
-                          // Generate personalized message based on transaction type
-                          if (desc.includes('chk') || desc.includes('check')) {
-                            return (
-                              <div className="space-y-3">
-                                <p>Hi John,</p>
-                                <p>
-                                  Quick question about a{' '}
-                                  <strong>
-                                    check for ${amount.toFixed(2)}
-                                  </strong>{' '}
-                                  that cleared on{' '}
-                                  {new Date(item.txnDate).toLocaleDateString()}.
-                                </p>
-                                <p>
-                                  The check number is{' '}
-                                  <strong>
-                                    {desc.match(/\d+/)?.[0] || 'not visible'}
-                                  </strong>
-                                  , but I don't have any documentation for it.
-                                </p>
-                                <p className="bg-yellow-50 dark:bg-yellow-950 p-3 rounded border-l-4 border-yellow-400">
-                                  <strong>Can you let me know:</strong>
-                                  <br />
-                                  • Who was this check made out to?
-                                  <br />• What was it for? (invoice #, project,
-                                  etc.)
-                                </p>
-                                <p className="text-sm text-muted-foreground">
-                                  Just reply to this email with the info - no
-                                  need for a call. Thanks!
-                                </p>
-                              </div>
-                            );
-                          } else if (desc.includes('wire')) {
-                            return (
-                              <div className="space-y-3">
-                                <p>Hi John,</p>
-                                <p>
-                                  I need help identifying a{' '}
-                                  <strong>
-                                    wire transfer for ${amount.toFixed(2)}
-                                  </strong>{' '}
-                                  sent on{' '}
-                                  {new Date(item.txnDate).toLocaleDateString()}.
-                                </p>
-                                <p className="bg-yellow-50 dark:bg-yellow-950 p-3 rounded border-l-4 border-yellow-400">
-                                  <strong>Please provide:</strong>
-                                  <br />
-                                  • Vendor/recipient name
-                                  <br />
-                                  • What this payment was for
-                                  <br />• Any invoice or PO number
-                                </p>
-                                <p className="text-sm text-muted-foreground">
-                                  This is a large payment that needs proper
-                                  documentation for your records.
-                                </p>
-                              </div>
-                            );
-                          } else if (
-                            desc.includes('venmo') ||
-                            desc.includes('paypal')
-                          ) {
-                            return (
-                              <div className="space-y-3">
-                                <p>Hi John,</p>
-                                <p>
-                                  There's a{' '}
-                                  <strong>
-                                    {desc.includes('venmo')
-                                      ? 'Venmo'
-                                      : 'PayPal'}{' '}
-                                    payment for ${amount.toFixed(2)}
-                                  </strong>{' '}
-                                  on{' '}
-                                  {new Date(item.txnDate).toLocaleDateString()}.
-                                </p>
-                                <p className="bg-yellow-50 dark:bg-yellow-950 p-3 rounded border-l-4 border-yellow-400">
-                                  <strong>I need to know:</strong>
-                                  <br />
-                                  • Who received this payment?
-                                  <br />
-                                  • Are they a W-9 contractor or W-2 employee?
-                                  <br />• What work did they do?
-                                </p>
-                                <p className="text-sm text-muted-foreground">
-                                  Important for 1099 reporting if they're a
-                                  contractor.
-                                </p>
-                              </div>
-                            );
-                          } else if (
-                            desc.includes('ach') &&
-                            desc.includes('unknown')
-                          ) {
-                            return (
-                              <div className="space-y-3">
-                                <p>Hi John,</p>
-                                <p>
-                                  Found an{' '}
-                                  <strong>
-                                    unidentified recurring charge for $
-                                    {amount.toFixed(2)}
-                                  </strong>{' '}
-                                  hitting your account monthly.
-                                </p>
-                                <p className="bg-red-50 dark:bg-red-950 p-3 rounded border-l-4 border-red-400">
-                                  <strong>⚠️ Mystery charge alert:</strong>
-                                  <br />
-                                  • Do you recognize this charge?
-                                  <br />
-                                  • It's been happening for 3+ months
-                                  <br />• Could be a forgotten subscription
-                                </p>
-                                <p className="text-sm">
-                                  Reply with what this is, or if you don't
-                                  recognize it, we should dispute it with the
-                                  bank.
-                                </p>
-                              </div>
-                            );
-                          } else if (desc.includes('atm')) {
-                            return (
-                              <div className="space-y-3">
-                                <p>Hi John,</p>
-                                <p>
-                                  Cash withdrawal of{' '}
-                                  <strong>${amount.toFixed(2)}</strong> on{' '}
-                                  {new Date(item.txnDate).toLocaleDateString()}.
-                                </p>
-                                <p className="bg-yellow-50 dark:bg-yellow-950 p-3 rounded border-l-4 border-yellow-400">
-                                  <strong>For tax purposes, I need:</strong>
-                                  <br />
-                                  • What was the cash used for?
-                                  <br />
-                                  • Do you have receipts?
-                                  <br />• Was this for client entertainment,
-                                  supplies, or other?
-                                </p>
-                                <p className="text-sm text-muted-foreground">
-                                  No receipts = potential audit issue. Let me
-                                  know what you have.
-                                </p>
-                              </div>
-                            );
-                          } else {
-                            return (
-                              <div className="space-y-3">
-                                <p>Hi John,</p>
-                                <p>
-                                  Need clarification on a{' '}
-                                  <strong>${amount.toFixed(2)} charge</strong>{' '}
-                                  from{' '}
-                                  {item.counterparty || 'an unknown vendor'} on{' '}
-                                  {new Date(item.txnDate).toLocaleDateString()}.
-                                </p>
-                                <p className="bg-yellow-50 dark:bg-yellow-950 p-3 rounded border-l-4 border-yellow-400">
-                                  <strong>Please clarify:</strong>
-                                  <br />
-                                  • What was this purchase for?
-                                  <br />
-                                  • Which category: Operations, Marketing, or
-                                  Other?
-                                  <br />• Is this recurring monthly?
-                                </p>
-                              </div>
-                            );
-                          }
-                        })()}
-                      </div>
-                    </div>
+                    >
+                      Auto-Categorize
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        handleSendMessage('Match invoices to transactions')
+                      }
+                    >
+                      Match All
+                    </Button>
                   </div>
                 </div>
-              </div>
-
-              {/* Send Options */}
-              <div className="flex justify-between items-center pt-4 border-t">
-                <div className="flex gap-2">
-                  <Button
-                    onClick={() => {
-                      toast({
-                        title: '📧 Email Sent',
-                        description: 'John will receive this in his inbox',
-                      });
-                      setTimeout(() => {
-                        toast({
-                          title: '👀 Email Opened',
-                          description: 'John opened the email (2 min ago)',
-                        });
-                      }, 2000);
-                    }}
-                  >
-                    <Mail className="h-4 w-4 mr-2" />
-                    Send Email
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      toast({
-                        title: 'Slack Message Sent',
-                        description: 'Posted in #finance channel',
-                      });
-                    }}
-                  >
-                    <MessageSquare className="h-4 w-4 mr-2" />
-                    Send via Slack
-                  </Button>
-                </div>
-              </div>
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Active Context Requests Indicator */}
-      {contextRequests.filter((r) => r.status === 'pending').length > 0 && (
-        <div className="fixed bottom-4 right-4 p-4 bg-white border rounded-lg shadow-lg">
-          <div className="flex items-center gap-3">
-            <div className="relative">
-              <MessageSquare className="h-5 w-5 text-blue-500" />
-              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
-                {contextRequests.filter((r) => r.status === 'pending').length}
-              </span>
-            </div>
-            <div>
-              <p className="font-medium text-sm">Pending Context Requests</p>
-              <p className="text-xs text-muted-foreground">
-                Waiting for client responses
-              </p>
-            </div>
+              </CardContent>
+            </Card>
           </div>
         </div>
-      )}
+
+        {/* Request Context Dialog - Shows actual message draft */}
+        <Dialog open={requestDialogOpen} onOpenChange={setRequestDialogOpen}>
+          <DialogContent className="max-w-3xl">
+            <DialogHeader>
+              <DialogTitle>Quick Clarification Needed</DialogTitle>
+              <DialogDescription>
+                AI has drafted a message to send to your client
+              </DialogDescription>
+            </DialogHeader>
+
+            {selectedRequestItem && (
+              <>
+                <div className="space-y-4">
+                  {/* Email Draft */}
+                  <div className="border rounded-lg p-4 bg-white dark:bg-gray-950">
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <span className="font-medium">To:</span>
+                        <span>john@acmecorp.com</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <span className="font-medium">Subject:</span>
+                        <span>
+                          Quick question about{' '}
+                          {new Date(
+                            selectedRequestItem.item.txnDate ||
+                              selectedRequestItem.item.issueDate,
+                          ).toLocaleDateString()}{' '}
+                          transaction
+                        </span>
+                      </div>
+                      <div className="border-t pt-4">
+                        <div className="prose prose-sm max-w-none">
+                          {(() => {
+                            const item = selectedRequestItem.item;
+                            const desc = (
+                              item.memo ||
+                              item.counterparty ||
+                              ''
+                            ).toLowerCase();
+                            const amount = Math.abs(
+                              Number(item.amount || item.totalAmount),
+                            );
+
+                            // Generate personalized message based on transaction type
+                            if (
+                              desc.includes('chk') ||
+                              desc.includes('check')
+                            ) {
+                              return (
+                                <div className="space-y-3">
+                                  <p>Hi John,</p>
+                                  <p>
+                                    Quick question about a{' '}
+                                    <strong>
+                                      check for ${amount.toFixed(2)}
+                                    </strong>{' '}
+                                    that cleared on{' '}
+                                    {new Date(
+                                      item.txnDate,
+                                    ).toLocaleDateString()}
+                                    .
+                                  </p>
+                                  <p>
+                                    The check number is{' '}
+                                    <strong>
+                                      {desc.match(/\d+/)?.[0] || 'not visible'}
+                                    </strong>
+                                    , but I don't have any documentation for it.
+                                  </p>
+                                  <p className="bg-yellow-50 dark:bg-yellow-950 p-3 rounded border-l-4 border-yellow-400">
+                                    <strong>Can you let me know:</strong>
+                                    <br />
+                                    • Who was this check made out to?
+                                    <br />• What was it for? (invoice #,
+                                    project, etc.)
+                                  </p>
+                                  <p className="text-sm text-muted-foreground">
+                                    Just reply to this email with the info - no
+                                    need for a call. Thanks!
+                                  </p>
+                                </div>
+                              );
+                            } else if (desc.includes('wire')) {
+                              return (
+                                <div className="space-y-3">
+                                  <p>Hi John,</p>
+                                  <p>
+                                    I need help identifying a{' '}
+                                    <strong>
+                                      wire transfer for ${amount.toFixed(2)}
+                                    </strong>{' '}
+                                    sent on{' '}
+                                    {new Date(
+                                      item.txnDate,
+                                    ).toLocaleDateString()}
+                                    .
+                                  </p>
+                                  <p className="bg-yellow-50 dark:bg-yellow-950 p-3 rounded border-l-4 border-yellow-400">
+                                    <strong>Please provide:</strong>
+                                    <br />
+                                    • Vendor/recipient name
+                                    <br />
+                                    • What this payment was for
+                                    <br />• Any invoice or PO number
+                                  </p>
+                                  <p className="text-sm text-muted-foreground">
+                                    This is a large payment that needs proper
+                                    documentation for your records.
+                                  </p>
+                                </div>
+                              );
+                            } else if (
+                              desc.includes('venmo') ||
+                              desc.includes('paypal')
+                            ) {
+                              return (
+                                <div className="space-y-3">
+                                  <p>Hi John,</p>
+                                  <p>
+                                    There's a{' '}
+                                    <strong>
+                                      {desc.includes('venmo')
+                                        ? 'Venmo'
+                                        : 'PayPal'}{' '}
+                                      payment for ${amount.toFixed(2)}
+                                    </strong>{' '}
+                                    on{' '}
+                                    {new Date(
+                                      item.txnDate,
+                                    ).toLocaleDateString()}
+                                    .
+                                  </p>
+                                  <p className="bg-yellow-50 dark:bg-yellow-950 p-3 rounded border-l-4 border-yellow-400">
+                                    <strong>I need to know:</strong>
+                                    <br />
+                                    • Who received this payment?
+                                    <br />
+                                    • Are they a W-9 contractor or W-2 employee?
+                                    <br />• What work did they do?
+                                  </p>
+                                  <p className="text-sm text-muted-foreground">
+                                    Important for 1099 reporting if they're a
+                                    contractor.
+                                  </p>
+                                </div>
+                              );
+                            } else if (
+                              desc.includes('ach') &&
+                              desc.includes('unknown')
+                            ) {
+                              return (
+                                <div className="space-y-3">
+                                  <p>Hi John,</p>
+                                  <p>
+                                    Found an{' '}
+                                    <strong>
+                                      unidentified recurring charge for $
+                                      {amount.toFixed(2)}
+                                    </strong>{' '}
+                                    hitting your account monthly.
+                                  </p>
+                                  <p className="bg-red-50 dark:bg-red-950 p-3 rounded border-l-4 border-red-400">
+                                    <strong>⚠️ Mystery charge alert:</strong>
+                                    <br />
+                                    • Do you recognize this charge?
+                                    <br />
+                                    • It's been happening for 3+ months
+                                    <br />• Could be a forgotten subscription
+                                  </p>
+                                  <p className="text-sm">
+                                    Reply with what this is, or if you don't
+                                    recognize it, we should dispute it with the
+                                    bank.
+                                  </p>
+                                </div>
+                              );
+                            } else if (desc.includes('atm')) {
+                              return (
+                                <div className="space-y-3">
+                                  <p>Hi John,</p>
+                                  <p>
+                                    Cash withdrawal of{' '}
+                                    <strong>${amount.toFixed(2)}</strong> on{' '}
+                                    {new Date(
+                                      item.txnDate,
+                                    ).toLocaleDateString()}
+                                    .
+                                  </p>
+                                  <p className="bg-yellow-50 dark:bg-yellow-950 p-3 rounded border-l-4 border-yellow-400">
+                                    <strong>For tax purposes, I need:</strong>
+                                    <br />
+                                    • What was the cash used for?
+                                    <br />
+                                    • Do you have receipts?
+                                    <br />• Was this for client entertainment,
+                                    supplies, or other?
+                                  </p>
+                                  <p className="text-sm text-muted-foreground">
+                                    No receipts = potential audit issue. Let me
+                                    know what you have.
+                                  </p>
+                                </div>
+                              );
+                            } else {
+                              return (
+                                <div className="space-y-3">
+                                  <p>Hi John,</p>
+                                  <p>
+                                    Need clarification on a{' '}
+                                    <strong>${amount.toFixed(2)} charge</strong>{' '}
+                                    from{' '}
+                                    {item.counterparty || 'an unknown vendor'}{' '}
+                                    on{' '}
+                                    {new Date(
+                                      item.txnDate,
+                                    ).toLocaleDateString()}
+                                    .
+                                  </p>
+                                  <p className="bg-yellow-50 dark:bg-yellow-950 p-3 rounded border-l-4 border-yellow-400">
+                                    <strong>Please clarify:</strong>
+                                    <br />
+                                    • What was this purchase for?
+                                    <br />
+                                    • Which category: Operations, Marketing, or
+                                    Other?
+                                    <br />• Is this recurring monthly?
+                                  </p>
+                                </div>
+                              );
+                            }
+                          })()}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Send Options */}
+                <div className="flex justify-between items-center pt-4 border-t">
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={() => {
+                        toast({
+                          title: '📧 Email Sent',
+                          description: 'John will receive this in his inbox',
+                        });
+                        setTimeout(() => {
+                          toast({
+                            title: '👀 Email Opened',
+                            description: 'John opened the email (2 min ago)',
+                          });
+                        }, 2000);
+                      }}
+                    >
+                      <Mail className="h-4 w-4 mr-2" />
+                      Send Email
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        toast({
+                          title: 'Slack Message Sent',
+                          description: 'Posted in #finance channel',
+                        });
+                      }}
+                    >
+                      <MessageSquare className="h-4 w-4 mr-2" />
+                      Send via Slack
+                    </Button>
+                  </div>
+                </div>
+              </>
+            )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Active Context Requests Indicator */}
+        {contextRequests.filter((r) => r.status === 'pending').length > 0 && (
+          <div className="fixed bottom-4 right-4 p-4 bg-white border rounded-lg shadow-lg">
+            <div className="flex items-center gap-3">
+              <div className="relative">
+                <MessageSquare className="h-5 w-5 text-blue-500" />
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
+                  {contextRequests.filter((r) => r.status === 'pending').length}
+                </span>
+              </div>
+              <div>
+                <p className="font-medium text-sm">Pending Context Requests</p>
+                <p className="text-xs text-muted-foreground">
+                  Waiting for client responses
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
