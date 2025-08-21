@@ -719,20 +719,132 @@ Return JSON only for the schema.`;
     const mockGmailInvoices = [
       {
         emailId: 'gmail-msg-001',
-        subject: 'Invoice for warehouse renovation - Final',
-        from: 'admin@johnsonconstruction.net',
-        date: new Date('2024-01-17'),
+        subject: 'Invoice from AWS',
+        from: 'billing@aws.amazon.com',
+        date: new Date('2024-01-16'),
         invoice: {
-          invoiceNumber: 'JC-2024-089',
-          vendor: 'Johnson Construction LLC',
-          issueDate: '2024-01-17',
-          dueDate: '2024-01-31',
-          amount: 8500.0, // Matches CHK 2341
-          items: ['Warehouse renovation - final payment', 'Completion bonus'],
+          invoiceNumber: 'AWS-2024-9823',
+          vendor: 'Amazon Web Services',
+          issueDate: '2024-01-16',
+          dueDate: '2024-02-16',
+          amount: 1249.67, // Matches AWS transaction
+          items: ['EC2 Instances', 'S3 Storage', 'CloudFront CDN'],
         },
       },
       {
         emailId: 'gmail-msg-002',
+        subject: 'Google Workspace Invoice',
+        from: 'gsuite-noreply@google.com',
+        date: new Date('2024-01-17'),
+        invoice: {
+          invoiceNumber: 'GSU-ACME-202401',
+          vendor: 'Google Workspace',
+          issueDate: '2024-01-17',
+          dueDate: '2024-01-31',
+          amount: 450.0, // Matches GOOGLE*GSUITE_ACME
+          items: ['Business Standard - 30 users @ $15/user'],
+        },
+      },
+      {
+        emailId: 'gmail-msg-003',
+        subject: 'Microsoft 365 Business Invoice',
+        from: 'microsoft-billing@microsoft.com',
+        date: new Date('2024-01-22'),
+        invoice: {
+          invoiceNumber: 'MS365-2024-1122',
+          vendor: 'Microsoft 365',
+          issueDate: '2024-01-22',
+          dueDate: '2024-02-22',
+          amount: 360.0, // Matches MICROSOFT 365 BUSINESS
+          items: ['Business Premium - 12 users @ $30/user'],
+        },
+      },
+      {
+        emailId: 'gmail-msg-004',
+        subject: 'Shopify Monthly Subscription',
+        from: 'billing@shopify.com',
+        date: new Date('2024-01-19'),
+        invoice: {
+          invoiceNumber: 'SHOP-2024-0119',
+          vendor: 'Shopify',
+          issueDate: '2024-01-19',
+          dueDate: '2024-01-19',
+          amount: 299.0, // Matches SHOPIFY MONTHLY SUB
+          items: ['Shopify Plus Plan - Monthly'],
+        },
+      },
+      {
+        emailId: 'gmail-msg-005',
+        subject: 'Zoom Business Invoice',
+        from: 'billing@zoom.us',
+        date: new Date('2024-01-30'),
+        invoice: {
+          invoiceNumber: 'ZOOM-INV-89234',
+          vendor: 'Zoom Video Communications',
+          issueDate: '2024-01-30',
+          dueDate: '2024-02-15',
+          amount: 149.9, // Matches ZOOM VIDEO COMM
+          items: ['Business Plan - 10 hosts'],
+        },
+      },
+      {
+        emailId: 'gmail-msg-006',
+        subject: 'Dropbox Business Invoice',
+        from: 'no-reply@dropbox.com',
+        date: new Date('2024-01-28'),
+        invoice: {
+          invoiceNumber: 'DBX-2024-2801',
+          vendor: 'Dropbox Business',
+          issueDate: '2024-01-28',
+          dueDate: '2024-02-28',
+          amount: 199.0, // Matches TST* DROPBOX BUSINESS
+          items: ['Advanced Plan - 5 users'],
+        },
+      },
+      {
+        emailId: 'gmail-msg-007',
+        subject: 'Office Depot Receipt #4829',
+        from: 'receipts@officedepot.com',
+        date: new Date('2024-01-26'),
+        invoice: {
+          invoiceNumber: 'OD-4829-2024',
+          vendor: 'Office Depot',
+          issueDate: '2024-01-26',
+          dueDate: '2024-01-26',
+          amount: 847.23, // Matches OFFICE DEPOT #4829
+          items: ['Office Supplies', 'Printer Ink', 'Paper'],
+        },
+      },
+      {
+        emailId: 'gmail-msg-008',
+        subject: 'Invoice - Johnson Construction',
+        from: 'accounting@johnsonconst.com',
+        date: new Date('2024-01-18'),
+        invoice: {
+          invoiceNumber: 'JC-INV-8923',
+          vendor: 'Johnson Construction LLC',
+          issueDate: '2024-01-18',
+          dueDate: '2024-02-01',
+          amount: 8500.0, // Matches CHK 2341 JOHNSON CONSTRUCTION
+          items: ['Office renovation - Final payment'],
+        },
+      },
+      {
+        emailId: 'gmail-msg-009',
+        subject: 'Consulting Invoice - TechStart Solutions',
+        from: 'billing@techstart.io',
+        date: new Date('2024-01-31'),
+        invoice: {
+          invoiceNumber: 'TS-2024-0131',
+          vendor: 'TechStart Solutions',
+          issueDate: '2024-01-31',
+          dueDate: '2024-02-15',
+          amount: 3500.0, // Matches TECHSTART SOLUTIONS CONSULTING
+          items: ['IT Consulting - 20 hours @ $175/hr'],
+        },
+      },
+      {
+        emailId: 'gmail-msg-010',
         subject: 'AWS Monthly Bill - January 2024',
         from: 'no-reply@aws.amazon.com',
         date: new Date('2024-01-16'),
