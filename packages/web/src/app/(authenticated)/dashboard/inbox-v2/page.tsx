@@ -2503,13 +2503,19 @@ export default function ReconciliationPage() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Date</TableHead>
-                        <TableHead>Counterparty</TableHead>
-                        <TableHead>Description</TableHead>
-                        <TableHead className="text-right">Amount</TableHead>
-                        <TableHead>GL Code</TableHead>
-                        <TableHead>Source</TableHead>
-                        <TableHead></TableHead>
+                        <TableHead className="w-[100px]">Date</TableHead>
+                        <TableHead className="w-[150px]">
+                          Counterparty
+                        </TableHead>
+                        <TableHead className="min-w-[200px]">
+                          Description
+                        </TableHead>
+                        <TableHead className="text-right w-[120px]">
+                          Amount
+                        </TableHead>
+                        <TableHead className="w-[200px]">GL Code</TableHead>
+                        <TableHead className="w-[150px]">Status</TableHead>
+                        <TableHead className="w-[100px]">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -2561,23 +2567,29 @@ export default function ReconciliationPage() {
                             <TableCell className="text-right font-mono">
                               ${Number(tx.amount).toFixed(2)}
                             </TableCell>
-                            <TableCell>
-                              <div className="flex items-center gap-2">
+                            <TableCell className="min-w-[200px]">
+                              <div className="flex flex-col gap-2">
                                 {assignedGLCode ? (
-                                  <Badge variant="default" className="gap-1">
-                                    <Hash className="h-3 w-3" />
-                                    {assignedGLCode}
+                                  <Badge
+                                    variant="default"
+                                    className="gap-1 w-fit"
+                                  >
+                                    <Hash className="h-3 w-3 flex-shrink-0" />
+                                    <span>{assignedGLCode}</span>
                                     {typeof assignedGL === 'object' &&
                                       assignedGL.confidence && (
-                                        <span className="text-xs ml-1">
+                                        <span className="text-xs">
                                           ({assignedGL.confidence}%)
                                         </span>
                                       )}
                                   </Badge>
                                 ) : suggestedGL ? (
-                                  <Badge variant="secondary" className="gap-1">
-                                    <Sparkles className="h-3 w-3" />
-                                    {suggestedGL.code}
+                                  <Badge
+                                    variant="secondary"
+                                    className="gap-1 w-fit"
+                                  >
+                                    <Sparkles className="h-3 w-3 flex-shrink-0" />
+                                    <span>{suggestedGL.code}</span>
                                     <span className="text-xs">
                                       ({suggestedGL.confidence}%)
                                     </span>
@@ -2594,8 +2606,8 @@ export default function ReconciliationPage() {
                                     )
                                   }
                                 >
-                                  <SelectTrigger className="w-[120px] h-7">
-                                    <SelectValue placeholder="Assign" />
+                                  <SelectTrigger className="w-[140px] h-7">
+                                    <SelectValue placeholder="Assign GL" />
                                   </SelectTrigger>
                                   <SelectContent>
                                     {mockGLCodes.map((gl) => (
@@ -2604,7 +2616,7 @@ export default function ReconciliationPage() {
                                           <span className="font-mono text-xs">
                                             {gl.code}
                                           </span>
-                                          <span className="text-xs">
+                                          <span className="text-xs truncate max-w-[150px]">
                                             {gl.name}
                                           </span>
                                         </div>
@@ -2614,30 +2626,37 @@ export default function ReconciliationPage() {
                                 </Select>
                               </div>
                             </TableCell>
-                            <TableCell>
-                              <div className="flex items-center gap-2">
-                                <Badge variant="outline">{tx.source}</Badge>
-                                {hasResponse && (
-                                  <Badge variant="default" className="gap-1">
+                            <TableCell className="min-w-[150px]">
+                              <div className="flex flex-col gap-1">
+                                <Badge variant="outline" className="w-fit">
+                                  {tx.source}
+                                </Badge>
+                                {/* Show only one status badge at a time, in priority order */}
+                                {hasResponse ? (
+                                  <Badge
+                                    variant="default"
+                                    className="gap-1 w-fit"
+                                  >
                                     <CheckCircle className="h-3 w-3" />
                                     Clarified
                                   </Badge>
-                                )}
-                                {isWaitingForResponse && (
-                                  <Badge variant="secondary" className="gap-1">
+                                ) : isWaitingForResponse ? (
+                                  <Badge
+                                    variant="secondary"
+                                    className="gap-1 w-fit"
+                                  >
                                     <Clock className="h-3 w-3" />
                                     Waiting
                                   </Badge>
-                                )}
-                                {!assignedGLCode && !hasContextRequest && (
+                                ) : !assignedGLCode ? (
                                   <Badge
                                     variant="destructive"
-                                    className="gap-1"
+                                    className="gap-1 w-fit"
                                   >
                                     <AlertCircle className="h-3 w-3" />
                                     Needs Review
                                   </Badge>
-                                )}
+                                ) : null}
                               </div>
                             </TableCell>
                             <TableCell>
@@ -3506,201 +3525,6 @@ export default function ReconciliationPage() {
                     <MessageSquare className="h-4 w-4 mr-2" />
                     Send via Slack
                   </Button>
-                </div>
-              </div>
-
-              {/* Demo: Simulate Client Response */}
-              <div className="pt-4 border-t space-y-4">
-                <div className="flex items-center justify-between">
-                  <p className="text-sm font-medium">Demo: Client Response</p>
-                  <Button
-                    onClick={() =>
-                      handleMockClientResponse(selectedRequestItem.id)
-                    }
-                    variant="default"
-                    size="sm"
-                  >
-                    <CheckCircle className="h-4 w-4 mr-2" />
-                    Simulate Reply
-                  </Button>
-                </div>
-
-                {/* Show mock client response */}
-                <div className="border rounded-lg p-4 bg-blue-50 dark:bg-blue-950">
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2 text-sm">
-                      <span className="font-medium">From:</span>
-                      <span>john@acmecorp.com</span>
-                      <span className="text-xs text-muted-foreground ml-auto">
-                        Just now
-                      </span>
-                    </div>
-                    <div className="pt-2 text-sm">
-                      {(() => {
-                        const desc = (
-                          selectedRequestItem.item.memo ||
-                          selectedRequestItem.item.counterparty ||
-                          ''
-                        ).toLowerCase();
-                        const amount = Math.abs(
-                          Number(
-                            selectedRequestItem.item.amount ||
-                              selectedRequestItem.item.totalAmount,
-                          ),
-                        );
-
-                        if (desc.includes('chk') || desc.includes('check')) {
-                          return (
-                            <div className="space-y-2">
-                              <p>
-                                That was for Johnson Construction - final
-                                payment for the warehouse renovation. Invoice
-                                #JC-2024-089 attached to original email.
-                              </p>
-                              <div className="bg-green-100 dark:bg-green-900 p-2 rounded text-xs">
-                                <strong>What will happen:</strong>
-                                <ul className="list-disc list-inside mt-1">
-                                  <li>
-                                    ✅ Match to Johnson Construction invoice
-                                  </li>
-                                  <li>
-                                    📊 Categorize as Professional Services (GL
-                                    5300)
-                                  </li>
-                                  <li>🤖 Auto-match future Johnson checks</li>
-                                </ul>
-                              </div>
-                            </div>
-                          );
-                        } else if (desc.includes('wire')) {
-                          return (
-                            <div className="space-y-2">
-                              <p>
-                                Shanghai Manufacturing Co - initial inventory
-                                order for Q1. PO #2024-156. Should arrive next
-                                week.
-                              </p>
-                              <div className="bg-green-100 dark:bg-green-900 p-2 rounded text-xs">
-                                <strong>What will happen:</strong>
-                                <ul className="list-disc list-inside mt-1">
-                                  <li>
-                                    📦 Categorize as Inventory/COGS (GL 4000)
-                                  </li>
-                                  <li>
-                                    🏭 Add Shanghai Manufacturing as known
-                                    vendor
-                                  </li>
-                                  <li>📈 Track for inventory reporting</li>
-                                </ul>
-                              </div>
-                            </div>
-                          );
-                        } else if (desc.includes('venmo')) {
-                          return (
-                            <div className="space-y-2">
-                              <p>
-                                Sarah Chen - she did our marketing materials
-                                redesign. She's a 1099 contractor, I'll forward
-                                her W-9.
-                              </p>
-                              <div className="bg-green-100 dark:bg-green-900 p-2 rounded text-xs">
-                                <strong>What will happen:</strong>
-                                <ul className="list-disc list-inside mt-1">
-                                  <li>✅ Match to Sarah's invoice if found</li>
-                                  <li>📊 Categorize as Marketing (GL 5100)</li>
-                                  <li>📋 Flag for 1099 reporting</li>
-                                  <li>
-                                    🤖 Remember Sarah for future Venmo payments
-                                  </li>
-                                </ul>
-                              </div>
-                            </div>
-                          );
-                        } else if (
-                          desc.includes('ach') &&
-                          desc.includes('unknown')
-                        ) {
-                          return (
-                            <div className="space-y-2">
-                              <p>
-                                Oh that's our Salesforce CRM! I forgot we still
-                                had that. We should probably cancel it - we
-                                switched to HubSpot.
-                              </p>
-                              <div className="bg-yellow-100 dark:bg-yellow-900 p-2 rounded text-xs">
-                                <strong>What will happen:</strong>
-                                <ul className="list-disc list-inside mt-1">
-                                  <li>🏷️ Label as "Salesforce CRM"</li>
-                                  <li>📊 Categorize as Software (GL 5200)</li>
-                                  <li>⚠️ Flag for cancellation review</li>
-                                  <li>🔄 Identify as recurring monthly</li>
-                                </ul>
-                              </div>
-                            </div>
-                          );
-                        } else if (desc.includes('atm')) {
-                          return (
-                            <div className="space-y-2">
-                              <p>
-                                Client dinner at Nobu with the Tech Corp team.
-                                No receipts but it was Smith, Johnson, and their
-                                CFO. About the new contract.
-                              </p>
-                              <div className="bg-green-100 dark:bg-green-900 p-2 rounded text-xs">
-                                <strong>What will happen:</strong>
-                                <ul className="list-disc list-inside mt-1">
-                                  <li>
-                                    🍽️ Categorize as Entertainment (GL 5500)
-                                  </li>
-                                  <li>
-                                    📝 Note: Tech Corp business development
-                                  </li>
-                                  <li>
-                                    ⚠️ Flag: Missing receipts for audit trail
-                                  </li>
-                                </ul>
-                              </div>
-                            </div>
-                          );
-                        } else if (desc.includes('aws')) {
-                          return (
-                            <div className="space-y-2">
-                              <p>
-                                Monthly cloud hosting for our production
-                                servers.
-                              </p>
-                              <div className="bg-green-100 dark:bg-green-900 p-2 rounded text-xs">
-                                <strong>What will happen:</strong>
-                                <ul className="list-disc list-inside mt-1">
-                                  <li>✅ Match to AWS invoice</li>
-                                  <li>📊 Categorize as Technology (GL 5200)</li>
-                                  <li>🔄 Mark as recurring monthly</li>
-                                </ul>
-                              </div>
-                            </div>
-                          );
-                        } else {
-                          return (
-                            <div className="space-y-2">
-                              <p>
-                                That's our monthly retainer for social media
-                                management. Recurring every month. Marketing
-                                budget.
-                              </p>
-                              <div className="bg-green-100 dark:bg-green-900 p-2 rounded text-xs">
-                                <strong>What will happen:</strong>
-                                <ul className="list-disc list-inside mt-1">
-                                  <li>📊 Categorize as Marketing (GL 5100)</li>
-                                  <li>🔄 Mark as recurring monthly</li>
-                                  <li>🤖 Auto-categorize future payments</li>
-                                </ul>
-                              </div>
-                            </div>
-                          );
-                        }
-                      })()}
-                    </div>
-                  </div>
                 </div>
               </div>
             </>
