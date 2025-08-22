@@ -874,6 +874,45 @@ Would you like to attach this invoice to the transaction?`,
         [transaction.id]: invoiceData,
       }));
 
+      // Determine source based on vendor
+      let source = 'Gmail';
+      if (desc.includes('sarah chen') || desc.includes('venmo')) {
+        source = 'Slack #contractors';
+      }
+
+      // Add to extracted documents for display in Supporting Documents tab
+      const newDocument = {
+        id: `doc-${Date.now()}`,
+        title: invoiceData.invoiceNumber,
+        type: 'invoice' as const,
+        source: source.includes('Gmail') ? 'gmail' : 'slack',
+        vendor: invoiceData.vendor,
+        amount: invoiceData.totalAmount,
+        date: new Date(transaction.txnDate),
+        confidence: 95,
+        status: 'matched' as const,
+        linkedTransaction: transaction.id,
+      };
+
+      setExtractedDocuments((prev) => [...prev, newDocument]);
+
+      // Update channel document count
+      setChannels((prev) =>
+        prev.map((channel) => {
+          if (
+            (source.includes('Gmail') && channel.id === 'gmail') ||
+            (source.includes('Slack') && channel.id === 'slack')
+          ) {
+            return {
+              ...channel,
+              documentCount: channel.documentCount + 1,
+              lastSync: new Date(),
+            };
+          }
+          return channel;
+        }),
+      );
+
       // Add to invoices if we have the mutation
       if (typeof uploadInvoice !== 'undefined' && uploadInvoice.mutateAsync) {
         await uploadInvoice.mutateAsync({
@@ -922,6 +961,278 @@ The transaction has been updated with invoice ${invoiceData.invoiceNumber}. You 
         : `Context: ${item.vendor} Invoice`;
 
     const newThreadId = createNewThread(threadTitle, 'context', item);
+
+    // First, show that we're searching online
+    const desc = (item.memo || item.counterparty || '').toLowerCase();
+    const amount = Math.abs(Number(item.amount));
+
+    // Add initial search message
+    const searchMessage = {
+      id: Date.now().toString(),
+      type: 'assistant',
+      content: `🔍 Let me search for information about this transaction online first...\n\nSearching for: "${item.memo || item.counterparty}" $${amount.toFixed(2)}`,
+      timestamp: new Date(),
+      actions: [
+        {
+          type: 'searching',
+          status: 'executing',
+          target: 'web',
+        },
+      ],
+    };
+
+    addMessageToThread(newThreadId, searchMessage);
+
+    // Determine if this transaction can be found online
+    const canFindOnline =
+      desc.includes('johnson construction') ||
+      desc.includes('chk 2341') ||
+      desc.includes('aws') ||
+      desc.includes('salesforce') ||
+      desc.includes('zoom') ||
+      desc.includes('dropbox') ||
+      desc.includes('google') ||
+      desc.includes('microsoft') ||
+      desc.includes('shopify') ||
+      desc.includes('stripe');
+
+    // Simulate search delay
+    setTimeout(() => {
+      if (canFindOnline) {
+        // Special case for Johnson Construction - show detailed search
+        if (
+          desc.includes('johnson construction') ||
+          desc.includes('chk 2341')
+        ) {
+          // Step 1: Show we're searching multiple sources
+          const detailedSearchMessage = {
+            id: (Date.now() + 1).toString(),
+            type: 'assistant',
+            content: `🔍 Found potential matches! Let me search multiple sources...\n\n**Searching:**\n• Google for "Johnson Construction LLC"\n• Gmail for correspondence\n• Previous invoices`,
+            timestamp: new Date(),
+            actions: [
+              {
+                type: 'searching',
+                status: 'executing',
+                target: 'multiple',
+              },
+            ],
+          };
+
+          addMessageToThread(newThreadId, detailedSearchMessage);
+
+          // Step 2: Show website found
+          setTimeout(() => {
+            const websiteFoundMessage = {
+              id: (Date.now() + 2).toString(),
+              type: 'assistant',
+              content: `🌐 **Found their website:**\n• Johnson Construction LLC - johnsonconstruction.com\n• Commercial & Industrial Construction Services\n• Based in: Denver, CO\n• Specializes in warehouse renovations and industrial facilities\n\n📧 **Searching email correspondence...**`,
+              timestamp: new Date(),
+            };
+
+            addMessageToThread(newThreadId, websiteFoundMessage);
+
+            // Step 3: Show email found
+            setTimeout(() => {
+              const emailFoundMessage = {
+                id: (Date.now() + 3).toString(),
+                type: 'assistant',
+                content: `📧 **Found email thread with Johnson Construction:**\n\n**From:** Mike Johnson <mike@johnsonconstruction.com>\n**Date:** 2 weeks ago\n**Subject:** Re: Warehouse Renovation - Final Invoice\n\n*"Hi John, As discussed, attached is the final invoice for the warehouse renovation project. This covers the remaining milestone payment for completion of Phase 3. The check should be made out to Johnson Construction LLC. Invoice #JC-2024-089 is attached for your records."*\n\n📎 **Attachment found:** JC-2024-089.pdf\n• Amount: $8,500.00\n• Project: Warehouse Renovation Phase 3\n• Payment Terms: Net 30`,
+                timestamp: new Date(),
+              };
+
+              addMessageToThread(newThreadId, emailFoundMessage);
+
+              // Step 4: Final categorization
+              setTimeout(() => {
+                const finalMessage = {
+                  id: (Date.now() + 4).toString(),
+                  type: 'assistant',
+                  content: `✅ **Transaction fully verified and categorized!**\n\n**Vendor:** Johnson Construction LLC\n**Invoice:** JC-2024-089\n**Project:** Warehouse Renovation - Final Payment\n**GL Code:** 5300 - Professional Services\n**Status:** Fully reconciled with supporting documentation\n\nI've linked the invoice from Gmail to this transaction.`,
+                  timestamp: new Date(),
+                  actions: [
+                    {
+                      type: 'categorize',
+                      status: 'completed',
+                      target: item.id,
+                    },
+                  ],
+                };
+
+                addMessageToThread(newThreadId, finalMessage);
+
+                // Update the transaction
+                setTransactionGLCodes((prev: any) => ({
+                  ...prev,
+                  [item.id]: {
+                    code: '5300',
+                    confidence: 95,
+                    reason: 'Verified via website and email correspondence',
+                  },
+                }));
+
+                // Add to matched invoices
+                setMatchedInvoices((prev) => ({
+                  ...prev,
+                  [item.id]: {
+                    vendor: 'Johnson Construction LLC',
+                    invoiceNumber: 'JC-2024-089',
+                    totalAmount: 8500,
+                  },
+                }));
+
+                // Add to extracted documents
+                const newDocument = {
+                  id: `doc-${Date.now()}`,
+                  title: 'JC-2024-089',
+                  type: 'invoice' as const,
+                  source: 'gmail',
+                  vendor: 'Johnson Construction LLC',
+                  amount: 8500,
+                  date: new Date(),
+                  confidence: 95,
+                  status: 'matched' as const,
+                  linkedTransaction: item.id,
+                };
+
+                setExtractedDocuments((prev) => [...prev, newDocument]);
+
+                // Update channel document count
+                setChannels((prev) =>
+                  prev.map((channel) => {
+                    if (channel.id === 'gmail') {
+                      return {
+                        ...channel,
+                        documentCount: channel.documentCount + 1,
+                        lastSync: new Date(),
+                      };
+                    }
+                    return channel;
+                  }),
+                );
+
+                setClarifiedItems(
+                  (prev) => new Set([...prev, `tx-${item.id}`]),
+                );
+
+                // Show success toast
+                toast({
+                  title: '✅ Complete Match Found',
+                  description:
+                    'Johnson Construction verified via multiple sources',
+                });
+              }, 2000);
+            }, 2000);
+          }, 2000);
+
+          return; // Exit early for Johnson Construction
+        }
+
+        // Other successful online searches
+        let foundInfo = '';
+        let glCode = '';
+        let vendorName = '';
+
+        if (desc.includes('aws')) {
+          foundInfo =
+            'Amazon Web Services - Cloud computing and hosting services. Standard monthly infrastructure costs.';
+          glCode = '5200';
+          vendorName = 'Amazon Web Services';
+        } else if (desc.includes('salesforce')) {
+          foundInfo =
+            'Salesforce CRM - Customer relationship management platform. Monthly subscription for business operations.';
+          glCode = '5200';
+          vendorName = 'Salesforce';
+        } else if (desc.includes('zoom')) {
+          foundInfo =
+            'Zoom Video Communications - Video conferencing service. Business plan subscription.';
+          glCode = '5200';
+          vendorName = 'Zoom';
+        } else if (desc.includes('dropbox')) {
+          foundInfo =
+            'Dropbox Business - Cloud storage and collaboration platform. Team subscription.';
+          glCode = '5200';
+          vendorName = 'Dropbox';
+        } else if (desc.includes('google')) {
+          foundInfo =
+            'Google Workspace - Business productivity and collaboration tools suite.';
+          glCode = '5200';
+          vendorName = 'Google';
+        } else if (desc.includes('microsoft')) {
+          foundInfo =
+            'Microsoft 365 - Office suite and cloud services for business.';
+          glCode = '5200';
+          vendorName = 'Microsoft';
+        } else if (desc.includes('shopify')) {
+          foundInfo =
+            'Shopify - E-commerce platform subscription for online store operations.';
+          glCode = '5200';
+          vendorName = 'Shopify';
+        } else if (desc.includes('stripe')) {
+          foundInfo =
+            'Stripe - Payment processing fees for online transactions.';
+          glCode = '6000';
+          vendorName = 'Stripe';
+        }
+
+        const successMessage = {
+          id: (Date.now() + 1).toString(),
+          type: 'assistant',
+          content: `✅ Found it! I was able to identify this transaction through online search.\n\n**${vendorName}**\n${foundInfo}\n\n• Applied GL Code: ${glCode} (${mockGLCodes.find((gl) => gl.code === glCode)?.name})\n• Status: Fully categorized\n\nThe transaction has been automatically categorized.`,
+          timestamp: new Date(),
+          actions: [
+            {
+              type: 'categorize',
+              status: 'completed',
+              target: item.id,
+            },
+          ],
+        };
+
+        addMessageToThread(newThreadId, successMessage);
+
+        // Update the transaction
+        setTransactionGLCodes((prev: any) => ({
+          ...prev,
+          [item.id]: {
+            code: glCode,
+            confidence: 90,
+            reason: `Identified via online search: ${vendorName}`,
+          },
+        }));
+
+        setClarifiedItems((prev) => new Set([...prev, `tx-${item.id}`]));
+
+        // Show success toast
+        toast({
+          title: '✅ Automatically Categorized',
+          description: `${vendorName} identified and categorized`,
+        });
+      } else {
+        // Failed to find online - need to ask client
+        const notFoundMessage = {
+          id: (Date.now() + 1).toString(),
+          type: 'assistant',
+          content: `❓ I couldn't find clear information about this transaction online.\n\nI'll need to reach out to the client for clarification.`,
+          timestamp: new Date(),
+        };
+
+        addMessageToThread(newThreadId, notFoundMessage);
+
+        // Now proceed with the email flow
+        setTimeout(() => {
+          generateContextQuestions(item, type, newThreadId);
+        }, 1500);
+      }
+    }, 3000);
+  };
+
+  // Separate function to handle the email questions
+  const generateContextQuestions = (
+    item: any,
+    type: 'transaction' | 'invoice',
+    threadId: string,
+  ) => {
     // AI generates SMART context-aware questions based on the transaction
     let questions = [];
 
@@ -1137,31 +1448,38 @@ The transaction has been updated with invoice ${invoiceData.invoiceNumber}. You 
     // Don't show the dialog anymore - we'll handle it in the chat
     setRequestDialogOpen(false);
 
-    // Generate the proposed message content
+    // Generate a more professional email message
     const transactionDate = new Date(
       item.txnDate || item.issueDate,
     ).toLocaleDateString();
     const amount = Math.abs(Number(item.amount)).toFixed(2);
     const desc = item.memo || item.counterparty || 'Transaction';
 
-    let proposedEmailContent = `Subject: Quick question about ${transactionDate} transaction\n\n`;
+    let proposedEmailContent = `Subject: Expense Categorization - ${desc} ($${amount})\n\n`;
     proposedEmailContent += `Hi John,\n\n`;
-    proposedEmailContent += `I need some clarification on a transaction from ${transactionDate}:\n\n`;
-    proposedEmailContent += `• Description: ${desc}\n`;
-    proposedEmailContent += `• Amount: $${amount}\n\n`;
+    proposedEmailContent += `I'm reviewing your financial records and need clarification on the following transaction:\n\n`;
+    proposedEmailContent += `Date: ${transactionDate}\n`;
+    proposedEmailContent += `Description: ${desc}\n`;
+    proposedEmailContent += `Amount: $${amount}\n\n`;
+    proposedEmailContent += `To properly categorize this for tax and accounting purposes, could you please provide:\n\n`;
 
-    // Add the specific questions
+    // Add the specific questions in a professional format
     questions.forEach((q, index) => {
-      proposedEmailContent += `${index + 1}. ${q.question}\n`;
+      if (q.type === 'select' && q.options) {
+        proposedEmailContent += `${index + 1}. ${q.question}\n   Options: ${q.options.join(', ')}\n\n`;
+      } else {
+        proposedEmailContent += `${index + 1}. ${q.question}\n\n`;
+      }
     });
 
-    proposedEmailContent += `\nPlease reply with the details when you get a chance.\n\nThanks!`;
+    proposedEmailContent += `Your prompt response will help ensure accurate financial records.\n\n`;
+    proposedEmailContent += `Best regards,\nYour Finance Team`;
 
     // Add message showing proposed content with action buttons
     const proposalMessage = {
       id: Date.now().toString(),
       type: 'assistant',
-      content: `I've prepared a context request for this ${type}. Here's what I'll send:\n\n📧 **Proposed Message:**\n\`\`\`\n${proposedEmailContent}\n\`\`\`\n\nHow would you like to send this?`,
+      content: `I've prepared a professional context request for this ${type}. Here's what I'll send:\n\n📧 **Proposed Email:**\n\`\`\`\n${proposedEmailContent}\n\`\`\`\n\nHow would you like to send this?`,
       timestamp: new Date(),
       actions: [
         {
@@ -1174,12 +1492,12 @@ The transaction has been updated with invoice ${invoiceData.invoiceNumber}. You 
           ],
         },
       ],
-      threadId: newThreadId,
+      threadId: threadId,
       itemId: item.id,
       questions: questions,
     };
 
-    addMessageToThread(newThreadId, proposalMessage);
+    addMessageToThread(threadId, proposalMessage);
 
     // Simulate email response after delay - make it specific to the transaction
     setTimeout(() => {
@@ -1192,33 +1510,27 @@ The transaction has been updated with invoice ${invoiceData.invoiceNumber}. You 
 
       // Check #2341 - specific for Johnson Construction
       if (desc.includes('chk 2341')) {
-        clientResponseContent = `"Hi, this was for the Johnson Construction project - final payment for warehouse renovation. Invoice #JC-2024-089 was sent last week. The check was made out to Johnson Construction LLC."`;
+        clientResponseContent = `"Thank you for reaching out. This check was issued to Johnson Construction LLC for the final payment on our warehouse renovation project. I'm attaching Invoice #JC-2024-089 which details the work completed. This should be categorized under Facilities/Construction."`;
         glCode = '5300';
         vendorName = 'Johnson Construction';
       }
       // Venmo payment - specific for Sarah Chen
       else if (desc.includes('venmo') && amount === '5000.00') {
-        clientResponseContent = `"That's for Sarah Chen, our UI designer. She's a 1099 contractor. I'm attaching her invoice for January's work (40 hours @ $125/hr). She should be set up for monthly payments."`;
+        clientResponseContent = `"This payment was for Sarah Chen, our contracted UI/UX designer. She submitted her January invoice for 40 hours of design work at $125/hour. She's a 1099 contractor and this is a recurring monthly expense. I'll forward her invoice shortly."`;
         glCode = '5100';
         vendorName = 'Sarah Chen';
       }
       // Wire transfer - specific amount
       else if (desc.includes('wire') && amount === '15000.00') {
-        clientResponseContent = `"This wire was for Shanghai Manufacturing Co - our Q1 inventory order. PO #2024-Q1-INV. They're our primary supplier for components."`;
+        clientResponseContent = `"This wire transfer was sent to Shanghai Manufacturing Co. for our Q1 inventory purchase order (PO #2024-Q1-INV). They're our primary component supplier. This should be categorized as Cost of Goods Sold."`;
         glCode = '4000';
         vendorName = 'Shanghai Manufacturing';
       }
       // ACH Unknown
       else if (desc.includes('ach') && desc.includes('unknown')) {
-        clientResponseContent = `"Oh that's our Salesforce CRM subscription! I forgot we had this on auto-pay. We definitely need to keep it - it's business critical."`;
+        clientResponseContent = `"I've identified this charge - it's our Salesforce CRM monthly subscription. This is a critical business system we use for customer management. Please categorize this under Software/Technology expenses."`;
         glCode = '5200';
         vendorName = 'Salesforce';
-      }
-      // AWS charges
-      else if (desc.includes('aws')) {
-        clientResponseContent = `"That's our monthly cloud hosting for production servers. Essential for operations. Should be categorized as Technology Infrastructure."`;
-        glCode = '5200';
-        vendorName = 'Amazon Web Services';
       }
       // Default - return null to skip this transaction
       else {
@@ -1229,16 +1541,16 @@ The transaction has been updated with invoice ${invoiceData.invoiceNumber}. You 
       const responseMessage = {
         id: (Date.now() + 1).toString(),
         type: 'client' as any, // Mark as client message
-        content: `📧 Email from John (Acme Corp):\n\n${clientResponseContent}`,
+        content: `📧 Email from John Smith (CFO, Acme Corp):\n\n${clientResponseContent}`,
         timestamp: new Date(),
       };
 
-      addMessageToThread(newThreadId, responseMessage);
+      addMessageToThread(threadId, responseMessage);
 
       // Update thread status
       setChatThreads((prev) =>
         prev.map((thread) => {
-          if (thread.id === newThreadId) {
+          if (thread.id === threadId) {
             return {
               ...thread,
               unread: thread.unread + 1,
@@ -1254,7 +1566,7 @@ The transaction has been updated with invoice ${invoiceData.invoiceNumber}. You 
         const processMessage = {
           id: (Date.now() + 2).toString(),
           type: 'assistant',
-          content: `✅ Perfect! I've processed this:\n\n• Vendor: ${vendorName}\n• Applied GL Code: ${glCode} (${mockGLCodes.find((gl) => gl.code === glCode)?.name})\n• Confidence: 95%\n• Status: Fully categorized and documented\n\nThe transaction has been updated in the system.`,
+          content: `✅ Excellent! I've successfully categorized this transaction:\n\n• Vendor: ${vendorName}\n• GL Code: ${glCode} - ${mockGLCodes.find((gl) => gl.code === glCode)?.name}\n• Status: Fully reconciled\n\nThe transaction has been updated and properly documented.`,
           timestamp: new Date(),
           actions: [
             {
@@ -1265,7 +1577,7 @@ The transaction has been updated with invoice ${invoiceData.invoiceNumber}. You 
           ],
         };
 
-        addMessageToThread(newThreadId, processMessage);
+        addMessageToThread(threadId, processMessage);
 
         // Actually update the transaction in the UI
         if (type === 'transaction') {
@@ -2768,35 +3080,89 @@ The transaction has been updated with invoice ${invoiceData.invoiceNumber}. You 
                 )}
                 <span className="text-sm">Propose Matches</span>
               </Button>
-
-              {/* Delete All Button */}
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-9 w-9 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/20"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Delete All Data?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      This will permanently delete all transactions, invoices,
-                      and matches. This action cannot be undone.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleDeleteAll}>
-                      Delete Everything
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
             </div>
+
+            {/* Reset Button */}
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-9 w-9 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/20"
+                  title="Reset Demo Data"
+                >
+                  <RefreshCw className="h-3.5 w-3.5" />
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Reset All Demo Data?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This will permanently delete all transactions, invoices,
+                    documents, and matches. This action cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={async () => {
+                      // Delete all data from database
+                      await Promise.all([
+                        deleteAllTransactions.mutateAsync(),
+                        deleteAllInvoices.mutateAsync(),
+                      ]);
+
+                      // Clear all local state
+                      setTransactionGLCodes({});
+                      setInvoiceGLCodes({});
+                      setContextRequests([]);
+                      setClarifiedItems(new Set());
+                      setMatchedInvoices({});
+                      setExtractedDocuments([]);
+                      setChatThreads([
+                        {
+                          id: 'main',
+                          title: 'Main Chat',
+                          type: 'main',
+                          unread: 0,
+                          lastMessage: 'Welcome! How can I help you today?',
+                          timestamp: new Date(),
+                          status: 'active',
+                          messages: [
+                            {
+                              id: '1',
+                              type: 'assistant',
+                              content:
+                                'Welcome! I can help you process documents, categorize transactions, and find missing invoices. What would you like to do?',
+                              timestamp: new Date(),
+                            },
+                          ],
+                        },
+                      ]);
+                      setActiveThreadId('main');
+
+                      // Reset channel counts
+                      setChannels((prev) =>
+                        prev.map((channel) => ({
+                          ...channel,
+                          documentCount: 0,
+                          lastSync: null,
+                        })),
+                      );
+
+                      toast({
+                        title: '✅ Demo Reset Complete',
+                        description:
+                          'All data has been cleared. You can start fresh.',
+                      });
+                    }}
+                    className="bg-red-600 hover:bg-red-700"
+                  >
+                    Reset Everything
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </div>
 
           {/* Stats Cards */}
@@ -2872,7 +3238,7 @@ The transaction has been updated with invoice ${invoiceData.invoiceNumber}. You 
                 <TabsTrigger value="documents">
                   Supporting Documents
                   <Badge className="ml-2" variant="secondary">
-                    {invoices?.length || 0}
+                    {extractedDocuments.length}
                   </Badge>
                 </TabsTrigger>
               </TabsList>
@@ -2993,9 +3359,6 @@ The transaction has been updated with invoice ${invoiceData.invoiceNumber}. You 
                       <TableHeader>
                         <TableRow>
                           <TableHead className="w-[100px]">Date</TableHead>
-                          <TableHead className="w-[150px]">
-                            Counterparty
-                          </TableHead>
                           <TableHead className="min-w-[200px]">
                             Description
                           </TableHead>
@@ -3058,7 +3421,6 @@ The transaction has been updated with invoice ${invoiceData.invoiceNumber}. You 
                               <TableCell>
                                 {new Date(tx.txnDate).toLocaleDateString()}
                               </TableCell>
-                              <TableCell>{tx.counterparty || '-'}</TableCell>
                               <TableCell className="max-w-xs truncate">
                                 {tx.memo || '-'}
                               </TableCell>
@@ -3076,11 +3438,6 @@ The transaction has been updated with invoice ${invoiceData.invoiceNumber}. You 
                                       <span className="font-mono">
                                         {assignedGLCode}
                                       </span>
-                                      {glConfidence && (
-                                        <span className="opacity-70">
-                                          {glConfidence}%
-                                        </span>
-                                      )}
                                     </Badge>
                                   ) : suggestedGL ? (
                                     <Badge
@@ -3090,9 +3447,6 @@ The transaction has been updated with invoice ${invoiceData.invoiceNumber}. You 
                                       <Sparkles className="h-3 w-3 flex-shrink-0" />
                                       <span className="font-mono">
                                         {suggestedGL.code}
-                                      </span>
-                                      <span className="opacity-70">
-                                        {suggestedGL.confidence}%
                                       </span>
                                     </Badge>
                                   ) : null}
@@ -3311,42 +3665,31 @@ The transaction has been updated with invoice ${invoiceData.invoiceNumber}. You 
                                 </div>
                               </TableCell>
                               <TableCell>
-                                <div className="flex gap-1">
-                                  <Button
-                                    variant={
-                                      clarifiedItems.has(`tx-${tx.id}`)
-                                        ? 'default'
-                                        : 'ghost'
-                                    }
-                                    size="icon"
-                                    onClick={() =>
-                                      handleCreateContextRequest(
-                                        tx,
-                                        'transaction',
-                                      )
-                                    }
-                                    title={
-                                      clarifiedItems.has(`tx-${tx.id}`)
-                                        ? 'Client has clarified this item'
-                                        : 'Request Context'
-                                    }
-                                  >
-                                    {clarifiedItems.has(`tx-${tx.id}`) ? (
-                                      <CheckCircle className="h-4 w-4" />
-                                    ) : (
-                                      <MessageSquare className="h-4 w-4" />
-                                    )}
-                                  </Button>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={() =>
-                                      deleteTransaction.mutate({ id: tx.id })
-                                    }
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
-                                </div>
+                                <Button
+                                  variant={
+                                    clarifiedItems.has(`tx-${tx.id}`)
+                                      ? 'default'
+                                      : 'ghost'
+                                  }
+                                  size="icon"
+                                  onClick={() =>
+                                    handleCreateContextRequest(
+                                      tx,
+                                      'transaction',
+                                    )
+                                  }
+                                  title={
+                                    clarifiedItems.has(`tx-${tx.id}`)
+                                      ? 'Client has clarified this item'
+                                      : 'Request Context'
+                                  }
+                                >
+                                  {clarifiedItems.has(`tx-${tx.id}`) ? (
+                                    <CheckCircle className="h-4 w-4" />
+                                  ) : (
+                                    <MessageSquare className="h-4 w-4" />
+                                  )}
+                                </Button>
                               </TableCell>
                             </TableRow>
                           );
