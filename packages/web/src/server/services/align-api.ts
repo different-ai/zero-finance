@@ -25,9 +25,16 @@ export const alignCustomerSchema = z.object({
   kycs: z
     .array(
       z.object({
-        status: z.enum(['pending', 'approved', 'rejected']),
-        sub_status: z.enum(['kyc_form_submission_started', 'kyc_form_submission_accepted', 'kyc_form_resubmission_required']).optional().nullable(),
-        kyc_flow_link: z.string().url().optional(),
+        status: z.enum(['pending', 'approved', 'rejected']).nullable(),
+        sub_status: z
+          .enum([
+            'kyc_form_submission_started',
+            'kyc_form_submission_accepted',
+            'kyc_form_resubmission_required',
+          ])
+          .optional()
+          .nullable(),
+        kyc_flow_link: z.string().url().nullable(),
       }),
     )
     .optional()
@@ -94,9 +101,16 @@ export type AlignVirtualAccount = z.infer<typeof alignVirtualAccountSchema>;
 
 /* ---------- KYC session ---------- */
 const alignKycSessionSchema = z.object({
-  status: z.enum(['pending', 'approved', 'rejected']),
-  sub_status: z.enum(['kyc_form_submission_started', 'kyc_form_submission_accepted', 'kyc_form_resubmission_required']).optional(),
-  kyc_flow_link: z.string().url().optional(),
+  status: z.enum(['pending', 'approved', 'rejected']).nullable(),
+  sub_status: z
+    .enum([
+      'kyc_form_submission_started',
+      'kyc_form_submission_accepted',
+      'kyc_form_resubmission_required',
+    ])
+    .optional()
+    .nullable(),
+  kyc_flow_link: z.string().url().optional().nullable(),
 });
 export type AlignKycSession = z.infer<typeof alignKycSessionSchema>;
 
@@ -272,8 +286,12 @@ const alignOfframpTransferListSchema = z.object({
   items: z.array(alignOfframpTransferListItemSchema),
 });
 
-export type AlignOfframpTransferListItem = z.infer<typeof alignOfframpTransferListItemSchema>;
-export type AlignOfframpTransferList = z.infer<typeof alignOfframpTransferListSchema>;
+export type AlignOfframpTransferListItem = z.infer<
+  typeof alignOfframpTransferListItemSchema
+>;
+export type AlignOfframpTransferList = z.infer<
+  typeof alignOfframpTransferListSchema
+>;
 
 // --- LIST ONRAMP TRANSFERS SCHEMA -----------------------------------------
 const alignOnrampTransferListItemSchema = z.object({
@@ -299,8 +317,12 @@ const alignOnrampTransferListSchema = z.object({
   items: z.array(alignOnrampTransferListItemSchema),
 });
 
-export type AlignOnrampTransferListItem = z.infer<typeof alignOnrampTransferListItemSchema>;
-export type AlignOnrampTransferList = z.infer<typeof alignOnrampTransferListSchema>;
+export type AlignOnrampTransferListItem = z.infer<
+  typeof alignOnrampTransferListItemSchema
+>;
+export type AlignOnrampTransferList = z.infer<
+  typeof alignOnrampTransferListSchema
+>;
 
 /**
  * Client for interacting with the Align API
@@ -325,19 +347,27 @@ class AlignApiClient {
     const method = options.method || 'GET';
     const body = options.body ? String(options.body) : ''; // Ensure body is string for hashing
 
-    // --- Record/Replay Logic --- 
+    // --- Record/Replay Logic ---
     const fixturesDir = path.join(__dirname, '__fixtures__/align-api');
-    const requestHash = crypto.createHash('sha256').update(method + endpoint + body).digest('hex');
+    const requestHash = crypto
+      .createHash('sha256')
+      .update(method + endpoint + body)
+      .digest('hex');
     const fixturePath = path.join(fixturesDir, `${requestHash}.json`);
 
     if (process.env.ALIGN_REPLAY === 'true') {
-      console.log(`[Align API REPLAY] Reading fixture for ${method} ${endpoint}: ${requestHash}.json`);
+      console.log(
+        `[Align API REPLAY] Reading fixture for ${method} ${endpoint}: ${requestHash}.json`,
+      );
       if (fs.existsSync(fixturePath)) {
         try {
           const fixtureData = fs.readFileSync(fixturePath, 'utf-8');
           return JSON.parse(fixtureData);
         } catch (err) {
-          console.error(`[Align API REPLAY] Error reading or parsing fixture ${fixturePath}:`, err);
+          console.error(
+            `[Align API REPLAY] Error reading or parsing fixture ${fixturePath}:`,
+            err,
+          );
           throw new Error(`Failed to read/parse fixture: ${fixturePath}`);
         }
       } else {
@@ -388,16 +418,21 @@ class AlignApiClient {
       // If response is OK, try to parse JSON
       const data = await response.json();
 
-      // --- Record Logic --- 
+      // --- Record Logic ---
       if (process.env.ALIGN_RECORD === 'true') {
-        console.log(`[Align API RECORD] Saving fixture for ${method} ${endpoint}: ${requestHash}.json`);
+        console.log(
+          `[Align API RECORD] Saving fixture for ${method} ${endpoint}: ${requestHash}.json`,
+        );
         try {
           if (!fs.existsSync(fixturesDir)) {
             fs.mkdirSync(fixturesDir, { recursive: true });
           }
           fs.writeFileSync(fixturePath, JSON.stringify(data, null, 2));
         } catch (err) {
-          console.error(`[Align API RECORD] Error writing fixture ${fixturePath}:`, err);
+          console.error(
+            `[Align API RECORD] Error writing fixture ${fixturePath}:`,
+            err,
+          );
           // Don't throw here, recording failure shouldn't break the app
         }
       }
@@ -524,7 +559,7 @@ class AlignApiClient {
    */
   async getRawCustomer(customerId: string): Promise<any> {
     const response = await this.fetchWithAuth(`/v0/customers/${customerId}`);
-    
+
     // Handle case where kycs is an object instead of an array
     if (response && response.kycs && !Array.isArray(response.kycs)) {
       // Transform the object into an array with one item
@@ -711,9 +746,11 @@ class AlignApiClient {
   /**
    * List all virtual accounts for a customer
    */
-  async listVirtualAccounts(customerId: string): Promise<{ items: AlignVirtualAccount[] }> {
+  async listVirtualAccounts(
+    customerId: string,
+  ): Promise<{ items: AlignVirtualAccount[] }> {
     const response = await this.fetchWithAuth(
-      `/v0/customers/${customerId}/virtual-account`
+      `/v0/customers/${customerId}/virtual-account`,
     );
 
     console.log(
@@ -873,7 +910,7 @@ class AlignApiClient {
     const query: string[] = [];
     if (params?.limit !== undefined) query.push(`limit=${params.limit}`);
     if (params?.skip !== undefined) query.push(`skip=${params.skip}`);
-    const qs = query.length ? `?${query.join("&")}` : "";
+    const qs = query.length ? `?${query.join('&')}` : '';
 
     const response = await this.fetchWithAuth(
       `/v0/customers/${customerId}/onramp-transfer${qs}`,
