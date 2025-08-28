@@ -17,7 +17,6 @@ import {
   MessageSquare,
   ExternalLink
 } from 'lucide-react';
-import { WelcomeSlideshow } from '@/components/welcome-slideshow';
 
 export function HelpMenu() {
   const [showSlideshow, setShowSlideshow] = useState(false);
