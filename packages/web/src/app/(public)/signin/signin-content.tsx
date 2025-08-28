@@ -88,7 +88,6 @@ export default function SignInContent() {
                 'Insured high-yield accounts for business',
                 'Simple ACH transfers - works like your bank',
                 'No minimums, no lock-ups, full liquidity',
-                '10x higher yields than traditional banks',
               ].map((item, index) => (
                 <li key={index} className="flex items-start gap-3">
                   <div className="w-6 h-6 rounded-full bg-[#0040FF]/10 flex items-center justify-center flex-shrink-0 mt-0.5">
