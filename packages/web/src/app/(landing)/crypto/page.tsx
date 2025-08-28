@@ -181,9 +181,9 @@ export default function CryptoLandingPage() {
         <div className="max-w-7xl mx-auto">
           <div className="text-center">
             <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-extrabold tracking-tight mb-6 leading-[0.9] sm:leading-[0.85]">
-              {/* on in blue and off in orange */}
-              Deposit and <span className="text-[#0040FF]">earn 10%</span> on
-              your business treasury
+              Open a <span className="text-[#0040FF]">10% savings</span>
+              <br />
+              account for your startup
             </h1>
 
             {/* Feature Chips */}
@@ -568,8 +568,7 @@ export default function CryptoLandingPage() {
                     <span className="font-semibold italic text-orange-600">
                       10% annual yield
                     </span>{' '}
-                    with enterprise-grade insurance from Munich Re. No lock-up
-                    periods or minimum balances.
+                    with enterprise-grade insurance.
                   </p>
                 </div>
               </div>
@@ -587,44 +586,20 @@ export default function CryptoLandingPage() {
                     <span className="font-semibold italic text-orange-600">
                       ACH, Wire, or SEPA
                     </span>{' '}
-                    to yourself or third parties. Or transfer{' '}
+                    to third parties, or transfer{' '}
                     <span className="font-semibold italic text-orange-600">
                       USDC onchain
                     </span>{' '}
-                    for instant crypto payments. Your USDC converts
-                    automatically to the destination currency.
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-3">
-                <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <span className="text-[#0040FF] font-bold text-sm">6</span>
-                </div>
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-2">
-                    <h4 className="font-semibold text-[#0f1e46] text-base">
-                      Create Corporate Cards
-                    </h4>
-                    <span className="inline-flex items-center px-2 py-1 bg-orange-100 text-orange-800 text-xs font-medium rounded-full border border-orange-200">
-                      Coming soon
-                    </span>
-                  </div>
-                  <p className="text-[#5a6b91] text-sm leading-relaxed">
-                    Spend directly from your balance{' '}
-                    <span className="font-semibold italic text-orange-600">
-                      anywhere in the world
-                    </span>
-                    . Built-in spend management, real-time controls, and instant
-                    settlement from your USDC holdings.
+                    for instant payments.
                   </p>
                 </div>
               </div>
             </div>
             <div className="mt-8 p-4 bg-green-50 border border-green-200 rounded-lg">
               <p className="text-sm text-green-800 text-center">
-                <strong>Bottom line:</strong> Banking made simple. Your money
-                stays yours, but works everywhere you need it to.
+                <strong>Bottom line:</strong> Your startup gets enterprise-grade
+                banking with 10% yield, global accounts, and full custody - all
+                in minutes.
               </p>
             </div>
           </div>
