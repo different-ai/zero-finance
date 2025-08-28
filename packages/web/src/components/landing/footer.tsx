@@ -23,40 +23,63 @@ export function Footer() {
               </span>
             </div>
             <p className="text-sm text-neutral-600">
-              the bank account that chases invoices and fills tax buckets automatically
+              the crypto bank account that earns yield while you bank globally
             </p>
           </div>
-          
+
           <div>
             <h4 className="font-semibold mb-3 text-neutral-900">Product</h4>
             <ul className="space-y-2 text-sm text-neutral-600">
-              <li><Link href="#pricing" className="hover:text-blue-600">Pricing</Link></li>
-              <li><Link href="#demo" className="hover:text-blue-600">Demo</Link></li>
+              <li>
+                <Link href="#pricing" className="hover:text-blue-600">
+                  Pricing
+                </Link>
+              </li>
+              <li>
+                <Link href="#demo" className="hover:text-blue-600">
+                  Demo
+                </Link>
+              </li>
             </ul>
           </div>
-          
+
           <div>
             <h4 className="font-semibold mb-3 text-neutral-900">Company</h4>
             <ul className="space-y-2 text-sm text-neutral-600">
-              <li><Link href="/careers" className="hover:text-blue-600">Careers</Link></li>
-              <li><Link href="https://github.com/different-ai/zero-finance" target="_blank" className="hover:text-blue-600">Open Source</Link></li>
+              <li>
+                <Link href="/careers" className="hover:text-blue-600">
+                  Careers
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="https://github.com/different-ai/zero-finance"
+                  target="_blank"
+                  className="hover:text-blue-600"
+                >
+                  Open Source
+                </Link>
+              </li>
             </ul>
           </div>
-          
+
           <div>
             <h4 className="font-semibold mb-3 text-neutral-900">Legal</h4>
             <ul className="space-y-2 text-sm text-neutral-600">
-              <li><span className="text-neutral-400">Coming soon</span></li>
+              <li>
+                <span className="text-neutral-400">Coming soon</span>
+              </li>
             </ul>
           </div>
         </div>
-        
+
         <div className="border-t border-neutral-200 pt-6 text-center">
           <p className="text-sm text-neutral-500">
-            © {new Date().getFullYear()} 0 finance • ai-native banking for businesses
+            © {new Date().getFullYear()} 0 finance • crypto-native banking with
+            yield
           </p>
         </div>
       </div>
     </footer>
   );
-} 
+}

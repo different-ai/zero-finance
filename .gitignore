@@ -56,3 +56,4 @@ build/
 node-compile-cache/
 
 memory/outreach-log.md
+.vercel

@@ -56,7 +56,7 @@ export default function CryptoLandingPage() {
   return (
     <div className="min-h-screen w-full bg-gradient-to-b from-[#eef4ff] to-[#dfe7ff]">
       {/* Background Video - Responsive handling */}
-      <div className="absolute inset-x-0 top-0 w-full h-[100vh] sm:h-[100vh] overflow-hidden">
+      <div className="absolute inset-x-0 top-0 w-full h-screen overflow-hidden">
         <video
           autoPlay
           muted
@@ -174,90 +174,66 @@ export default function CryptoLandingPage() {
       </header>
 
       {/* Hero Section - Dashboard Style */}
-      <section className="relative z-10 px-4 sm:px-6 lg:px-16 pt-8 sm:pt-12 lg:pt-16 pb-16 sm:pb-20 lg:pb-24">
+      <section
+        className="relative z-10 px-4 sm:px-6 lg:px-16 py-16 sm:py-20 lg:py-24"
+        style={{ paddingBottom: 'calc(6rem + 70px)' }}
+      >
         <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-8">
-            <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-extrabold tracking-tight mb-6 leading-[0.9] sm:leading-[0.85]">
+          <div className="text-center">
+            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-extrabold tracking-tight mb-6 leading-[0.9] sm:leading-[0.85]">
               {/* on in blue and off in orange */}
-              Fastest way to get <span className="text-[#0040FF]">USDC</span>
-              <br />
-              <span className="text-black">for your business.</span>
+              Deposit and <span className="text-[#0040FF]">earn 10%</span> on
+              your business treasury
             </h1>
+
+            {/* Feature Chips */}
+            <div className="flex flex-wrap justify-center gap-3 mb-8">
+              <div className="inline-flex items-center px-4 py-2 bg-[#0040FF]/10 text-[#0040FF] rounded-full border border-[#0040FF]/20 font-medium text-sm">
+                10% APY fully insured
+              </div>
+              <div className="inline-flex items-center px-4 py-2 bg-[#0040FF]/10 text-[#0040FF] rounded-full border border-[#0040FF]/20 font-medium text-sm">
+                Instant US/EU Bank Account
+              </div>
+              <div className="inline-flex items-center px-4 py-2 bg-[#0040FF]/10 text-[#0040FF] rounded-full border border-[#0040FF]/20 font-medium text-sm">
+                Corporate cards
+              </div>
+            </div>
+
             <div className="space-y-3 max-w-4xl mx-auto">
-              <p className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-light text-black leading-[1.2]">
-                Get a <span className="text-[#0040FF] font-semibold">USDC</span>{' '}
-                business bank account, and move funds{' '}
-                <span className="text-orange-600 font-semibold italic">
-                  faster
-                </span>{' '}
-                in and out of crypto.
+              <p className="text-base sm:text-lg md:text-xl lg:text-2xl font-light text-black leading-[1.2]">
+                Get started by depositing{' '}
+                <span className="text-[#0040FF] font-semibold">USD/EUR</span> or{' '}
+                <span className="text-[#0040FF] font-semibold">USDC</span>
               </p>
             </div>
-            <h2 className="text-base sm:text-lg md:text-xl lg:text-2xl font-normal text-[#5a6b91] mt-6 max-w-3xl mx-auto leading-relaxed">
-              Virtual accounts you can spin up in minutes. Move funds between
-              traditional banking and crypto instantly. Perfect for companies
-              operating globally.
-            </h2>
 
-            {/* Platform Integration Badges */}
-            <div className="flex flex-col items-center gap-4 mt-8">
-              <div className="flex items-center gap-4">
-                <span className="text-sm text-[#5a6b91]">Works with</span>
-                {/* Solana Logo */}
-                <img
-                  src="https://solana.com/src/img/branding/solanaLogoMark.svg"
-                  alt="Solana"
-                  className="h-6 w-auto"
-                />
-                <span className="text-sm text-[#5a6b91]">•</span>
-                {/* Gnosis Safe Logo */}
-                <img
-                  src="https://cdn.brandfetch.io/idEaF8VndV/idbs4VrGxp.svg?c=1dxbfHSJFAPEGdCLU4o5B"
-                  alt="Gnosis Safe"
-                  className="h-5 w-auto"
-                />
-                <span className="text-sm text-[#5a6b91]">•</span>
-                {/* Squads Logo */}
-                <div className="flex items-center gap-1">
-                  <img
-                    src="/squads-logo-black.svg"
-                    alt="Squads"
-                    className="h-4 w-auto"
-                  />
-                  <span className="text-xs text-[#5a6b91] italic">(soon)</span>
-                </div>
-              </div>
-              {/* Backed by Orange DAO */}
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-[#5a6b91] uppercase tracking-wider">
-                  Backed by
-                </span>
-                <a
-                  href="https://www.orangedao.xyz/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="opacity-70 hover:opacity-100 transition-opacity"
-                >
-                  <OrangeDAOLogo className="h-6 w-auto" />
-                </a>
-              </div>
+            {/* CTA Buttons */}
+            <div className="flex flex-col sm:flex-row gap-4 justify-center m-8">
+              <Link
+                href="/signin?source=crypto"
+                className="inline-flex items-center justify-center px-6 sm:px-8 py-3 sm:py-4 bg-[#0050ff] hover:bg-[#0050ff]/90 text-white text-lg sm:text-xl font-semibold rounded-xl transition-all hover:scale-[1.02] active:scale-[0.97] shadow-lg shadow-[#0050ff]/25"
+              >
+                Sign Up
+              </Link>
             </div>
-          </div>
 
-          {/* CTA Buttons */}
-          <div className="flex flex-col sm:flex-row gap-4 justify-center m-8">
-            <Link
-              href="/signin?source=crypto"
-              className="inline-flex items-center justify-center px-6 sm:px-8 py-3 sm:py-4 bg-[#0050ff] hover:bg-[#0050ff]/90 text-white text-lg sm:text-xl font-semibold rounded-xl transition-all hover:scale-[1.02] active:scale-[0.97] shadow-lg shadow-[#0050ff]/25"
-            >
-              Signup
-            </Link>
-          </div>
-          <div className="flex items-center justify-center gap-2">
-            {/*  center it */}
-            <div className="flex items-center gap-2">
-              {/* make it more like a text for below less button-like like more like no backgroudn but still this orange thingy and maybe and arrow pointing below*/}
-              {/* blue  */}
+            {/* Backed by Orange DAO */}
+            <div className="flex items-center justify-center gap-2 mt-8">
+              <span className="text-xs text-[#5a6b91] uppercase tracking-wider">
+                Backed by
+              </span>
+              <a
+                href="https://www.orangedao.xyz/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="opacity-70 hover:opacity-100 transition-opacity"
+              >
+                <OrangeDAOLogo className="h-6 w-auto" />
+              </a>
+            </div>
+
+            {/* Try Me - At Bottom Edge of Hero Content */}
+            <div className="flex items-center justify-center gap-2 mt-16">
               <span className="text-[#0050ff] text-lg font-semibold">
                 Try Me
               </span>
@@ -266,8 +242,12 @@ export default function CryptoLandingPage() {
               </span>
             </div>
           </div>
+        </div>
+      </section>
 
-          {/* Dashboard Demo Section */}
+      {/* Dashboard Demo Section */}
+      <section className="relative z-10 px-4 sm:px-6 lg:px-16 py-16 bg-white">
+        <div className="max-w-7xl mx-auto">
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 max-w-3xl mx-auto">
             {/* Simple Bank Dashboard Style */}
             <div className="space-y-6">
@@ -409,69 +389,89 @@ export default function CryptoLandingPage() {
       {/* What You Get Section - NEW */}
       <section
         id="demo"
-        className="relative z-10 px-4 sm:px-6 lg:px-16 py-16 bg-white"
+        className="relative z-10 px-4 sm:px-6 lg:px-16 py-16 sm:py-20 lg:py-24 bg-gray-50"
       >
-        <div className="max-w-6xl mx-auto">
-          <h2 className="text-3xl sm:text-4xl font-bold text-center text-[#0f1e46] mb-4">
-            What's inside your account
-          </h2>
-          <p className="text-lg text-center text-[#5a6b91] mb-12 max-w-3xl mx-auto">
-            Everything you need to manage money globally. Simple, fast, and{' '}
-            <span className="font-semibold italic text-orange-600">
-              always in your control
-            </span>
-            .
-          </p>
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-12 sm:mb-16">
+            <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold text-[#0f1e46] mb-3 sm:mb-4">
+              What&apos;s inside your{' '}
+              <span className="text-[#0040FF]">account</span>
+            </h2>
+            <p className="text-lg sm:text-xl md:text-2xl font-light text-[#5a6b91] max-w-3xl mx-auto px-4">
+              Everything you need to manage money globally. Simple, fast, and{' '}
+              <span className="font-semibold italic text-orange-600">
+                always in your control
+              </span>
+              .
+            </p>
+          </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <div className="bg-gray-50 p-6 rounded-xl">
-              <div className="w-12 h-12 bg-[#0040FF] rounded-lg flex items-center justify-center mb-4">
-                <ArrowRightLeft className="w-6 h-6 text-white" />
-              </div>
-              <h3 className="text-xl font-semibold text-[#0f1e46] mb-2">
-                Instant Bank Bridge
+          {/* Features Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl mx-auto">
+            {/* 1. 10% Yield on USDC - Fully Insured */}
+            <div className="bg-white p-8 rounded-xl shadow-lg">
+              <TrendingUp className="w-12 h-12 text-[#0040FF] mb-4" />
+              <h3 className="text-xl font-bold text-[#0f1e46] mb-3">
+                10% APY on USDC - Fully Insured
               </h3>
-              <p className="text-[#5a6b91] mb-3">
-                Move money between traditional banks and crypto instantly.
-                Perfect for companies operating globally.
-              </p>
-              <p className="text-sm text-[#0040FF] font-semibold">
-                FREE - No wire fees
-              </p>
-            </div>
-
-            <div className="bg-gray-50 p-6 rounded-xl">
-              <div className="w-12 h-12 bg-[#0040FF] rounded-lg flex items-center justify-center mb-4">
-                <Wallet className="w-6 h-6 text-white" />
-              </div>
-              <h3 className="text-xl font-semibold text-[#0f1e46] mb-2">
-                Flexible Wallet Options
-              </h3>
-              <p className="text-[#5a6b91] mb-3">
-                Choose between{' '}
+              <p className="text-[#5a6b91]">
+                Earn 10% annual yield on your USDC holdings with
+                enterprise-grade insurance from{' '}
                 <span className="font-semibold italic text-orange-600">
-                  managed wallets
-                </span>{' '}
-                for simplicity or bring your own for full control.
-              </p>
-              <p className="text-sm text-[#0040FF] font-semibold">
-                Your choice, your control
+                  Munich Re
+                </span>
+                . Your funds are protected while generating consistent returns.
               </p>
             </div>
 
-            <div className="bg-gray-50 p-6 rounded-xl">
-              <div className="w-12 h-12 bg-[#0040FF] rounded-lg flex items-center justify-center mb-4">
-                <Shield className="w-6 h-6 text-white" />
-              </div>
-              <h3 className="text-xl font-semibold text-[#0f1e46] mb-2">
-                Team Access
+            {/* 2. US and EU Bank Account Opening in Seconds */}
+            <div className="bg-white p-8 rounded-xl shadow-lg">
+              <Globe className="w-12 h-12 text-[#0040FF] mb-4" />
+              <h3 className="text-xl font-bold text-[#0f1e46] mb-3">
+                Instant Global Banking
               </h3>
-              <p className="text-[#5a6b91] mb-3">
-                Add team members with custom permissions. Perfect for finance
-                teams and accountants.
+              <p className="text-[#5a6b91]">
+                Open US and EU bank accounts in{' '}
+                <span className="font-semibold italic text-orange-600">
+                  seconds
+                </span>
+                . Get ACH routing numbers and SEPA IBANs instantly linked to
+                your crypto wallet for seamless fiat-crypto operations.
               </p>
-              <p className="text-sm text-[#0040FF] font-semibold">
-                Coming soon
+            </div>
+
+            {/* 3. Corporate Cards with Spend Management */}
+            <div className="bg-white p-8 rounded-xl shadow-lg">
+              <Shield className="w-12 h-12 text-[#0040FF] mb-4" />
+              <h3 className="text-xl font-bold text-[#0f1e46] mb-3">
+                Corporate Cards with Smart Controls
+              </h3>
+              <p className="text-[#5a6b91]">
+                Spend directly from your balance{' '}
+                <span className="font-semibold italic text-orange-600">
+                  anywhere in the world
+                </span>
+                . Built-in spend management, real-time controls, and instant
+                settlement from your USDC holdings.
+                <span className="inline-flex items-center ml-2 px-2 py-1 bg-orange-100 text-orange-800 text-xs font-medium rounded-full border border-orange-200">
+                  Coming soon
+                </span>
+              </p>
+            </div>
+
+            {/* 4. Full Self Custody */}
+            <div className="bg-white p-8 rounded-xl shadow-lg">
+              <Lock className="w-12 h-12 text-[#0040FF] mb-4" />
+              <h3 className="text-xl font-bold text-[#0f1e46] mb-3">
+                Complete Self-Custody
+              </h3>
+              <p className="text-[#5a6b91]">
+                Maintain{' '}
+                <span className="font-semibold italic text-orange-600">
+                  full control
+                </span>{' '}
+                of your funds with your own keys. Choose between managed wallets
+                for convenience or bring your own for maximum security.
               </p>
             </div>
           </div>
@@ -491,131 +491,132 @@ export default function CryptoLandingPage() {
               banking
             </p>
 
-            {/* Visual Diagram */}
-            <div className="bg-gray-50 rounded-xl p-6 mb-8">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
-                {/* Your Wallet */}
-                <div className="text-center">
-                  <div className="bg-white rounded-lg p-4 shadow-sm mb-3">
-                    <div className="w-16 h-16 bg-[#0040FF] rounded-lg mx-auto mb-2 flex items-center justify-center">
-                      <Wallet className="w-8 h-8 text-white" />
-                    </div>
-                    <h4 className="font-semibold text-[#0f1e46]">
-                      Your Wallet
-                    </h4>
-                    <p className="text-sm text-[#5a6b91] mt-1">0x742d...b7d</p>
-                  </div>
-                  <p className="text-xs text-gray-600">
-                    Your keys, your crypto
-                  </p>
+            <div className="space-y-4">
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <span className="text-[#0040FF] font-bold text-sm">1</span>
                 </div>
-
-                {/* Bridge */}
-                <div className="text-center">
-                  <div className="hidden md:block">
-                    <svg className="w-full h-12" viewBox="0 0 200 50">
-                      <line
-                        x1="20"
-                        y1="25"
-                        x2="180"
-                        y2="25"
-                        stroke="#0040FF"
-                        strokeWidth="2"
-                        strokeDasharray="5,5"
-                      />
-                      <polygon points="180,25 175,20 175,30" fill="#0040FF" />
-                      <polygon points="20,25 25,20 25,30" fill="#0040FF" />
-                    </svg>
-                  </div>
-                  <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
-                    <h4 className="font-semibold text-[#0040FF]">
-                      0.finance Bridge
-                    </h4>
-                    <p className="text-xs text-[#5a6b91] mt-1">
-                      Instant conversion
-                    </p>
-                  </div>
-                </div>
-
-                {/* Banking Network */}
-                <div className="text-center">
-                  <div className="bg-white rounded-lg p-4 shadow-sm mb-3">
-                    <div className="w-16 h-16 bg-green-500 rounded-lg mx-auto mb-2 flex items-center justify-center">
-                      <DollarSign className="w-8 h-8 text-white" />
-                    </div>
-                    <h4 className="font-semibold text-[#0f1e46]">
-                      ACH Account
-                    </h4>
-                    <div className="text-xs text-[#5a6b91] mt-1 space-y-1">
-                      <div>Routing: 021000021</div>
-                      <div>Account: 1234567890</div>
-                    </div>
-                  </div>
-                  <p className="text-xs text-gray-600">
-                    Incoming transforms to USDC
+                <div className="flex-1">
+                  <h4 className="font-semibold text-[#0f1e46] mb-2 text-base">
+                    Sign Up with Your Email
+                  </h4>
+                  <p className="text-[#5a6b91] text-sm leading-relaxed">
+                    Get started in minutes with just your email address. Simple
+                    onboarding process to get you up and running quickly.
                   </p>
                 </div>
               </div>
-            </div>
 
-            <div className="space-y-6">
-              <div className="flex items-start gap-4">
-                <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <span className="text-[#0040FF] font-bold">1</span>
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <span className="text-[#0040FF] font-bold text-sm">2</span>
                 </div>
-                <div>
-                  <h4 className="font-semibold text-[#0f1e46] mb-1">
-                    Connect Your Wallet
+                <div className="flex-1">
+                  <h4 className="font-semibold text-[#0f1e46] mb-2 text-base">
+                    Create Your Bank Accounts (US & EU)
                   </h4>
-                  <p className="text-[#5a6b91]">
-                    Use your existing wallet or let us create one for you.
-                    Options include
+                  <p className="text-[#5a6b91] text-sm leading-relaxed">
+                    Instantly receive{' '}
                     <span className="font-semibold italic text-orange-600">
-                      {' '}
-                      managed by 0.finance
+                      ACH routing numbers
                     </span>{' '}
-                    for simplicity or{' '}
-                    <span className="font-semibold">
-                      bring your own wallet
+                    and{' '}
+                    <span className="font-semibold italic text-orange-600">
+                      SEPA IBANs
                     </span>{' '}
-                    for full control.
+                    linked to your wallet. Set up both regions in seconds.
                   </p>
                 </div>
               </div>
-              <div className="flex items-start gap-4">
-                <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <span className="text-[#0040FF] font-bold">2</span>
+
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <span className="text-[#0040FF] font-bold text-sm">3</span>
                 </div>
-                <div>
-                  <h4 className="font-semibold text-[#0f1e46] mb-1">
-                    Get Your ACH Account
+                <div className="flex-1">
+                  <h4 className="font-semibold text-[#0f1e46] mb-2 text-base">
+                    Deposit USD, EUR, or USDC
                   </h4>
-                  <p className="text-[#5a6b91]">
-                    Instantly receive ACH routing numbers linked to your wallet.
-                    When anyone sends you dollars, they{' '}
+                  <p className="text-[#5a6b91] text-sm leading-relaxed">
+                    Fund your account via{' '}
                     <span className="font-semibold italic text-orange-600">
-                      automatically convert
-                    </span>{' '}
-                    to USDC in your wallet.
+                      ACH/Wire transfers
+                    </span>
+                    ,{' '}
+                    <span className="font-semibold italic text-orange-600">
+                      SEPA payments
+                    </span>
+                    , or{' '}
+                    <span className="font-semibold italic text-orange-600">
+                      onchain USDC transfers
+                    </span>
+                    . All fiat automatically converts to USDC.
                   </p>
                 </div>
               </div>
-              <div className="flex items-start gap-4">
-                <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <span className="text-[#0040FF] font-bold">3</span>
+
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <span className="text-[#0040FF] font-bold text-sm">4</span>
                 </div>
-                <div>
-                  <h4 className="font-semibold text-[#0f1e46] mb-1">
-                    Send Anywhere
+                <div className="flex-1">
+                  <h4 className="font-semibold text-[#0f1e46] mb-2 text-base">
+                    Start Earning 10% APY on Idle Funds
                   </h4>
-                  <p className="text-[#5a6b91]">
-                    Transfer to US banks, EU SEPA, or other crypto wallets. Your
-                    USDC
+                  <p className="text-[#5a6b91] text-sm leading-relaxed">
+                    Your USDC holdings immediately begin earning{' '}
                     <span className="font-semibold italic text-orange-600">
-                      {' '}
-                      converts on-the-fly
+                      10% annual yield
                     </span>{' '}
-                    to whatever currency your recipient needs.
+                    with enterprise-grade insurance from Munich Re. No lock-up
+                    periods or minimum balances.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <span className="text-[#0040FF] font-bold text-sm">5</span>
+                </div>
+                <div className="flex-1">
+                  <h4 className="font-semibold text-[#0f1e46] mb-2 text-base">
+                    Spend Like a Regular Bank
+                  </h4>
+                  <p className="text-[#5a6b91] text-sm leading-relaxed">
+                    Send money via{' '}
+                    <span className="font-semibold italic text-orange-600">
+                      ACH, Wire, or SEPA
+                    </span>{' '}
+                    to yourself or third parties. Or transfer{' '}
+                    <span className="font-semibold italic text-orange-600">
+                      USDC onchain
+                    </span>{' '}
+                    for instant crypto payments. Your USDC converts
+                    automatically to the destination currency.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <span className="text-[#0040FF] font-bold text-sm">6</span>
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-2">
+                    <h4 className="font-semibold text-[#0f1e46] text-base">
+                      Create Corporate Cards
+                    </h4>
+                    <span className="inline-flex items-center px-2 py-1 bg-orange-100 text-orange-800 text-xs font-medium rounded-full border border-orange-200">
+                      Coming soon
+                    </span>
+                  </div>
+                  <p className="text-[#5a6b91] text-sm leading-relaxed">
+                    Spend directly from your balance{' '}
+                    <span className="font-semibold italic text-orange-600">
+                      anywhere in the world
+                    </span>
+                    . Built-in spend management, real-time controls, and instant
+                    settlement from your USDC holdings.
                   </p>
                 </div>
               </div>
@@ -630,76 +631,15 @@ export default function CryptoLandingPage() {
         </div>
       </section>
 
-      {/* Built for Crypto Section */}
-      <section className="px-4 sm:px-6 lg:px-16 py-16 sm:py-20 lg:py-24 bg-gray-50">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-12 sm:mb-16">
-            <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold text-[#0f1e46] mb-3 sm:mb-4">
-              Built for <span className="text-[#0040FF]">global companies</span>
-            </h2>
-            <p className="text-lg sm:text-xl md:text-2xl font-light text-[#5a6b91] max-w-3xl mx-auto px-4">
-              Whether you're in tech, e-commerce, or services -{' '}
-              <span className="font-semibold italic text-orange-600">
-                manage money without borders
-              </span>
-              .
-            </p>
-          </div>
-
-          {/* Benefits Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-            <div className="bg-white p-8 rounded-xl shadow-lg">
-              <Shield className="w-12 h-12 text-[#0040FF] mb-4" />
-              <h3 className="text-xl font-bold text-[#0f1e46] mb-3">
-                Always In Control
-              </h3>
-              <p className="text-[#5a6b91]">
-                Your money, your decisions.{' '}
-                <span className="font-semibold italic text-orange-600">
-                  No freezes
-                </span>
-                , no surprises.
-              </p>
-            </div>
-            <div className="bg-white p-8 rounded-xl shadow-lg">
-              <Clock className="w-12 h-12 text-[#0040FF] mb-4" />
-              <h3 className="text-xl font-bold text-[#0f1e46] mb-3">
-                Instant Transfers
-              </h3>
-              <p className="text-[#5a6b91]">
-                Move money globally in{' '}
-                <span className="font-semibold italic text-orange-600">
-                  seconds
-                </span>
-                , not days.
-              </p>
-            </div>
-            <div className="bg-white p-8 rounded-xl shadow-lg">
-              <DollarSign className="w-12 h-12 text-[#0040FF] mb-4" />
-              <h3 className="text-xl font-bold text-[#0f1e46] mb-3">
-                Pay Anyone
-              </h3>
-              <p className="text-[#5a6b91]">
-                Employees, vendors, contractors -{' '}
-                <span className="font-semibold italic text-orange-600">
-                  anywhere
-                </span>{' '}
-                in the world.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
       {/* Testimonial Quote */}
       <section className="px-4 sm:px-6 lg:px-16 py-16 sm:py-20 lg:py-24 bg-white">
         <div className="max-w-4xl mx-auto text-center">
           <blockquote className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-light text-[#0f1e46] italic mb-6 leading-tight">
-            &ldquo;We{' '}
+            &ldquo;Earning{' '}
             <span className="text-orange-600 font-bold not-italic">
-              cut our finance ops time by 80%
+              10% on our idle funds
             </span>{' '}
-            and can finally pay international contractors instantly.&rdquo;
+            has helped us almost pay for another employee a year.&rdquo;
           </blockquote>
           <p className="text-lg text-[#5a6b91]">
             — Sarah Chen, Tech Startup CFO
@@ -707,18 +647,25 @@ export default function CryptoLandingPage() {
         </div>
       </section>
 
+      {/* Visual Separator */}
+      <div className="bg-gray-100">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-16">
+          <div className="border-t border-gray-200"></div>
+        </div>
+      </div>
+
       {/* Final CTA Section */}
-      <section className="px-4 sm:px-6 lg:px-16 py-16 sm:py-20 lg:py-24 bg-white">
+      <section className="px-4 sm:px-6 lg:px-16 py-16 sm:py-20 lg:py-24 bg-gray-50">
         <div className="max-w-7xl mx-auto">
           <div className="max-w-3xl mx-auto text-center">
             <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold text-[#0f1e46] mb-4 leading-tight">
-              Ready to <span className="text-[#0040FF]">simplify</span> your
-              finances?
+              Ready to <span className="text-[#0040FF]">bank smarter</span> with
+              your company&apos;s funds?
             </h2>
             <p className="text-xl sm:text-2xl md:text-3xl font-light text-[#5a6b91] mb-8">
               Join companies that{' '}
               <span className="font-semibold italic text-orange-600">
-                spend less time on finance ops
+                earn while they bank
               </span>
               .
             </p>
@@ -728,7 +675,7 @@ export default function CryptoLandingPage() {
                 href="/signin?source=crypto"
                 className="inline-flex items-center justify-center px-8 sm:px-10 py-4 sm:py-5 bg-[#0050ff] hover:bg-[#0050ff]/90 text-white text-lg sm:text-xl font-semibold rounded-xl transition-all hover:scale-[1.02] active:scale-[0.97] shadow-lg shadow-[#0050ff]/25"
               >
-                Get Started
+                Sign Up
               </Link>
               <Link
                 href="https://cal.com/potato/0-finance-onboarding"
@@ -886,7 +833,7 @@ export default function CryptoLandingPage() {
                 href="/signin?source=crypto"
                 className="block w-full py-3 bg-[#0050ff] hover:bg-[#0050ff]/90 text-white text-center font-semibold rounded-lg transition-all hover:scale-[1.02] active:scale-[0.97] shadow-lg shadow-[#0050ff]/25"
               >
-                Get Your Own Virtual Account →
+                Sign Up →
               </Link>
             </div>
           </div>
