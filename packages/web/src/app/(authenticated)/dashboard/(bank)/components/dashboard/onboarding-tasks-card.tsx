@@ -37,18 +37,17 @@ interface OnboardingTasksProps {
 export function OnboardingTasksCard({ initialData }: OnboardingTasksProps) {
   const [isCreatingAccounts, setIsCreatingAccounts] = useState(false);
 
-  const { data: onboardingStatus, isLoading } = api.onboarding.getOnboardingSteps.useQuery(
-    undefined,
-    {
+  const { data: onboardingStatus, isLoading } =
+    api.onboarding.getOnboardingSteps.useQuery(undefined, {
       initialData: initialData as any,
       staleTime: 10 * 1000,
       refetchInterval: 5000,
       refetchOnWindowFocus: false,
-    }
-  );
+    });
 
   const utils = api.useUtils();
-  const createAccountsMutation = api.align.createAllVirtualAccounts.useMutation();
+  const createAccountsMutation =
+    api.align.createAllVirtualAccounts.useMutation();
 
   const handleCreateVirtualAccounts = async () => {
     setIsCreatingAccounts(true);
@@ -108,7 +107,7 @@ export function OnboardingTasksCard({ initialData }: OnboardingTasksProps) {
     title: 'Create Smart Account',
     description: isSafeComplete
       ? 'Your smart account is created and ready to use.'
-      : 'Create a secure smart account to manage your crypto transactions and payments.',
+      : 'Create a secure smart account to access insured 8-10% yield on your business savings.',
     button: !isSafeComplete ? (
       <Button asChild size="sm" className="w-full sm:w-auto">
         <Link href="/onboarding/create-safe">Create Smart Account</Link>
@@ -144,16 +143,23 @@ export function OnboardingTasksCard({ initialData }: OnboardingTasksProps) {
         </Button>
       ),
     };
-  } else if (kycStep?.kycSubStatus === 'kyc_form_submission_accepted' || kycMarkedDone) {
+  } else if (
+    kycStep?.kycSubStatus === 'kyc_form_submission_accepted' ||
+    kycMarkedDone
+  ) {
     kycContent = {
       icon: <Loader2 className="h-6 w-6 animate-spin text-[#0050ff]" />,
       title: 'Verification in Review',
-      description:
-        kycMarkedDone
-          ? "You've marked your KYC as complete. We are actively reviewing your submission."
-          : 'Your verification has been submitted successfully and is under review.',
+      description: kycMarkedDone
+        ? "You've marked your KYC as complete. We are actively reviewing your submission."
+        : 'Your verification has been submitted successfully and is under review.',
       button: (
-        <Button asChild size="sm" variant="outline" className="w-full sm:w-auto">
+        <Button
+          asChild
+          size="sm"
+          variant="outline"
+          className="w-full sm:w-auto"
+        >
           <Link href="/onboarding/kyc">Check Status</Link>
         </Button>
       ),
@@ -165,7 +171,7 @@ export function OnboardingTasksCard({ initialData }: OnboardingTasksProps) {
       title: 'Verify Your Identity',
       description: !isSafeComplete
         ? 'Create your smart account first to unlock identity verification.'
-        : 'Complete KYC to verify your identity and unlock banking features.',
+        : 'Complete KYC to verify your identity and unlock high-yield banking.',
       button: isSafeComplete ? (
         <Button asChild size="sm" className="w-full sm:w-auto">
           <Link href="/onboarding/kyc">Complete KYC</Link>
@@ -184,15 +190,20 @@ export function OnboardingTasksCard({ initialData }: OnboardingTasksProps) {
     ) : (
       <Circle className="h-6 w-6 text-gray-400" />
     ),
-    title: 'Create Virtual Bank Account',
+    title: 'Set Up High-Yield Account',
     description: !isKycComplete
       ? 'Complete identity verification to unlock this step.'
       : isBankAccountComplete
-      ? 'Your virtual bank accounts are set up and ready to use.'
-      : 'Set up virtual bank accounts to receive USD and EUR payments that automatically convert to stablecoins.',
+        ? 'Your insured high-yield account is ready. Transfer funds via ACH to start earning 8-10% annually.'
+        : 'Get instant access to insured 8-10% yield accounts. Simply transfer funds via ACH to start earning immediately.',
     button:
       isKycComplete && !isBankAccountComplete ? (
-        <Button size="sm" onClick={handleCreateVirtualAccounts} disabled={isCreatingAccounts} className="w-full sm:w-auto">
+        <Button
+          size="sm"
+          onClick={handleCreateVirtualAccounts}
+          disabled={isCreatingAccounts}
+          className="w-full sm:w-auto"
+        >
           {isCreatingAccounts ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Creating...
@@ -205,52 +216,84 @@ export function OnboardingTasksCard({ initialData }: OnboardingTasksProps) {
   } as const;
 
   // Determine whether to show the card (we now keep it visible as a "Getting Started" screen until at least bank account is set up)
-  const shouldShowCard = !(isSafeComplete && isKycComplete && isBankAccountComplete);
+  const shouldShowCard = !(
+    isSafeComplete &&
+    isKycComplete &&
+    isBankAccountComplete
+  );
 
   if (!shouldShowCard) return null;
 
   return (
     <Card className="w-full">
       <CardHeader className="pb-4 sm:pb-6">
-        <CardTitle className="text-base sm:text-lg">Set up your virtual bank account</CardTitle>
+        <CardTitle className="text-base sm:text-lg">
+          Set up your high-yield bank account
+        </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6 px-4 sm:px-6">
         {/* Setup checklist */}
         <div className="space-y-4 sm:space-y-6">
           {/* Step 1: Create Smart Account */}
-          <div className={`flex flex-col sm:flex-row items-start gap-3 sm:gap-4 ${safeContent.disabled ? 'opacity-50' : ''}`}>
+          <div
+            className={`flex flex-col sm:flex-row items-start gap-3 sm:gap-4 ${safeContent.disabled ? 'opacity-50' : ''}`}
+          >
             <div className="flex items-start gap-3 flex-1 w-full">
               <div className="flex-shrink-0 mt-0.5">{safeContent.icon}</div>
               <div className="flex-1 min-w-0">
                 <p className="font-semibold text-gray-800 text-sm sm:text-base">{`1. ${safeContent.title}`}</p>
-                <p className="text-xs sm:text-sm text-gray-600 mt-1">{safeContent.description}</p>
+                <p className="text-xs sm:text-sm text-gray-600 mt-1">
+                  {safeContent.description}
+                </p>
               </div>
             </div>
-            {safeContent.button && <div className="flex-shrink-0 w-full sm:w-auto sm:ml-9">{safeContent.button}</div>}
+            {safeContent.button && (
+              <div className="flex-shrink-0 w-full sm:w-auto sm:ml-9">
+                {safeContent.button}
+              </div>
+            )}
           </div>
 
           {/* Step 2: Verify Identity */}
-          <div className={`flex flex-col sm:flex-row items-start gap-3 sm:gap-4 ${kycContent.disabled ? 'opacity-50' : ''}`}>
+          <div
+            className={`flex flex-col sm:flex-row items-start gap-3 sm:gap-4 ${kycContent.disabled ? 'opacity-50' : ''}`}
+          >
             <div className="flex items-start gap-3 flex-1 w-full">
               <div className="flex-shrink-0 mt-0.5">{kycContent.icon}</div>
               <div className="flex-1 min-w-0">
                 <p className="font-semibold text-gray-800 text-sm sm:text-base">{`2. ${kycContent.title}`}</p>
-                <p className="text-xs sm:text-sm text-gray-600 mt-1">{kycContent.description}</p>
+                <p className="text-xs sm:text-sm text-gray-600 mt-1">
+                  {kycContent.description}
+                </p>
               </div>
             </div>
-            {kycContent.button && <div className="flex-shrink-0 w-full sm:w-auto sm:ml-9">{kycContent.button}</div>}
+            {kycContent.button && (
+              <div className="flex-shrink-0 w-full sm:w-auto sm:ml-9">
+                {kycContent.button}
+              </div>
+            )}
           </div>
 
           {/* Step 3: Create Virtual Bank Account */}
-          <div className={`flex flex-col sm:flex-row items-start gap-3 sm:gap-4 ${bankAccountContent.disabled ? 'opacity-50' : ''}`}>
+          <div
+            className={`flex flex-col sm:flex-row items-start gap-3 sm:gap-4 ${bankAccountContent.disabled ? 'opacity-50' : ''}`}
+          >
             <div className="flex items-start gap-3 flex-1 w-full">
-              <div className="flex-shrink-0 mt-0.5">{bankAccountContent.icon}</div>
+              <div className="flex-shrink-0 mt-0.5">
+                {bankAccountContent.icon}
+              </div>
               <div className="flex-1 min-w-0">
                 <p className="font-semibold text-gray-800 text-sm sm:text-base">{`3. ${bankAccountContent.title}`}</p>
-                <p className="text-xs sm:text-sm text-gray-600 mt-1">{bankAccountContent.description}</p>
+                <p className="text-xs sm:text-sm text-gray-600 mt-1">
+                  {bankAccountContent.description}
+                </p>
               </div>
             </div>
-            {bankAccountContent.button && <div className="flex-shrink-0 w-full sm:w-auto sm:ml-9">{bankAccountContent.button}</div>}
+            {bankAccountContent.button && (
+              <div className="flex-shrink-0 w-full sm:w-auto sm:ml-9">
+                {bankAccountContent.button}
+              </div>
+            )}
           </div>
         </div>
       </CardContent>

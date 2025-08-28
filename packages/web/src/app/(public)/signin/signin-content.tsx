@@ -24,13 +24,15 @@ export default function SignInContent() {
   // Fetch company info for invite
   const { data: inviteCompany } = api.company.getCompanyByInvite.useQuery(
     { token: inviteToken || '' },
-    { enabled: !!inviteToken }
+    { enabled: !!inviteToken },
   );
 
   // Redirect to dashboard if already authenticated
   useEffect(() => {
     if (authenticated) {
-      const redirectUrl = inviteToken ? `/dashboard?invite=${inviteToken}` : '/dashboard';
+      const redirectUrl = inviteToken
+        ? `/dashboard?invite=${inviteToken}`
+        : '/dashboard';
       window.location.href = redirectUrl;
     }
   }, [authenticated, inviteToken]);
@@ -71,19 +73,22 @@ export default function SignInContent() {
                 height={40}
                 className="w-10 h-10 object-contain"
               />
-              <span className="text-xl font-semibold text-[#0040FF] tracking-tight">finance</span>
+              <span className="text-xl font-semibold text-[#0040FF] tracking-tight">
+                finance
+              </span>
             </Link>
 
             {/* Focused value prop */}
             <h2 className="text-4xl lg:text-5xl font-extrabold leading-tight text-[#0f1e46] mb-6">
-              <span className="text-[#0040FF]">USDC</span> banking pros
+              Earn <span className="text-[#0040FF]">8-10%</span> on business
+              savings
             </h2>
             <ul className="space-y-4 mb-8">
               {[
-                'Virtual accounts to get paid anywhere',
-                'Fastest ways to off/on-ramp USDC',
-                'Receive/Send invoices',
-                'Earn yield on your idle cash',
+                'Insured high-yield accounts for business',
+                'Simple ACH transfers - works like your bank',
+                'No minimums, no lock-ups, full liquidity',
+                '10x higher yields than traditional banks',
               ].map((item, index) => (
                 <li key={index} className="flex items-start gap-3">
                   <div className="w-6 h-6 rounded-full bg-[#0040FF]/10 flex items-center justify-center flex-shrink-0 mt-0.5">
@@ -97,7 +102,9 @@ export default function SignInContent() {
 
           {/* Backed by Orange DAO */}
           <div className="mt-6">
-            <p className="text-xs text-[#5a6b91] mb-3 uppercase tracking-wider">Backed by</p>
+            <p className="text-xs text-[#5a6b91] mb-3 uppercase tracking-wider">
+              Backed by
+            </p>
             <a
               href="https://www.orangedao.xyz/"
               target="_blank"
@@ -119,18 +126,27 @@ export default function SignInContent() {
                   <Building2 className="h-5 w-5 text-blue-600" />
                 </div>
                 <div className="flex-1">
-                  <h3 className="font-medium text-blue-900 mb-1">🎉 You're invited to join a company!</h3>
+                  <h3 className="font-medium text-blue-900 mb-1">
+                    🎉 You're invited to join a company!
+                  </h3>
                   {inviteCompany ? (
                     <div className="space-y-1">
-                      <p className="text-sm text-blue-800 font-medium">{inviteCompany.name}</p>
+                      <p className="text-sm text-blue-800 font-medium">
+                        {inviteCompany.name}
+                      </p>
                       <p className="text-xs text-blue-700 flex items-center gap-1">
                         <Mail className="h-3 w-3" />
                         {inviteCompany.email}
                       </p>
-                      <p className="text-xs text-blue-600">Sign in to accept this invitation and start creating invoices</p>
+                      <p className="text-xs text-blue-600">
+                        Sign in to accept this invitation and start creating
+                        invoices
+                      </p>
                     </div>
                   ) : (
-                    <p className="text-sm text-blue-700">Sign in to accept your company invitation</p>
+                    <p className="text-sm text-blue-700">
+                      Sign in to accept your company invitation
+                    </p>
                   )}
                 </div>
               </div>
@@ -142,7 +158,9 @@ export default function SignInContent() {
               {inviteToken ? "You've been invited!" : 'Welcome to 0 finance'}
             </h1>
             <p className="text-[#5a6b91] text-lg">
-              {inviteToken ? 'Sign in to accept your company invitation' : 'Sign in or create your account'}
+              {inviteToken
+                ? 'Sign in to accept your company invitation'
+                : 'Sign in or create your account'}
             </p>
           </div>
 
@@ -150,7 +168,8 @@ export default function SignInContent() {
           {authenticated && user && (
             <div className="mb-6 p-4 bg-[#DDE0F2]/20 rounded-lg border border-[#0040FF]/10">
               <p className="text-sm text-[#5a6b91] text-center">
-                Already signed in as {user.email?.address ?? 'your account'}. Redirecting to dashboard...
+                Already signed in as {user.email?.address ?? 'your account'}.
+                Redirecting to dashboard...
               </p>
             </div>
           )}
@@ -166,10 +185,18 @@ export default function SignInContent() {
           )}
 
           <div className="mt-6 text-center">
-            <p className="text-sm text-[#5a6b91]">Secure authentication powered by Privy</p>
+            <p className="text-sm text-[#5a6b91]">
+              Secure authentication powered by Privy
+            </p>
             <div className="mt-4">
-              <Link href={source ? `/${source}` : '/'} className="text-[#5a6b91] hover:text-[#0040FF] transition-colors font-medium">
-                ← Back to {source ? `${source.charAt(0).toUpperCase() + source.slice(1)} page` : 'Home'}
+              <Link
+                href={source ? `/${source}` : '/'}
+                className="text-[#5a6b91] hover:text-[#0040FF] transition-colors font-medium"
+              >
+                ← Back to{' '}
+                {source
+                  ? `${source.charAt(0).toUpperCase() + source.slice(1)} page`
+                  : 'Home'}
               </Link>
             </div>
           </div>

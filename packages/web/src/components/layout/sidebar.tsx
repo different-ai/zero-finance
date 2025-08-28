@@ -8,8 +8,6 @@ import {
   FileText,
   Settings,
   LogOut,
-  Inbox,
-  PiggyBank,
   ChevronDown,
   User,
   Phone,
@@ -36,19 +34,9 @@ const navigationItems: NavigationItem[] = [
     icon: Banknote,
   },
   {
-    name: 'Savings',
-    href: '/dashboard/savings',
-    icon: PiggyBank,
-  },
-  {
     name: 'Invoices',
     href: '/dashboard/invoices',
     icon: FileText,
-  },
-  {
-    name: 'Inbox',
-    href: '/dashboard/inbox ',
-    icon: Inbox,
   },
 ];
 
