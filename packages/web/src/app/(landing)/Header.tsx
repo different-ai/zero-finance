@@ -7,7 +7,7 @@ import Image from 'next/image';
 export function Header() {
   return (
     <header className="border-b border-[#101010]/10 bg-[#F7F7F2]">
-      <div className="mx-auto max-w-[1200px] px-8 py-6">
+      <div className="mx-auto max-w-[1200px] px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
         <div className="flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2">
             <Image
@@ -15,30 +15,18 @@ export function Header() {
               alt="Zero Finance"
               width={24}
               height={24}
-              className="w-6 h-6 object-contain"
+              className="w-5 h-5 sm:w-6 sm:h-6 object-contain"
             />
-            <span className="text-[14px] font-medium tracking-tight text-[#101010]">
+            <span className="text-[13px] sm:text-[14px] font-medium tracking-tight text-[#101010]">
               finance
             </span>
           </Link>
-          <nav className="flex items-center gap-8">
+          <nav className="flex items-center gap-3 sm:gap-4">
             <Link
-              className="text-[13px] uppercase tracking-[0.14em] text-[#101010]/70 hover:text-[#101010] transition-colors"
-              href="#about"
-            >
-              About
-            </Link>
-            <Link
-              className="text-[13px] uppercase tracking-[0.14em] text-[#101010]/70 hover:text-[#101010] transition-colors"
-              href="#docs"
-            >
-              Docs
-            </Link>
-            <Link
-              className="text-[13px] uppercase tracking-[0.14em] text-[#1B29FF] hover:underline underline-offset-4"
+              className="px-3 sm:px-4 py-1.5 sm:py-2 bg-[#1B29FF] hover:bg-[#1B29FF]/90 text-white text-[12px] sm:text-[13px] font-medium rounded-md transition-all"
               href="/signin"
             >
-              Sign in →
+              Sign in
             </Link>
           </nav>
         </div>

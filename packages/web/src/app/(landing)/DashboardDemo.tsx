@@ -19,14 +19,16 @@ export function DashboardDemo({
   onTransferClick,
 }: DashboardDemoProps) {
   return (
-    <section className="relative z-10 px-4 sm:px-6 lg:px-16 py-16 bg-white">
+    <section className="relative z-10 px-4 sm:px-6 lg:px-8 py-8 sm:py-12 lg:py-16 bg-white overflow-x-hidden">
       <div className="max-w-7xl mx-auto">
-        <h2 className="text-2xl sm:text-3xl font-bold text-center text-[#0f1e46] mb-8">
+        <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-center text-[#0f1e46] mb-6 sm:mb-8 px-2">
           See how it works:{' '}
-          <span className="text-[#0040FF]">Deposit → Earn → Spend</span>
+          <span className="text-[#0040FF] block sm:inline">
+            Deposit → Earn → Spend
+          </span>
         </h2>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 max-w-6xl mx-auto">
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
@@ -101,7 +103,7 @@ export function DashboardDemo({
                 <div className="flex items-center gap-2">
                   <Shield className="w-4 h-4 text-blue-600" />
                   <p className="text-xs text-blue-800">
-                    <strong>Insured by Munich Re</strong>
+                    <strong>Insured by Chainproof</strong>
                   </p>
                 </div>
                 <p className="text-xs text-blue-700 mt-1">

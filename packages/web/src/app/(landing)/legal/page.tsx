@@ -22,145 +22,133 @@ export default function LegalPage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
-    <div className="min-h-screen w-full bg-gradient-to-b from-[#eef4ff] to-[#dfe7ff]">
+    <div className="min-h-screen w-full bg-[#F7F7F2]">
       {/* Header */}
-      <header className="relative z-20 w-full px-4 sm:px-6 lg:px-16 py-4 sm:py-6 lg:py-8 bg-white/80 backdrop-blur-sm border-b border-gray-200">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          {/* Logo */}
-          <Link href="/" className="flex items-center gap-2">
-            <Image
-              src="/new-logo-bluer.png"
-              alt="Zero Finance"
-              width={48}
-              height={48}
-              className="w-12 h-12 sm:w-16 sm:h-16 object-contain rounded-md"
-            />
-            <span className="text-xl sm:text-2xl font-semibold text-[#00225b] tracking-tight">
-              finance
-            </span>
-          </Link>
+      <header className="border-b border-[#101010]/10 bg-[#F7F7F2]">
+        <div className="mx-auto max-w-[1200px] px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
+          <div className="flex items-center justify-between">
+            <Link href="/" className="flex items-center gap-2">
+              <Image
+                src="/new-logo-bluer.png"
+                alt="Zero Finance"
+                width={24}
+                height={24}
+                className="w-5 h-5 sm:w-6 sm:h-6 object-contain"
+              />
+              <span className="text-[13px] sm:text-[14px] font-medium tracking-tight text-[#101010]">
+                finance
+              </span>
+            </Link>
 
-          {/* Desktop Nav Links */}
-          <nav className="hidden md:flex items-center gap-6 lg:gap-8">
-            <Link
-              href="/"
-              className="text-sm lg:text-base font-medium text-[#0f1e46] hover:text-[#0050ff] transition-colors"
-            >
-              Home
-            </Link>
-            <Link
-              href="/legal"
-              className="text-sm lg:text-base font-medium text-[#0050ff] transition-colors"
-            >
-              Legal & Security
-            </Link>
-            <Link
-              href="/signin"
-              className="flex items-center gap-2 bg-[#0040FF] text-white px-3 lg:px-4 py-2 rounded-lg font-semibold text-sm transition-colors shadow-sm hover:bg-[#0050ff] focus-visible:ring-2 focus-visible:ring-[#0040FF] focus:outline-none"
-            >
-              Sign In
-            </Link>
-            <Link
-              href="https://cal.com/potato/0-finance-onboarding"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-2 backdrop-blur-sm bg-[#0040FF]/10 text-[#0040FF] px-3 lg:px-4 py-2 rounded-lg font-semibold text-sm transition-colors shadow-sm border border-[#0040FF]/30 hover:border-[#0040FF] hover:bg-[#0040FF]/15 focus-visible:ring-2 focus-visible:ring-[#0040FF] focus:outline-none"
-            >
-              <Calendar className="w-4 lg:w-5 h-4 lg:h-5" />
-              Book Demo
-            </Link>
-          </nav>
+            {/* Desktop Nav Links */}
+            <nav className="hidden md:flex items-center gap-6 lg:gap-8">
+              <Link
+                href="/"
+                className="text-[13px] uppercase tracking-[0.14em] text-[#101010]/70 hover:text-[#101010] transition-colors"
+              >
+                Home
+              </Link>
+              <Link
+                href="/legal"
+                className="text-[13px] uppercase tracking-[0.14em] text-[#1B29FF] transition-colors"
+              >
+                Legal & Security
+              </Link>
+              <Link
+                className="px-3 sm:px-4 py-1.5 sm:py-2 bg-[#1B29FF] hover:bg-[#1B29FF]/90 text-white text-[12px] sm:text-[13px] font-medium rounded-md transition-all"
+                href="/signin"
+              >
+                Sign in
+              </Link>
+            </nav>
 
-          {/* Mobile Menu Button */}
-          <button
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="md:hidden p-2 text-[#0f1e46] hover:text-[#0050ff] transition-colors"
-          >
-            {mobileMenuOpen ? (
-              <X className="w-6 h-6" />
-            ) : (
-              <Menu className="w-6 h-6" />
-            )}
-          </button>
+            {/* Mobile Menu Button */}
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="md:hidden p-2 text-[#101010] hover:text-[#1B29FF] transition-colors"
+            >
+              {mobileMenuOpen ? (
+                <X className="w-5 h-5" />
+              ) : (
+                <Menu className="w-5 h-5" />
+              )}
+            </button>
+          </div>
         </div>
 
         {/* Mobile Menu */}
         {mobileMenuOpen && (
-          <div className="md:hidden absolute top-full left-0 right-0 bg-white/95 backdrop-blur-sm border-t border-gray-200 px-4 py-4 space-y-4">
+          <div className="md:hidden absolute top-full left-0 right-0 bg-[#F7F7F2] border-t border-[#101010]/10 px-4 py-4 space-y-3">
             <Link
               href="/"
-              className="block text-base font-medium text-[#0f1e46] hover:text-[#0050ff] transition-colors py-2"
+              className="block text-[13px] uppercase tracking-[0.14em] text-[#101010]/70 hover:text-[#101010] py-2"
               onClick={() => setMobileMenuOpen(false)}
             >
               Home
             </Link>
             <Link
               href="/legal"
-              className="block text-base font-medium text-[#0050ff] transition-colors py-2"
+              className="block text-[13px] uppercase tracking-[0.14em] text-[#1B29FF] py-2"
               onClick={() => setMobileMenuOpen(false)}
             >
               Legal & Security
             </Link>
             <Link
               href="/signin"
-              className="flex items-center gap-2 bg-[#0040FF] text-white px-4 py-3 rounded-lg font-semibold text-base transition-colors shadow-sm hover:bg-[#0050ff]"
+              className="block px-3 py-2 bg-[#1B29FF] hover:bg-[#1B29FF]/90 text-white text-[13px] font-medium rounded-md text-center"
               onClick={() => setMobileMenuOpen(false)}
             >
-              Sign In
-            </Link>
-            <Link
-              href="https://cal.com/potato/0-finance-onboarding"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-2 bg-[#0040FF]/10 text-[#0040FF] px-4 py-3 rounded-lg font-semibold text-base transition-colors border border-[#0040FF]/30 hover:border-[#0040FF] hover:bg-[#0040FF]/15"
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              <Calendar className="w-5 h-5" />
-              Book Demo
+              Sign in
             </Link>
           </div>
         )}
       </header>
 
       {/* Hero Section */}
-      <section className="relative z-10 px-4 sm:px-6 lg:px-16 pt-16 pb-12 bg-white">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-12">
-            <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tight mb-4 text-[#0f1e46]">
-              Legal & <span className="text-[#0040FF]">Security</span>
-            </h1>
-            <p className="text-xl text-[#5a6b91] max-w-3xl mx-auto">
-              Understanding your protection, insurance, and regulatory
-              compliance
-            </p>
+      <section className="relative z-10 px-4 sm:px-6 lg:px-8 py-8 sm:py-12 lg:py-16">
+        <div className="max-w-4xl mx-auto text-center">
+          <div className="inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-white/80 backdrop-blur-sm rounded-full border border-[#101010]/10 mb-4 sm:mb-6">
+            <Shield className="w-3 h-3 sm:w-4 sm:h-4 text-[#1B29FF]" />
+            <span className="text-[11px] sm:text-[12px] font-medium text-[#101010]">
+              SOC2 Type II Compliant
+            </span>
           </div>
+          <h1 className="text-2xl sm:text-3xl lg:text-5xl font-bold text-[#101010] mb-4 sm:mb-6 leading-tight">
+            Enterprise-Grade Security
+            <br />
+            <span className="text-[#1B29FF]">for Your Business</span>
+          </h1>
+          <p className="text-[14px] sm:text-[16px] lg:text-[18px] text-[#101010]/70 mb-6 sm:mb-8 max-w-3xl mx-auto">
+            Bank-level security meets blockchain innovation. Your funds are
+            protected by smart contract insurance, multi-sig wallets, and SOC2
+            compliance
+          </p>
         </div>
       </section>
 
       {/* Insurance Section */}
-      <section className="px-4 sm:px-6 lg:px-16 py-16 bg-gray-50">
+      <section className="px-4 sm:px-6 lg:px-8 py-8 sm:py-12 lg:py-16 bg-white border-t border-[#101010]/10">
         <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-12">
-            <Shield className="w-16 h-16 text-[#0040FF] mx-auto mb-4" />
-            <h2 className="text-3xl sm:text-4xl font-bold text-[#0f1e46] mb-4">
+          <div className="text-center mb-8 sm:mb-12">
+            <Shield className="w-12 h-12 sm:w-16 sm:h-16 text-[#1B29FF] mx-auto mb-3 sm:mb-4" />
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-[#101010] mb-3 sm:mb-4">
               10% APY - Fully Insured
             </h2>
-            <p className="text-lg text-[#5a6b91] max-w-3xl mx-auto">
+            <p className="text-[14px] sm:text-[16px] lg:text-[18px] text-[#101010]/70 max-w-3xl mx-auto">
               Your yield is protected by enterprise-grade smart contract
               insurance
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
-            <div className="bg-white rounded-xl shadow-lg p-8">
-              <h3 className="text-xl font-bold text-[#0f1e46] mb-4">
-                Insurance Provider: Munich Re
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 lg:gap-8 mb-8 sm:mb-12">
+            <div className="bg-white rounded-xl border border-[#101010]/10 p-4 sm:p-6 lg:p-8">
+              <h3 className="text-[16px] sm:text-[18px] lg:text-xl font-bold text-[#101010] mb-3 sm:mb-4">
+                Insurance Provider: Chainproof
               </h3>
-              <p className="text-[#5a6b91] mb-4">
-                Munich Re is the world's largest reinsurer with over 140 years
-                of experience. They provide the backing for our smart contract
-                insurance, ensuring that your funds are protected against
-                technical risks.
+              <p className="text-[13px] sm:text-[14px] lg:text-[15px] text-[#101010]/70 mb-3 sm:mb-4">
+                Chainproof provides comprehensive smart contract insurance
+                coverage, ensuring that your funds are protected against
+                technical risks and vulnerabilities.
               </p>
               <ul className="space-y-2">
                 <li className="flex items-start gap-2">
