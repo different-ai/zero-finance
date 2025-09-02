@@ -2,91 +2,133 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { ArrowDown } from 'lucide-react';
-import { OrangeDAOLogo } from '@/components/orange-dao-logo';
 
 export function HeroSection() {
   return (
     <>
-      <div className="absolute inset-x-0 top-0 w-full h-screen overflow-hidden">
-        <video
-          autoPlay
-          muted
-          playsInline
-          className="absolute inset-0 w-full h-full object-cover opacity-100 hidden sm:block"
-        >
-          <source
-            src="https://cdn.midjourney.com/video/b1844fe8-1f77-48e4-81be-b5918c753e77/2.mp4"
-            type="video/mp4"
-          />
-        </video>
-        <div className="absolute inset-0 bg-gradient-to-b from-[#eef4ff] to-[#dfe7ff] sm:hidden" />
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-[#dfe7ff]/90" />
-      </div>
+      {/* Hero */}
+      <section className="border-b border-[#101010]/10 bg-[#F7F7F2]">
+        <div className="mx-auto max-w-[1200px] px-8 pt-16 pb-12">
+          <p className="uppercase tracking-[0.18em] text-sm text-[#101010]/70">
+            Insured yield for startups
+          </p>
+          <h1 className="mt-3 font-serif text-[92px] leading-[0.98] tracking-[-0.01em] text-[#101010]">
+            <span className="text-[#1B29FF]">10% Yield</span> on Your <span className="italic">Startup&apos;s</span> Savings
+          </h1>
+          <p className="mt-6 max-w-[62ch] text-[18px] leading-[1.5] text-[#222]">
+            Open a regulated business account. Deposit USD, EUR, or USDC. Earn
+            automatically. Withdraw any time.
+          </p>
+          <div className="mt-10 flex items-center gap-24">
+            <Link
+              className="text-[18px] font-medium text-[#1B29FF] underline underline-offset-[6px] hover:no-underline transition-all"
+              href="/signin?source=crypto"
+            >
+              Sign up →
+            </Link>
+            <Link
+              className="text-[16px] text-[#101010] hover:text-[#1B29FF] transition-colors"
+              href="https://cal.com/potato/0-finance-onboarding"
+            >
+              Book demo
+            </Link>
+          </div>
+        </div>
+      </section>
 
-      <section
-        className="relative z-10 px-4 sm:px-6 lg:px-16 py-16 sm:py-20 lg:py-24"
-        style={{ paddingBottom: 'calc(6rem + 70px)' }}
-      >
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center">
-            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-extrabold tracking-tight mb-6 leading-[0.9] sm:leading-[0.85]">
-              Open a <span className="text-[#0040FF]">10% savings</span>
-              <br />
-              account for your startup
-            </h1>
+      {/* Demo Panel - Bank Statement Style */}
+      <section className="border-b border-[#101010]/10 bg-white">
+        <div className="mx-auto max-w-[1200px] px-8 py-16">
+          <div className="border border-[#101010]/10 bg-white">
+            <div className="grid grid-cols-12">
+              <div className="col-span-8 p-6 border-r border-[#101010]/10">
+                <div className="uppercase tracking-[0.14em] text-[12px] text-[#101010]/60">
+                  Total Balance
+                </div>
+                <div className="mt-2 tabular-nums text-[40px] leading-none font-medium tracking-tight">
+                  $2,480,930.22
+                </div>
+                <div className="mt-1 text-[14px] text-[#1B29FF] font-medium">
+                  10% APY
+                </div>
 
-            <div className="flex flex-wrap justify-center gap-3 mb-8">
-              <div className="inline-flex items-center px-4 py-2 bg-[#0040FF]/10 text-[#0040FF] rounded-full border border-[#0040FF]/20 font-medium text-sm">
-                10% APY fully insured
+                <div className="mt-6 border-t border-[#101010]/10 pt-4">
+                  <div className="text-[12px] uppercase tracking-[0.14em] text-[#101010]/60">
+                    Wire funds instantly
+                  </div>
+                  <dl className="mt-2 grid grid-cols-[120px_1fr] gap-y-1 text-[14px]">
+                    <dt className="text-[#101010]/60">Routing</dt>
+                    <dd className="tabular-nums font-medium">021000021</dd>
+                    <dt className="text-[#101010]/60">Account</dt>
+                    <dd className="tabular-nums font-medium">1234567890</dd>
+                  </dl>
+
+                  <div className="mt-4 flex gap-6 text-[15px]">
+                    <span className="text-[#1B29FF] underline underline-offset-4 cursor-pointer">
+                      Deposit
+                    </span>
+                    <span className="text-[#101010] hover:text-[#1B29FF] transition-colors cursor-pointer">
+                      Earn
+                    </span>
+                    <span className="text-[#101010] hover:text-[#1B29FF] transition-colors cursor-pointer">
+                      Spend
+                    </span>
+                  </div>
+                </div>
               </div>
-              <div className="inline-flex items-center px-4 py-2 bg-[#0040FF]/10 text-[#0040FF] rounded-full border border-[#0040FF]/20 font-medium text-sm">
-                Instant US/EU Bank Account
+
+              <div className="col-span-4 p-6">
+                <div className="uppercase tracking-[0.14em] text-[12px] text-[#101010]/60">
+                  Accounts
+                </div>
+                <ul className="mt-2 space-y-2 text-[14px]">
+                  <li className="text-[#101010]">
+                    US account <span className="tabular-nums">•••• 6241</span>
+                  </li>
+                  <li className="text-[#101010]">
+                    Corporate card{' '}
+                    <Link
+                      className="text-[#1B29FF] underline underline-offset-2"
+                      href="#"
+                    >
+                      set daily limit
+                    </Link>
+                  </li>
+                  <li className="text-[#101010]">Payouts ACH • SEPA • USDC</li>
+                </ul>
               </div>
-              <div className="inline-flex items-center px-4 py-2 bg-[#0040FF]/10 text-[#0040FF] rounded-full border border-[#0040FF]/20 font-medium text-sm">
-                Corporate cards
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Trust Section */}
+      <section className="bg-[#F7F7F2] py-12">
+        <div className="mx-auto max-w-[1200px] px-8">
+          <div className="grid grid-cols-3 gap-px bg-[#101010]/10">
+            {[
+              {
+                title: 'Fully insured',
+                detail: 'Coverage through regulated partners',
+              },
+              {
+                title: 'Instant US/EU accounts',
+                detail: 'Account numbers on sign up',
+              },
+              {
+                title: 'Regulated partner banks',
+                detail: 'Serious compliance, real rails',
+              },
+            ].map((item, index) => (
+              <div key={index} className="bg-[#F7F7F2] p-6">
+                <h3 className="text-[14px] font-medium text-[#101010]">
+                  {item.title}
+                </h3>
+                <p className="mt-1 text-[13px] text-[#101010]/70">
+                  {item.detail}
+                </p>
               </div>
-            </div>
-
-            <div className="space-y-3 max-w-4xl mx-auto">
-              <p className="text-base sm:text-lg md:text-xl lg:text-2xl font-light text-black leading-[1.2]">
-                Get started by depositing{' '}
-                <span className="text-[#0040FF] font-semibold">USD/EUR</span> or{' '}
-                <span className="text-[#0040FF] font-semibold">USDC</span>
-              </p>
-            </div>
-
-            <div className="flex flex-col sm:flex-row gap-4 justify-center m-8">
-              <Link
-                href="/signin?source=crypto"
-                className="inline-flex items-center justify-center px-6 sm:px-8 py-3 sm:py-4 bg-[#0050ff] hover:bg-[#0050ff]/90 text-white text-lg sm:text-xl font-semibold rounded-xl transition-all hover:scale-[1.02] active:scale-[0.97] shadow-lg shadow-[#0050ff]/25"
-              >
-                Sign Up
-              </Link>
-            </div>
-
-            <div className="flex items-center justify-center gap-2 mt-8">
-              <span className="text-xs text-[#5a6b91] uppercase tracking-wider">
-                Backed by
-              </span>
-              <a
-                href="https://www.orangedao.xyz/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="opacity-70 hover:opacity-100 transition-opacity"
-              >
-                <OrangeDAOLogo className="h-6 w-auto" />
-              </a>
-            </div>
-
-            <div className="flex items-center justify-center gap-2 mt-16">
-              <span className="text-[#0050ff] text-lg font-semibold">
-                Try Me
-              </span>
-              <span className="text-orange-600 text-lg font-semibold">
-                <ArrowDown className="w-4 h-4" />
-              </span>
-            </div>
+            ))}
           </div>
         </div>
       </section>

@@ -17,20 +17,19 @@ export default function CryptoLandingPage() {
   const [showTransferModal, setShowTransferModal] = useState(false);
 
   return (
-    <div className="min-h-screen w-full bg-gradient-to-b from-[#eef4ff] to-[#dfe7ff]">
+    <div className="min-h-screen bg-[#F7F7F2]">
       <Header />
       <HeroSection />
-      <DashboardDemo
-        onDepositClick={() => setShowDepositModal(true)}
-        onTransferClick={() => setShowTransferModal(true)}
+      {/* Removing other sections for now to focus on header and hero */}
+
+      <DepositModal
+        isOpen={showDepositModal}
+        onClose={() => setShowDepositModal(false)}
       />
-      <WhatYouGetSection />
-      <HowItWorksSection />
-      <TestimonialSection />
-      <FinalCTASection />
-
-      <Footer />
-
+      <TransferModal
+        isOpen={showTransferModal}
+        onClose={() => setShowTransferModal(false)}
+      />
     </div>
   );
 }
