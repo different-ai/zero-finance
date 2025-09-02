@@ -1,12 +1,9 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Footer } from '@/components/landing/footer';
 import { Header } from './Header';
 import { HeroSection } from './HeroSection';
-import { DashboardDemo } from './DashboardDemo';
 import { WhatYouGetSection } from './WhatYouGetSection';
-import { HowItWorksSection } from './HowItWorksSection';
 import { TestimonialSection } from './TestimonialSection';
 import { FinalCTASection } from './FinalCTASection';
 import { DepositModal } from './DepositModal';
@@ -20,7 +17,9 @@ export default function CryptoLandingPage() {
     <div className="min-h-screen bg-[#F7F7F2]">
       <Header />
       <HeroSection />
-      {/* Removing other sections for now to focus on header and hero */}
+      <WhatYouGetSection />
+      {/* <TestimonialSection /> */}
+      <FinalCTASection />
 
       <DepositModal
         isOpen={showDepositModal}

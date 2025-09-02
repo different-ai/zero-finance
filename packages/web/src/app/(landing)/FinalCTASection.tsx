@@ -2,49 +2,68 @@
 
 import React from 'react';
 import Link from 'next/link';
+import { OrangeDAOLogo } from '@/components/orange-dao-logo';
 
 export function FinalCTASection() {
   return (
     <>
-      <div className="bg-gray-100">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-16">
-          <div className="border-t border-gray-200"></div>
-        </div>
-      </div>
-
-      <section className="px-4 sm:px-6 lg:px-16 py-16 sm:py-20 lg:py-24 bg-gray-50">
-        <div className="max-w-7xl mx-auto">
-          <div className="max-w-3xl mx-auto text-center">
-            <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold text-[#0f1e46] mb-4 leading-tight">
-              Ready to <span className="text-[#0040FF]">bank smarter</span> with
-              your company&apos;s funds?
+      <section className="border-t border-[#101010]/10 bg-[#F7F7F2] py-16">
+        <div className="mx-auto max-w-[1200px] px-8">
+          <div className="max-w-[800px]">
+            <h2 className="font-serif text-[48px] leading-[1.1] tracking-[-0.01em] text-[#101010]">
+              Ready to earn 10% on your startup&apos;s funds?
             </h2>
-            <p className="text-xl sm:text-2xl md:text-3xl font-light text-[#5a6b91] mb-8">
-              Join companies that{' '}
-              <span className="font-semibold italic text-orange-600">
-                earn while they bank
-              </span>
-              .
+            <p className="mt-4 text-[18px] text-[#101010]/70">
+              Join 50+ startups already earning yield on their treasury.
             </p>
-            <div className="mt-8 sm:mt-10 flex flex-col sm:flex-row gap-4 justify-center">
+            <div className="mt-8 flex items-center gap-20">
               <Link
                 href="/signin?source=crypto"
-                className="inline-flex items-center justify-center px-8 sm:px-10 py-4 sm:py-5 bg-[#0050ff] hover:bg-[#0050ff]/90 text-white text-lg sm:text-xl font-semibold rounded-xl transition-all hover:scale-[1.02] active:scale-[0.97] shadow-lg shadow-[#0050ff]/25"
+                className="text-[18px] font-medium text-[#1B29FF] underline underline-offset-[6px] hover:no-underline transition-all"
               >
-                Sign Up
+                Open account →
               </Link>
               <Link
-                href="https://cal.com/potato/0-finance-onboarding"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center justify-center px-8 sm:px-10 py-4 sm:py-5 bg-white text-[#0050ff] text-lg sm:text-xl font-semibold rounded-xl transition-all hover:scale-[1.02] active:scale-[0.97] shadow-lg border-2 border-[#0050ff]"
+                href="https://cal.com/team/0finance/30"
+                className="text-[16px] text-[#101010] hover:text-[#1B29FF] transition-colors"
               >
-                Schedule Call
+                Schedule demo
               </Link>
             </div>
           </div>
         </div>
       </section>
+
+      {/* Footer */}
+      <footer className="border-t border-[#101010]/10 bg-white">
+        <div className="mx-auto max-w-[1200px] px-8 py-8">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-8">
+              <span className="text-[13px] text-[#101010]/60">
+                © 2025 0 finance
+              </span>
+              <Link
+                href="/legal"
+                className="text-[13px] text-[#101010]/60 hover:text-[#101010]"
+              >
+                Legal & Security
+              </Link>
+              <Link
+                href="/privacy"
+                className="text-[13px] text-[#101010]/60 hover:text-[#101010]"
+              >
+                Privacy
+              </Link>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-[12px] uppercase tracking-[0.14em] text-[#101010]/40">
+                Backed by
+              </span>
+              <OrangeDAOLogo className="h-5 w-auto opacity-50 grayscale" />
+            </div>
+          </div>
+        </div>
+      </footer>
     </>
   );
 }

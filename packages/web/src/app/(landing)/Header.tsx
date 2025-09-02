@@ -21,30 +21,24 @@ export function Header() {
               finance
             </span>
           </Link>
-          <nav className="hidden md:flex items-center gap-8 text-[13px] uppercase tracking-[0.14em]">
+          <nav className="flex items-center gap-8">
             <Link
-              className="text-[#101010]/70 hover:text-[#101010] transition-colors"
-              href="#customers"
-            >
-              Customers
-            </Link>
-            <Link
-              className="text-[#101010]/70 hover:text-[#101010] transition-colors"
+              className="text-[13px] uppercase tracking-[0.14em] text-[#101010]/70 hover:text-[#101010] transition-colors"
               href="#about"
             >
               About
             </Link>
             <Link
-              className="text-[#101010]/70 hover:text-[#101010] transition-colors"
+              className="text-[13px] uppercase tracking-[0.14em] text-[#101010]/70 hover:text-[#101010] transition-colors"
               href="#docs"
             >
               Docs
             </Link>
             <Link
-              className="text-[#1B29FF] hover:underline underline-offset-4 transition-all"
-              href="#contact"
+              className="text-[13px] uppercase tracking-[0.14em] text-[#1B29FF] hover:underline underline-offset-4"
+              href="/signin"
             >
-              Contact us →
+              Sign in →
             </Link>
           </nav>
         </div>
