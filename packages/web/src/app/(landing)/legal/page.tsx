@@ -107,12 +107,6 @@ export default function LegalPage() {
       {/* Hero Section */}
       <section className="relative z-10 px-4 sm:px-6 lg:px-8 py-8 sm:py-12 lg:py-16">
         <div className="max-w-4xl mx-auto text-center">
-          <div className="inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-white/80 backdrop-blur-sm rounded-full border border-[#101010]/10 mb-4 sm:mb-6">
-            <Shield className="w-3 h-3 sm:w-4 sm:h-4 text-[#1B29FF]" />
-            <span className="text-[11px] sm:text-[12px] font-medium text-[#101010]">
-              SOC2 Type II Compliant
-            </span>
-          </div>
           <h1 className="text-2xl sm:text-3xl lg:text-5xl font-bold text-[#101010] mb-4 sm:mb-6 leading-tight">
             Enterprise-Grade Security
             <br />
@@ -120,8 +114,7 @@ export default function LegalPage() {
           </h1>
           <p className="text-[14px] sm:text-[16px] lg:text-[18px] text-[#101010]/70 mb-6 sm:mb-8 max-w-3xl mx-auto">
             Bank-level security meets blockchain innovation. Your funds are
-            protected by smart contract insurance, multi-sig wallets, and SOC2
-            compliance
+            protected by smart contract insurance and multi-sig wallets
           </p>
         </div>
       </section>
@@ -320,60 +313,6 @@ export default function LegalPage() {
               </div>
             </div>
           </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div className="bg-white rounded-xl shadow-lg p-8">
-              <h3 className="text-xl font-bold text-[#0f1e46] mb-4">
-                USDC Reserve Composition
-              </h3>
-              <div className="space-y-3">
-                <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                  <span className="text-gray-700">US Treasury Bills</span>
-                  <span className="font-semibold text-[#0040FF]">80%</span>
-                </div>
-                <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                  <span className="text-gray-700">Cash at US Banks</span>
-                  <span className="font-semibold text-[#0040FF]">20%</span>
-                </div>
-              </div>
-              <p className="text-sm text-gray-600 mt-4">
-                Reserves held at BNY Mellon and other regulated financial
-                institutions
-              </p>
-            </div>
-
-            <div className="bg-white rounded-xl shadow-lg p-8">
-              <h3 className="text-xl font-bold text-[#0f1e46] mb-4">
-                Why USDC vs Traditional Banking?
-              </h3>
-              <ul className="space-y-3">
-                <li className="flex items-start gap-2">
-                  <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
-                  <span className="text-sm text-gray-700">
-                    24/7 instant global transfers
-                  </span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
-                  <span className="text-sm text-gray-700">
-                    Programmable money with smart contracts
-                  </span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
-                  <span className="text-sm text-gray-700">
-                    Full transparency with blockchain verification
-                  </span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
-                  <span className="text-sm text-gray-700">
-                    Self-custody option for complete control
-                  </span>
-                </li>
-              </ul>
-            </div>
-          </div>
         </div>
       </section>
 
@@ -452,66 +391,6 @@ export default function LegalPage() {
             </div>
           </div>
 
-          <div className="bg-orange-50 border border-orange-200 rounded-xl p-8">
-            <h3 className="text-xl font-bold text-[#0f1e46] mb-4">
-              Wallet Setup Options
-            </h3>
-            <div className="space-y-4">
-              <div className="bg-white rounded-lg p-6">
-                <h4 className="font-semibold text-gray-900 mb-2">
-                  Option 1: Connect Your Existing Wallet
-                </h4>
-                <p className="text-gray-700 mb-3">
-                  Already have a MetaMask, Coinbase, or other wallet? Connect it
-                  directly. You maintain complete control of your keys as you
-                  always have. Perfect for crypto-native users.
-                </p>
-                <div className="flex items-center gap-2">
-                  <Shield className="w-4 h-4 text-green-600" />
-                  <span className="text-sm text-green-700 font-medium">
-                    Best for: Users with existing wallets
-                  </span>
-                </div>
-              </div>
-
-              <div className="bg-white rounded-lg p-6">
-                <h4 className="font-semibold text-gray-900 mb-2">
-                  Option 2: Privy Embedded Wallet
-                </h4>
-                <p className="text-gray-700 mb-3">
-                  Create a wallet with just your email. Privy's embedded wallets
-                  use distributed key sharding - your key is split between your
-                  device, Privy's secure enclave, and a recovery method you
-                  control. Neither Privy nor 0.finance can access your funds.
-                </p>
-                <div className="flex items-center gap-2">
-                  <Shield className="w-4 h-4 text-blue-600" />
-                  <span className="text-sm text-blue-700 font-medium">
-                    Best for: New to crypto
-                  </span>
-                </div>
-              </div>
-
-              <div className="bg-white rounded-lg p-6">
-                <h4 className="font-semibold text-gray-900 mb-2">
-                  Option 3: Gnosis Safe Multi-Sig
-                </h4>
-                <p className="text-gray-700 mb-3">
-                  For larger organizations, set up a Gnosis Safe with multiple
-                  signers. Require 2-of-3 or custom threshold approvals for
-                  transactions. Connect via Privy for seamless access while
-                  maintaining institutional-grade security.
-                </p>
-                <div className="flex items-center gap-2">
-                  <Shield className="w-4 h-4 text-purple-600" />
-                  <span className="text-sm text-purple-700 font-medium">
-                    Best for: Teams & enterprises
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-
           <div className="bg-blue-50 border border-blue-200 rounded-xl p-8 mt-8">
             <h3 className="text-xl font-bold text-[#0f1e46] mb-4">
               How Privy Protects Your Keys
@@ -561,69 +440,6 @@ export default function LegalPage() {
                     SMS, or social auth. Even if you lose access to one method,
                     you can recover your wallet securely.
                   </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Wallet Setup Options Section */}
-      <section className="px-4 sm:px-6 lg:px-16 py-16 bg-white">
-        <div className="max-w-6xl mx-auto">
-          <div className="bg-orange-50 border border-orange-200 rounded-xl p-8">
-            <h3 className="text-xl font-bold text-[#0f1e46] mb-4">
-              Wallet Setup Options
-            </h3>
-            <div className="space-y-4">
-              <div className="bg-white rounded-lg p-6">
-                <h4 className="font-semibold text-gray-900 mb-2">
-                  Option 1: Full Self-Custody
-                </h4>
-                <p className="text-gray-700 mb-3">
-                  You generate and control all keys. 0.finance never has access.
-                  Maximum security and control for technically sophisticated
-                  users.
-                </p>
-                <div className="flex items-center gap-2">
-                  <Shield className="w-4 h-4 text-green-600" />
-                  <span className="text-sm text-green-700 font-medium">
-                    Recommended for: Crypto-native companies
-                  </span>
-                </div>
-              </div>
-
-              <div className="bg-white rounded-lg p-6">
-                <h4 className="font-semibold text-gray-900 mb-2">
-                  Option 2: Assisted Setup
-                </h4>
-                <p className="text-gray-700 mb-3">
-                  We help you set up your Safe with best practices, but you
-                  control the keys from day one. Good balance of security and
-                  convenience.
-                </p>
-                <div className="flex items-center gap-2">
-                  <Shield className="w-4 h-4 text-blue-600" />
-                  <span className="text-sm text-blue-700 font-medium">
-                    Recommended for: Most businesses
-                  </span>
-                </div>
-              </div>
-
-              <div className="bg-white rounded-lg p-6">
-                <h4 className="font-semibold text-gray-900 mb-2">
-                  Option 3: Managed Wallet (Coming Soon)
-                </h4>
-                <p className="text-gray-700 mb-3">
-                  We handle key management with enterprise-grade security. You
-                  maintain control through our interface. Easiest option with
-                  bank-like experience.
-                </p>
-                <div className="flex items-center gap-2">
-                  <Shield className="w-4 h-4 text-purple-600" />
-                  <span className="text-sm text-purple-700 font-medium">
-                    Recommended for: Traditional businesses
-                  </span>
                 </div>
               </div>
             </div>
