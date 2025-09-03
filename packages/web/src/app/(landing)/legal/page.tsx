@@ -199,7 +199,7 @@ export default function LegalPage() {
 
           <div className="bg-blue-50 border border-blue-200 rounded-xl p-8">
             <h3 className="text-xl font-bold text-[#0f1e46] mb-4">
-              How the 10% Yield Works
+              How the 8% Yield Works
             </h3>
             <div className="space-y-4">
               <div className="flex items-start gap-4">
@@ -580,12 +580,12 @@ export default function LegalPage() {
 
             <div className="bg-white rounded-lg p-6 shadow-sm">
               <h3 className="font-semibold text-gray-900 mb-2">
-                How is the 10% yield sustainable?
+                How is the 8% yield sustainable?
               </h3>
               <p className="text-gray-700">
                 The yield comes from established DeFi protocols that have been
                 operating for years. These include lending markets (like Aave),
-                liquidity provision, and other yield strategies. The 10%
+                liquidity provision, and other yield strategies. The 8%
                 includes the base protocol yield plus additional optimization
                 strategies. This is sustainable because it's based on real
                 economic activity, not speculation.

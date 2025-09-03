@@ -14,7 +14,7 @@ export function HeroSection() {
           </p>
           <h1 className="mt-3 font-serif text-[36px] sm:text-[52px] md:text-[72px] lg:text-[88px] leading-[0.96] tracking-[-0.015em] text-[#101010]">
             <span className="block text-[#1B29FF] text-[44px] sm:text-[64px] md:text-[88px] lg:text-[108px] leading-[0.9]">
-              10% Yield
+              8% Yield
             </span>{' '}
             on Your <span className="italic">Startup&apos;s</span> Savings
           </h1>
