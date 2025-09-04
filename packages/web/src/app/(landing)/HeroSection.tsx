@@ -2,13 +2,29 @@
 
 import React from 'react';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
+
+// Dynamic import with SSR disabled for Three.js
+const ThreeBackground = dynamic(
+  () =>
+    import('./ThreeBackground').then((mod) => ({
+      default: mod.ThreeBackground,
+    })),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="absolute inset-0 -z-10 bg-gradient-to-br from-blue-50/20 to-transparent" />
+    ),
+  },
+);
 
 export function HeroSection() {
   return (
     <>
       {/* Hero */}
-      <section className="border-b border-[#101010]/10 bg-[#F6F5EF] [background-image:radial-gradient(rgba(0,0,0,0.03)_1px,transparent_1px)] [background-size:3px_3px]">
-        <div className="mx-auto max-w-[1200px] px-4 sm:px-6 lg:px-8 pt-12 sm:pt-16 lg:pt-20 pb-10 sm:pb-12 lg:pb-14">
+      <section className="relative border-b border-[#101010]/10 bg-[#F6F5EF] overflow-hidden min-h-[80vh] sm:min-h-[85vh] lg:min-h-[90vh] flex items-center">
+        <ThreeBackground className="opacity-80" />
+        <div className="relative mx-auto max-w-[1200px] px-4 sm:px-6 lg:px-8 py-16 sm:py-20 lg:py-24 w-full">
           <p className="uppercase tracking-[0.14em] sm:tracking-[0.18em] text-[11px] sm:text-[12px] lg:text-[13px] font-medium text-[#101010]/70">
             Insured yield for startups
           </p>
