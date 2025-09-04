@@ -2,8 +2,24 @@
 
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Check, Sparkles, Zap, Shield, MessageSquare, Bot, FileText, TrendingUp } from 'lucide-react';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import {
+  Check,
+  Sparkles,
+  Zap,
+  Shield,
+  MessageSquare,
+  Bot,
+  FileText,
+  TrendingUp,
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 type Feature = {
@@ -57,15 +73,15 @@ export default function UpgradePage() {
 
   const handleUpgrade = async (planName: string) => {
     setIsLoading(true);
-    
+
     // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+
     // In real implementation, this would:
     // 1. Call Stripe/payment processor
     // 2. Create checkout session
     // 3. Redirect to payment page
-    
+
     console.log(`upgrading to ${planName} plan`);
     setIsLoading(false);
   };
@@ -85,7 +101,8 @@ export default function UpgradePage() {
             key={plan.name}
             className={cn(
               'relative overflow-hidden transition-all duration-200',
-              plan.highlight && 'border-purple-500 shadow-lg shadow-purple-500/10 scale-105'
+              plan.highlight &&
+                'border-purple-500 shadow-lg shadow-purple-500/10 scale-105',
             )}
           >
             {plan.popular && (
@@ -93,7 +110,7 @@ export default function UpgradePage() {
                 most popular
               </div>
             )}
-            
+
             <CardHeader>
               <CardTitle className="text-2xl">{plan.name}</CardTitle>
               <CardDescription>{plan.description}</CardDescription>
@@ -102,7 +119,7 @@ export default function UpgradePage() {
                 <span className="text-muted-foreground">{plan.period}</span>
               </div>
             </CardHeader>
-            
+
             <CardContent>
               <ul className="space-y-3">
                 {plan.features.map((feature, i) => (
@@ -110,31 +127,40 @@ export default function UpgradePage() {
                     key={i}
                     className={cn(
                       'flex items-start gap-3',
-                      !feature.included && 'opacity-50'
+                      !feature.included && 'opacity-50',
                     )}
                   >
-                    <div className={cn(
-                      'mt-0.5 rounded-full p-1',
-                      feature.included ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'
-                    )}>
+                    <div
+                      className={cn(
+                        'mt-0.5 rounded-full p-1',
+                        feature.included
+                          ? 'bg-green-100 text-green-600'
+                          : 'bg-gray-100 text-gray-400',
+                      )}
+                    >
                       <Check className="h-3 w-3" />
                     </div>
                     <span className="text-sm flex items-center gap-2">
                       {feature.text}
-                      {feature.icon && feature.included && (
-                        <feature.icon className="h-4 w-4 text-purple-500" />
-                      )}
+                      {feature.icon &&
+                        feature.included &&
+                        (() => {
+                          const IconComponent = feature.icon;
+                          return (
+                            <IconComponent className="h-4 w-4 text-purple-500" />
+                          );
+                        })()}
                     </span>
                   </li>
                 ))}
               </ul>
             </CardContent>
-            
+
             <CardFooter>
               <Button
                 className={cn(
                   'w-full',
-                  plan.highlight && 'bg-purple-600 hover:bg-purple-700'
+                  plan.highlight && 'bg-purple-600 hover:bg-purple-700',
                 )}
                 disabled={plan.disabled || isLoading}
                 onClick={() => handleUpgrade(plan.name)}
@@ -157,29 +183,38 @@ export default function UpgradePage() {
       </div>
 
       <div className="mt-16 text-center">
-        <h2 className="text-2xl font-semibold mb-8">frequently asked questions</h2>
-        
+        <h2 className="text-2xl font-semibold mb-8">
+          frequently asked questions
+        </h2>
+
         <div className="max-w-3xl mx-auto space-y-6 text-left">
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">what happens after my free trial?</CardTitle>
+              <CardTitle className="text-lg">
+                what happens after my free trial?
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground">
-                your free trial lasts 7 days. after that, you&apos;ll be charged $19/month. 
-                you can cancel anytime during the trial and won&apos;t be charged.
+                your free trial lasts 7 days. after that, you&apos;ll be charged
+                $19/month. you can cancel anytime during the trial and
+                won&apos;t be charged.
               </p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">what does &ldquo;unlimited ai chats&rdquo; mean?</CardTitle>
+              <CardTitle className="text-lg">
+                what does &ldquo;unlimited ai chats&rdquo; mean?
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground">
-                with pro, you can have unlimited conversations with our ai assistant to help with 
-                invoice analysis, financial questions, and document processing. free users are limited to 5 chats per month.
+                with pro, you can have unlimited conversations with our ai
+                assistant to help with invoice analysis, financial questions,
+                and document processing. free users are limited to 5 chats per
+                month.
               </p>
             </CardContent>
           </Card>
@@ -190,8 +225,9 @@ export default function UpgradePage() {
             </CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground">
-                yes! you can cancel your subscription at any time from your settings page. 
-                you&apos;ll continue to have access until the end of your billing period.
+                yes! you can cancel your subscription at any time from your
+                settings page. you&apos;ll continue to have access until the end
+                of your billing period.
               </p>
             </CardContent>
           </Card>
@@ -199,4 +235,4 @@ export default function UpgradePage() {
       </div>
     </div>
   );
-} 
+}
