@@ -1,4 +1,5 @@
 'use client';
+import React from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import Image from 'next/image';
@@ -130,7 +131,9 @@ export function Sidebar() {
                   key={item.name}
                   className="flex items-center gap-3 px-4 py-3 text-gray-400 cursor-not-allowed opacity-50"
                 >
-                  <item.icon className="h-[18px] w-[18px]" />
+                  {React.createElement(item.icon, {
+                    className: 'h-[18px] w-[18px]',
+                  })}
                   <span className="text-[15px] font-medium">{item.name}</span>
                 </div>
               );
@@ -148,14 +151,14 @@ export function Sidebar() {
                 )}
                 aria-current={isActive ? 'page' : undefined}
               >
-                <item.icon
-                  className={cn(
+                {React.createElement(item.icon, {
+                  className: cn(
                     'h-[18px] w-[18px] transition-all duration-200',
                     isActive
                       ? 'text-[#0040FF]'
                       : 'text-gray-500 group-hover:text-gray-700',
-                  )}
-                />
+                  ),
+                })}
                 <span
                   className={cn(
                     'text-[15px] font-medium transition-all duration-200',

@@ -1,6 +1,7 @@
-"use client"
+'use client';
 
-import type { ActivityItem } from "@/context/demo-timeline-context"
+import React from 'react';
+import type { ActivityItem } from '@/context/demo-timeline-context';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -8,13 +9,13 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Button } from "@/components/ui/button"
-import { Bell } from "lucide-react"
+} from '@/components/ui/dropdown-menu';
+import { Button } from '@/components/ui/button';
+import { Bell } from 'lucide-react';
 
 interface ActivityFeedProps {
-  items: ActivityItem[]
-  showFeedIndicator?: boolean
+  items: ActivityItem[];
+  showFeedIndicator?: boolean;
 }
 
 export function ActivityFeed({ items, showFeedIndicator }: ActivityFeedProps) {
@@ -33,24 +34,37 @@ export function ActivityFeed({ items, showFeedIndicator }: ActivityFeedProps) {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-80 md:w-96">
-        <DropdownMenuLabel className="px-3 py-2">Activity Feed</DropdownMenuLabel>
+        <DropdownMenuLabel className="px-3 py-2">
+          Activity Feed
+        </DropdownMenuLabel>
         <DropdownMenuSeparator />
         {items && items.length > 0 ? (
           <div className="max-h-80 overflow-y-auto">
             {items.map((item) => (
-              <DropdownMenuItem key={item.id} className="flex gap-3 items-start p-3">
-                {item.icon && <item.icon className="h-4 w-4 mt-1 text-muted-foreground flex-shrink-0" />}
+              <DropdownMenuItem
+                key={item.id}
+                className="flex gap-3 items-start p-3"
+              >
+                {item.icon &&
+                  React.createElement(item.icon, {
+                    className:
+                      'h-4 w-4 mt-1 text-muted-foreground flex-shrink-0',
+                  })}
                 <div className="flex-1">
                   <p className="text-sm leading-snug">{item.description}</p>
-                  <p className="text-xs text-muted-foreground">{item.timestamp}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {item.timestamp}
+                  </p>
                 </div>
               </DropdownMenuItem>
             ))}
           </div>
         ) : (
-          <p className="p-3 text-sm text-muted-foreground">No recent activity.</p>
+          <p className="p-3 text-sm text-muted-foreground">
+            No recent activity.
+          </p>
         )}
       </DropdownMenuContent>
     </DropdownMenu>
-  )
+  );
 }

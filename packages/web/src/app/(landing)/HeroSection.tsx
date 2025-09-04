@@ -23,7 +23,7 @@ export function HeroSection() {
     <>
       {/* Hero */}
       <section className="relative border-b border-[#101010]/10 bg-[#F6F5EF] overflow-hidden min-h-[80vh] sm:min-h-[85vh] lg:min-h-[90vh] flex items-center">
-        <ThreeBackground className="opacity-80" />
+        <ThreeBackground className="absolute ml-auto opacity-80" />
         <div className="relative mx-auto max-w-[1200px] px-4 sm:px-6 lg:px-8 py-16 sm:py-20 lg:py-24 w-full">
           <p className="uppercase tracking-[0.14em] sm:tracking-[0.18em] text-[11px] sm:text-[12px] lg:text-[13px] font-medium text-[#101010]/70">
             Insured yield for startups
