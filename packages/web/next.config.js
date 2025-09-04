@@ -1,14 +1,15 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  transpilePackages: ['three', '@react-three/fiber', '@react-three/drei'],
   async rewrites() {
     return [
       {
-        source: "/ingest/static/:path*",
-        destination: "https://us-assets.i.posthog.com/static/:path*",
+        source: '/ingest/static/:path*',
+        destination: 'https://us-assets.i.posthog.com/static/:path*',
       },
       {
-        source: "/ingest/:path*",
-        destination: "https://us.i.posthog.com/:path*",
+        source: '/ingest/:path*',
+        destination: 'https://us.i.posthog.com/:path*',
       },
     ];
   },
@@ -32,16 +33,13 @@ const nextConfig = {
       path: require.resolve('path-browserify'),
       os: require.resolve('os-browserify/browser'),
     };
-    
+
     // Suppress the critical dependency warning from web-worker
     config.plugins.push(
-      new webpack.ContextReplacementPlugin(
-        /web-worker/,
-        (data) => {
-          delete data.dependencies[0].critical;
-          return data;
-        }
-      )
+      new webpack.ContextReplacementPlugin(/web-worker/, (data) => {
+        delete data.dependencies[0].critical;
+        return data;
+      }),
     );
 
     // Memory optimizations for Vercel
@@ -76,12 +74,10 @@ const nextConfig = {
       ...config.optimization,
       minimize: process.env.NODE_ENV === 'production',
     };
-    
+
     return config;
   },
-  serverExternalPackages: [
-    'require-in-the-middle',
-  ],
-}
+  serverExternalPackages: ['require-in-the-middle'],
+};
 
 module.exports = nextConfig;
