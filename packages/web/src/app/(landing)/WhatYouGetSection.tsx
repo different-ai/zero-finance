@@ -16,7 +16,7 @@ export function WhatYouGetSection() {
         <div className="mt-6 sm:mt-8 grid grid-cols-1 sm:grid-cols-2 gap-px bg-[#101010]/10">
           <div className="bg-white p-4 sm:p-6">
             <h3 className="uppercase tracking-[0.12em] sm:tracking-[0.14em] text-[12px] sm:text-[13px] text-[#101010]/70">
-              10% APY - Fully Insured
+              8% APY - Fully Insured
             </h3>
             <p className="mt-3 text-[13px] sm:text-[14px] leading-[1.5] text-[#101010]/80">
               Earn 10% annual yield on your USDC holdings with enterprise-grade

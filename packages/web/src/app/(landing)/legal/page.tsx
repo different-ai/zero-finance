@@ -125,7 +125,7 @@ export default function LegalPage() {
           <div className="text-center mb-8 sm:mb-12">
             <Shield className="w-12 h-12 sm:w-16 sm:h-16 text-[#1B29FF] mx-auto mb-3 sm:mb-4" />
             <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-[#101010] mb-3 sm:mb-4">
-              10% APY - Fully Insured
+              8% APY - Fully Insured
             </h2>
             <p className="text-[14px] sm:text-[16px] lg:text-[18px] text-[#101010]/70 max-w-3xl mx-auto">
               Your yield is protected by enterprise-grade smart contract
