@@ -28,7 +28,7 @@ export function getDemoTransactions(demoStep: number) {
       {
         id: 'demo-2',
         hash: '0xdemo' + Math.random().toString(36).substring(7),
-        type: 'payment' as const,
+        type: 'deposit' as const,
         amount: '45000',
         token: 'USDC',
         from: '0xYourSafeAddress',
@@ -40,7 +40,7 @@ export function getDemoTransactions(demoStep: number) {
       {
         id: 'demo-3',
         hash: '0xdemo' + Math.random().toString(36).substring(7),
-        type: 'payment' as const,
+        type: 'deposit' as const,
         amount: '125000',
         token: 'USDC',
         from: '0xYourSafeAddress',
