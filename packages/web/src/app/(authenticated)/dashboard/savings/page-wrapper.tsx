@@ -250,6 +250,28 @@ export default function SavingsPageWrapper() {
         </div>
 
         <div className="space-y-6">
+          {savingsState.enabled && (
+            <Card className="rounded-lg border p-5 transition-all hover:shadow-md border-primary/20 bg-primary/5 p-6">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="font-medium mb-1">Auto-Savings</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Saving {savingsState.allocation}% of deposits
+                      automatically
+                    </p>
+                  </div>
+                  <Link href="/dashboard/savings/settings">
+                    <Button variant="outline" size="sm">
+                      <Settings className="mr-2 h-3 w-3" />
+                      Settings
+                    </Button>
+                  </Link>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           {!savingsState.enabled && (
             <div className="w-full flex justify-center">
               {!isEarnModuleInitialized ? (
@@ -331,7 +353,7 @@ export default function SavingsPageWrapper() {
                 </Alert>
               )}
 
-              {/* Animated Yield Counter Card - Premium Design */}
+              {/* Animated Yield Counter Card */}
               {totalSaved > 0 && (
                 <div className="rounded-2xl bg-[#0040FF]/10 ring-1 ring-[#DDE7FF] p-6 md:p-8">
                   <div className="flex items-center justify-between mb-6">
@@ -421,8 +443,10 @@ export default function SavingsPageWrapper() {
                   {vaultsVM.map((v) => (
                     <div
                       key={v.id}
-                      className={`rounded-lg border bg-white p-5 transition-all hover:shadow-md ${
-                        v.isAuto ? 'border-primary/20' : 'border-border'
+                      className={`rounded-lg border bg-card p-5 transition-all hover:shadow-md ${
+                        v.isAuto
+                          ? 'border-primary/20 bg-primary/5'
+                          : 'border-border'
                       } ${
                         expandedAction?.vaultId === v.id
                           ? 'ring-2 ring-primary/50 shadow-md'
@@ -464,8 +488,8 @@ export default function SavingsPageWrapper() {
                         </div>
                       </div>
 
-                      <div className="flex gap-3 mb-4">
-                        <div className="flex-1 bg-muted rounded-lg p-3">
+                      <div className="grid grid-cols-3 gap-4 mb-4">
+                        <div>
                           <p className="text-xs text-muted-foreground mb-1">
                             Balance
                           </p>
@@ -473,7 +497,7 @@ export default function SavingsPageWrapper() {
                             {formatUsd(v.balanceUsd)}
                           </p>
                         </div>
-                        <div className="flex-1 bg-muted rounded-lg p-3">
+                        <div>
                           <p className="text-xs text-muted-foreground mb-1">
                             APY
                           </p>
@@ -481,7 +505,7 @@ export default function SavingsPageWrapper() {
                             {v.apy.toFixed(2)}%
                           </p>
                         </div>
-                        <div className="flex-1 bg-muted rounded-lg p-3">
+                        <div>
                           <p className="text-xs text-muted-foreground mb-1">
                             Earned
                           </p>
@@ -658,28 +682,6 @@ export default function SavingsPageWrapper() {
               )}
             </CardContent>
           </Card>
-
-          {savingsState.enabled && (
-            <Card className="rounded-lg border p-5 transition-all hover:shadow-md border-primary/20 bg-primary/5 p-6">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="font-medium mb-1">Auto-Savings</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Saving {savingsState.allocation}% of deposits
-                      automatically
-                    </p>
-                  </div>
-                  <Link href="/dashboard/savings/settings">
-                    <Button variant="outline" size="sm">
-                      <Settings className="mr-2 h-3 w-3" />
-                      Settings
-                    </Button>
-                  </Link>
-                </div>
-              </CardContent>
-            </Card>
-          )}
         </div>
       </div>
     </div>
