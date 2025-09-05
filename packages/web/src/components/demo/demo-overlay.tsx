@@ -111,7 +111,7 @@ export function DemoOverlay() {
       'activate-savings': 2000,
       'savings-active': 5000,
       withdrawal: 4000,
-      summary: null, // Don't auto-advance from summary
+      summary: 0, // Don't auto-advance from summary
     };
 
     const delay = delays[demo.currentStep];
