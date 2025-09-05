@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import { userProfileService } from '@/lib/user-profile-service';
 import { getUser } from '@/lib/auth';
 import DashboardClientLayout from './dashboard/dashboard-client-layout';
+import { DemoModeToggle } from '@/components/demo-mode-toggle';
 
 // Force dynamic rendering since this layout uses cookies for authentication
 export const dynamic = 'force-dynamic';
@@ -36,5 +37,10 @@ export default async function AuthenticatedLayout({
   console.log('userProfile', userProfile);
   // Redirect to onboarding if profile exists but onboarding is not complete
   // AND the user hasn't skipped or completed the stepper
-  return <DashboardClientLayout>{children}</DashboardClientLayout>;
+  return (
+    <>
+      <DashboardClientLayout>{children}</DashboardClientLayout>
+      <DemoModeToggle />
+    </>
+  );
 }

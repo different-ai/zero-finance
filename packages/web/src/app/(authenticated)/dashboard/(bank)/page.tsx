@@ -3,9 +3,9 @@ import { getUserId } from '@/lib/auth';
 import { db } from '@/db';
 import { Suspense } from 'react';
 import { ActiveAgents } from './components/agents/active-agents';
-import { TransactionTabs } from './components/dashboard/transaction-tabs';
+import { TransactionTabsDemo } from './components/dashboard/transaction-tabs-demo';
 import { redirect } from 'next/navigation';
-import { FundsDisplay } from './components/dashboard/funds-display';
+import { FundsDisplayDemo } from './components/dashboard/funds-display-demo';
 import { VirtualAccountOnboardingLayer } from './components/dashboard/virtual-account-onboarding-layer';
 import { USDC_ADDRESS } from '@/lib/constants';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -35,9 +35,12 @@ function LoadingCard() {
 
 // Create a simple log object
 const log = {
-  info: (payload: any, message: string) => console.log(`[INFO] ${message}`, JSON.stringify(payload, null, 2)),
-  error: (payload: any, message: string) => console.error(`[ERROR] ${message}`, JSON.stringify(payload, null, 2)),
-  warn: (payload: any, message: string) => console.warn(`[WARN] ${message}`, JSON.stringify(payload, null, 2)),
+  info: (payload: any, message: string) =>
+    console.log(`[INFO] ${message}`, JSON.stringify(payload, null, 2)),
+  error: (payload: any, message: string) =>
+    console.error(`[ERROR] ${message}`, JSON.stringify(payload, null, 2)),
+  warn: (payload: any, message: string) =>
+    console.warn(`[WARN] ${message}`, JSON.stringify(payload, null, 2)),
 };
 
 async function FundsData() {
@@ -46,7 +49,7 @@ async function FundsData() {
 
   const caller = appRouter.createCaller({ userId, db, log });
   const primarySafe = await caller.user.getPrimarySafeAddress();
-  
+
   if (!primarySafe?.primarySafeAddress) {
     return null;
   }
@@ -60,8 +63,8 @@ async function FundsData() {
   const totalBalance = balanceData ? Number(balanceData.balance) / 1e6 : 0;
 
   return (
-    <FundsDisplay 
-      totalBalance={totalBalance} 
+    <FundsDisplayDemo
+      totalBalance={totalBalance}
       walletAddress={primarySafe.primarySafeAddress}
     />
   );
@@ -95,7 +98,7 @@ export default async function DashboardPage() {
           <OnboardingData />
 
           <Suspense fallback={<LoadingCard />}>
-            <TransactionTabs />
+            <TransactionTabsDemo />
           </Suspense>
 
           <ActiveAgents />

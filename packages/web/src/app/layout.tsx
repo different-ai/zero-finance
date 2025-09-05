@@ -3,10 +3,10 @@ import { Inter } from 'next/font/google';
 import { Providers } from '@/components/providers';
 import { TRPCProvider } from '@/providers/trpc-provider';
 import { NuqsAdapter } from 'nuqs/adapters/next/app';
-import { Toaster } from "@/components/ui/sonner";
+import { Toaster } from '@/components/ui/sonner';
+import { DemoModeProvider } from '@/context/demo-mode-context';
 
 const inter = Inter({ subsets: ['latin'] });
-
 
 export default function RootLayout({
   children,
@@ -20,9 +20,11 @@ export default function RootLayout({
         <NuqsAdapter>
           <Providers>
             <TRPCProvider>
+              <DemoModeProvider>
                 <div className="noise-texture"></div>
                 <div className="scanline"></div>
                 {children}
+              </DemoModeProvider>
             </TRPCProvider>
           </Providers>
         </NuqsAdapter>
