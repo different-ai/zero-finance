@@ -143,6 +143,7 @@ export function DemoModeSidebar() {
   const pathname = usePathname();
   const {
     isDemoMode,
+    setDemoMode,
     demoStep,
     setDemoStep,
     setDemoBalance,
