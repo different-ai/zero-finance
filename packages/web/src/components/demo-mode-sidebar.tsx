@@ -196,12 +196,15 @@ export function DemoModeSidebar() {
       setDemoBalance(2300000);
     }
 
-    // Handle navigation
+    // Handle navigation with delay
     if (demoStep === 5) {
-      // Automatically navigate to savings page when reaching savings step
+      // Automatically navigate to savings page after a short delay
       if (pathname !== '/dashboard/savings') {
-        router.push('/dashboard/savings');
-        toast.info('Navigating to Savings page...');
+        const timer = setTimeout(() => {
+          router.push('/dashboard/savings');
+          toast.info('Navigating to Savings page...');
+        }, 1500); // 1.5 second delay
+        return () => clearTimeout(timer);
       }
     } else if (
       demoStep === 1 ||
@@ -354,7 +357,9 @@ export function DemoModeSidebar() {
               {currentStep.highlights.map((highlight, i) => (
                 <div key={i} className="flex items-start gap-2">
                   <div className="h-1.5 w-1.5 rounded-full bg-green-500 mt-1.5 flex-shrink-0" />
-                  <span className="text-xs text-muted-foreground">{highlight}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {highlight}
+                  </span>
                 </div>
               ))}
             </div>
@@ -367,7 +372,9 @@ export function DemoModeSidebar() {
               <div className="bg-muted rounded-lg p-3">
                 <div className="flex items-center justify-between mb-1">
                   <span className="text-xs font-medium">Opportunity Cost</span>
-                  <span className="text-xs text-muted-foreground">vs 0.1% APY</span>
+                  <span className="text-xs text-muted-foreground">
+                    vs 0.1% APY
+                  </span>
                 </div>
                 <div className="text-xl font-bold text-red-600 dark:text-red-400">
                   -${opportunityCost.toFixed(2)}
@@ -382,7 +389,9 @@ export function DemoModeSidebar() {
                 <div className="bg-muted rounded-lg p-3">
                   <div className="flex items-center justify-between mb-1">
                     <span className="text-xs font-medium">Extra Runway</span>
-                    <span className="text-xs text-muted-foreground">$200k/mo burn</span>
+                    <span className="text-xs text-muted-foreground">
+                      $200k/mo burn
+                    </span>
                   </div>
                   <div className="text-xl font-bold text-green-600 dark:text-green-400">
                     +{((2500000 * 0.08) / burnRate).toFixed(1)} months
@@ -816,10 +825,12 @@ export function DemoModeSidebar() {
           {demoStep === 7 ? (
             <div className="space-y-3">
               <div className="bg-orange-50 dark:bg-orange-950/20 rounded-lg p-3">
-                <p className="text-xs font-semibold mb-1">Smart Risk Management</p>
+                <p className="text-xs font-semibold mb-1">
+                  Smart Risk Management
+                </p>
                 <p className="text-xs text-muted-foreground">
-                  Start with 10% of your treasury. Test for 3 months. Scale up when comfortable.
-                  Even 10% at 8% APY beats 100% at 0.1%.
+                  Start with 10% of your treasury. Test for 3 months. Scale up
+                  when comfortable. Even 10% at 8% APY beats 100% at 0.1%.
                 </p>
               </div>
               <div className="flex items-start gap-2">
@@ -833,8 +844,8 @@ export function DemoModeSidebar() {
             <div className="flex items-start gap-2">
               <Info className="h-3 w-3 text-muted-foreground mt-0.5" />
               <p className="text-xs text-muted-foreground">
-                Zero Finance: 8% APY savings for startups. 
-                Add {((2500000 * 0.08) / 200000).toFixed(1)} months to your runway.
+                Zero Finance: 8% APY savings for startups. Add{' '}
+                {((2500000 * 0.08) / 200000).toFixed(1)} months to your runway.
               </p>
             </div>
           )}
