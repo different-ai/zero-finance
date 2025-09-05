@@ -227,6 +227,13 @@ export function HeroSection() {
                 Set limits and pay via ACH, SEPA, or corporate card from the
                 same account.
               </p>
+              <div className="mt-3 flex items-center">
+                <img
+                  src="/Visa_Brandmark_Blue_RGB_2021.svgz"
+                  alt="Visa"
+                  className="h-6 w-auto"
+                />
+              </div>
             </div>
           </div>
         </div>

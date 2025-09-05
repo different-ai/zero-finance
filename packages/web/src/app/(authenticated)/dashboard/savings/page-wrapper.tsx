@@ -331,33 +331,80 @@ export default function SavingsPageWrapper() {
                 </Alert>
               )}
 
-              {/* Animated Yield Counter Card */}
+              {/* Animated Yield Counter Card - Premium Design */}
               {totalSaved > 0 && (
-                <Card className="bg-[#0040FF]/10 border-[#0040FF]/20">
-                  <CardHeader>
-                    <CardTitle className="text-lg flex items-center justify-between">
-                      <span className="text-[#0040FF]">
-                        Your Yield Performance
+                <div className="rounded-2xl bg-[#0040FF]/10 ring-1 ring-[#DDE7FF] p-6 md:p-8">
+                  <div className="flex items-center justify-between mb-6">
+                    <h2 className="text-slate-900 text-xl md:text-2xl font-semibold tracking-tight">
+                      Your Yield Performance
+                    </h2>
+                    <div className="inline-flex items-center gap-2 rounded-full bg-emerald-50 ring-1 ring-emerald-200 px-3 py-1">
+                      <span className="size-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                      <span className="text-emerald-700 text-sm font-medium">
+                        Live
                       </span>
-                      <AnimatedYieldBadge
-                        principal={totalSaved}
-                        apy={vaultsVM[0]?.apy || 8.0}
-                      />
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <AnimatedYieldCounter
-                      principal={totalSaved}
-                      apy={vaultsVM[0]?.apy || 8.0}
-                      showDaily={true}
-                      showMonthly={true}
-                      showYearly={true}
-                      startDate={
-                        new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
-                      } // Start 30 days ago for demo
-                    />
-                  </CardContent>
-                </Card>
+                    </div>
+                  </div>
+
+                  {/* Total Earned Slab */}
+                  <div className="rounded-xl bg-white ring-1 ring-slate-200 overflow-hidden mb-4">
+                    <div className="bg-[radial-gradient(75%_120%_at_0%_0%,#ECFDF5_0%,white_45%)] p-5 md:p-7">
+                      <p className="text-sm text-slate-600 mb-2">
+                        Total Earned
+                      </p>
+                      <p className="text-3xl md:text-4xl font-semibold text-emerald-700 font-mono tabular-nums tracking-tight">
+                        +{formatUsdWithPrecision(totalEarned, 2)}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Metric Rows */}
+                  <div className="divide-y divide-slate-100 rounded-xl bg-white ring-1 ring-slate-200">
+                    <div className="flex items-center justify-between px-4 md:px-5 py-3 hover:bg-emerald-50/40 transition-colors">
+                      <span className="text-slate-700">Principal Amount</span>
+                      <span className="font-mono tabular-nums text-slate-900 font-medium">
+                        {formatUsd(totalSaved)}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between px-4 md:px-5 py-3 hover:bg-emerald-50/40 transition-colors">
+                      <span className="text-slate-700">Daily Earnings</span>
+                      <span className="font-mono tabular-nums text-emerald-700 font-medium">
+                        +
+                        {formatUsdWithPrecision(
+                          (totalSaved * (vaultsVM[0]?.apy || 8.0)) / 100 / 365,
+                          2,
+                        )}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between px-4 md:px-5 py-3 hover:bg-emerald-50/40 transition-colors">
+                      <span className="text-slate-700">Monthly Earnings</span>
+                      <span className="font-mono tabular-nums text-emerald-700 font-medium">
+                        +
+                        {formatUsdWithPrecision(
+                          (totalSaved * (vaultsVM[0]?.apy || 8.0)) / 100 / 12,
+                          2,
+                        )}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between px-4 md:px-5 py-3 hover:bg-emerald-50/40 transition-colors">
+                      <span className="text-slate-700">Yearly Projection</span>
+                      <span className="font-mono tabular-nums text-emerald-700 font-semibold">
+                        +
+                        {formatUsd(
+                          (totalSaved * (vaultsVM[0]?.apy || 8.0)) / 100,
+                        )}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Current APY Footer */}
+                  <div className="mt-4 text-slate-600 text-sm">
+                    Current APY:{' '}
+                    <span className="font-semibold text-[#0040FF]">
+                      {(vaultsVM[0]?.apy || 8.0).toFixed(2)}%
+                    </span>
+                  </div>
+                </div>
               )}
 
               <div className="border-0 shadow-none bg-transparent p-0">
