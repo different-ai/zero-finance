@@ -16,6 +16,8 @@ import {
   X,
   Sparkles,
   Banknote,
+  PiggyBank,
+  CreditCard,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { usePrivy } from '@privy-io/react-auth';
@@ -33,6 +35,17 @@ const navigationItems: NavigationItem[] = [
     name: 'Banking',
     href: '/dashboard',
     icon: Banknote,
+  },
+  {
+    name: 'Savings',
+    href: '/dashboard/savings',
+    icon: PiggyBank,
+  },
+  {
+    name: 'Cards',
+    href: '/dashboard/cards',
+    icon: CreditCard,
+    disabled: true,
   },
   {
     name: 'Invoices',
@@ -129,12 +142,17 @@ export function Sidebar() {
               return (
                 <div
                   key={item.name}
-                  className="flex items-center gap-3 px-4 py-3 text-gray-400 cursor-not-allowed opacity-50"
+                  className="flex items-center justify-between gap-3 px-4 py-3 text-gray-400 cursor-not-allowed opacity-50"
                 >
-                  {React.createElement(item.icon, {
-                    className: 'h-[18px] w-[18px]',
-                  })}
-                  <span className="text-[15px] font-medium">{item.name}</span>
+                  <div className="flex items-center gap-3">
+                    {React.createElement(item.icon, {
+                      className: 'h-[18px] w-[18px]',
+                    })}
+                    <span className="text-[15px] font-medium">{item.name}</span>
+                  </div>
+                  <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">
+                    Coming Soon
+                  </span>
                 </div>
               );
             }

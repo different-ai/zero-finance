@@ -250,28 +250,6 @@ export default function SavingsPageWrapper() {
         </div>
 
         <div className="space-y-6">
-          {savingsState.enabled && (
-            <Card className="rounded-lg border p-5 transition-all hover:shadow-md border-primary/20 bg-primary/5 p-6">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="font-medium mb-1">Auto-Savings</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Saving {savingsState.allocation}% of deposits
-                      automatically
-                    </p>
-                  </div>
-                  <Link href="/dashboard/savings/settings">
-                    <Button variant="outline" size="sm">
-                      <Settings className="mr-2 h-3 w-3" />
-                      Settings
-                    </Button>
-                  </Link>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
           {!savingsState.enabled && (
             <div className="w-full flex justify-center">
               {!isEarnModuleInitialized ? (
@@ -355,10 +333,12 @@ export default function SavingsPageWrapper() {
 
               {/* Animated Yield Counter Card */}
               {totalSaved > 0 && (
-                <Card className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/10 dark:to-emerald-950/10 border-green-200 dark:border-green-800">
+                <Card className="bg-[#0040FF]/10 border-[#0040FF]/20">
                   <CardHeader>
                     <CardTitle className="text-lg flex items-center justify-between">
-                      <span>Your Yield Performance</span>
+                      <span className="text-[#0040FF]">
+                        Your Yield Performance
+                      </span>
                       <AnimatedYieldBadge
                         principal={totalSaved}
                         apy={vaultsVM[0]?.apy || 8.0}
@@ -394,10 +374,8 @@ export default function SavingsPageWrapper() {
                   {vaultsVM.map((v) => (
                     <div
                       key={v.id}
-                      className={`rounded-lg border bg-card p-5 transition-all hover:shadow-md ${
-                        v.isAuto
-                          ? 'border-primary/20 bg-primary/5'
-                          : 'border-border'
+                      className={`rounded-lg border bg-white p-5 transition-all hover:shadow-md ${
+                        v.isAuto ? 'border-primary/20' : 'border-border'
                       } ${
                         expandedAction?.vaultId === v.id
                           ? 'ring-2 ring-primary/50 shadow-md'
@@ -439,8 +417,8 @@ export default function SavingsPageWrapper() {
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-3 gap-4 mb-4">
-                        <div>
+                      <div className="flex gap-3 mb-4">
+                        <div className="flex-1 bg-muted rounded-lg p-3">
                           <p className="text-xs text-muted-foreground mb-1">
                             Balance
                           </p>
@@ -448,7 +426,7 @@ export default function SavingsPageWrapper() {
                             {formatUsd(v.balanceUsd)}
                           </p>
                         </div>
-                        <div>
+                        <div className="flex-1 bg-muted rounded-lg p-3">
                           <p className="text-xs text-muted-foreground mb-1">
                             APY
                           </p>
@@ -456,7 +434,7 @@ export default function SavingsPageWrapper() {
                             {v.apy.toFixed(2)}%
                           </p>
                         </div>
-                        <div>
+                        <div className="flex-1 bg-muted rounded-lg p-3">
                           <p className="text-xs text-muted-foreground mb-1">
                             Earned
                           </p>
@@ -633,6 +611,28 @@ export default function SavingsPageWrapper() {
               )}
             </CardContent>
           </Card>
+
+          {savingsState.enabled && (
+            <Card className="rounded-lg border p-5 transition-all hover:shadow-md border-primary/20 bg-primary/5 p-6">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="font-medium mb-1">Auto-Savings</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Saving {savingsState.allocation}% of deposits
+                      automatically
+                    </p>
+                  </div>
+                  <Link href="/dashboard/savings/settings">
+                    <Button variant="outline" size="sm">
+                      <Settings className="mr-2 h-3 w-3" />
+                      Settings
+                    </Button>
+                  </Link>
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
     </div>
