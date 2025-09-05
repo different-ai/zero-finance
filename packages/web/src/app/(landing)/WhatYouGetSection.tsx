@@ -16,12 +16,13 @@ export function WhatYouGetSection() {
         <div className="mt-6 sm:mt-8 grid grid-cols-1 sm:grid-cols-2 gap-px bg-[#101010]/10">
           <div className="bg-white p-4 sm:p-6">
             <h3 className="uppercase tracking-[0.12em] sm:tracking-[0.14em] text-[12px] sm:text-[13px] text-[#101010]/70">
-              8% APY - Fully Insured
+              8% APY - Insured
             </h3>
             <p className="mt-3 text-[13px] sm:text-[14px] leading-[1.5] text-[#101010]/80">
-              Earn 10% annual yield on your USDC holdings with enterprise-grade
-              insurance from Chainproof. Your funds are protected while
-              generating consistent returns.
+              We provide insurance coverage on 8% annual yield through our
+              partnership with Chainproof. Yield opportunities are carefully
+              vetted but as with any investment, returns cannot be guaranteed.
+              Your capital is protected through our insurance program.
             </p>
           </div>
 
@@ -55,10 +56,36 @@ export function WhatYouGetSection() {
               Complete Self-Custody
             </h3>
             <p className="mt-3 text-[13px] sm:text-[14px] leading-[1.5] text-[#101010]/80">
-              Maintain full control of your funds with your own keys. Choose
-              between managed wallets for convenience or bring your own for
-              maximum security.
+              Email-type login for easy access. Your funds are secured on-chain
+              for institutional-grade protection. Your keys, your control.
             </p>
+            <div className="mt-4 flex items-center gap-6">
+              <a
+                href="https://privy.io"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="opacity-70 hover:opacity-100 transition-opacity flex items-center"
+              >
+                <img
+                  src="/Privy_Brandmark_Black.svg"
+                  alt="Privy"
+                  className="h-5 w-auto"
+                />
+              </a>
+              <span className="text-[#101010]/30">×</span>
+              <a
+                href="https://safe.global"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="opacity-70 hover:opacity-100 transition-opacity flex items-center"
+              >
+                <img
+                  src="https://github.com/safe-global/safe-core-sdk/blob/main/assets/logo.png?raw=true"
+                  alt="Safe"
+                  className="h-5 w-auto"
+                />
+              </a>
+            </div>
           </div>
         </div>
       </div>

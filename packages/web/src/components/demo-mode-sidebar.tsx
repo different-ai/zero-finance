@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { useRouter, usePathname } from 'next/navigation';
 import { useDemoMode } from '@/context/demo-mode-context';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -64,9 +65,13 @@ const DEMO_STEPS = [
   },
   {
     id: 5,
-    name: 'Savings Enabled',
-    description: '10% auto-save active',
-    highlights: ['$200k in savings', '8% APY earning'],
+    name: 'Savings Activated',
+    description: '$200k earning 8% APY',
+    highlights: [
+      'Auto-savings enabled',
+      'Yield generation started',
+      'Auto-navigates to Savings',
+    ],
   },
   {
     id: 6,
@@ -106,6 +111,8 @@ const DEMO_BANK_ACCOUNTS = {
 };
 
 export function DemoModeSidebar() {
+  const router = useRouter();
+  const pathname = usePathname();
   const {
     isDemoMode,
     setDemoMode,
@@ -133,7 +140,7 @@ export function DemoModeSidebar() {
     }
   }, [isAutoPlaying, demoStep]);
 
-  // Update balances based on step
+  // Update balances based on step and handle navigation
   useEffect(() => {
     if (!isDemoMode) return;
 
@@ -142,8 +149,30 @@ export function DemoModeSidebar() {
     } else if (demoStep === 5) {
       setDemoSavingsBalance(200000);
       setDemoBalance(2300000);
+      // Automatically navigate to savings page when reaching savings step
+      if (pathname !== '/dashboard/savings') {
+        router.push('/dashboard/savings');
+        toast.info('Navigating to Savings page...');
+      }
+    } else if (
+      demoStep === 1 ||
+      demoStep === 2 ||
+      demoStep === 3 ||
+      demoStep === 4
+    ) {
+      // Navigate back to dashboard for earlier steps
+      if (pathname !== '/dashboard') {
+        router.push('/dashboard');
+      }
     }
-  }, [demoStep, isDemoMode, setDemoBalance, setDemoSavingsBalance]);
+  }, [
+    demoStep,
+    isDemoMode,
+    setDemoBalance,
+    setDemoSavingsBalance,
+    pathname,
+    router,
+  ]);
 
   const handleNext = () => {
     if (demoStep < DEMO_STEPS.length - 1) {

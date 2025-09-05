@@ -1,12 +1,22 @@
 'use client';
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+  useEffect,
+} from 'react';
+
 
 interface DemoModeContextType {
   isDemoMode: boolean;
-  setDemoMode: (enabled: boolean) => void;
+  toggleDemoMode: () => void;
   demoStep: number;
   setDemoStep: (step: number) => void;
+  nextDemoStep: () => void;
+  prevDemoStep: () => void;
+  resetDemo: () => void;
   demoBalance: number;
   setDemoBalance: (balance: number) => void;
   demoSavingsBalance: number;

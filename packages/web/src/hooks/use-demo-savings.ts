@@ -88,8 +88,8 @@ export function useDemoVaultStats() {
     {
       vaultAddress: '0x616a4E1db48e22028f6bbf20444Cd3b8e3273738',
       vaultName: 'Seamless USDC',
-      apy: 0.08,
-      netApy: 0.08,
+      apy: 8.0,
+      netApy: 8.0,
       tvl: 25000000n,
       yield: BigInt(Math.floor(yieldAmount)),
     },

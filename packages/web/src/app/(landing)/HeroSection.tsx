@@ -23,8 +23,8 @@ export function HeroSection() {
     <>
       {/* Hero */}
       <section className="relative border-b border-[#101010]/10 bg-[#F6F5EF] overflow-hidden min-h-[80vh] sm:min-h-[85vh] lg:min-h-[90vh] flex items-center">
-        <ThreeBackground className="absolute ml-auto opacity-80" />
-        <div className="relative mx-auto max-w-[1200px] px-4 sm:px-6 lg:px-8 py-16 sm:py-20 lg:py-24 w-full">
+        <ThreeBackground className="absolute inset-0 -z-10 opacity-80" />
+        <div className="relative z-10 mx-auto max-w-[1200px] px-4 sm:px-6 lg:px-8 py-16 sm:py-20 lg:py-24 w-full">
           <p className="uppercase tracking-[0.14em] sm:tracking-[0.18em] text-[11px] sm:text-[12px] lg:text-[13px] font-medium text-[#101010]/70">
             Insured yield for startups
           </p>
@@ -38,15 +38,15 @@ export function HeroSection() {
             Open a business account. Deposit USD, EUR, or USDC. Earn
             automatically. Withdraw any time.
           </p>
-          <div className="mt-8 sm:mt-10 flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-12 lg:gap-20">
+          <div className="mt-8 sm:mt-10 flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6">
             <Link
-              className="text-[16px] sm:text-[17px] lg:text-[18px] font-medium text-[#1B29FF] underline underline-offset-[6px] hover:no-underline transition-all"
+              className="inline-flex items-center px-6 py-3 text-[15px] sm:text-[16px] font-medium text-white bg-[#1B29FF] hover:bg-[#1420CC] rounded-md transition-colors"
               href="/signin?source=crypto"
             >
               Sign up →
             </Link>
             <Link
-              className="text-[14px] sm:text-[15px] lg:text-[16px] text-[#101010] hover:text-[#1B29FF] underline decoration-[#101010]/30 underline-offset-[4px] hover:decoration-[#1B29FF] transition-colors"
+              className="inline-flex items-center text-[14px] sm:text-[15px] lg:text-[16px] text-[#101010] hover:text-[#1B29FF] underline decoration-[#101010]/30 underline-offset-[4px] hover:decoration-[#1B29FF] transition-colors"
               href="https://cal.com/team/0finance/30"
             >
               Book demo
@@ -209,7 +209,7 @@ export function HeroSection() {
                 2
               </div>
               <h3 className="mt-2 text-[15px] sm:text-[16px] font-medium text-[#101010]">
-                Earn 10% APY
+                Earn 8% APY
               </h3>
               <p className="mt-1 text-[13px] sm:text-[14px] text-[#101010]/70">
                 Funds sweep to regulated yield partners. No lockups. Withdraw

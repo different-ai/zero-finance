@@ -217,16 +217,18 @@ function PixelSquares({
             // base density of the chosen motif
             float baseD = densityFor(pAspect);
 
-            // SUPER SIMPLE animation to test if time is updating
+            // Animation that works consistently
             float rnd = hash21(cellId);
             
-            // Just use time directly to see if it's animating
-            float simpleWave = sin(uTime * 2.0 + rnd * 6.28);
+            // Create a wave animation with time
+            float phase = rnd * 6.28;
+            float wave1 = sin(uTime * 1.5 + phase);
+            float wave2 = sin(uTime * 0.8 + phase * 0.5);
             
-            // Make half the cells blink on and off
-            float blink = step(0.0, simpleWave);
+            // Combine waves for organic movement
+            float animValue = 0.5 + 0.3 * wave1 + 0.2 * wave2;
             
-            float spawn = baseD * blink;
+            float spawn = baseD * animValue;
 
             // pointer in same aspect space for distance math
             vec2 mNDC = uMouse;
@@ -393,11 +395,10 @@ export function ThreeBackground({
   return (
     <div
       ref={containerRef}
-      className={`absolute top-0 right-0 bottom-0 left-0 ${className}`}
+      className={`absolute inset-0 ${className}`}
       style={{
         pointerEvents: 'none',
-        zIndex: 1,
-        background: 'transparent',
+        zIndex: -1,
       }}
     >
       <Canvas
