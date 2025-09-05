@@ -139,6 +139,36 @@ export function getDemoVaultStats(
   return vaults;
 }
 
+// Demo virtual bank accounts
+export function getDemoVirtualAccounts(demoStep: number) {
+  if (demoStep < 2) return [];
+
+  return [
+    {
+      id: 'demo-usd-account',
+      sourceAccountType: 'us_ach' as const,
+      sourceAccountNumber: '8274619503',
+      sourceRoutingNumber: '121000248',
+      sourceBankName: 'Wells Fargo Bank',
+      sourceBankAddress: '420 Montgomery Street, San Francisco, CA 94104',
+      sourceCurrency: 'usd',
+      destinationCurrency: 'usdc',
+      destinationPaymentRail: 'Base',
+    },
+    {
+      id: 'demo-eur-account',
+      sourceAccountType: 'iban' as const,
+      sourceIban: 'DE89 3704 0044 0532 0130 00',
+      sourceBicSwift: 'COBADEFFXXX',
+      sourceBankName: 'Commerzbank AG',
+      sourceBankAddress: 'Kaiserplatz, 60311 Frankfurt am Main, Germany',
+      sourceCurrency: 'eur',
+      destinationCurrency: 'usdc',
+      destinationPaymentRail: 'Base',
+    },
+  ];
+}
+
 // Hook to override TRPC data with demo data
 export function useDemoTRPC() {
   const { isDemoMode, demoStep, demoBalance, demoSavingsBalance } =
@@ -154,6 +184,7 @@ export function useDemoTRPC() {
       vaultStats: getDemoVaultStats(demoStep, demoSavingsBalance),
       balance: demoBalance,
       safeAddress: '0xDemo1234567890abcdef1234567890abcdef1234',
+      virtualAccounts: getDemoVirtualAccounts(demoStep),
     };
   }, [isDemoMode, demoStep, demoBalance, demoSavingsBalance]);
 

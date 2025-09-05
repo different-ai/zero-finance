@@ -5,7 +5,7 @@ import { Suspense } from 'react';
 import { ActiveAgents } from './components/agents/active-agents';
 import { TransactionTabsDemo } from './components/dashboard/transaction-tabs-demo';
 import { redirect } from 'next/navigation';
-import { FundsDisplayDemo } from './components/dashboard/funds-display-demo';
+import { FundsDisplayWithDemo } from './components/dashboard/funds-display-with-demo';
 import { VirtualAccountOnboardingLayer } from './components/dashboard/virtual-account-onboarding-layer';
 import { USDC_ADDRESS } from '@/lib/constants';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -63,7 +63,7 @@ async function FundsData() {
   const totalBalance = balanceData ? Number(balanceData.balance) / 1e6 : 0;
 
   return (
-    <FundsDisplayDemo
+    <FundsDisplayWithDemo
       totalBalance={totalBalance}
       walletAddress={primarySafe.primarySafeAddress}
     />

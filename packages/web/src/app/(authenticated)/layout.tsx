@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation';
 import { userProfileService } from '@/lib/user-profile-service';
 import { getUser } from '@/lib/auth';
 import DashboardClientLayout from './dashboard/dashboard-client-layout';
-import { DemoModeToggle } from '@/components/demo-mode-toggle';
+import { DemoModeSidebar } from '@/components/demo-mode-sidebar';
 
 // Force dynamic rendering since this layout uses cookies for authentication
 export const dynamic = 'force-dynamic';
@@ -40,7 +40,7 @@ export default async function AuthenticatedLayout({
   return (
     <>
       <DashboardClientLayout>{children}</DashboardClientLayout>
-      <DemoModeToggle />
+      <DemoModeSidebar />
     </>
   );
 }
