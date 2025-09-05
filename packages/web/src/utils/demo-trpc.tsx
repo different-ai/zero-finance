@@ -194,7 +194,7 @@ export function useDemoTRPC() {
 // Custom hooks that wrap TRPC hooks with demo data
 export function useUserSafesWithDemo() {
   const demoData = useDemoTRPC();
-  const realQuery = trpc.user.getSafes.useQuery(undefined, {
+  const realQuery = trpc.settings.userSafes.list.useQuery(undefined, {
     enabled: !demoData,
   });
 
