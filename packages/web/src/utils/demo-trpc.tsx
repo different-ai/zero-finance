@@ -56,7 +56,7 @@ export function getDemoTransactions(demoStep: number) {
     baseTransactions.push({
       id: 'demo-4',
       hash: '0xdemo' + Math.random().toString(36).substring(7),
-      type: 'earn_deposit' as const,
+      type: 'deposit' as const,
       amount: '200000',
       token: 'USDC',
       from: '0xYourSafeAddress',
