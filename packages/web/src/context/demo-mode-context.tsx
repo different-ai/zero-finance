@@ -8,9 +8,9 @@ import React, {
   useEffect,
 } from 'react';
 
-
 interface DemoModeContextType {
   isDemoMode: boolean;
+  setDemoMode: (enabled: boolean) => void;
   toggleDemoMode: () => void;
   demoStep: number;
   setDemoStep: (step: number) => void;
