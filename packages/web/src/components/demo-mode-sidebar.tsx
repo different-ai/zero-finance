@@ -42,8 +42,8 @@ const DEMO_STEPS = [
     name: 'The Problem',
     description: 'Your $2.5M earning 0.1% at Chase',
     highlights: [
-      'Losing $195k/year vs 8% APY',
-      "That's 1 month of runway lost",
+      'Losing $197.5k/year vs 8% APY',
+      "That's 12 months of runway lost",
       'Mercury: 4.5% | Zero: 8.0%',
     ],
   },
@@ -70,7 +70,7 @@ const DEMO_STEPS = [
     highlights: [
       'Instant yield activation',
       'No action needed',
-      'Adding 2.4 months runway/year',
+      'Adding 12 months runway/year',
     ],
   },
   {
@@ -85,11 +85,11 @@ const DEMO_STEPS = [
   },
   {
     id: 5,
-    name: 'Optimize Savings',
-    description: '$200k allocated to 8% APY',
+    name: 'Maximize Savings',
+    description: '$2.5M allocated to 8% APY',
     highlights: [
-      'Earning $43.84 daily',
-      "That's $16,000/year extra",
+      'Earning $547.95 daily',
+      "That's $200,000/year extra",
       'Auto-navigates to Savings',
     ],
   },
@@ -161,8 +161,8 @@ export function DemoModeSidebar() {
   // Calculate opportunity cost counter (updates every second)
   useEffect(() => {
     const timer = setInterval(() => {
-      // $195k per year / 365 days / 24 hours / 60 minutes / 60 seconds
-      const costPerSecond = 195000 / (365 * 24 * 60 * 60);
+      // $197.5k per year / 365 days / 24 hours / 60 minutes / 60 seconds
+      const costPerSecond = 197500 / (365 * 24 * 60 * 60);
       setOpportunityCost((prev) => prev + costPerSecond);
     }, 1000);
 
@@ -193,8 +193,8 @@ export function DemoModeSidebar() {
       setDemoBalance(2500000);
       setDemoSavingsBalance(0);
     } else if (demoStep >= 5) {
-      setDemoSavingsBalance(200000);
-      setDemoBalance(2300000);
+      setDemoSavingsBalance(2500000);
+      setDemoBalance(0);
     }
 
     // Handle navigation with delay
@@ -406,7 +406,7 @@ export function DemoModeSidebar() {
               {/* Live Yield Counter */}
               {demoStep >= 3 && (
                 <AnimatedYieldCounter
-                  principal={demoStep >= 5 ? 200000 : 2500000}
+                  principal={2500000}
                   apy={8}
                   showDaily={true}
                   showMonthly={true}
@@ -716,18 +716,13 @@ export function DemoModeSidebar() {
               <div className="bg-muted rounded-lg p-3">
                 <p className="text-xs text-muted-foreground mb-1">Balance</p>
                 <p className="text-lg font-bold">
-                  $
-                  {demoStep >= 3
-                    ? demoStep >= 5
-                      ? '2,300,000'
-                      : '2,500,000'
-                    : '0'}
+                  ${demoStep >= 3 ? (demoStep >= 5 ? '0' : '2,500,000') : '0'}
                 </p>
               </div>
               <div className="bg-muted rounded-lg p-3">
                 <p className="text-xs text-muted-foreground mb-1">In Savings</p>
                 <p className="text-lg font-bold">
-                  ${demoStep >= 5 ? '200,000' : '0'}
+                  ${demoStep >= 5 ? '2,500,000' : '0'}
                 </p>
               </div>
               <div className="bg-muted rounded-lg p-3">
@@ -739,7 +734,7 @@ export function DemoModeSidebar() {
                   Daily Yield
                 </p>
                 <p className="text-lg font-bold text-green-600">
-                  ${demoStep >= 5 ? ((200000 * 0.08) / 365).toFixed(2) : '0'}
+                  ${demoStep >= 5 ? ((2500000 * 0.08) / 365).toFixed(2) : '0'}
                 </p>
               </div>
             </div>

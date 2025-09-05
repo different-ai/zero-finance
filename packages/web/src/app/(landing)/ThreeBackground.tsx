@@ -395,7 +395,7 @@ export function ThreeBackground({
   return (
     <div
       ref={containerRef}
-      className={`absolute inset-0 ${className}`}
+      className={`inset-0 ${className}`}
       style={{
         pointerEvents: 'none',
         zIndex: -1,

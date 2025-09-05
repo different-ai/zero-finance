@@ -21,13 +21,13 @@ export function useDemoSavingsState(realState: any, isLoading: boolean) {
       };
     }
 
-    // Step 5+: Savings enabled with 10% allocation
+    // Step 5+: Savings enabled with 100% allocation
     const dailyYield = (demoSavingsBalance * 0.08) / 365;
     const accumulatedYield = demoStep >= 6 ? dailyYield : 0;
 
     return {
       enabled: true,
-      allocation: 10, // 10% auto-save
+      allocation: 100, // 100% auto-save
       apy: 8.0,
       totalSaved: demoSavingsBalance,
       totalEarned: accumulatedYield,
@@ -132,8 +132,8 @@ export function useDemoRecentDeposits() {
   return [
     {
       id: 'demo-deposit-1',
-      amount: 200000, // $200k
-      skimmedAmount: 200000,
+      amount: 2500000, // $2.5M
+      skimmedAmount: 2500000,
       timestamp: Date.now() - 1800000, // 30 mins ago
       status: 'completed',
       transactionHash: '0xdemo123',
