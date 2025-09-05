@@ -74,14 +74,14 @@ function PixelSquares({
         ref={mat}
         transparent
         depthWrite={false}
-        blending={THREE.AdditiveBlending}
+        blending={THREE.NormalBlending}
         needsUpdate={true}
         uniforms={{
           uTime: { value: 0 },
           uRes: { value: new THREE.Vector2(size.width, size.height) },
-          uColor: { value: new THREE.Color('#1B29FF') },
+          uColor: { value: new THREE.Color('#4A5BFF') }, // Lighter, softer blue
           uVariant: { value: variant === 'dual' ? 0 : 1 },
-          uGrid: { value: 140.0 }, // higher → smaller squares
+          uGrid: { value: 180.0 }, // higher → smaller squares (less dense)
           uJitter: { value: 0.2 }, // idle wobble per cell
           uPulse: { value: 0.25 }, // idle breathing
           uSwirl: { value: 0.3 }, // idle boundary swirl
@@ -264,11 +264,11 @@ function PixelSquares({
             // stochastic occupancy
             float live = step(rnd, spawn);
             
-            // Add STRONGER global fade oscillation
-            float globalFade = 0.5 + 0.5 * sin(uTime * 0.8);
+            // Add gentler global fade oscillation
+            float globalFade = 0.7 + 0.3 * sin(uTime * 0.8);
             
-            // Add positional wave effect
-            float wave = sin(pNDC.x * 3.0 - uTime * 2.0) * 0.3 + 0.7;
+            // Add subtle positional wave effect
+            float wave = sin(pNDC.x * 3.0 - uTime * 2.0) * 0.15 + 0.85;
             
             float alpha = inside * live * mask * globalFade * wave;
             if (alpha <= 0.0) discard;
@@ -276,7 +276,7 @@ function PixelSquares({
             vec3 col = uColor;
             // gentle brightening in denser areas
             col += 0.35 * vec3(1.0) * pow(baseD, 3.0);
-            gl_FragColor = vec4(col, alpha);
+            gl_FragColor = vec4(col, alpha * 0.4); // Reduced overall opacity to 40%
           }
         `
         }
@@ -304,8 +304,8 @@ function Scene({
       <PixelSquares
         variant={variant}
         pointerRef={pointerRef}
-        rightMaskStart={0.4}
-        maskFeather={0.2}
+        rightMaskStart={0.55} // Pushed further right to avoid text
+        maskFeather={0.15} // Slightly sharper fade
         shapeScale={0.95}
       />
     </>
