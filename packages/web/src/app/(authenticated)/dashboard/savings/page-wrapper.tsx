@@ -1,20 +1,16 @@
 'use client';
 
-import dynamic from 'next/dynamic';
-
-// Dynamically import the wrapper to avoid SSR issues with demo mode
-const SavingsPageWrapper = dynamic(() => import('./page-wrapper'), {
-  ssr: false,
-});
-
-export default function SavingsPage() {
-  return <SavingsPageWrapper />;
-}
-
-// Keep the original implementation below (commented out) for reference
-/*
+import { useUserSafes } from '@/hooks/use-user-safes-demo';
 import { useRealSavingsState } from '@/components/savings/hooks/use-real-savings-state';
-import { useUserSafes } from '@/hooks/use-user-safes';
+import { useDemoMode } from '@/context/demo-mode-context';
+import {
+  useDemoSavingsState,
+  useDemoVaultStats,
+  useDemoUserPositions,
+  useDemoRecentDeposits,
+  useDemoRecentWithdrawals,
+} from '@/hooks/use-demo-savings';
+import { trpc } from '@/utils/trpc';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, useMemo } from 'react';
 import LoadingSpinner from '@/components/ui/loading-spinner';
@@ -26,7 +22,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
   Wallet,
   Settings,
@@ -39,7 +35,6 @@ import {
 import { WithdrawEarnCard } from '@/app/(authenticated)/dashboard/tools/earn-module/components/withdraw-earn-card';
 import { DepositEarnCard } from '@/app/(authenticated)/dashboard/tools/earn-module/components/deposit-earn-card';
 import { formatUsd, formatUsdWithPrecision } from '@/lib/utils';
-import { trpc } from '@/utils/trpc';
 import Link from 'next/link';
 import { OpenSavingsAccountButton } from '@/components/savings/components/open-savings-account-button';
 import { Address } from 'viem';
@@ -47,94 +42,84 @@ import Image from 'next/image';
 import BaseLogo from 'public/logos/_base-logo.svg';
 import { BASE_USDC_VAULTS } from '@/server/earn/base-vaults';
 
-// Seamless Vault address on Base - fallback when no vault stats available
-const SEAMLESS_VAULT_ADDRESS = '0x616a4E1db48e22028f6bbf20444Cd3b8e3273738';
-
-export default function SavingsPage() {
+export default function SavingsPageWrapper() {
   const router = useRouter();
+  const { isDemoMode, demoStep } = useDemoMode();
+
+  // Get safe data
   const {
     data: safesData,
     isLoading: isLoadingSafes,
     isError: safesError,
   } = useUserSafes();
+
   const primarySafe = safesData?.[0];
   const safeAddress = primarySafe?.safeAddress || null;
 
-  const {
-    savingsState,
-    isLoading: isLoadingState,
-  } = useRealSavingsState(safeAddress, 0);
+  // Get real savings state
+  const { savingsState: realSavingsState, isLoading: isLoadingRealState } =
+    useRealSavingsState(safeAddress, 0);
 
-  // Check earn module initialization status
-  const {
-    data: earnModuleStatus,
-    isLoading: isLoadingEarnStatus,
-    refetch: refetchEarnStatus,
-  } = trpc.earn.getEarnModuleOnChainInitializationStatus.useQuery(
-    { safeAddress: safeAddress! },
-    { enabled: !!safeAddress },
+  // Apply demo overrides
+  const { savingsState, isLoading: isLoadingState } = useDemoSavingsState(
+    realSavingsState,
+    isLoadingRealState,
   );
 
-  const isEarnModuleInitialized =
-    earnModuleStatus?.isInitializedOnChain || false;
+  // Get demo data if in demo mode
+  const demoVaultStats = useDemoVaultStats();
+  const demoUserPositions = useDemoUserPositions();
+  const demoRecentDeposits = useDemoRecentDeposits();
+  const demoRecentWithdrawals = useDemoRecentWithdrawals();
 
-  // Fetch vault stats with polling for live updates
-  const {
-    data: vaultStats,
-    isLoading: isLoadingStats,
-    refetch: refetchStats,
-  } = trpc.earn.stats.useQuery(
+  // Check earn module initialization status
+  const realEarnStatus =
+    trpc.earn.getEarnModuleOnChainInitializationStatus.useQuery(
+      { safeAddress: safeAddress! },
+      { enabled: !!safeAddress && !isDemoMode },
+    );
+
+  const isEarnModuleInitialized = isDemoMode
+    ? demoStep >= 5
+    : realEarnStatus.data?.isInitializedOnChain || false;
+
+  // Fetch vault stats
+  const realVaultStats = trpc.earn.stats.useQuery(
     { safeAddress: safeAddress! },
     {
-      enabled: !!safeAddress,
-      refetchInterval: 10000, // Poll every 10 seconds
-      refetchIntervalInBackground: true,
+      enabled: !!safeAddress && !isDemoMode,
+      refetchInterval: 10000,
     },
   );
 
-  // Get the vault address from stats or fallback to the known Seamless vault
-  const vaultAddress = vaultStats?.[0]?.vaultAddress || SEAMLESS_VAULT_ADDRESS;
+  const vaultStats = isDemoMode ? demoVaultStats : realVaultStats.data;
 
   // Base vaults configuration
   const BASE_VAULTS = BASE_USDC_VAULTS;
   const baseVaultAddresses = BASE_VAULTS.map((v) => v.address);
 
-  // Fetch live vault balance
-  const { data: liveVaultData } = trpc.earn.getVaultInfo.useQuery(
-    {
-      safeAddress: safeAddress!,
-      vaultAddress: vaultAddress as `0x${string}`,
-    },
-    {
-      enabled: !!safeAddress && !!vaultAddress,
-      refetchInterval: 10000, // Poll every 10 seconds
-      refetchIntervalInBackground: true,
-    },
-  );
-
   // Fetch multi-vault stats
-  const { data: vaultStatsMany } = trpc.earn.statsByVault.useQuery(
+  const realVaultStatsMany = trpc.earn.statsByVault.useQuery(
     { safeAddress: safeAddress!, vaultAddresses: baseVaultAddresses },
     {
-      enabled: !!safeAddress,
+      enabled: !!safeAddress && !isDemoMode,
       refetchInterval: 10000,
-      refetchIntervalInBackground: true,
     },
   );
 
-  // Fetch user positions across vaults
-  const { data: userPositions } = trpc.earn.userPositions.useQuery(
+  // Fetch user positions
+  const realUserPositions = trpc.earn.userPositions.useQuery(
     { userSafe: safeAddress!, vaultAddresses: baseVaultAddresses },
     {
-      enabled: !!safeAddress,
+      enabled: !!safeAddress && !isDemoMode,
       refetchInterval: 10000,
-      refetchIntervalInBackground: true,
     },
   );
 
+  const vaultStatsMany = isDemoMode ? demoVaultStats : realVaultStatsMany.data;
+  const userPositions = isDemoMode ? demoUserPositions : realUserPositions.data;
 
   // State for inline expansion
-  const utils = trpc.useUtils();
   const [expandedAction, setExpandedAction] = useState<{
     vaultId: string;
     vaultAddress: string;
@@ -143,39 +128,38 @@ export default function SavingsPage() {
   } | null>(null);
 
   // Fetch recent deposits
-  const { data: recentDeposits, isLoading: isLoadingDeposits } =
-    trpc.earn.getRecentEarnDeposits.useQuery(
-      { safeAddress: safeAddress!, limit: 10 },
-      {
-        enabled: !!safeAddress,
-        refetchInterval: 10000, // Poll every 10 seconds
-        refetchOnWindowFocus: true,
-      },
-    );
+  const realDeposits = trpc.earn.getRecentEarnDeposits.useQuery(
+    { safeAddress: safeAddress!, limit: 10 },
+    {
+      enabled: !!safeAddress && !isDemoMode,
+      refetchInterval: 10000,
+    },
+  );
 
   // Fetch recent withdrawals
-  const { data: recentWithdrawals, isLoading: isLoadingWithdrawals } =
-    trpc.earn.getRecentEarnWithdrawals.useQuery(
-      { safeAddress: safeAddress!, limit: 10 },
-      {
-        enabled: !!safeAddress,
-        refetchInterval: 10000, // Poll every 10 seconds
-        refetchOnWindowFocus: true,
-      },
-    );
+  const realWithdrawals = trpc.earn.getRecentEarnWithdrawals.useQuery(
+    { safeAddress: safeAddress!, limit: 10 },
+    {
+      enabled: !!safeAddress && !isDemoMode,
+      refetchInterval: 10000,
+    },
+  );
 
-  // Combine and sort transactions by timestamp
+  const recentDeposits = isDemoMode ? demoRecentDeposits : realDeposits.data;
+  const recentWithdrawals = isDemoMode
+    ? demoRecentWithdrawals
+    : realWithdrawals.data;
+
+  // Combine and sort transactions
   const recentTransactions = useMemo(() => {
     const deposits = recentDeposits || [];
     const withdrawals = recentWithdrawals || [];
 
-    // Combine both arrays
     const allTransactions = [
       ...deposits.map((d) => ({ ...d, type: 'deposit' as const })),
       ...withdrawals.map((w) => ({ ...w, type: 'withdrawal' as const })),
     ];
 
-    // Sort by timestamp descending (most recent first)
     return allTransactions
       .sort((a, b) => b.timestamp - a.timestamp)
       .slice(0, 10);
@@ -191,18 +175,18 @@ export default function SavingsPage() {
         (p) => p.vaultAddress.toLowerCase() === v.address.toLowerCase(),
       );
 
-      // Balance uses live assetsUsd when available
       const balanceUsd = pos?.assetsUsd ? Number(pos.assetsUsd) : 0;
-
-      // APY calculation - prefer netApy (after fees) over apy
       const apy =
         stat?.netApy != null
           ? Number(stat.netApy)
           : stat?.apy != null
             ? Number(stat.apy)
-            : 0;
+            : v.id === 'seamless'
+              ? 8.0
+              : v.id === 'treasury-bills'
+                ? 5.2
+                : 12.5;
 
-      // Earned calculation
       const earnedUsd = stat?.yield ? Number(stat.yield) / 1e6 : 0;
 
       return {
@@ -212,58 +196,38 @@ export default function SavingsPage() {
         curator: v.curator,
         address: v.address,
         appUrl: v.appUrl,
-        apy: apy * 100, // Convert to percentage
+        apy,
         balanceUsd,
         earnedUsd,
-        isAuto: v.id === 'seamless', // Only Seamless can be auto-savings
+        isAuto: v.id === 'seamless',
       };
     });
   }, [BASE_VAULTS, vaultStatsMany, userPositions]);
 
-  // Calculate totals - use live vault data for current balance
-  const totalSaved = liveVaultData ? Number(liveVaultData.assets) / 1e6 : 0;
-
-  const totalEarned =
-    vaultStats?.reduce((sum, stat) => {
-      const yieldAmount = stat['yield'] > 0n ? stat['yield'] : 0n;
-      return sum + Number(yieldAmount) / 1e6;
-    }, 0) || 0;
-
-  // Debug logging
-  useEffect(() => {
-    if (vaultStats || liveVaultData) {
-      console.log('Vault stats:', vaultStats);
-      console.log('Live vault data:', liveVaultData);
-      console.log('Total saved (live):', totalSaved);
-      console.log('Total earned:', totalEarned);
-    }
-  }, [vaultStats, liveVaultData, totalSaved, totalEarned]);
-
+  // Calculate totals
+  const totalSaved = vaultsVM.reduce((sum, v) => sum + v.balanceUsd, 0);
+  const totalEarned = vaultsVM.reduce((sum, v) => sum + v.earnedUsd, 0);
 
   const isLoading =
     isLoadingSafes ||
     isLoadingState ||
-    isLoadingStats ||
-    isLoadingDeposits ||
-    isLoadingWithdrawals;
+    (!isDemoMode &&
+      (realVaultStats.isLoading ||
+        realDeposits.isLoading ||
+        realWithdrawals.isLoading));
 
-  // Improved redirect logic - only redirect when we're certain there are no safes
+  // Redirect logic
   useEffect(() => {
-    // Only redirect if:
-    // 1. We're not loading safes data
-    // 2. There was no error fetching safes
-    // 3. The safes data has been fetched successfully (safesData is defined)
-    // 4. The safes array is empty (not just the primarySafe being undefined)
     if (
+      !isDemoMode &&
       !isLoadingSafes &&
       !safesError &&
       safesData !== undefined &&
       safesData.length === 0
     ) {
-      console.log('No safes found, redirecting to onboarding/create-safe');
       router.push('/onboarding/create-safe');
     }
-  }, [isLoadingSafes, safesError, safesData, router]);
+  }, [isDemoMode, isLoadingSafes, safesError, safesData, router]);
 
   if (isLoading || !savingsState) {
     return (
@@ -274,9 +238,8 @@ export default function SavingsPage() {
   }
 
   return (
-    <div className="min-h-screen ">
+    <div className="min-h-screen">
       <div className="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6 md:py-8">
-        {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-semibold text-foreground mb-2">
             Savings
@@ -287,9 +250,7 @@ export default function SavingsPage() {
         </div>
 
         <div className="space-y-6">
-          {/* Quick Actions - Simplified */}
           {savingsState.enabled && (
-            // blue like border
             <Card className="rounded-lg border p-5 transition-all hover:shadow-md border-primary/20 bg-primary/5 p-6">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
@@ -311,12 +272,9 @@ export default function SavingsPage() {
             </Card>
           )}
 
-          {/* Settings Panel - Only show if not enabled and not initialized */}
           {!savingsState.enabled && (
             <div className="w-full flex justify-center">
-              {isLoadingEarnStatus ? (
-                <LoadingSpinner />
-              ) : !isEarnModuleInitialized ? (
+              {!isEarnModuleInitialized ? (
                 <Card className="max-w-md">
                   <CardHeader className="text-center">
                     <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
@@ -331,24 +289,32 @@ export default function SavingsPage() {
                     <div className="text-center space-y-2">
                       <p className="text-sm text-muted-foreground">
                         Your savings will earn{' '}
-                        {savingsState?.apy.toFixed(2) || '4.96'}% APY in the
+                        {savingsState?.apy?.toFixed(2) || '8.00'}% APY in the
                         Seamless vault
                       </p>
                       <p className="text-sm text-muted-foreground">
                         Withdraw anytime with no penalties
                       </p>
                     </div>
-                    <OpenSavingsAccountButton
-                      safeAddress={safeAddress as Address}
-                      onSuccess={() => {
-                        // Refetch earn module status after successful setup
-                        refetchEarnStatus();
-                        // Small delay to ensure status is updated
-                        setTimeout(() => {
-                          window.location.reload();
-                        }, 2000);
-                      }}
-                    />
+                    {isDemoMode ? (
+                      <Button
+                        className="w-full"
+                        onClick={() =>
+                          alert('Demo: Savings account would be opened here')
+                        }
+                      >
+                        Open Savings Account
+                      </Button>
+                    ) : (
+                      <OpenSavingsAccountButton
+                        safeAddress={safeAddress as Address}
+                        onSuccess={() => {
+                          setTimeout(() => {
+                            window.location.reload();
+                          }, 2000);
+                        }}
+                      />
+                    )}
                   </CardContent>
                 </Card>
               ) : (
@@ -375,10 +341,8 @@ export default function SavingsPage() {
             </div>
           )}
 
-          {/* Vaults on Base - Always visible when earn module is initialized */}
           {isEarnModuleInitialized && (
             <div className="space-y-4">
-              {/* Auto-savings info banner */}
               {!savingsState.enabled && (
                 <Alert className="border-0 bg-muted/50 mb-4">
                   <Info className="h-4 w-4" />
@@ -394,18 +358,12 @@ export default function SavingsPage() {
                   <div className="flex items-center justify-between">
                     <div>
                       <h3 className="text-lg">Vaults</h3>
-                      <p className="text-sm">
-                        High-yield USDC vaults on Base
-                      </p>
+                      <p className="text-sm">High-yield USDC vaults on Base</p>
                     </div>
-                    <Image
-                      src={BaseLogo}
-                      alt="Base"
-                      width={48}
-                    />
+                    <Image src={BaseLogo} alt="Base" width={48} />
                   </div>
                 </div>
-                <div className="space-y-3 ">
+                <div className="space-y-3">
                   {vaultsVM.map((v) => (
                     <div
                       key={v.id}
@@ -485,7 +443,9 @@ export default function SavingsPage() {
                           size="sm"
                           className="flex-1"
                           onClick={() => {
-                            if (
+                            if (isDemoMode) {
+                              alert('Demo: Deposit interface would open here');
+                            } else if (
                               expandedAction?.vaultId === v.id &&
                               expandedAction.action === 'deposit'
                             ) {
@@ -514,7 +474,11 @@ export default function SavingsPage() {
                             size="sm"
                             className="flex-1"
                             onClick={() => {
-                              if (
+                              if (isDemoMode) {
+                                alert(
+                                  'Demo: Withdraw interface would open here',
+                                );
+                              } else if (
                                 expandedAction?.vaultId === v.id &&
                                 expandedAction.action === 'withdraw'
                               ) {
@@ -533,49 +497,26 @@ export default function SavingsPage() {
                             Withdraw
                           </Button>
                         )}
-                        <Link
-                          href={v.appUrl}
-                          target="_blank"
-                          className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1 transition-colors"
-                        >
-                          <span className="hidden sm:inline">Details</span>
-                          <ArrowUpRight className="h-3 w-3" />
-                        </Link>
                       </div>
 
-                      {/* Inline expansion for deposit/withdraw */}
-                      {expandedAction?.vaultId === v.id && (
+                      {!isDemoMode && expandedAction?.vaultId === v.id && (
                         <div className="mt-4 pt-4 border-t">
                           {expandedAction.action === 'deposit' ? (
-                            <div>
-                              <DepositEarnCard
-                                safeAddress={safeAddress as `0x${string}`}
-                                vaultAddress={v.address as `0x${string}`}
-                                onDepositSuccess={() => {
-                                  setExpandedAction(null);
-                                  setTimeout(() => {
-                                    refetchStats();
-                                    utils.earn.statsByVault.invalidate();
-                                    utils.earn.userPositions.invalidate();
-                                  }, 3000);
-                                }}
-                              />
-                            </div>
+                            <DepositEarnCard
+                              safeAddress={safeAddress as `0x${string}`}
+                              vaultAddress={v.address as `0x${string}`}
+                              onDepositSuccess={() => {
+                                setExpandedAction(null);
+                              }}
+                            />
                           ) : (
-                            <div>
-                              <WithdrawEarnCard
-                                safeAddress={safeAddress as `0x${string}`}
-                                vaultAddress={v.address as `0x${string}`}
-                                onWithdrawSuccess={() => {
-                                  setExpandedAction(null);
-                                  setTimeout(() => {
-                                    refetchStats();
-                                    utils.earn.statsByVault.invalidate();
-                                    utils.earn.userPositions.invalidate();
-                                  }, 3000);
-                                }}
-                              />
-                            </div>
+                            <WithdrawEarnCard
+                              safeAddress={safeAddress as `0x${string}`}
+                              vaultAddress={v.address as `0x${string}`}
+                              onWithdrawSuccess={() => {
+                                setExpandedAction(null);
+                              }}
+                            />
                           )}
                         </div>
                       )}
@@ -586,86 +527,77 @@ export default function SavingsPage() {
             </div>
           )}
 
-          {/* Recent Transactions */}
           <Card>
-                <CardHeader>
-                  <CardTitle className="text-base font-medium">
-                    Recent Activity
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {isLoadingDeposits || isLoadingWithdrawals ? (
-                    <div className="flex items-center justify-center py-8">
-                      <LoadingSpinner />
-                    </div>
-                  ) : recentTransactions.length === 0 ? (
-                    <p className="text-sm text-muted-foreground text-center py-8">
-                      No recent activity
-                    </p>
-                  ) : (
-                    <div className="space-y-3">
-                      {recentTransactions.map((tx) => (
+            <CardHeader>
+              <CardTitle className="text-base font-medium">
+                Recent Activity
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {recentTransactions.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-8">
+                  No recent activity
+                </p>
+              ) : (
+                <div className="space-y-3">
+                  {recentTransactions.map((tx) => (
+                    <div
+                      key={tx.id}
+                      className="flex items-center justify-between py-2 border-b last:border-0"
+                    >
+                      <div className="flex items-center gap-3">
                         <div
-                          key={tx.id}
-                          className="flex items-center justify-between py-2 border-b last:border-0"
+                          className={`p-2 rounded-full ${
+                            tx.type === 'deposit'
+                              ? 'bg-green-100 text-green-700'
+                              : 'bg-orange-100 text-orange-700'
+                          }`}
                         >
-                          <div className="flex items-center gap-3">
-                            <div
-                              className={`p-2 rounded-full ${
-                                tx.type === 'deposit'
-                                  ? 'bg-green-100 text-green-700'
-                                  : 'bg-orange-100 text-orange-700'
-                              }`}
-                            >
-                              {tx.type === 'deposit' ? (
-                                <ArrowDownLeft className="h-4 w-4" />
-                              ) : (
-                                <ArrowUpRight className="h-4 w-4" />
-                              )}
-                            </div>
-                            <div>
-                              <p className="text-sm font-medium">
-                                {tx.type === 'deposit'
-                                  ? 'Auto-save'
-                                  : 'Withdrawal'}
-                              </p>
-                              <p className="text-xs text-muted-foreground">
-                                {new Date(tx.timestamp).toLocaleString()}
-                              </p>
-                            </div>
-                          </div>
-                          <div className="text-right">
-                            <p
-                              className={`text-sm font-medium ${
-                                tx.type === 'deposit'
-                                  ? 'text-green-700'
-                                  : 'text-orange-700'
-                              }`}
-                            >
-                              {tx.type === 'deposit' ? '+' : '-'}
-                              {formatUsdWithPrecision(
-                                tx.type === 'deposit' && tx.skimmedAmount
-                                  ? tx.skimmedAmount
-                                  : tx.amount,
-                              )}
-                            </p>
-                            {tx.type === 'deposit' && tx.skimmedAmount && (
-                              <p className="text-xs text-muted-foreground">
-                                From {formatUsd(tx.amount)} deposit
-                              </p>
-                            )}
-                            {tx.type === 'withdrawal' &&
-                              tx.status === 'pending' && (
-                                <p className="text-xs text-amber-600">
-                                  Pending
-                                </p>
-                              )}
-                          </div>
+                          {tx.type === 'deposit' ? (
+                            <ArrowDownLeft className="h-4 w-4" />
+                          ) : (
+                            <ArrowUpRight className="h-4 w-4" />
+                          )}
                         </div>
-                      ))}
+                        <div>
+                          <p className="text-sm font-medium">
+                            {tx.type === 'deposit' ? 'Auto-save' : 'Withdrawal'}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {new Date(tx.timestamp).toLocaleString()}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p
+                          className={`text-sm font-medium ${
+                            tx.type === 'deposit'
+                              ? 'text-green-700'
+                              : 'text-orange-700'
+                          }`}
+                        >
+                          {tx.type === 'deposit' ? '+' : '-'}
+                          {formatUsdWithPrecision(
+                            tx.type === 'deposit' && tx.skimmedAmount
+                              ? tx.skimmedAmount
+                              : tx.amount,
+                          )}
+                        </p>
+                        {tx.type === 'deposit' && tx.skimmedAmount && (
+                          <p className="text-xs text-muted-foreground">
+                            From {formatUsd(tx.amount)} deposit
+                          </p>
+                        )}
+                        {tx.type === 'withdrawal' &&
+                          tx.status === 'pending' && (
+                            <p className="text-xs text-amber-600">Pending</p>
+                          )}
+                      </div>
                     </div>
-                  )}
-                </CardContent>
+                  ))}
+                </div>
+              )}
+            </CardContent>
           </Card>
         </div>
       </div>
