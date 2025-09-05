@@ -185,11 +185,7 @@ export default function SavingsPageWrapper() {
           ? Number(stat.netApy)
           : stat?.apy != null
             ? Number(stat.apy)
-            : v.id === 'seamless'
-              ? 8.0
-              : v.id === 'treasury-bills'
-                ? 5.2
-                : 12.5;
+            : 8.0; // Default APY
 
       const earnedUsd = stat?.yield ? Number(stat.yield) / 1e6 : 0;
 
