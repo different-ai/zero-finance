@@ -141,6 +141,7 @@
     "@types/react-dom": "catalog:",
     "@types/three": "^0.180.0",
     "autoprefixer": "catalog:",
+    "caniuse-lite": "^1.0.30001739",
     "crypto-browserify": "^3.12.1",
     "dotenv-cli": "^8.0.0",
     "drizzle-kit": "catalog:",
