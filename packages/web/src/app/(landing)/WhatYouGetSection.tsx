@@ -49,6 +49,13 @@ export function WhatYouGetSection() {
                 [Coming soon]
               </span>
             </p>
+            <div className="mt-4">
+              <img
+                src="Visa_Brandmark_Blue_RGB_2021.png"
+                alt="Visa"
+                className="h-5 w-auto opacity-70"
+              />
+            </div>
           </div>
 
           <div className="bg-white p-4 sm:p-6">

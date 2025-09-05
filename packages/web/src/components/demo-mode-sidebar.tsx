@@ -678,7 +678,9 @@ export function DemoModeSidebar() {
                   <div className="flex items-start gap-2">
                     <div className="h-4 w-4 rounded-full bg-blue-100 dark:bg-blue-950 mt-0.5 flex-shrink-0" />
                     <div className="flex-1">
-                      <span className="text-sm text-muted-foreground">Corporate cards (Q1 2025)</span>
+                      <span className="text-sm text-muted-foreground">
+                        Corporate cards (Q1 2025)
+                      </span>
                       <div className="mt-1">
                         <img
                           src="/Visa_Brandmark_Blue_RGB_2021.svgz"
@@ -688,16 +690,6 @@ export function DemoModeSidebar() {
                       </div>
                     </div>
                   </div>
-                  <div className="flex items-start gap-2">
-                    <div className="h-4 w-4 rounded-full bg-blue-100 dark:bg-blue-950 mt-0.5 flex-shrink-0" />
-                    <span className="text-sm text-muted-foreground">Bill pay integration</span>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <div className="h-4 w-4 rounded-full bg-blue-100 dark:bg-blue-950 mt-0.5 flex-shrink-0" />
-                    <span className="text-sm text-muted-foreground">Automatic 1099 tax forms</span>
-                  </div>
-                </div>
-              </div>
                   <div className="flex items-start gap-2">
                     <div className="h-4 w-4 rounded-full bg-blue-100 dark:bg-blue-950 mt-0.5 flex-shrink-0" />
                     <span className="text-sm text-muted-foreground">
