@@ -35,55 +35,79 @@ import { cn } from '@/lib/utils';
 const DEMO_STEPS = [
   {
     id: 0,
-    name: 'Welcome',
-    description: '8% APY Savings Account',
-    highlights: ['Zero Finance Demo', 'Crypto yield with TradFi safety'],
+    name: 'The Problem',
+    description: 'Your $2.5M earning 0.1% at Chase',
+    highlights: [
+      'Losing $195k/year vs 8% APY',
+      "That's 1 month of runway lost",
+      'Mercury: 4.5% | Zero: 8.0%',
+    ],
   },
   {
     id: 1,
     name: 'Empty Dashboard',
-    description: 'Starting fresh',
-    highlights: ['$0 balance', 'Ready to receive funds'],
+    description: 'Start earning in 2 minutes',
+    highlights: ['No minimum balance', 'No lock-ups', 'Withdraw anytime'],
   },
   {
     id: 2,
-    name: 'Deposit Options',
-    description: 'Multiple funding methods',
-    highlights: ['USD Bank Transfer', 'EUR SEPA Transfer', 'USDC on Base'],
+    name: 'Fund Your Account',
+    description: 'Wire from your existing bank',
+    highlights: [
+      'Same-day ACH/Wire',
+      'We handle crypto conversion',
+      'You only see USD',
+    ],
   },
   {
     id: 3,
     name: 'Funds Received',
-    description: '$2.5M treasury deposited',
-    highlights: ['Instant settlement', 'Ready to earn'],
+    description: '$2.5M now earning $547/day',
+    highlights: [
+      'Instant yield activation',
+      'No action needed',
+      'Adding 2.4 months runway/year',
+    ],
   },
   {
     id: 4,
-    name: 'Dashboard Active',
-    description: 'Full banking features',
-    highlights: ['Transaction history', 'Real-time balance'],
+    name: 'Your Dashboard',
+    description: 'Simple, transparent, real-time',
+    highlights: [
+      '$547 earned today',
+      'Compound automatically',
+      'Non-custodial (you control it)',
+    ],
   },
   {
     id: 5,
-    name: 'Savings Activated',
-    description: '$200k earning 8% APY',
+    name: 'Optimize Savings',
+    description: '$200k allocated to 8% APY',
     highlights: [
-      'Auto-savings enabled',
-      'Yield generation started',
+      'Earning $43.84 daily',
+      "That's $16,000/year extra",
       'Auto-navigates to Savings',
     ],
   },
   {
     id: 6,
-    name: 'Earning Yield',
-    description: '$43.84 daily yield',
-    highlights: ['Compounds automatically', '2.4 month runway extension'],
+    name: 'Withdrawals',
+    description: 'Get money out in 1-2 days',
+    highlights: [
+      'ACH to your bank',
+      'No penalties or fees',
+      'Keep earning until withdrawal',
+    ],
   },
   {
     id: 7,
-    name: 'Withdrawals',
-    description: 'Easy access to funds',
-    highlights: ['ACH transfers', 'Wire transfers', 'Future: Card spending'],
+    name: "What's Coming",
+    description: 'Building the full stack',
+    highlights: [
+      '✓ Corporate cards (Q1 2025)',
+      '✓ Bill pay from yield account',
+      '✓ Automatic tax forms (1099)',
+    ],
   },
 ];
 
@@ -125,8 +149,21 @@ export function DemoModeSidebar() {
   const [isAutoPlaying, setIsAutoPlaying] = useState(false);
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [showDetails, setShowDetails] = useState(false);
+  const [opportunityCost, setOpportunityCost] = useState(0);
+  const [burnRate, setBurnRate] = useState(200000); // Default $200k/month
 
   const currentStep = DEMO_STEPS[demoStep] || DEMO_STEPS[0];
+
+  // Calculate opportunity cost counter (updates every second)
+  useEffect(() => {
+    const timer = setInterval(() => {
+      // $195k per year / 365 days / 24 hours / 60 minutes / 60 seconds
+      const costPerSecond = 195000 / (365 * 24 * 60 * 60);
+      setOpportunityCost((prev) => prev + costPerSecond);
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, []);
 
   // Auto-play functionality
   useEffect(() => {
@@ -314,6 +351,73 @@ export function DemoModeSidebar() {
               ))}
             </CardContent>
           </Card>
+
+          {/* Opportunity Cost & Runway Calculator */}
+          {demoStep > 0 && (
+            <Card className="mt-3">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm">Startup Impact</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {/* Opportunity Cost Counter */}
+                <div className="bg-red-50 dark:bg-red-950/20 rounded-lg p-3">
+                  <div className="text-xs text-muted-foreground mb-1">
+                    Opportunity Cost (0.1% vs 8% APY)
+                  </div>
+                  <div className="text-lg font-bold text-red-600 dark:text-red-400">
+                    -${opportunityCost.toFixed(2)}
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-1">
+                    Lost during this demo
+                  </div>
+                </div>
+
+                {/* Runway Calculator */}
+                <div className="bg-green-50 dark:bg-green-950/20 rounded-lg p-3">
+                  <div className="text-xs text-muted-foreground mb-2">
+                    Runway Extension Calculator
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs">Treasury</span>
+                      <span className="text-xs font-mono">$2,500,000</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs">Monthly Burn</span>
+                      <span className="text-xs font-mono">
+                        ${burnRate.toLocaleString()}
+                      </span>
+                    </div>
+                    <div className="pt-2 border-t">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-medium">
+                          Extra Runway
+                        </span>
+                        <span className="text-sm font-bold text-green-600 dark:text-green-400">
+                          +{((2500000 * 0.08) / burnRate).toFixed(1)} months
+                        </span>
+                      </div>
+                      <div className="text-xs text-muted-foreground mt-1">
+                        With 8% APY yield
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Quick Stats */}
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div className="bg-muted rounded p-2">
+                    <div className="text-muted-foreground">Daily Yield</div>
+                    <div className="font-semibold">$547</div>
+                  </div>
+                  <div className="bg-muted rounded p-2">
+                    <div className="text-muted-foreground">Annual Yield</div>
+                    <div className="font-semibold">$200,000</div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
 
         {/* Demo Bank Accounts - Show on deposit step */}
@@ -532,8 +636,63 @@ export function DemoModeSidebar() {
           </div>
         )}
 
+        {/* What's Coming - Special display for final step */}
+        {demoStep === 7 && (
+          <div className="p-4 border-b">
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm">Zero Finance Roadmap</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <p className="text-xs font-semibold mb-2 text-green-600">
+                    What This Is:
+                  </p>
+                  <ul className="space-y-1 text-xs text-muted-foreground">
+                    <li>✓ 8% yield on idle cash</li>
+                    <li>✓ ACH in/out to your bank</li>
+                    <li>✓ Non-custodial (you control)</li>
+                    <li>✓ Start in 2 minutes</li>
+                  </ul>
+                </div>
+
+                <div>
+                  <p className="text-xs font-semibold mb-2 text-blue-600">
+                    Coming Soon:
+                  </p>
+                  <ul className="space-y-1 text-xs text-muted-foreground">
+                    <li>• Corporate cards (Q1 2025)</li>
+                    <li>• Bill pay from yield account</li>
+                    <li>• Auto tax forms (1099)</li>
+                    <li>• Wire transfers</li>
+                  </ul>
+                </div>
+
+                <div>
+                  <p className="text-xs font-semibold mb-2 text-orange-600">
+                    What This Isn't (Yet):
+                  </p>
+                  <ul className="space-y-1 text-xs text-muted-foreground">
+                    <li>× Full bank replacement</li>
+                    <li>× FDIC insured (smart contract based)</li>
+                    <li>× Credit cards or lending</li>
+                  </ul>
+                </div>
+
+                <div className="pt-3 border-t">
+                  <p className="text-xs font-semibold mb-2">The Bottom Line:</p>
+                  <p className="text-xs text-muted-foreground">
+                    Start with 10% of treasury. If it works for 3 months, scale
+                    up. Even 10% at 8% beats 100% at 0.1%.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
         {/* Key Metrics */}
-        {demoStep >= 3 && (
+        {demoStep >= 3 && demoStep < 7 && (
           <div className="p-4 border-b">
             <h3 className="text-sm font-semibold mb-3">Key Metrics</h3>
             <div className="grid grid-cols-2 gap-3">
