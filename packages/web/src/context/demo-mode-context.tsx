@@ -80,13 +80,39 @@ export function DemoModeProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const toggleDemoMode = () => {
+    setDemoMode(!isDemoMode);
+  };
+
+  const nextDemoStep = () => {
+    if (demoStep < 7) {
+      updateDemoStep(demoStep + 1);
+    }
+  };
+
+  const prevDemoStep = () => {
+    if (demoStep > 0) {
+      updateDemoStep(demoStep - 1);
+    }
+  };
+
+  const resetDemo = () => {
+    updateDemoStep(0);
+    setDemoBalance(0);
+    setDemoSavingsBalance(0);
+  };
+
   return (
     <DemoModeContext.Provider
       value={{
         isDemoMode,
         setDemoMode,
+        toggleDemoMode,
         demoStep,
         setDemoStep: updateDemoStep,
+        nextDemoStep,
+        prevDemoStep,
+        resetDemo,
         demoBalance,
         setDemoBalance,
         demoSavingsBalance,
