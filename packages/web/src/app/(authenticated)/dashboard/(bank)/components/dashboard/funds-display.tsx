@@ -165,42 +165,6 @@ export function FundsDisplay({
                 </div>
               ) : (
                 <>
-                  {/* Account Stats */}
-                  <div className="grid grid-cols-3 gap-3 mt-4">
-                    <div className="bg-gray-50 rounded-lg p-3 text-center">
-                      <p className="text-2xl font-bold">
-                        {fundingSources.length}
-                      </p>
-                      <p className="text-xs text-gray-600">Total Accounts</p>
-                    </div>
-                    <div className="bg-blue-50 rounded-lg p-3 text-center">
-                      <div className="flex items-center justify-center gap-1">
-                        <Euro className="h-4 w-4 text-blue-600" />
-                        <p className="text-2xl font-bold">
-                          {
-                            fundingSources.filter(
-                              (s) => s.sourceAccountType === 'iban',
-                            ).length
-                          }
-                        </p>
-                      </div>
-                      <p className="text-xs text-gray-600">EUR Account</p>
-                    </div>
-                    <div className="bg-green-50 rounded-lg p-3 text-center">
-                      <div className="flex items-center justify-center gap-1">
-                        <DollarSign className="h-4 w-4 text-green-600" />
-                        <p className="text-2xl font-bold">
-                          {
-                            fundingSources.filter(
-                              (s) => s.sourceAccountType === 'us_ach',
-                            ).length
-                          }
-                        </p>
-                      </div>
-                      <p className="text-xs text-gray-600">USD Accounts</p>
-                    </div>
-                  </div>
-
                   <Tabs defaultValue="all" className="w-full mt-4">
                     <TabsList className="grid w-full grid-cols-4 bg-gray-100">
                       <TabsTrigger

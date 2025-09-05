@@ -143,7 +143,6 @@ export function DemoModeSidebar() {
   const pathname = usePathname();
   const {
     isDemoMode,
-    setDemoMode,
     demoStep,
     setDemoStep,
     setDemoBalance,
@@ -407,9 +406,6 @@ export function DemoModeSidebar() {
                 />
               )}
             </div>
-          )}
-              </CardContent>
-            </Card>
           )}
         </div>
 
