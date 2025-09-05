@@ -85,9 +85,11 @@ export function Providers({ children }: { children: ReactNode }) {
         supportedChains: [base],
         defaultChain: base,
         embeddedWallets: {
-          // Create an embedded EOA for *every* user, even if they logged in with Metamask.
-          // This gives us a deterministic signer for the downstream smart‑wallet client.
-          createOnLogin: 'all-users',
+          ethereum: {
+            // Ensure a deterministic EOA exists so the AA smart wallet can be owned
+            // even if a user connects an external wallet first.
+            createOnLogin: 'all-users', // 'all-users' | 'users-without-wallets' | 'off'
+          },
         },
       }}
     >
