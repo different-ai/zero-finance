@@ -31,6 +31,10 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import {
+  AnimatedYieldCounter,
+  AnimatedYieldBadge,
+} from '@/components/animated-yield-counter';
 
 const DEMO_STEPS = [
   {
@@ -181,11 +185,20 @@ export function DemoModeSidebar() {
   useEffect(() => {
     if (!isDemoMode) return;
 
-    if (demoStep === 3) {
+    // Set balances based on demo step
+    if (demoStep === 0 || demoStep === 1 || demoStep === 2) {
+      setDemoBalance(0);
+      setDemoSavingsBalance(0);
+    } else if (demoStep === 3 || demoStep === 4) {
       setDemoBalance(2500000);
-    } else if (demoStep === 5) {
+      setDemoSavingsBalance(0);
+    } else if (demoStep >= 5) {
       setDemoSavingsBalance(200000);
       setDemoBalance(2300000);
+    }
+
+    // Handle navigation
+    if (demoStep === 5) {
       // Automatically navigate to savings page when reaching savings step
       if (pathname !== '/dashboard/savings') {
         router.push('/dashboard/savings');
@@ -404,17 +417,17 @@ export function DemoModeSidebar() {
                   </div>
                 </div>
 
-                {/* Quick Stats */}
-                <div className="grid grid-cols-2 gap-2 text-xs">
-                  <div className="bg-muted rounded p-2">
-                    <div className="text-muted-foreground">Daily Yield</div>
-                    <div className="font-semibold">$547</div>
-                  </div>
-                  <div className="bg-muted rounded p-2">
-                    <div className="text-muted-foreground">Annual Yield</div>
-                    <div className="font-semibold">$200,000</div>
-                  </div>
-                </div>
+                {/* Animated Yield Counter */}
+                {demoStep >= 3 && (
+                  <AnimatedYieldCounter
+                    principal={demoStep >= 5 ? 200000 : 2500000}
+                    apy={8}
+                    showDaily={true}
+                    showMonthly={true}
+                    showYearly={false}
+                    isPaused={!isAutoPlaying && demoStep < 3}
+                  />
+                )}
               </CardContent>
             </Card>
           )}
@@ -699,7 +712,12 @@ export function DemoModeSidebar() {
               <div className="bg-muted rounded-lg p-3">
                 <p className="text-xs text-muted-foreground mb-1">Balance</p>
                 <p className="text-lg font-bold">
-                  ${demoStep >= 3 ? '2,500,000' : '0'}
+                  $
+                  {demoStep >= 3
+                    ? demoStep >= 5
+                      ? '2,300,000'
+                      : '2,500,000'
+                    : '0'}
                 </p>
               </div>
               <div className="bg-muted rounded-lg p-3">
@@ -717,7 +735,7 @@ export function DemoModeSidebar() {
                   Daily Yield
                 </p>
                 <p className="text-lg font-bold text-green-600">
-                  ${demoStep >= 6 ? '43.84' : '0'}
+                  ${demoStep >= 5 ? ((200000 * 0.08) / 365).toFixed(2) : '0'}
                 </p>
               </div>
             </div>

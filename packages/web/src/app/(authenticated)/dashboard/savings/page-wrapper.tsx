@@ -41,6 +41,10 @@ import { Address } from 'viem';
 import Image from 'next/image';
 import BaseLogo from 'public/logos/_base-logo.svg';
 import { BASE_USDC_VAULTS } from '@/server/earn/base-vaults';
+import {
+  AnimatedYieldCounter,
+  AnimatedYieldBadge,
+} from '@/components/animated-yield-counter';
 
 export default function SavingsPageWrapper() {
   const router = useRouter();
@@ -348,9 +352,36 @@ export default function SavingsPageWrapper() {
                   <Info className="h-4 w-4" />
                   <AlertDescription>
                     Enable auto-savings to automatically save a portion of your
-                    incoming deposits
+                    deposits
                   </AlertDescription>
                 </Alert>
+              )}
+
+              {/* Animated Yield Counter Card */}
+              {totalSaved > 0 && (
+                <Card className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/10 dark:to-emerald-950/10 border-green-200 dark:border-green-800">
+                  <CardHeader>
+                    <CardTitle className="text-lg flex items-center justify-between">
+                      <span>Your Yield Performance</span>
+                      <AnimatedYieldBadge
+                        principal={totalSaved}
+                        apy={vaultsVM[0]?.apy || 8.0}
+                      />
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <AnimatedYieldCounter
+                      principal={totalSaved}
+                      apy={vaultsVM[0]?.apy || 8.0}
+                      showDaily={true}
+                      showMonthly={true}
+                      showYearly={true}
+                      startDate={
+                        new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+                      } // Start 30 days ago for demo
+                    />
+                  </CardContent>
+                </Card>
               )}
 
               <div className="border-0 shadow-none bg-transparent p-0">
@@ -385,6 +416,13 @@ export default function SavingsPageWrapper() {
                               <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
                                 AUTO
                               </span>
+                            )}
+                            {v.balanceUsd > 0 && (
+                              <AnimatedYieldBadge
+                                principal={v.balanceUsd}
+                                apy={v.apy}
+                                className="scale-90"
+                              />
                             )}
                           </div>
                           <div className="flex items-center gap-2 text-xs text-muted-foreground">
