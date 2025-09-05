@@ -339,95 +339,75 @@ export function DemoModeSidebar() {
 
         {/* Current Step */}
         <div className="p-4 border-b">
-          <Card>
-            <CardHeader className="pb-3">
-              <div className="flex items-start justify-between">
-                <div>
-                  <CardTitle className="text-base">
-                    {currentStep.name}
-                  </CardTitle>
-                  <CardDescription className="text-sm mt-1">
-                    {currentStep.description}
-                  </CardDescription>
-                </div>
-                <Badge variant="outline" className="text-xs">
-                  {demoStep + 1}/{DEMO_STEPS.length}
-                </Badge>
+          <div className="space-y-3">
+            <div className="flex items-start justify-between">
+              <div>
+                <h3 className="text-sm font-semibold">{currentStep.name}</h3>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {currentStep.description}
+                </p>
               </div>
-            </CardHeader>
-            <CardContent className="space-y-3">
+              <Badge variant="outline" className="text-xs">
+                {demoStep + 1}/{DEMO_STEPS.length}
+              </Badge>
+            </div>
+            <div className="space-y-2 mt-3">
               {currentStep.highlights.map((highlight, i) => (
-                <div key={i} className="flex items-center gap-2 text-sm">
-                  <Check className="h-3 w-3 text-green-500" />
-                  <span>{highlight}</span>
+                <div key={i} className="flex items-start gap-2">
+                  <div className="h-1.5 w-1.5 rounded-full bg-green-500 mt-1.5 flex-shrink-0" />
+                  <span className="text-xs text-muted-foreground">{highlight}</span>
                 </div>
               ))}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
 
-          {/* Opportunity Cost & Runway Calculator */}
-          {demoStep > 0 && (
-            <Card className="mt-3">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm">Startup Impact</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {/* Opportunity Cost Counter */}
-                <div className="bg-red-50 dark:bg-red-950/20 rounded-lg p-3">
-                  <div className="text-xs text-muted-foreground mb-1">
-                    Opportunity Cost (0.1% vs 8% APY)
+          {/* Startup Impact Metrics */}
+          {demoStep > 0 && demoStep < 7 && (
+            <div className="mt-3 space-y-3">
+              {/* Opportunity Cost Counter */}
+              <div className="bg-muted rounded-lg p-3">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-xs font-medium">Opportunity Cost</span>
+                  <span className="text-xs text-muted-foreground">vs 0.1% APY</span>
+                </div>
+                <div className="text-xl font-bold text-red-600 dark:text-red-400">
+                  -${opportunityCost.toFixed(2)}
+                </div>
+                <div className="text-xs text-muted-foreground mt-1">
+                  Lost during this demo
+                </div>
+              </div>
+
+              {/* Runway Extension */}
+              {demoStep >= 3 && (
+                <div className="bg-muted rounded-lg p-3">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs font-medium">Extra Runway</span>
+                    <span className="text-xs text-muted-foreground">$200k/mo burn</span>
                   </div>
-                  <div className="text-lg font-bold text-red-600 dark:text-red-400">
-                    -${opportunityCost.toFixed(2)}
+                  <div className="text-xl font-bold text-green-600 dark:text-green-400">
+                    +{((2500000 * 0.08) / burnRate).toFixed(1)} months
                   </div>
                   <div className="text-xs text-muted-foreground mt-1">
-                    Lost during this demo
+                    From 8% APY on $2.5M
                   </div>
                 </div>
+              )}
 
-                {/* Runway Calculator */}
-                <div className="bg-green-50 dark:bg-green-950/20 rounded-lg p-3">
-                  <div className="text-xs text-muted-foreground mb-2">
-                    Runway Extension Calculator
-                  </div>
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs">Treasury</span>
-                      <span className="text-xs font-mono">$2,500,000</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs">Monthly Burn</span>
-                      <span className="text-xs font-mono">
-                        ${burnRate.toLocaleString()}
-                      </span>
-                    </div>
-                    <div className="pt-2 border-t">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-medium">
-                          Extra Runway
-                        </span>
-                        <span className="text-sm font-bold text-green-600 dark:text-green-400">
-                          +{((2500000 * 0.08) / burnRate).toFixed(1)} months
-                        </span>
-                      </div>
-                      <div className="text-xs text-muted-foreground mt-1">
-                        With 8% APY yield
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Animated Yield Counter */}
-                {demoStep >= 3 && (
-                  <AnimatedYieldCounter
-                    principal={demoStep >= 5 ? 200000 : 2500000}
-                    apy={8}
-                    showDaily={true}
-                    showMonthly={true}
-                    showYearly={false}
-                    isPaused={!isAutoPlaying && demoStep < 3}
-                  />
-                )}
+              {/* Live Yield Counter */}
+              {demoStep >= 3 && (
+                <AnimatedYieldCounter
+                  principal={demoStep >= 5 ? 200000 : 2500000}
+                  apy={8}
+                  showDaily={true}
+                  showMonthly={true}
+                  showYearly={false}
+                  isPaused={!isAutoPlaying && demoStep < 3}
+                  className="mt-3"
+                />
+              )}
+            </div>
+          )}
               </CardContent>
             </Card>
           )}
@@ -649,58 +629,67 @@ export function DemoModeSidebar() {
           </div>
         )}
 
-        {/* What's Coming - Special display for final step */}
+        {/* What's Coming - Cleaner display for final step */}
         {demoStep === 7 && (
-          <div className="p-4 border-b">
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm">Zero Finance Roadmap</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <p className="text-xs font-semibold mb-2 text-green-600">
-                    What This Is:
-                  </p>
-                  <ul className="space-y-1 text-xs text-muted-foreground">
-                    <li>✓ 8% yield on idle cash</li>
-                    <li>✓ ACH in/out to your bank</li>
-                    <li>✓ Non-custodial (you control)</li>
-                    <li>✓ Start in 2 minutes</li>
-                  </ul>
+          <div className="p-4 space-y-4">
+            {/* What This Is */}
+            <div className="space-y-3">
+              <div>
+                <h3 className="text-sm font-semibold mb-2">
+                  What Zero Is Today
+                </h3>
+                <div className="space-y-2">
+                  <div className="flex items-start gap-2">
+                    <Check className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
+                    <span className="text-sm text-muted-foreground">
+                      8% APY on your idle cash
+                    </span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <Check className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
+                    <span className="text-sm text-muted-foreground">
+                      ACH transfers in/out
+                    </span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <Check className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
+                    <span className="text-sm text-muted-foreground">
+                      Non-custodial (you control funds)
+                    </span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <Check className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
+                    <span className="text-sm text-muted-foreground">
+                      Start earning in 2 minutes
+                    </span>
+                  </div>
                 </div>
+              </div>
 
-                <div>
-                  <p className="text-xs font-semibold mb-2 text-blue-600">
-                    Coming Soon:
-                  </p>
-                  <ul className="space-y-1 text-xs text-muted-foreground">
-                    <li>• Corporate cards (Q1 2025)</li>
-                    <li>• Bill pay from yield account</li>
-                    <li>• Auto tax forms (1099)</li>
-                    <li>• Wire transfers</li>
-                  </ul>
+              <div className="pt-3 border-t">
+                <h3 className="text-sm font-semibold mb-2">Coming Soon</h3>
+                <div className="space-y-2">
+                  <div className="flex items-start gap-2">
+                    <div className="h-4 w-4 rounded-full bg-blue-100 dark:bg-blue-950 mt-0.5 flex-shrink-0" />
+                    <span className="text-sm text-muted-foreground">
+                      Corporate cards (Q1 2025)
+                    </span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <div className="h-4 w-4 rounded-full bg-blue-100 dark:bg-blue-950 mt-0.5 flex-shrink-0" />
+                    <span className="text-sm text-muted-foreground">
+                      Bill pay integration
+                    </span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <div className="h-4 w-4 rounded-full bg-blue-100 dark:bg-blue-950 mt-0.5 flex-shrink-0" />
+                    <span className="text-sm text-muted-foreground">
+                      Automatic 1099 tax forms
+                    </span>
+                  </div>
                 </div>
-
-                <div>
-                  <p className="text-xs font-semibold mb-2 text-orange-600">
-                    What This Isn't (Yet):
-                  </p>
-                  <ul className="space-y-1 text-xs text-muted-foreground">
-                    <li>× Full bank replacement</li>
-                    <li>× FDIC insured (smart contract based)</li>
-                    <li>× Credit cards or lending</li>
-                  </ul>
-                </div>
-
-                <div className="pt-3 border-t">
-                  <p className="text-xs font-semibold mb-2">The Bottom Line:</p>
-                  <p className="text-xs text-muted-foreground">
-                    Start with 10% of treasury. If it works for 3 months, scale
-                    up. Even 10% at 8% beats 100% at 0.1%.
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           </div>
         )}
 
@@ -828,14 +817,31 @@ export function DemoModeSidebar() {
 
         {/* Info Footer */}
         <div className="p-4 border-t bg-muted/50">
-          <div className="flex items-start gap-2">
-            <Info className="h-3 w-3 text-muted-foreground mt-0.5" />
-            <p className="text-xs text-muted-foreground">
-              This demo shows Zero Finance&apos;s 8% savings account that
-              provides crypto yield with TradFi safety. Perfect for startups
-              looking to extend their runway.
-            </p>
-          </div>
+          {demoStep === 7 ? (
+            <div className="space-y-3">
+              <div className="bg-orange-50 dark:bg-orange-950/20 rounded-lg p-3">
+                <p className="text-xs font-semibold mb-1">Smart Risk Management</p>
+                <p className="text-xs text-muted-foreground">
+                  Start with 10% of your treasury. Test for 3 months. Scale up when comfortable.
+                  Even 10% at 8% APY beats 100% at 0.1%.
+                </p>
+              </div>
+              <div className="flex items-start gap-2">
+                <Info className="h-3 w-3 text-muted-foreground mt-0.5" />
+                <p className="text-xs text-muted-foreground">
+                  Not FDIC insured. Smart contract based. USDC stablecoin risk.
+                </p>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-start gap-2">
+              <Info className="h-3 w-3 text-muted-foreground mt-0.5" />
+              <p className="text-xs text-muted-foreground">
+                Zero Finance: 8% APY savings for startups. 
+                Add {((2500000 * 0.08) / 200000).toFixed(1)} months to your runway.
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </>
