@@ -1,4 +1,4 @@
-# Zero Finance
+# 0 Finance
 
 > Get Paid. Pay Bills. Make Money Work.
 
@@ -18,24 +18,7 @@
 - [x] Phase 0: invoicing
 - [x] Phase 1: iban/ach accounts
 - [x] Phase 2: savings accounts
-- [ ] Phase 3: receipts matching/invoice matching - early access🔜
-- [ ] Phase 4: debit/credit cards
-
-
-
-## 🚀 Financial Inbox
-
-We sync with various data sources (right now gmail) and allow you to stay on track of your financial task.
-
-- [x] Surfacing of critical information
-- [x] Auto-categorize based on AI-rules
-- [x] Auto-schedule vendor payments from invoices via AI-rules (you're still in control atm we just pre-fill information for you)
-- [x] Export to CSV
-
-<img width="1840" height="1191" alt="Screenshot 2025-07-10 at 18 59 54" src="https://github.com/user-attachments/assets/8225f9fa-fa64-434c-9a3c-5e9d8fb286fc" />
-
-
-
+- [ ] Phase 3: debit/credit cards
 
 
 
@@ -61,7 +44,6 @@ This monorepo contains multiple packages:
 
 - **packages/web**: The bank web app
 - **packages/fluidkey-earn-module/**: The smart contract that help with securely automating savings.
-
 
 
 ## 🌐 Join Us
