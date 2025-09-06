@@ -282,7 +282,7 @@ function PixelSquares({
             vec3 col = uColor;
             // gentle brightening in denser areas
             col += 0.35 * vec3(1.0) * pow(baseD, 3.0);
-            gl_FragColor = vec4(col, alpha * 0.4); // Reduced overall opacity to 40%
+            gl_FragColor = vec4(col, alpha * 0.7); // Increased visibility for testing
           }
         `
         }
