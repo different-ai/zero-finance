@@ -3,6 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
+import { BrowserFrame } from '@/components/BrowserFrame';
 
 // Dynamic import with SSR disabled for Three.js
 const ThreeBackground = dynamic(
@@ -59,7 +60,17 @@ export function HeroSection() {
       <section className="relative border-y border-[#101010]/10 bg-white/90 overflow-hidden">
         <ThreeBackground className="z-0" variant="c" />
         <div className="relative z-10 mx-auto max-w-[1200px] px-4 sm:px-6 lg:px-8 py-8 sm:py-12 lg:py-16">
-          <div className="border border-[#101010]/10 bg-white overflow-x-auto">
+          {/* Demo indicator - subtle and premium */}
+          <div className="flex justify-center mb-4">
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-white/80 backdrop-blur-sm border border-[#101010]/10 rounded-full">
+              <div className="w-1.5 h-1.5 bg-[#1B29FF] rounded-full animate-pulse"></div>
+              <span className="text-[11px] uppercase tracking-[0.14em] text-[#101010]/60 font-medium">
+                Live Demo
+              </span>
+            </div>
+          </div>
+
+          <BrowserFrame url="0.finance/dashboard" className="shadow-lg">
             <div className="grid grid-cols-1 lg:grid-cols-12 min-w-[320px]">
               <div className="lg:col-span-8 p-4 sm:p-6 lg:border-r border-b lg:border-b-0 border-[#101010]/10">
                 <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
@@ -179,7 +190,7 @@ export function HeroSection() {
                 </div>
               </div>
             </div>
-          </div>
+          </BrowserFrame>
         </div>
       </section>
 
@@ -230,7 +241,7 @@ export function HeroSection() {
               </p>
               <div className="mt-3 flex items-center">
                 <img
-                  src="/Visa_Brandmark_Blue_RGB_2021.svgz"
+                  src="/Visa_Brandmark_Blue_RGB_2021.png"
                   alt="Visa"
                   className="h-6 w-auto"
                 />

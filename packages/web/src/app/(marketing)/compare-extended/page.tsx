@@ -10,7 +10,7 @@ export const metadata: Metadata = {
     '0 finance vs mercury, startup treasury comparison, high yield vs etfs, business savings comparison',
 };
 
-export default function ComparePage() {
+export default function CompareExtendedPage() {
   return (
     <div className="min-h-screen bg-[#F7F7F2]">
       {/* Hero Section */}

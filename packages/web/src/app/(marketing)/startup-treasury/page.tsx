@@ -1,491 +1,407 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
-import { Button } from '@/components/ui/button';
-import {
-  ArrowRight,
-  Building2,
-  CheckCircle,
-  Shield,
-  TrendingUp,
-  X,
-} from 'lucide-react';
+import { Check } from 'lucide-react';
 
 export const metadata: Metadata = {
-  title: 'Startup Treasury Management - 8% Yield, Zero Complexity | 0 Finance',
+  title: 'Startup Treasury Management - 8% Yield, Full Banking | 0 Finance',
   description:
-    'Modern treasury management for startups. Earn 8% on idle cash with the same boring banking experience. Built by the Gnosis Pay team.',
+    'Complete treasury management for startups. 8% yield, corporate cards, ACH/wire transfers, multi-currency support. Built by the Gnosis Pay founding team.',
   keywords:
-    'startup treasury management, startup cash management, business treasury account, startup banking, high yield treasury',
+    'startup treasury management, business cash management, startup banking, corporate treasury, high yield business account',
   openGraph: {
-    title: 'Treasury Management Built for Startups | 0 Finance',
+    title: 'Modern Treasury Management for Startups | 0 Finance',
     description:
-      'Stop choosing between safety and yield. Get 8% APY with full insurance and zero DeFi complexity.',
+      'The only treasury platform that combines 8% yield with full banking features. No minimums, instant setup.',
   },
 };
 
 export default function StartupTreasuryPage() {
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white dark:from-gray-950 dark:to-gray-900">
+    <>
       {/* Hero Section */}
-      <section className="container mx-auto px-4 py-20">
-        <div className="max-w-4xl mx-auto text-center">
-          <div className="inline-flex items-center gap-2 bg-purple-50 dark:bg-purple-950/50 text-purple-600 dark:text-purple-400 px-4 py-2 rounded-full text-sm font-medium mb-6">
-            <Building2 className="h-4 w-4" />
-            <span>Built for Ambitious Startups</span>
-          </div>
-
-          <h1 className="text-5xl md:text-6xl font-bold text-gray-900 dark:text-white mb-6">
-            Treasury Management That{' '}
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-600">
-              Actually Works
-            </span>
+      <section className="bg-[#F6F5EF] border-b border-[#101010]/10 py-16 sm:py-20 lg:py-24">
+        <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8">
+          <p className="uppercase tracking-[0.18em] text-[12px] font-medium text-[#101010]/70">
+            Modern Treasury Management
+          </p>
+          <h1 className="mt-3 font-serif text-[48px] sm:text-[64px] lg:text-[72px] leading-[0.96] tracking-[-0.015em] text-[#101010]">
+            Your Startup's Complete
+            <span className="block text-[#1B29FF]">Treasury Platform</span>
           </h1>
-
-          <p className="text-xl text-gray-600 dark:text-gray-400 mb-8 max-w-2xl mx-auto">
-            We turned DeFi's 8% yields into a boring checking account. Same
-            Mercury experience, double the yield, full insurance.
+          <p className="mt-6 text-[18px] leading-[1.5] text-[#222] max-w-[65ch]">
+            The only platform that combines 8% yield with full banking features.
+            Built by the team that scaled Gnosis Pay to $50M in transaction
+            volume.
           </p>
 
-          <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
-            <Link href="/signup">
-              <Button size="lg" className="w-full sm:w-auto">
-                Open Your Treasury Account
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
+          <div className="mt-10 flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6">
+            <Link
+              href="/signin"
+              className="inline-flex items-center px-6 py-3 text-[16px] font-medium text-white bg-[#1B29FF] hover:bg-[#1420CC] rounded-md transition-colors"
+            >
+              Open Account in 5 Minutes →
             </Link>
-            <Link href="/compare">
-              <Button size="lg" variant="outline" className="w-full sm:w-auto">
-                Compare to Mercury & Brex
-              </Button>
+            <Link
+              href="https://cal.com/team/0finance/30"
+              className="inline-flex items-center text-[15px] text-[#101010] hover:text-[#1B29FF] underline decoration-[#101010]/30 underline-offset-[4px] hover:decoration-[#1B29FF] transition-colors"
+            >
+              Book Demo with Founders
             </Link>
           </div>
 
-          <div className="flex flex-wrap justify-center gap-4 text-sm text-gray-600 dark:text-gray-400">
+          <div className="mt-12 flex flex-wrap gap-6 text-[14px] text-[#101010]/70">
             <div className="flex items-center gap-2">
-              <CheckCircle className="h-4 w-4 text-green-600" />
-              <span>8% Target APY</span>
+              <Check className="w-4 h-4 text-[#1B29FF]" />
+              <span>No minimums</span>
             </div>
             <div className="flex items-center gap-2">
-              <CheckCircle className="h-4 w-4 text-green-600" />
-              <span>Smart Contract Insurance</span>
+              <Check className="w-4 h-4 text-[#1B29FF]" />
+              <span>Smart contract insured</span>
             </div>
             <div className="flex items-center gap-2">
-              <CheckCircle className="h-4 w-4 text-green-600" />
-              <span>Zero Minimums</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <CheckCircle className="h-4 w-4 text-green-600" />
-              <span>Same-Day Setup</span>
+              <Check className="w-4 h-4 text-[#1B29FF]" />
+              <span>Same-day setup</span>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Problem Section */}
-      <section className="container mx-auto px-4 py-20 border-t">
-        <div className="max-w-4xl mx-auto">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold mb-4">
-              Your Treasury Shouldn't Be This Hard
-            </h2>
-            <p className="text-xl text-gray-600 dark:text-gray-400">
-              Startups told us their treasury options all have fatal flaws
-            </p>
-          </div>
+      {/* Core Features Section */}
+      <section className="bg-white py-12 sm:py-16 border-b border-[#101010]/10">
+        <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8">
+          <p className="uppercase tracking-[0.14em] text-[12px] text-[#101010]/60 text-center">
+            Complete Solution
+          </p>
+          <h2 className="mt-2 font-serif text-[30px] sm:text-[36px] leading-[1.1] tracking-[-0.01em] text-[#101010] text-center">
+            Everything Your Treasury Needs
+          </h2>
 
-          <div className="space-y-6">
-            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-              <div className="flex items-start gap-4">
-                <X className="h-6 w-6 text-red-500 flex-shrink-0 mt-1" />
-                <div>
-                  <h3 className="font-semibold text-lg mb-2">
-                    Traditional Banks (SVB, First Republic)
-                  </h3>
-                  <p className="text-gray-600 dark:text-gray-400 mb-2">
-                    Remember March 2023? Your "safe" bank can fail. Plus they
-                    only yield 0.5%.
-                  </p>
-                  <div className="flex gap-4 text-sm text-gray-500">
-                    <span>❌ Bank run risk</span>
-                    <span>❌ 0.5% yield</span>
-                    <span>❌ Slow wires</span>
-                  </div>
-                </div>
+          <div className="mt-10 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-px bg-[#101010]/10">
+            <div className="bg-white p-6">
+              <div className="text-[32px] leading-none font-medium text-[#1B29FF]">
+                8%
               </div>
-            </div>
-
-            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-              <div className="flex items-start gap-4">
-                <X className="h-6 w-6 text-red-500 flex-shrink-0 mt-1" />
-                <div>
-                  <h3 className="font-semibold text-lg mb-2">
-                    Mercury Treasury (4% yield)
-                  </h3>
-                  <p className="text-gray-600 dark:text-gray-400 mb-2">
-                    Better than banks but still leaving money on the table.
-                    $100K minimums lock out early startups.
-                  </p>
-                  <div className="flex gap-4 text-sm text-gray-500">
-                    <span>❌ Only 4% yield</span>
-                    <span>❌ $100K minimum</span>
-                    <span>❌ Withdrawal limits</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-              <div className="flex items-start gap-4">
-                <X className="h-6 w-6 text-red-500 flex-shrink-0 mt-1" />
-                <div>
-                  <h3 className="font-semibold text-lg mb-2">
-                    Money Market Funds / ETFs
-                  </h3>
-                  <p className="text-gray-600 dark:text-gray-400 mb-2">
-                    Some founders open brokerage accounts to buy Treasury ETFs.
-                    That's not treasury management.
-                  </p>
-                  <div className="flex gap-4 text-sm text-gray-500">
-                    <span>❌ Settlement delays</span>
-                    <span>❌ Tax complexity</span>
-                    <span>❌ Not a bank account</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-              <div className="flex items-start gap-4">
-                <X className="h-6 w-6 text-red-500 flex-shrink-0 mt-1" />
-                <div>
-                  <h3 className="font-semibold text-lg mb-2">
-                    Raw DeFi Protocols
-                  </h3>
-                  <p className="text-gray-600 dark:text-gray-400 mb-2">
-                    8%+ yields exist but managing wallets, gas fees, and smart
-                    contract risk? That's a full-time job.
-                  </p>
-                  <div className="flex gap-4 text-sm text-gray-500">
-                    <span>❌ Too complex</span>
-                    <span>❌ No insurance</span>
-                    <span>❌ Regulatory risk</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Solution Section */}
-      <section className="container mx-auto px-4 py-20 border-t">
-        <div className="max-w-4xl mx-auto">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold mb-4">
-              We Built What Startups Actually Need
-            </h2>
-            <p className="text-xl text-gray-600 dark:text-gray-400">
-              After talking to 50+ startups, we built the obvious solution
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-8">
-            <div className="text-center">
-              <div className="w-16 h-16 bg-gradient-to-br from-purple-100 to-pink-100 dark:from-purple-900/50 dark:to-pink-900/50 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                <TrendingUp className="h-8 w-8 text-purple-600 dark:text-purple-400" />
-              </div>
-              <h3 className="font-semibold text-lg mb-2">8% Target Yield</h3>
-              <p className="text-gray-600 dark:text-gray-400">
-                We use battle-tested DeFi protocols like Morpho and Aave. You
-                get the yield without the complexity.
-              </p>
-            </div>
-
-            <div className="text-center">
-              <div className="w-16 h-16 bg-gradient-to-br from-purple-100 to-pink-100 dark:from-purple-900/50 dark:to-pink-900/50 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                <Shield className="h-8 w-8 text-purple-600 dark:text-purple-400" />
-              </div>
-              <h3 className="font-semibold text-lg mb-2">
-                Insured & Compliant
+              <h3 className="mt-3 text-[16px] font-medium text-[#101010]">
+                Target APY
               </h3>
-              <p className="text-gray-600 dark:text-gray-400">
-                Smart contract insurance covers technical failures. We handle
-                all compliance so you don't have to.
+              <p className="mt-2 text-[14px] leading-[1.5] text-[#101010]/70">
+                Double traditional treasury yields with smart contract insurance
+                coverage
               </p>
             </div>
 
-            <div className="text-center">
-              <div className="w-16 h-16 bg-gradient-to-br from-purple-100 to-pink-100 dark:from-purple-900/50 dark:to-pink-900/50 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                <Building2 className="h-8 w-8 text-purple-600 dark:text-purple-400" />
+            <div className="bg-white p-6">
+              <div className="text-[32px] leading-none font-medium text-[#1B29FF]">
+                $0
               </div>
-              <h3 className="font-semibold text-lg mb-2">Banking Features</h3>
-              <p className="text-gray-600 dark:text-gray-400">
-                ACH, wires, virtual cards. Everything you expect from Mercury or
-                Brex, but with double the yield.
+              <h3 className="mt-3 text-[16px] font-medium text-[#101010]">
+                Minimum Balance
+              </h3>
+              <p className="mt-2 text-[14px] leading-[1.5] text-[#101010]/70">
+                Start earning from your first dollar, unlike Mercury's $100K
+                requirement
+              </p>
+            </div>
+
+            <div className="bg-white p-6">
+              <div className="text-[32px] leading-none font-medium text-[#1B29FF]">
+                24/7
+              </div>
+              <h3 className="mt-3 text-[16px] font-medium text-[#101010]">
+                Instant Access
+              </h3>
+              <p className="mt-2 text-[14px] leading-[1.5] text-[#101010]/70">
+                No lockups or withdrawal limits. Your money when you need it
+              </p>
+            </div>
+
+            <div className="bg-white p-6">
+              <h3 className="text-[16px] font-medium text-[#101010] flex items-center gap-2">
+                <span className="text-[#1B29FF]">✓</span> Corporate Cards
+              </h3>
+              <p className="mt-2 text-[14px] leading-[1.5] text-[#101010]/70">
+                Visa cards with customizable limits and real-time spend controls
+              </p>
+            </div>
+
+            <div className="bg-white p-6">
+              <h3 className="text-[16px] font-medium text-[#101010] flex items-center gap-2">
+                <span className="text-[#1B29FF]">✓</span> ACH & Wire
+              </h3>
+              <p className="mt-2 text-[14px] leading-[1.5] text-[#101010]/70">
+                Full banking rails with same-day wires and standard ACH
+                transfers
+              </p>
+            </div>
+
+            <div className="bg-white p-6">
+              <h3 className="text-[16px] font-medium text-[#101010] flex items-center gap-2">
+                <span className="text-[#1B29FF]">✓</span> Multi-Currency
+              </h3>
+              <p className="mt-2 text-[14px] leading-[1.5] text-[#101010]/70">
+                Hold and transact in USD, EUR, and USDC seamlessly
               </p>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Features Grid Section */}
-      <section className="container mx-auto px-4 py-20 border-t">
-        <div className="max-w-4xl mx-auto">
-          <h2 className="text-3xl font-bold text-center mb-12">
-            Everything You Need, Nothing You Don't
+      {/* How It Works Section */}
+      <section className="bg-[#F7F7F2] py-12 sm:py-16">
+        <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8">
+          <p className="uppercase tracking-[0.14em] text-[12px] text-[#101010]/60 text-center">
+            Simple Process
+          </p>
+          <h2 className="mt-2 font-serif text-[30px] sm:text-[36px] leading-[1.1] tracking-[-0.01em] text-[#101010] text-center">
+            From Sign-up to Earning in Minutes
           </h2>
 
-          <div className="grid md:grid-cols-2 gap-x-12 gap-y-6">
-            <div className="flex items-start gap-3">
-              <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
-              <div>
-                <h3 className="font-semibold mb-1">No Minimum Balance</h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Start earning 8% from your first dollar
-                </p>
+          <div className="mt-10 grid grid-cols-1 sm:grid-cols-4 gap-px bg-[#101010]/10">
+            <div className="bg-white p-6">
+              <div className="text-[11px] uppercase tracking-[0.14em] text-[#101010]/60">
+                Step 1
+              </div>
+              <h3 className="mt-2 text-[15px] font-medium text-[#101010]">
+                Sign Up
+              </h3>
+              <p className="mt-2 text-[13px] text-[#101010]/70">
+                Email login, KYC verification in minutes
+              </p>
+            </div>
+
+            <div className="bg-white p-6">
+              <div className="text-[11px] uppercase tracking-[0.14em] text-[#101010]/60">
+                Step 2
+              </div>
+              <h3 className="mt-2 text-[15px] font-medium text-[#101010]">
+                Get Account Numbers
+              </h3>
+              <p className="mt-2 text-[13px] text-[#101010]/70">
+                Instant US routing and EU IBAN numbers
+              </p>
+            </div>
+
+            <div className="bg-white p-6">
+              <div className="text-[11px] uppercase tracking-[0.14em] text-[#101010]/60">
+                Step 3
+              </div>
+              <h3 className="mt-2 text-[15px] font-medium text-[#101010]">
+                Deposit Funds
+              </h3>
+              <p className="mt-2 text-[13px] text-[#101010]/70">
+                Wire, ACH, or USDC transfer from existing accounts
+              </p>
+            </div>
+
+            <div className="bg-white p-6">
+              <div className="text-[11px] uppercase tracking-[0.14em] text-[#101010]/60">
+                Step 4
+              </div>
+              <h3 className="mt-2 text-[15px] font-medium text-[#101010]">
+                Start Earning
+              </h3>
+              <p className="mt-2 text-[13px] text-[#101010]/70">
+                Automatic 8% yield from day one
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Security Section */}
+      <section className="bg-white py-12 sm:py-16 border-b border-[#101010]/10">
+        <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8">
+          <p className="uppercase tracking-[0.14em] text-[12px] text-[#101010]/60 text-center">
+            Security First
+          </p>
+          <h2 className="mt-2 font-serif text-[30px] sm:text-[36px] leading-[1.1] tracking-[-0.01em] text-[#101010] text-center">
+            Built for Institutional Security
+          </h2>
+
+          <div className="mt-10 grid md:grid-cols-2 gap-8">
+            <div className="border border-[#101010]/10 p-6">
+              <h3 className="uppercase tracking-[0.14em] text-[13px] text-[#101010]/70">
+                Smart Contract Insurance
+              </h3>
+              <p className="mt-3 text-[14px] leading-[1.5] text-[#101010]/80">
+                Partnership with Chainproof provides coverage against technical
+                risks, exploits, and smart contract failures. While not FDIC, it
+                protects against the primary risks in DeFi infrastructure.
+              </p>
+            </div>
+
+            <div className="border border-[#101010]/10 p-6">
+              <h3 className="uppercase tracking-[0.14em] text-[13px] text-[#101010]/70">
+                Self-Custody Architecture
+              </h3>
+              <p className="mt-3 text-[14px] leading-[1.5] text-[#101010]/80">
+                Your funds are secured on-chain with institutional-grade
+                protection. Multi-sig wallets via Safe (formerly Gnosis Safe)
+                ensure you maintain control while we handle the complexity.
+              </p>
+            </div>
+
+            <div className="border border-[#101010]/10 p-6">
+              <h3 className="uppercase tracking-[0.14em] text-[13px] text-[#101010]/70">
+                Regulatory Compliance
+              </h3>
+              <p className="mt-3 text-[14px] leading-[1.5] text-[#101010]/80">
+                Full KYC/AML compliance, regulated banking partners, and
+                transparent reporting. We handle the regulatory complexity so
+                you can focus on building.
+              </p>
+            </div>
+
+            <div className="border border-[#101010]/10 p-6">
+              <h3 className="uppercase tracking-[0.14em] text-[13px] text-[#101010]/70">
+                Battle-Tested Team
+              </h3>
+              <p className="mt-3 text-[14px] leading-[1.5] text-[#101010]/80">
+                Founding team of Gnosis Pay scaled to $50M annual transaction
+                volume. We've been bridging DeFi and traditional banking for
+                years.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Use Cases Section */}
+      <section className="bg-[#F6F5EF] py-12 sm:py-16 border-b border-[#101010]/10">
+        <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8">
+          <p className="uppercase tracking-[0.14em] text-[12px] text-[#101010]/60 text-center">
+            Use Cases
+          </p>
+          <h2 className="mt-2 font-serif text-[30px] sm:text-[36px] leading-[1.1] tracking-[-0.01em] text-[#101010] text-center">
+            Perfect for Every Stage
+          </h2>
+
+          <div className="mt-10 grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="bg-white border border-[#101010]/10 p-6">
+              <h3 className="text-[16px] font-medium text-[#101010]">
+                Pre-Seed to Seed
+              </h3>
+              <p className="mt-2 text-[14px] leading-[1.5] text-[#101010]/70">
+                Extend runway by 2-3 months without raising. Every dollar counts
+                when you're bootstrapping to product-market fit.
+              </p>
+              <div className="mt-4 text-[13px] text-[#1B29FF]">
+                Average: $500K treasury → +$20K/year
               </div>
             </div>
 
-            <div className="flex items-start gap-3">
-              <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
-              <div>
-                <h3 className="font-semibold mb-1">Same-Day ACH</h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Move money in and out instantly
-                </p>
+            <div className="bg-white border border-[#101010]/10 p-6">
+              <h3 className="text-[16px] font-medium text-[#101010]">
+                Series A to B
+              </h3>
+              <p className="mt-2 text-[14px] leading-[1.5] text-[#101010]/70">
+                Optimize burn while scaling. Higher yields mean more
+                experiments, more hires, or simply more time to hit metrics.
+              </p>
+              <div className="mt-4 text-[13px] text-[#1B29FF]">
+                Average: $2M treasury → +$80K/year
               </div>
             </div>
 
-            <div className="flex items-start gap-3">
-              <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
-              <div>
-                <h3 className="font-semibold mb-1">Wire Transfers</h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Domestic and international wires
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-3">
-              <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
-              <div>
-                <h3 className="font-semibold mb-1">Virtual Cards</h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Unlimited virtual cards for online spending
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-3">
-              <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
-              <div>
-                <h3 className="font-semibold mb-1">Smart Contract Insurance</h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Technical failures covered by Chainproof
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-3">
-              <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
-              <div>
-                <h3 className="font-semibold mb-1">Real-Time Dashboard</h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Track yield earnings and transactions
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-3">
-              <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
-              <div>
-                <h3 className="font-semibold mb-1">API Access</h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Integrate with your existing tools
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-3">
-              <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
-              <div>
-                <h3 className="font-semibold mb-1">Multi-User Access</h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Role-based permissions for your team
-                </p>
+            <div className="bg-white border border-[#101010]/10 p-6">
+              <h3 className="text-[16px] font-medium text-[#101010]">
+                Growth Stage
+              </h3>
+              <p className="mt-2 text-[14px] leading-[1.5] text-[#101010]/70">
+                Significant yield on large treasuries. An extra $200K+ annually
+                funds entire initiatives without touching principal.
+              </p>
+              <div className="mt-4 text-[13px] text-[#1B29FF]">
+                Average: $5M+ treasury → +$200K/year
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Trust Section */}
-      <section className="container mx-auto px-4 py-20 border-t">
-        <div className="max-w-4xl mx-auto">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold mb-4">
-              Built by the Team That Bridged DeFi & Banking
-            </h2>
-            <p className="text-xl text-gray-600 dark:text-gray-400">
-              We're not DeFi tourists. We've done this before.
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-2 gap-12 items-center">
-            <div className="space-y-6">
-              <div>
-                <h3 className="text-xl font-semibold mb-3">Our Track Record</h3>
-                <p className="text-gray-600 dark:text-gray-400 mb-4">
-                  Founding team of Gnosis Pay - we scaled it to $50M in annual
-                  transaction volume. We know how to bridge DeFi and traditional
-                  banking infrastructure.
-                </p>
-              </div>
-
-              <div>
-                <h3 className="text-xl font-semibold mb-3">
-                  Why We Built This
-                </h3>
-                <p className="text-gray-600 dark:text-gray-400">
-                  After talking to 50 startups, we found half are desperately
-                  trying to earn yield but their options suck. We built the
-                  obvious solution: DeFi yields with banking UX.
-                </p>
-              </div>
-            </div>
-
-            <div className="bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-950/50 dark:to-pink-950/50 rounded-2xl p-8">
-              <h3 className="text-xl font-bold mb-6">Traction in 7 Days</h3>
-              <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-600 dark:text-gray-400">
-                    LOIs secured:
-                  </span>
-                  <span className="font-bold text-2xl">$1M+</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-600 dark:text-gray-400">
-                    YC startups onboarded:
-                  </span>
-                  <span className="font-bold text-2xl">2</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-600 dark:text-gray-400">
-                    Startups interviewed:
-                  </span>
-                  <span className="font-bold text-2xl">50+</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Comparison Preview Section */}
-      <section className="container mx-auto px-4 py-20 border-t">
-        <div className="max-w-4xl mx-auto">
-          <h2 className="text-3xl font-bold text-center mb-12">
-            How We Stack Up
+      {/* Social Proof Section */}
+      <section className="bg-white py-12 sm:py-16 border-b border-[#101010]/10">
+        <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8">
+          <p className="uppercase tracking-[0.14em] text-[12px] text-[#101010]/60 text-center">
+            Traction
+          </p>
+          <h2 className="mt-2 font-serif text-[30px] sm:text-[36px] leading-[1.1] tracking-[-0.01em] text-[#101010] text-center">
+            Trusted by Ambitious Startups
           </h2>
 
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b">
-                  <th className="text-left py-4 px-4"></th>
-                  <th className="text-center py-4 px-4">
-                    <div className="font-semibold">0 Finance</div>
-                    <div className="text-sm text-gray-500">That's us</div>
-                  </th>
-                  <th className="text-center py-4 px-4">
-                    <div className="font-semibold">Mercury</div>
-                    <div className="text-sm text-gray-500">Treasury</div>
-                  </th>
-                  <th className="text-center py-4 px-4">
-                    <div className="font-semibold">Brex</div>
-                    <div className="text-sm text-gray-500">Cash</div>
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr className="border-b">
-                  <td className="py-4 px-4 font-medium">Yield (APY)</td>
-                  <td className="text-center py-4 px-4">
-                    <span className="text-green-600 font-semibold">8%</span>
-                  </td>
-                  <td className="text-center py-4 px-4">4.81%</td>
-                  <td className="text-center py-4 px-4">4.58%</td>
-                </tr>
-                <tr className="border-b">
-                  <td className="py-4 px-4 font-medium">Minimum Balance</td>
-                  <td className="text-center py-4 px-4">
-                    <span className="text-green-600 font-semibold">$0</span>
-                  </td>
-                  <td className="text-center py-4 px-4">$100K</td>
-                  <td className="text-center py-4 px-4">$0</td>
-                </tr>
-                <tr className="border-b">
-                  <td className="py-4 px-4 font-medium">Insurance</td>
-                  <td className="text-center py-4 px-4">
-                    <CheckCircle className="h-5 w-5 text-green-600 inline" />
-                  </td>
-                  <td className="text-center py-4 px-4">
-                    <CheckCircle className="h-5 w-5 text-green-600 inline" />
-                  </td>
-                  <td className="text-center py-4 px-4">
-                    <CheckCircle className="h-5 w-5 text-green-600 inline" />
-                  </td>
-                </tr>
-                <tr className="border-b">
-                  <td className="py-4 px-4 font-medium">Same-day ACH</td>
-                  <td className="text-center py-4 px-4">
-                    <CheckCircle className="h-5 w-5 text-green-600 inline" />
-                  </td>
-                  <td className="text-center py-4 px-4">
-                    <CheckCircle className="h-5 w-5 text-green-600 inline" />
-                  </td>
-                  <td className="text-center py-4 px-4">
-                    <CheckCircle className="h-5 w-5 text-green-600 inline" />
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+          <div className="mt-10 grid grid-cols-1 sm:grid-cols-4 gap-px bg-[#101010]/10">
+            <div className="bg-white p-6 text-center">
+              <div className="text-[32px] leading-none font-medium tabular-nums text-[#1B29FF]">
+                $1M+
+              </div>
+              <div className="mt-2 text-[13px] text-[#101010]/60">
+                LOIs in 7 days
+              </div>
+            </div>
+            <div className="bg-white p-6 text-center">
+              <div className="text-[32px] leading-none font-medium tabular-nums text-[#1B29FF]">
+                2
+              </div>
+              <div className="mt-2 text-[13px] text-[#101010]/60">
+                YC companies onboarded
+              </div>
+            </div>
+            <div className="bg-white p-6 text-center">
+              <div className="text-[32px] leading-none font-medium tabular-nums text-[#1B29FF]">
+                50+
+              </div>
+              <div className="mt-2 text-[13px] text-[#101010]/60">
+                Startups interviewed
+              </div>
+            </div>
+            <div className="bg-white p-6 text-center">
+              <div className="text-[32px] leading-none font-medium tabular-nums text-[#1B29FF]">
+                $50M
+              </div>
+              <div className="mt-2 text-[13px] text-[#101010]/60">
+                Gnosis Pay volume
+              </div>
+            </div>
           </div>
 
-          <div className="text-center mt-8">
-            <Link href="/compare">
-              <Button variant="outline">
-                See Full Comparison
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            </Link>
+          <div className="mt-10 max-w-[600px] mx-auto">
+            <blockquote className="font-serif text-[20px] leading-[1.4] text-[#101010] text-center">
+              "The best DeFi apps don't look like DeFi at all. 0 Finance made
+              crypto yields accessible without the complexity."
+            </blockquote>
+            <cite className="mt-4 block text-[13px] text-[#101010]/60 text-center not-italic">
+              — YC Founder, Fintech
+            </cite>
           </div>
         </div>
       </section>
 
       {/* CTA Section */}
-      <section className="container mx-auto px-4 py-20">
-        <div className="max-w-3xl mx-auto">
-          <div className="bg-gradient-to-br from-purple-600 to-pink-600 rounded-2xl p-12 text-center text-white">
-            <h2 className="text-3xl font-bold mb-4">
-              Your Treasury Deserves Better Than 4%
-            </h2>
-            <p className="text-xl mb-8 text-purple-100">
-              Join the startups already earning double the yield with zero extra
-              complexity
-            </p>
-            <Link href="/signup">
-              <Button size="lg" variant="secondary">
-                Open Your 8% Treasury Account
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
+      <section className="bg-[#1B29FF] py-12 sm:py-16">
+        <div className="max-w-[800px] mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <h2 className="font-serif text-[36px] sm:text-[48px] leading-[1.1] text-white">
+            Your Treasury Deserves Better Than 4%
+          </h2>
+          <p className="mt-4 text-[16px] text-white/90 max-w-[50ch] mx-auto">
+            Join startups earning 8% on their idle cash. Full banking features,
+            no minimums, setup in minutes.
+          </p>
+          <div className="mt-8 flex flex-col sm:flex-row justify-center items-center gap-4">
+            <Link
+              href="/signin"
+              className="inline-flex items-center px-6 py-3 text-[16px] font-medium text-[#1B29FF] bg-white hover:bg-white/90 rounded-md transition-colors"
+            >
+              Open Your Account →
             </Link>
-            <p className="text-sm text-purple-200 mt-4">
-              5-minute setup • No minimums • Start earning today
-            </p>
+            <Link
+              href="/compare"
+              className="inline-flex items-center px-6 py-3 text-[16px] font-medium text-white border-2 border-white hover:bg-white/10 rounded-md transition-colors"
+            >
+              Compare Options
+            </Link>
           </div>
         </div>
       </section>
-    </div>
+    </>
   );
 }

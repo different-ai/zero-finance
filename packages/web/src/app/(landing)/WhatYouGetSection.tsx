@@ -51,7 +51,7 @@ export function WhatYouGetSection() {
             </p>
             <div className="mt-4">
               <img
-                src="Visa_Brandmark_Blue_RGB_2021.png"
+                src="/Visa_Brandmark_Blue_RGB_2021.png"
                 alt="Visa"
                 className="h-5 w-auto opacity-70"
               />

@@ -1,18 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Metadata } from 'next';
 import Link from 'next/link';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { ArrowRight, Calculator, TrendingUp } from 'lucide-react';
-
-// export const metadata: Metadata = {
-//   title: "Runway Calculator - See Your Extra Months | 0 Finance",
-//   description: "Calculate how much runway you'll gain with 8% yield vs 4%. Free startup runway calculator shows months gained from higher treasury yields.",
-//   keywords: "startup runway calculator, burn rate calculator, treasury yield calculator, extend runway calculator",
-// }
 
 export default function RunwayCalculatorPage() {
   const [treasury, setTreasury] = useState(2000000);
@@ -30,298 +19,385 @@ export default function RunwayCalculatorPage() {
   const runway0Finance = treasury / netBurn0Finance;
 
   // Calculate the difference
-  const runwayDifference = runway0Finance - runwayCurrent;
-  const extraYearlyEarnings = treasury * 0.08 - treasury * (currentYield / 100);
+  const runwayExtension = runway0Finance - runwayCurrent;
+  const extraYearlyYield = treasury * 0.08 - treasury * (currentYield / 100);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white dark:from-gray-950 dark:to-gray-900">
+    <>
       {/* Hero Section */}
-      <section className="container mx-auto px-4 py-20">
-        <div className="max-w-4xl mx-auto text-center">
-          <div className="inline-flex items-center gap-2 bg-green-50 dark:bg-green-950/50 text-green-600 dark:text-green-400 px-4 py-2 rounded-full text-sm font-medium mb-6">
-            <Calculator className="h-4 w-4" />
-            <span>Free Runway Calculator</span>
-          </div>
-
-          <h1 className="text-5xl md:text-6xl font-bold text-gray-900 dark:text-white mb-6">
-            Calculate Your{' '}
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-green-600 to-emerald-600">
-              Extra Runway
-            </span>
+      <section className="bg-[#F6F5EF] border-b border-[#101010]/10 py-12 sm:py-16">
+        <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8">
+          <p className="uppercase tracking-[0.18em] text-[12px] font-medium text-[#101010]/70 text-center">
+            Interactive Calculator
+          </p>
+          <h1 className="mt-3 font-serif text-[36px] sm:text-[48px] lg:text-[56px] leading-[0.96] tracking-[-0.015em] text-[#101010] text-center">
+            Calculate Your Runway Extension
           </h1>
-
-          <p className="text-xl text-gray-600 dark:text-gray-400 mb-8 max-w-2xl mx-auto">
-            See exactly how many months you'll gain by earning 8% instead of
-            your current yield
+          <p className="mt-6 text-[16px] leading-[1.5] text-[#222] max-w-[65ch] mx-auto text-center">
+            See exactly how much runway you'd gain by earning 8% instead of your
+            current yield. Adjust the numbers to match your situation.
           </p>
         </div>
       </section>
 
       {/* Calculator Section */}
-      <section className="container mx-auto px-4 pb-20">
-        <div className="max-w-4xl mx-auto">
-          <div className="grid md:grid-cols-2 gap-12">
+      <section className="bg-white py-12 sm:py-16">
+        <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid md:grid-cols-2 gap-8">
             {/* Input Section */}
-            <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 border border-gray-200 dark:border-gray-700">
-              <h2 className="text-2xl font-bold mb-6">Your Numbers</h2>
+            <div>
+              <h2 className="uppercase tracking-[0.14em] text-[13px] text-[#101010]/70 mb-6">
+                Your Numbers
+              </h2>
 
               <div className="space-y-6">
                 <div>
-                  <Label
-                    htmlFor="treasury"
-                    className="text-sm font-medium mb-2 block"
-                  >
-                    Current Treasury Balance
-                  </Label>
+                  <label className="block text-[14px] font-medium text-[#101010] mb-2">
+                    Current Treasury
+                  </label>
                   <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#101010]/60">
                       $
                     </span>
-                    <Input
-                      id="treasury"
+                    <input
                       type="number"
                       value={treasury}
                       onChange={(e) => setTreasury(Number(e.target.value))}
-                      className="pl-8"
-                      placeholder="2000000"
+                      className="w-full pl-8 pr-4 py-3 border border-[#101010]/10 bg-white text-[16px] tabular-nums focus:border-[#1B29FF] focus:outline-none transition-colors"
+                      step="100000"
                     />
                   </div>
-                  <p className="text-xs text-gray-500 mt-1">
-                    Your total cash in bank
+                  <p className="mt-1 text-[12px] text-[#101010]/60">
+                    Your total cash balance
                   </p>
                 </div>
 
                 <div>
-                  <Label
-                    htmlFor="burn"
-                    className="text-sm font-medium mb-2 block"
-                  >
+                  <label className="block text-[14px] font-medium text-[#101010] mb-2">
                     Monthly Burn Rate
-                  </Label>
+                  </label>
                   <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#101010]/60">
                       $
                     </span>
-                    <Input
-                      id="burn"
+                    <input
                       type="number"
                       value={monthlyBurn}
                       onChange={(e) => setMonthlyBurn(Number(e.target.value))}
-                      className="pl-8"
-                      placeholder="150000"
+                      className="w-full pl-8 pr-4 py-3 border border-[#101010]/10 bg-white text-[16px] tabular-nums focus:border-[#1B29FF] focus:outline-none transition-colors"
+                      step="10000"
                     />
                   </div>
-                  <p className="text-xs text-gray-500 mt-1">
-                    Total monthly expenses
+                  <p className="mt-1 text-[12px] text-[#101010]/60">
+                    Your monthly operating expenses
                   </p>
                 </div>
 
                 <div>
-                  <Label
-                    htmlFor="yield"
-                    className="text-sm font-medium mb-2 block"
-                  >
-                    Current APY
-                  </Label>
+                  <label className="block text-[14px] font-medium text-[#101010] mb-2">
+                    Current Yield (APY)
+                  </label>
                   <div className="relative">
-                    <Input
-                      id="yield"
+                    <input
                       type="number"
                       value={currentYield}
                       onChange={(e) => setCurrentYield(Number(e.target.value))}
-                      step="0.1"
-                      className="pr-8"
-                      placeholder="4"
+                      className="w-full pr-8 pl-4 py-3 border border-[#101010]/10 bg-white text-[16px] tabular-nums focus:border-[#1B29FF] focus:outline-none transition-colors"
+                      step="0.5"
+                      min="0"
+                      max="10"
                     />
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500">
+                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[#101010]/60">
                       %
                     </span>
                   </div>
-                  <p className="text-xs text-gray-500 mt-1">
-                    What you earn now (Mercury ~4.8%)
+                  <p className="mt-1 text-[12px] text-[#101010]/60">
+                    What you're earning now (Mercury = 4%, Banks = 0.5%)
                   </p>
                 </div>
+              </div>
+
+              <div className="mt-8 grid grid-cols-3 gap-px bg-[#101010]/10">
+                <button
+                  onClick={() => {
+                    setTreasury(500000);
+                    setMonthlyBurn(50000);
+                    setCurrentYield(4);
+                  }}
+                  className="bg-white p-3 text-[13px] text-[#101010] hover:bg-[#F7F7F2] transition-colors"
+                >
+                  Seed Stage
+                </button>
+                <button
+                  onClick={() => {
+                    setTreasury(2000000);
+                    setMonthlyBurn(150000);
+                    setCurrentYield(4);
+                  }}
+                  className="bg-white p-3 text-[13px] text-[#101010] hover:bg-[#F7F7F2] transition-colors"
+                >
+                  Series A
+                </button>
+                <button
+                  onClick={() => {
+                    setTreasury(5000000);
+                    setMonthlyBurn(300000);
+                    setCurrentYield(4);
+                  }}
+                  className="bg-white p-3 text-[13px] text-[#101010] hover:bg-[#F7F7F2] transition-colors"
+                >
+                  Growth
+                </button>
               </div>
             </div>
 
             {/* Results Section */}
-            <div className="space-y-6">
-              {/* Current Situation */}
-              <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 border border-gray-200 dark:border-gray-700">
-                <h3 className="text-lg font-semibold mb-4 text-gray-600 dark:text-gray-400">
-                  Current Situation ({currentYield}% APY)
-                </h3>
-                <div className="space-y-3">
-                  <div className="flex justify-between">
-                    <span className="text-gray-600 dark:text-gray-400">
-                      Monthly yield:
-                    </span>
-                    <span className="font-semibold">
-                      $
-                      {monthlyYieldCurrent.toLocaleString('en-US', {
-                        maximumFractionDigits: 0,
-                      })}
-                    </span>
+            <div>
+              <h2 className="uppercase tracking-[0.14em] text-[13px] text-[#101010]/70 mb-6">
+                Your Results
+              </h2>
+
+              <div className="space-y-4">
+                {/* Current Situation */}
+                <div className="border border-[#101010]/10 bg-white">
+                  <div className="p-4 border-b border-[#101010]/10">
+                    <h3 className="text-[14px] font-medium text-[#101010]/70">
+                      Current Situation ({currentYield}% yield)
+                    </h3>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600 dark:text-gray-400">
-                      Net burn:
-                    </span>
-                    <span className="font-semibold text-red-600">
-                      -$
-                      {netBurnCurrent.toLocaleString('en-US', {
-                        maximumFractionDigits: 0,
-                      })}
-                    </span>
-                  </div>
-                  <div className="pt-3 border-t">
-                    <div className="flex justify-between">
-                      <span className="font-semibold">Runway:</span>
-                      <span className="text-xl font-bold">
+                  <div className="p-4 space-y-2">
+                    <div className="flex justify-between text-[13px]">
+                      <span className="text-[#101010]/60">Monthly yield:</span>
+                      <span className="tabular-nums">
+                        $
+                        {monthlyYieldCurrent.toLocaleString('en-US', {
+                          maximumFractionDigits: 0,
+                        })}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-[13px]">
+                      <span className="text-[#101010]/60">Net burn:</span>
+                      <span className="tabular-nums text-[#FF4444]">
+                        -$
+                        {netBurnCurrent.toLocaleString('en-US', {
+                          maximumFractionDigits: 0,
+                        })}
+                      </span>
+                    </div>
+                    <div className="pt-2 border-t border-[#101010]/10">
+                      <div className="text-[24px] font-medium tabular-nums text-[#101010]">
                         {runwayCurrent.toFixed(1)} months
-                      </span>
+                      </div>
+                      <div className="text-[12px] text-[#101010]/60">
+                        runway
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
 
-              {/* With 0 Finance */}
-              <div className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/50 dark:to-emerald-950/50 rounded-2xl p-6 border border-green-200 dark:border-green-700">
-                <h3 className="text-lg font-semibold mb-4 text-green-700 dark:text-green-400">
-                  With 0 Finance (8% APY)
-                </h3>
-                <div className="space-y-3">
-                  <div className="flex justify-between">
-                    <span className="text-gray-600 dark:text-gray-400">
-                      Monthly yield:
-                    </span>
-                    <span className="font-semibold text-green-600">
-                      $
-                      {monthlyYield0Finance.toLocaleString('en-US', {
-                        maximumFractionDigits: 0,
-                      })}
-                    </span>
+                {/* With 0 Finance */}
+                <div className="border border-[#1B29FF]/20 bg-white">
+                  <div className="p-4 border-b border-[#1B29FF]/20 bg-[#1B29FF]/5">
+                    <h3 className="text-[14px] font-medium text-[#1B29FF]">
+                      With 0 Finance (8% yield)
+                    </h3>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600 dark:text-gray-400">
-                      Net burn:
-                    </span>
-                    <span className="font-semibold text-green-600">
-                      -$
-                      {netBurn0Finance.toLocaleString('en-US', {
-                        maximumFractionDigits: 0,
-                      })}
-                    </span>
-                  </div>
-                  <div className="pt-3 border-t border-green-200 dark:border-green-700">
-                    <div className="flex justify-between">
-                      <span className="font-semibold">Runway:</span>
-                      <span className="text-xl font-bold text-green-600">
+                  <div className="p-4 space-y-2">
+                    <div className="flex justify-between text-[13px]">
+                      <span className="text-[#101010]/60">Monthly yield:</span>
+                      <span className="tabular-nums text-[#1B29FF]">
+                        $
+                        {monthlyYield0Finance.toLocaleString('en-US', {
+                          maximumFractionDigits: 0,
+                        })}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-[13px]">
+                      <span className="text-[#101010]/60">Net burn:</span>
+                      <span className="tabular-nums text-[#1B29FF]">
+                        -$
+                        {netBurn0Finance.toLocaleString('en-US', {
+                          maximumFractionDigits: 0,
+                        })}
+                      </span>
+                    </div>
+                    <div className="pt-2 border-t border-[#101010]/10">
+                      <div className="text-[24px] font-medium tabular-nums text-[#1B29FF]">
                         {runway0Finance.toFixed(1)} months
-                      </span>
+                      </div>
+                      <div className="text-[12px] text-[#101010]/60">
+                        extended runway
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
 
-              {/* The Difference */}
-              <div className="bg-gradient-to-br from-blue-600 to-cyan-600 rounded-2xl p-6 text-white">
-                <h3 className="text-lg font-semibold mb-4">Your Gain</h3>
-                <div className="space-y-4">
-                  <div>
-                    <div className="text-3xl font-bold mb-1">
-                      +{runwayDifference.toFixed(1)} months
-                    </div>
-                    <div className="text-blue-100">
-                      Extra runway without raising
-                    </div>
+                {/* Extension Summary */}
+                <div className="bg-[#1B29FF] text-white p-6 rounded-lg">
+                  <div className="text-[32px] leading-none font-medium">
+                    +{runwayExtension.toFixed(1)} months
                   </div>
-                  <div className="pt-4 border-t border-blue-500">
-                    <div className="text-2xl font-bold mb-1">
-                      +$
-                      {extraYearlyEarnings.toLocaleString('en-US', {
-                        maximumFractionDigits: 0,
-                      })}
-                      /year
-                    </div>
-                    <div className="text-blue-100">
-                      Extra earnings at 8% vs {currentYield}%
-                    </div>
+                  <p className="mt-2 text-[14px] text-white/90">
+                    runway extension
+                  </p>
+                  <div className="mt-4 pt-4 border-t border-white/20">
+                    <p className="text-[13px] text-white/80">
+                      That's{' '}
+                      <span className="font-medium text-white">
+                        $
+                        {extraYearlyYield.toLocaleString('en-US', {
+                          maximumFractionDigits: 0,
+                        })}
+                      </span>{' '}
+                      extra per year
+                    </p>
                   </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
-      </section>
 
-      {/* Scenarios Section */}
-      <section className="container mx-auto px-4 py-20 border-t">
-        <div className="max-w-4xl mx-auto">
-          <h2 className="text-3xl font-bold text-center mb-12">
-            What {runwayDifference.toFixed(1)} Extra Months Means
-          </h2>
-
-          <div className="grid md:grid-cols-3 gap-8">
-            <div className="text-center">
-              <div className="w-16 h-16 bg-gradient-to-br from-blue-100 to-cyan-100 dark:from-blue-900/50 dark:to-cyan-900/50 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                <TrendingUp className="h-8 w-8 text-blue-600 dark:text-blue-400" />
-              </div>
-              <h3 className="font-semibold text-lg mb-2">Hit Your Metrics</h3>
-              <p className="text-gray-600 dark:text-gray-400">
-                Reach that next revenue milestone or user target before
-                fundraising
-              </p>
+          {/* Comparison Table */}
+          <div className="mt-12 border border-[#101010]/10 bg-white">
+            <div className="p-4 bg-[#F7F7F2] border-b border-[#101010]/10">
+              <h3 className="text-[14px] font-medium text-[#101010]">
+                Detailed Comparison
+              </h3>
             </div>
-
-            <div className="text-center">
-              <div className="w-16 h-16 bg-gradient-to-br from-green-100 to-emerald-100 dark:from-green-900/50 dark:to-emerald-900/50 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                <Calculator className="h-8 w-8 text-green-600 dark:text-green-400" />
-              </div>
-              <h3 className="font-semibold text-lg mb-2">Better Valuation</h3>
-              <p className="text-gray-600 dark:text-gray-400">
-                {runwayDifference.toFixed(1)} months more traction = 20-30%
-                higher valuation
-              </p>
-            </div>
-
-            <div className="text-center">
-              <div className="w-16 h-16 bg-gradient-to-br from-purple-100 to-pink-100 dark:from-purple-900/50 dark:to-pink-900/50 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                <ArrowRight className="h-8 w-8 text-purple-600 dark:text-purple-400" />
-              </div>
-              <h3 className="font-semibold text-lg mb-2">Skip a Round</h3>
-              <p className="text-gray-600 dark:text-gray-400">
-                Maybe reach profitability without another dilutive fundraise
-              </p>
+            <div className="overflow-x-auto">
+              <table className="w-full text-[13px]">
+                <thead>
+                  <tr className="border-b border-[#101010]/10">
+                    <th className="text-left p-4 font-medium text-[#101010]/70">
+                      Metric
+                    </th>
+                    <th className="text-right p-4 font-medium text-[#101010]/70">
+                      Current ({currentYield}%)
+                    </th>
+                    <th className="text-right p-4 font-medium text-[#1B29FF]">
+                      0 Finance (8%)
+                    </th>
+                    <th className="text-right p-4 font-medium text-[#1B29FF]">
+                      Difference
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr className="border-b border-[#101010]/5">
+                    <td className="p-4 text-[#101010]/70">Annual Yield</td>
+                    <td className="p-4 text-right tabular-nums">
+                      $
+                      {((treasury * currentYield) / 100).toLocaleString(
+                        'en-US',
+                        { maximumFractionDigits: 0 },
+                      )}
+                    </td>
+                    <td className="p-4 text-right tabular-nums">
+                      $
+                      {(treasury * 0.08).toLocaleString('en-US', {
+                        maximumFractionDigits: 0,
+                      })}
+                    </td>
+                    <td className="p-4 text-right tabular-nums font-medium text-[#1B29FF]">
+                      +$
+                      {extraYearlyYield.toLocaleString('en-US', {
+                        maximumFractionDigits: 0,
+                      })}
+                    </td>
+                  </tr>
+                  <tr className="border-b border-[#101010]/5">
+                    <td className="p-4 text-[#101010]/70">Monthly Yield</td>
+                    <td className="p-4 text-right tabular-nums">
+                      $
+                      {monthlyYieldCurrent.toLocaleString('en-US', {
+                        maximumFractionDigits: 0,
+                      })}
+                    </td>
+                    <td className="p-4 text-right tabular-nums">
+                      $
+                      {monthlyYield0Finance.toLocaleString('en-US', {
+                        maximumFractionDigits: 0,
+                      })}
+                    </td>
+                    <td className="p-4 text-right tabular-nums font-medium text-[#1B29FF]">
+                      +$
+                      {(
+                        monthlyYield0Finance - monthlyYieldCurrent
+                      ).toLocaleString('en-US', { maximumFractionDigits: 0 })}
+                    </td>
+                  </tr>
+                  <tr className="border-b border-[#101010]/5">
+                    <td className="p-4 text-[#101010]/70">Net Monthly Burn</td>
+                    <td className="p-4 text-right tabular-nums">
+                      $
+                      {netBurnCurrent.toLocaleString('en-US', {
+                        maximumFractionDigits: 0,
+                      })}
+                    </td>
+                    <td className="p-4 text-right tabular-nums">
+                      $
+                      {netBurn0Finance.toLocaleString('en-US', {
+                        maximumFractionDigits: 0,
+                      })}
+                    </td>
+                    <td className="p-4 text-right tabular-nums font-medium text-[#1B29FF]">
+                      -$
+                      {(netBurnCurrent - netBurn0Finance).toLocaleString(
+                        'en-US',
+                        { maximumFractionDigits: 0 },
+                      )}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className="p-4 font-medium text-[#101010]">
+                      Runway (months)
+                    </td>
+                    <td className="p-4 text-right tabular-nums font-medium">
+                      {runwayCurrent.toFixed(1)}
+                    </td>
+                    <td className="p-4 text-right tabular-nums font-medium">
+                      {runway0Finance.toFixed(1)}
+                    </td>
+                    <td className="p-4 text-right tabular-nums font-bold text-[#1B29FF]">
+                      +{runwayExtension.toFixed(1)}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
       </section>
 
       {/* CTA Section */}
-      <section className="container mx-auto px-4 py-20">
-        <div className="max-w-2xl mx-auto text-center">
-          <h2 className="text-3xl font-bold mb-4">
-            Ready to Add {runwayDifference.toFixed(1)} Months?
+      <section className="bg-[#1B29FF] py-12 sm:py-16">
+        <div className="max-w-[800px] mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <h2 className="font-serif text-[32px] sm:text-[40px] leading-[1.1] text-white">
+            Ready to Extend Your Runway?
           </h2>
-          <p className="text-xl text-gray-600 dark:text-gray-400 mb-8">
-            That's $
-            {extraYearlyEarnings.toLocaleString('en-US', {
-              maximumFractionDigits: 0,
-            })}
-            extra per year you're leaving on the table
+          <p className="mt-4 text-[16px] text-white/90 max-w-[50ch] mx-auto">
+            Stop leaving money on the table. Open an account in 5 minutes and
+            start earning 8% on your treasury.
           </p>
-          <Link href="/signup">
-            <Button size="lg">
-              Start Earning 8% Today
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
-          </Link>
-          <p className="text-sm text-gray-500 mt-4">
-            5-minute setup • No minimums • Same-day ACH
+          <div className="mt-8 flex flex-col sm:flex-row justify-center items-center gap-4">
+            <Link
+              href="/signin"
+              className="inline-flex items-center px-6 py-3 text-[16px] font-medium text-[#1B29FF] bg-white hover:bg-white/90 rounded-md transition-colors"
+            >
+              Open Account Now →
+            </Link>
+            <Link
+              href="/high-yield-startup-savings"
+              className="inline-flex items-center px-6 py-3 text-[16px] font-medium text-white border-2 border-white hover:bg-white/10 rounded-md transition-colors"
+            >
+              Learn More
+            </Link>
+          </div>
+          <p className="mt-6 text-[13px] text-white/70">
+            $1M+ in LOIs secured in our first week
           </p>
         </div>
       </section>
-    </div>
+    </>
   );
 }
