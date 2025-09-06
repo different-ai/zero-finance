@@ -9,7 +9,7 @@ export function Header() {
     <header className="border-b border-[#101010]/10 bg-[#F7F7F2]">
       <div className="mx-auto max-w-[1200px] px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
         <div className="flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2">
+          <Link href="/" className="flex items-center ">
             <Image
               src="/new-logo-bluer.png"
               alt="Zero Finance"
@@ -17,7 +17,8 @@ export function Header() {
               height={24}
               className="w-5 h-5 sm:w-6 sm:h-6 object-contain"
             />
-            <span className="text-[13px] sm:text-[14px] font-medium tracking-tight text-[#101010]">
+            {/* use a diff font  */}
+            <span className="ml[-12px] font-bold  text-[#1B29FF] text-[13px] sm:text-[14px] tracking-tight text-[#101010]">
               finance
             </span>
           </Link>

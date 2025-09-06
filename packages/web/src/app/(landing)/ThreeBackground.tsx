@@ -7,7 +7,7 @@ import React, {
   useState,
   useLayoutEffect,
 } from 'react';
-import { Canvas, useFrame, useThree } from '@react-three/fiber';
+import { Canvas, useFrame, useThree, invalidate } from '@react-three/fiber';
 import { Float } from '@react-three/drei';
 import * as THREE from 'three';
 
@@ -74,8 +74,8 @@ function PixelSquares({
   });
 
   return (
-    <mesh>
-      <planeGeometry args={[viewport.width, viewport.height]} />
+    <mesh scale={[viewport.width, viewport.height, 1]} frustumCulled={false}>
+      <planeGeometry args={[1, 1]} />
       <shaderMaterial
         ref={mat}
         transparent
@@ -349,6 +349,16 @@ export function ThreeBackground({
     return () => ro.disconnect();
   }, []);
 
+  // Force presentation when the container first has size
+  useEffect(() => {
+    if (!hasSize) return;
+    const id = requestAnimationFrame(() => {
+      invalidate();
+      requestAnimationFrame(() => invalidate());
+    });
+    return () => cancelAnimationFrame(id);
+  }, [hasSize]);
+
   // shared mutable pointer state used inside the WebGL scene without re-rendering React
   const pointerRef = useRef({
     x: 2,
@@ -425,6 +435,8 @@ export function ThreeBackground({
         pointerEvents: 'none',
         transform: 'translateZ(0)',
         willChange: 'transform, opacity',
+        contain: 'layout paint size',
+        isolation: 'isolate',
       }}
     >
       {hasSize && (
@@ -433,11 +445,10 @@ export function ThreeBackground({
           dpr={1}
           gl={{
             alpha: true,
-            antialias: false,
+            antialias: true,
             powerPreference: 'high-performance',
             failIfMajorPerformanceCaveat: false,
-            premultipliedAlpha: false,
-            preserveDrawingBuffer: true,
+            preserveDrawingBuffer: false,
           }}
           onCreated={({ gl }) => {
             gl.setClearColor(0x000000, 0);
@@ -446,7 +457,7 @@ export function ThreeBackground({
             console.error('Canvas error:', e);
             setError(e?.message || 'Canvas error');
           }}
-          style={{ width: '100%', height: '100%' }}
+          style={{ width: '100%', height: '100%', display: 'block' }}
           frameloop="always"
         >
           <Scene pointerRef={pointerRef} variant={variant} />
