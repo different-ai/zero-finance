@@ -1,6 +1,45 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   transpilePackages: ['three', '@react-three/fiber', '@react-three/drei'],
+
+  // SEO and Performance Optimizations
+  poweredByHeader: false,
+  compress: true,
+
+  // Image optimization for better Core Web Vitals
+  images: {
+    formats: ['image/avif', 'image/webp'],
+    domains: ['0finance.com'],
+    minimumCacheTTL: 60,
+  },
+
+  // Security headers
+  async headers() {
+    return [
+      {
+        source: '/:path*',
+        headers: [
+          {
+            key: 'X-DNS-Prefetch-Control',
+            value: 'on',
+          },
+          {
+            key: 'X-Content-Type-Options',
+            value: 'nosniff',
+          },
+          {
+            key: 'X-Frame-Options',
+            value: 'SAMEORIGIN',
+          },
+          {
+            key: 'X-XSS-Protection',
+            value: '1; mode=block',
+          },
+        ],
+      },
+    ];
+  },
+
   async rewrites() {
     return [
       {

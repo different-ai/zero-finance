@@ -1,7 +1,5 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
-import { Button } from '@/components/ui/button';
-import { ArrowRight, Shield, TrendingUp, Zap } from 'lucide-react';
 
 export const metadata: Metadata = {
   title: 'High Yield Startup Savings Account - 8% APY | 0 Finance',
@@ -154,9 +152,9 @@ export default function HighYieldStartupSavingsPage() {
                 Built by Experts
               </h3>
               <p className="mt-4 text-[14px] leading-[1.5] text-[#101010]/80">
-                Our founding team previously built Gnosis Pay, scaling to $50M
-                in annual transaction volume. We know how to bridge DeFi and
-                traditional banking.
+                Our founding team has deep experience in DeFi and traditional
+                finance. We've built and scaled fintech products used by
+                thousands of businesses worldwide.
               </p>
               <p className="mt-3 text-[14px] leading-[1.5] text-[#101010]/80">
                 In just 7 days after our launch, we secured $1M in LOIs from

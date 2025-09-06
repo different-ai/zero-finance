@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 
 export default function MarketingLayout({
   children,
@@ -10,11 +11,17 @@ export default function MarketingLayout({
       {/* Header */}
       <header className="bg-white border-b border-[#101010]/10">
         <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
-          <Link
-            href="/"
-            className="font-serif text-2xl tracking-tight text-[#101010]"
-          >
-            0 Finance
+          <Link href="/" className="flex items-center">
+            <Image
+              src="/new-logo-bluer.png"
+              alt="Zero Finance"
+              width={24}
+              height={24}
+              className="w-5 h-5 sm:w-6 sm:h-6 object-contain"
+            />
+            <span className="ml-2 font-bold text-[#1B29FF] text-[13px] sm:text-[14px] tracking-tight">
+              finance
+            </span>
           </Link>
           <div className="flex items-center gap-4">
             <Link

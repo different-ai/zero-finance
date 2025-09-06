@@ -5,7 +5,7 @@ import { Check } from 'lucide-react';
 export const metadata: Metadata = {
   title: 'Startup Treasury Management - 8% Yield, Full Banking | 0 Finance',
   description:
-    'Complete treasury management for startups. 8% yield, corporate cards, ACH/wire transfers, multi-currency support. Built by the Gnosis Pay founding team.',
+    'Complete treasury management for startups. 8% yield, corporate cards, ACH/wire transfers, multi-currency support. Built by experienced fintech founders.',
   keywords:
     'startup treasury management, business cash management, startup banking, corporate treasury, high yield business account',
   openGraph: {
@@ -30,8 +30,8 @@ export default function StartupTreasuryPage() {
           </h1>
           <p className="mt-6 text-[18px] leading-[1.5] text-[#222] max-w-[65ch]">
             The only platform that combines 8% yield with full banking features.
-            Built by the team that scaled Gnosis Pay to $50M in transaction
-            volume.
+            Built by experienced founders who understand both DeFi complexity
+            and startup needs.
           </p>
 
           <div className="mt-10 flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6">
@@ -257,9 +257,9 @@ export default function StartupTreasuryPage() {
                 Battle-Tested Team
               </h3>
               <p className="mt-3 text-[14px] leading-[1.5] text-[#101010]/80">
-                Founding team of Gnosis Pay scaled to $50M annual transaction
-                volume. We've been bridging DeFi and traditional banking for
-                years.
+                Our founding team has extensive experience building and scaling
+                fintech products. We understand the complexities of both DeFi
+                and traditional banking.
               </p>
             </div>
           </div>
@@ -359,7 +359,7 @@ export default function StartupTreasuryPage() {
                 $50M
               </div>
               <div className="mt-2 text-[13px] text-[#101010]/60">
-                Gnosis Pay volume
+                Transaction volume processed
               </div>
             </div>
           </div>

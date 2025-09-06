@@ -7,7 +7,7 @@ import React, {
   useState,
   useLayoutEffect,
 } from 'react';
-import { Canvas, useFrame, useThree, invalidate } from '@react-three/fiber';
+import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { Float } from '@react-three/drei';
 import * as THREE from 'three';
 
@@ -328,7 +328,7 @@ export function ThreeBackground({
   const [mounted, setMounted] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [key, setKey] = useState(0);
-  const [hasSize, setHasSize] = useState(false);
+  const [hasSize, setHasSize] = useState(true); // Start with true to avoid blocking
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Observe container size and only mount Canvas when it has dimensions
@@ -336,28 +336,31 @@ export function ThreeBackground({
     const el = containerRef.current;
     if (!el) return;
 
-    const check = () => {
+    // Initial check with small delay to ensure parent layout is complete
+    setTimeout(() => {
       const r = el.getBoundingClientRect();
-      setHasSize(r.width > 0 && r.height > 0);
-    };
+      console.log('Initial container size:', r.width, r.height);
+      if (r.width > 0 && r.height > 0) {
+        setHasSize(true);
+      }
+    }, 10);
 
-    check();
-
-    const ro = new ResizeObserver(check);
+    // ResizeObserver for subsequent changes
+    const ro = new ResizeObserver((entries) => {
+      const r = entries[0].contentRect;
+      console.log('ResizeObserver update:', r.width, r.height);
+      if (r.width > 0 && r.height > 0) {
+        setHasSize(true);
+      }
+    });
     ro.observe(el);
 
     return () => ro.disconnect();
   }, []);
 
   // Force presentation when the container first has size
-  useEffect(() => {
-    if (!hasSize) return;
-    const id = requestAnimationFrame(() => {
-      invalidate();
-      requestAnimationFrame(() => invalidate());
-    });
-    return () => cancelAnimationFrame(id);
-  }, [hasSize]);
+  // Note: We can't call invalidate here since it's only available inside Canvas context
+  // The canvas will start rendering automatically with frameloop="always"
 
   // shared mutable pointer state used inside the WebGL scene without re-rendering React
   const pointerRef = useRef({
@@ -371,6 +374,14 @@ export function ThreeBackground({
   useEffect(() => {
     console.log('ThreeBackground mounting...');
     setMounted(true);
+
+    // Failsafe: Force hasSize to true after 100ms if still false
+    const failsafe = setTimeout(() => {
+      setHasSize(true);
+      console.log('Forced hasSize to true as failsafe');
+    }, 100);
+
+    return () => clearTimeout(failsafe);
     const onMove = (e: MouseEvent) => {
       const el = containerRef.current;
       if (!el) return;
@@ -390,6 +401,7 @@ export function ThreeBackground({
       if (inside) {
         if (pointerRef.current.hovered < 0.5) {
           // rising edge
+          console.log('Mouse entered canvas area');
           pointerRef.current.justEnteredAt = performance.now() / 1000;
           pointerRef.current.enterPos = { x: nx, y: ny };
         }
@@ -425,44 +437,48 @@ export function ThreeBackground({
     return null;
   }
 
-  console.log('ThreeBackground rendering...');
+  console.log('ThreeBackground rendering...', { hasSize, mounted });
 
   return (
     <div
       ref={containerRef}
       className={`absolute inset-0 ${className}`}
       style={{
-        pointerEvents: 'none',
         transform: 'translateZ(0)',
         willChange: 'transform, opacity',
         contain: 'layout paint size',
         isolation: 'isolate',
       }}
     >
-      {hasSize && (
-        <Canvas
-          camera={{ position: [0, 0, 5], fov: 50 }}
-          dpr={1}
-          gl={{
-            alpha: true,
-            antialias: true,
-            powerPreference: 'high-performance',
-            failIfMajorPerformanceCaveat: false,
-            preserveDrawingBuffer: false,
-          }}
-          onCreated={({ gl }) => {
-            gl.setClearColor(0x000000, 0);
-          }}
-          onError={(e: any) => {
-            console.error('Canvas error:', e);
-            setError(e?.message || 'Canvas error');
-          }}
-          style={{ width: '100%', height: '100%', display: 'block' }}
-          frameloop="always"
-        >
-          <Scene pointerRef={pointerRef} variant={variant} />
-        </Canvas>
-      )}
+      {/* {hasSize && ( */}
+      <Canvas
+        camera={{ position: [0, 0, 5], fov: 50 }}
+        dpr={1}
+        gl={{
+          alpha: true,
+          antialias: true,
+          powerPreference: 'high-performance',
+          failIfMajorPerformanceCaveat: false,
+          preserveDrawingBuffer: false,
+        }}
+        onCreated={({ gl }) => {
+          gl.setClearColor(0x000000, 0);
+        }}
+        onError={(e: any) => {
+          console.error('Canvas error:', e);
+          setError(e?.message || 'Canvas error');
+        }}
+        style={{
+          width: '100%',
+          height: '100%',
+          display: 'block',
+          pointerEvents: 'none',
+        }}
+        frameloop="always"
+      >
+        <Scene pointerRef={pointerRef} variant={variant} />
+      </Canvas>
+      {/* )} */}
     </div>
   );
 }
