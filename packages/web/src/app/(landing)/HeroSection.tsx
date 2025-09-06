@@ -22,8 +22,8 @@ export function HeroSection() {
   return (
     <>
       {/* Hero */}
-      <ThreeBackground className=" inset-0 opacity-80 z-10" />
       <section className="relative border-b border-[#101010]/10 bg-[#F6F5EF] overflow-hidden min-h-[80vh] sm:min-h-[85vh] lg:min-h-[90vh] flex items-center">
+        <ThreeBackground className="z-0" />
         <div className="relative z-10 mx-auto max-w-[1200px] px-4 sm:px-6 lg:px-8 py-16 sm:py-20 lg:py-24 w-full">
           <p className="uppercase tracking-[0.14em] sm:tracking-[0.18em] text-[11px] sm:text-[12px] lg:text-[13px] font-medium text-[#101010]/70">
             Insured yield for startups
@@ -56,8 +56,9 @@ export function HeroSection() {
       </section>
 
       {/* Demo Panel - Bank Statement Style */}
-      <section className="border-y border-[#101010]/10 bg-white">
-        <div className="mx-auto max-w-[1200px] px-4 sm:px-6 lg:px-8 py-8 sm:py-12 lg:py-16">
+      <section className="relative border-y border-[#101010]/10 bg-white/90 overflow-hidden">
+        <ThreeBackground className="z-0" variant="c" />
+        <div className="relative z-10 mx-auto max-w-[1200px] px-4 sm:px-6 lg:px-8 py-8 sm:py-12 lg:py-16">
           <div className="border border-[#101010]/10 bg-white overflow-x-auto">
             <div className="grid grid-cols-1 lg:grid-cols-12 min-w-[320px]">
               <div className="lg:col-span-8 p-4 sm:p-6 lg:border-r border-b lg:border-b-0 border-[#101010]/10">

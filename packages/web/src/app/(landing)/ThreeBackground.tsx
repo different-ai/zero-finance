@@ -1,6 +1,12 @@
 'use client';
 
-import React, { useRef, useMemo, useEffect, useState } from 'react';
+import React, {
+  useRef,
+  useMemo,
+  useEffect,
+  useState,
+  useLayoutEffect,
+} from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { Float } from '@react-three/drei';
 import * as THREE from 'three';
@@ -322,7 +328,26 @@ export function ThreeBackground({
   const [mounted, setMounted] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [key, setKey] = useState(0);
+  const [hasSize, setHasSize] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // Observe container size and only mount Canvas when it has dimensions
+  useLayoutEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+
+    const check = () => {
+      const r = el.getBoundingClientRect();
+      setHasSize(r.width > 0 && r.height > 0);
+    };
+
+    check();
+
+    const ro = new ResizeObserver(check);
+    ro.observe(el);
+
+    return () => ro.disconnect();
+  }, []);
 
   // shared mutable pointer state used inside the WebGL scene without re-rendering React
   const pointerRef = useRef({
@@ -334,21 +359,16 @@ export function ThreeBackground({
   });
 
   useEffect(() => {
+    console.log('ThreeBackground mounting...');
     setMounted(true);
-    // Force re-mount on page visibility change
-    const handleVisibilityChange = () => {
-      if (!document.hidden) {
-        setKey((prev) => prev + 1);
-      }
-    };
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-
-    // Force animation restart on mount
-    setKey((prev) => prev + 1);
     const onMove = (e: MouseEvent) => {
       const el = containerRef.current;
       if (!el) return;
       const r = el.getBoundingClientRect();
+
+      // Guard against zero sizes
+      if (r.width === 0 || r.height === 0) return;
+
       const x = e.clientX;
       const y = e.clientY;
       const inside = x >= r.left && x <= r.right && y >= r.top && y <= r.bottom;
@@ -382,42 +402,56 @@ export function ThreeBackground({
     return () => {
       window.removeEventListener('mousemove', onMove);
       window.removeEventListener('touchmove', onTouch);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, []);
 
-  if (!mounted) return null;
+  if (!mounted) {
+    console.log('ThreeBackground not mounted yet');
+    return null;
+  }
+
   if (error) {
     console.error('ThreeBackground error:', error);
     return null;
   }
 
+  console.log('ThreeBackground rendering...');
+
   return (
     <div
       ref={containerRef}
-      className={`inset-0 ${className}`}
+      className={`absolute inset-0 ${className}`}
       style={{
         pointerEvents: 'none',
-        zIndex: -1,
+        transform: 'translateZ(0)',
+        willChange: 'transform, opacity',
       }}
     >
-      <Canvas
-        key={key}
-        camera={{ position: [0, 0, 5], fov: 50 }}
-        dpr={[1, 2]}
-        gl={{
-          alpha: true,
-          antialias: true,
-          toneMapping: THREE.ACESFilmicToneMapping,
-          toneMappingExposure: 1.0,
-          preserveDrawingBuffer: true,
-        }}
-        onError={(e: any) => setError(e?.message || 'Canvas error')}
-        style={{ width: '100%', height: '100%' }}
-        frameloop="always"
-      >
-        <Scene pointerRef={pointerRef} variant={variant} />
-      </Canvas>
+      {hasSize && (
+        <Canvas
+          camera={{ position: [0, 0, 5], fov: 50 }}
+          dpr={1}
+          gl={{
+            alpha: true,
+            antialias: false,
+            powerPreference: 'high-performance',
+            failIfMajorPerformanceCaveat: false,
+            premultipliedAlpha: false,
+            preserveDrawingBuffer: true,
+          }}
+          onCreated={({ gl }) => {
+            gl.setClearColor(0x000000, 0);
+          }}
+          onError={(e: any) => {
+            console.error('Canvas error:', e);
+            setError(e?.message || 'Canvas error');
+          }}
+          style={{ width: '100%', height: '100%' }}
+          frameloop="always"
+        >
+          <Scene pointerRef={pointerRef} variant={variant} />
+        </Canvas>
+      )}
     </div>
   );
 }

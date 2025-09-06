@@ -169,12 +169,24 @@ export function DemoModeSidebar() {
     return () => clearInterval(timer);
   }, []);
 
-  // Auto-play functionality
+  // Auto-play functionality with custom timing for each step
   useEffect(() => {
     if (isAutoPlaying && demoStep < DEMO_STEPS.length - 1) {
+      // Custom timing for each step to match Ben's script
+      const stepTimings = [
+        10000, // Step 0 (The Problem): 10 seconds
+        15000, // Step 1 (Empty Dashboard): 15 seconds
+        20000, // Step 2 (Fund Your Account): 20 seconds
+        15000, // Step 3 (Funds Received): 15 seconds
+        5000, // Step 4 (Your Dashboard): 5 seconds (quick transition to savings)
+        30000, // Step 5 (Maximize Savings): 30 seconds
+        20000, // Step 6 (Withdrawals): 20 seconds (or skip)
+        20000, // Step 7 (What's Coming): 20 seconds
+      ];
+
       const timer = setTimeout(() => {
         handleNext();
-      }, 4000);
+      }, stepTimings[demoStep] || 4000);
       return () => clearTimeout(timer);
     } else if (isAutoPlaying && demoStep === DEMO_STEPS.length - 1) {
       setIsAutoPlaying(false);
