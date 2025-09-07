@@ -15,12 +15,13 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { TableIcon, LayoutGrid } from 'lucide-react';
+import { TableIcon, LayoutGrid, RefreshCw } from 'lucide-react';
 
 export default function AdminPage() {
   const [adminToken, setAdminToken] = useState('');
   const [isTokenValid, setIsTokenValid] = useState(false);
   const [activeView, setActiveView] = useState<'table' | 'kanban'>('table');
+  const [isSyncing, setIsSyncing] = useState(false);
 
   const {
     data: usersData,
@@ -49,6 +50,36 @@ export default function AdminPage() {
     // or navigate to a user detail page
     console.log('User clicked:', user);
     toast.info(`Selected user: ${user.email}`);
+  };
+
+  const handleSyncKyc = async () => {
+    setIsSyncing(true);
+    try {
+      const response = await fetch('/api/admin/sync-all-kyc', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ adminToken }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        toast.success(
+          `KYC sync completed: ${data.summary.updated} updated, ${data.summary.unchanged} unchanged, ${data.summary.errors} errors`,
+        );
+        // Refresh the users list
+        refetchUsers();
+      } else {
+        toast.error(`Sync failed: ${data.error}`);
+      }
+    } catch (error) {
+      toast.error('Failed to sync KYC data');
+      console.error('Sync error:', error);
+    } finally {
+      setIsSyncing(false);
+    }
   };
 
   if (!isTokenValid) {
@@ -90,15 +121,28 @@ export default function AdminPage() {
     <div className="container mx-auto px-4 py-8">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Admin Panel</h1>
-        <Button
-          variant="outline"
-          onClick={() => {
-            setIsTokenValid(false);
-            setAdminToken('');
-          }}
-        >
-          Log Out
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={handleSyncKyc}
+            disabled={isSyncing}
+            className="flex items-center gap-2"
+          >
+            <RefreshCw
+              className={`h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`}
+            />
+            {isSyncing ? 'Syncing...' : 'Sync All KYC'}
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => {
+              setIsTokenValid(false);
+              setAdminToken('');
+            }}
+          >
+            Log Out
+          </Button>
+        </div>
       </div>
 
       <Tabs

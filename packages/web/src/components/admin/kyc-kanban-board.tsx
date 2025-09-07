@@ -102,6 +102,7 @@ export default function KycKanbanBoard({
   };
 
   // Categorize users by KYC status
+  // Be very specific about filtering to avoid misplaced users
   const columns: KycColumn[] = [
     {
       id: 'no_kyc',
@@ -110,7 +111,10 @@ export default function KycKanbanBoard({
       color: 'text-gray-700',
       bgColor: 'bg-gray-50',
       borderColor: 'border-gray-200',
-      users: users?.filter((u) => !u.kycStatus && !u.alignCustomerId) || [],
+      users:
+        users?.filter(
+          (u) => (!u.kycStatus || u.kycStatus === 'none') && !u.alignCustomerId,
+        ) || [],
     },
     {
       id: 'no_align',
@@ -119,7 +123,10 @@ export default function KycKanbanBoard({
       color: 'text-orange-700',
       bgColor: 'bg-orange-50',
       borderColor: 'border-orange-200',
-      users: users?.filter((u) => !u.alignCustomerId && u.kycStatus) || [],
+      users:
+        users?.filter(
+          (u) => !u.alignCustomerId && u.kycStatus && u.kycStatus !== 'none',
+        ) || [],
     },
     {
       id: 'needs_documents',
@@ -131,9 +138,9 @@ export default function KycKanbanBoard({
       users:
         users?.filter(
           (u) =>
-            u.kycSubStatus === 'kyc_form_resubmission_required' ||
-            (u.kycStatus === 'pending' &&
-              u.kycSubStatus === 'kyc_form_resubmission_required'),
+            // Only show users who are pending AND need resubmission
+            u.kycStatus === 'pending' &&
+            u.kycSubStatus === 'kyc_form_resubmission_required',
         ) || [],
     },
     {
@@ -147,6 +154,7 @@ export default function KycKanbanBoard({
         users?.filter(
           (u) =>
             u.kycStatus === 'pending' &&
+            // Exclude users who need document resubmission
             u.kycSubStatus !== 'kyc_form_resubmission_required',
         ) || [],
     },
@@ -157,7 +165,13 @@ export default function KycKanbanBoard({
       color: 'text-green-700',
       bgColor: 'bg-green-50',
       borderColor: 'border-green-200',
-      users: users?.filter((u) => u.kycStatus === 'approved') || [],
+      users:
+        users?.filter(
+          (u) =>
+            u.kycStatus === 'approved' &&
+            // Ensure they're not mistakenly marked as needing documents
+            u.kycSubStatus !== 'kyc_form_resubmission_required',
+        ) || [],
     },
     {
       id: 'rejected',
