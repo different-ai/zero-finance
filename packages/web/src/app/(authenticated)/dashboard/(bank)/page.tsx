@@ -13,20 +13,15 @@ import { Skeleton } from '@/components/ui/skeleton';
 // Loading components for Suspense boundaries
 function LoadingCard() {
   return (
-    <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-6">
-      <div className="space-y-4">
-        <div className="flex items-center gap-3">
-          <Skeleton variant="avatar" className="h-12 w-12" />
-          <div className="space-y-2 flex-1">
-            <Skeleton variant="text" className="h-4 w-1/3" />
-            <Skeleton variant="text" className="h-3 w-1/4" />
-          </div>
+    <div className="border border-[#101010]/10 bg-white rounded-md">
+      <div className="p-6 space-y-4">
+        <div className="space-y-2">
+          <Skeleton className="h-3 w-24 bg-[#101010]/5" />
+          <Skeleton className="h-10 w-48 bg-[#101010]/5" />
         </div>
-        <Skeleton variant="text" className="h-8 w-full" />
-        <div className="flex gap-3">
-          <Skeleton variant="button" className="h-10 flex-1" />
-          <Skeleton variant="button" className="h-10 flex-1" />
-          <Skeleton variant="button" className="h-10 flex-1" />
+        <div className="flex gap-4">
+          <Skeleton className="h-12 w-32 bg-[#101010]/5" />
+          <Skeleton className="h-12 w-32 bg-[#101010]/5" />
         </div>
       </div>
     </div>
@@ -88,22 +83,59 @@ export default async function DashboardPage() {
   }
 
   return (
-    <>
-      <div className="container mx-auto px-4 space-y-6">
+    <div className="min-h-screen bg-[#F7F7F2]">
+      {/* Header Section */}
+      <div className="border-b border-[#101010]/10 bg-white">
+        <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <p className="uppercase tracking-[0.14em] text-[11px] sm:text-[12px] text-[#101010]/60">
+            Dashboard
+          </p>
+          <h1 className="mt-2 font-serif text-[28px] sm:text-[36px] leading-[1.1] tracking-[-0.01em] text-[#101010]">
+            Your Business Account
+          </h1>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
         <div className="space-y-6">
+          {/* Balance Section */}
           <Suspense fallback={<LoadingCard />}>
             <FundsData />
           </Suspense>
 
+          {/* Onboarding Section */}
           <OnboardingData />
 
-          <Suspense fallback={<LoadingCard />}>
-            <TransactionTabsDemo />
-          </Suspense>
+          {/* Transactions Section */}
+          <div className="border border-[#101010]/10 bg-white rounded-md">
+            <div className="p-6 border-b border-[#101010]/10">
+              <p className="uppercase tracking-[0.14em] text-[12px] text-[#101010]/60">
+                Recent Activity
+              </p>
+              <h2 className="mt-2 text-[20px] font-medium text-[#101010]">
+                Transactions & Transfers
+              </h2>
+            </div>
+            <Suspense fallback={<LoadingCard />}>
+              <TransactionTabsDemo />
+            </Suspense>
+          </div>
 
-          <ActiveAgents />
+          {/* Active Agents Section */}
+          <div className="border border-[#101010]/10 bg-white rounded-md">
+            <div className="p-6 border-b border-[#101010]/10">
+              <p className="uppercase tracking-[0.14em] text-[12px] text-[#101010]/60">
+                Automation
+              </p>
+              <h2 className="mt-2 text-[20px] font-medium text-[#101010]">
+                Active Agents
+              </h2>
+            </div>
+            <ActiveAgents />
+          </div>
         </div>
       </div>
-    </>
+    </div>
   );
 }

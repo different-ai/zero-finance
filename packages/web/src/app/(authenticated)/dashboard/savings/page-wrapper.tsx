@@ -14,13 +14,6 @@ import { trpc } from '@/utils/trpc';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, useMemo } from 'react';
 import LoadingSpinner from '@/components/ui/loading-spinner';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
@@ -31,6 +24,8 @@ import {
   ArrowDownLeft,
   ArrowUpRight,
   ArrowDownToLine,
+  TrendingUp,
+  DollarSign,
 } from 'lucide-react';
 import { WithdrawEarnCard } from '@/app/(authenticated)/dashboard/tools/earn-module/components/withdraw-earn-card';
 import { DepositEarnCard } from '@/app/(authenticated)/dashboard/tools/earn-module/components/deposit-earn-card';
@@ -98,592 +93,262 @@ export default function SavingsPageWrapper() {
 
   const vaultStats = isDemoMode ? demoVaultStats : realVaultStats.data;
 
-  // Base vaults configuration
-  const BASE_VAULTS = BASE_USDC_VAULTS;
-  const baseVaultAddresses = BASE_VAULTS.map((v) => v.address);
-
-  // Fetch multi-vault stats
-  const realVaultStatsMany = trpc.earn.statsByVault.useQuery(
-    { safeAddress: safeAddress!, vaultAddresses: baseVaultAddresses },
-    {
-      enabled: !!safeAddress && !isDemoMode,
-      refetchInterval: 10000,
-    },
-  );
-
   // Fetch user positions
-  const realUserPositions = trpc.earn.userPositions.useQuery(
-    { userSafe: safeAddress!, vaultAddresses: baseVaultAddresses },
+  const realUserPositions = trpc.earn.getUserPositions.useQuery(
+    { safeAddress: safeAddress! },
     {
       enabled: !!safeAddress && !isDemoMode,
       refetchInterval: 10000,
     },
   );
 
-  const vaultStatsMany = isDemoMode ? demoVaultStats : realVaultStatsMany.data;
   const userPositions = isDemoMode ? demoUserPositions : realUserPositions.data;
 
-  // State for inline expansion
-  const [expandedAction, setExpandedAction] = useState<{
-    vaultId: string;
-    vaultAddress: string;
-    vaultName: string;
-    action: 'deposit' | 'withdraw';
-  } | null>(null);
+  // Track modal states
+  const [showDeposit, setShowDeposit] = useState(false);
+  const [showWithdraw, setShowWithdraw] = useState(false);
 
-  // Fetch recent deposits
-  const realDeposits = trpc.earn.getRecentEarnDeposits.useQuery(
-    { safeAddress: safeAddress!, limit: 10 },
-    {
-      enabled: !!safeAddress && !isDemoMode,
-      refetchInterval: 10000,
-    },
-  );
+  // Get total position value
+  const totalPositionValue = useMemo(() => {
+    if (!userPositions) return 0;
+    return userPositions.reduce((acc, pos) => acc + (pos.assetsUsd || 0), 0);
+  }, [userPositions]);
 
-  // Fetch recent withdrawals
-  const realWithdrawals = trpc.earn.getRecentEarnWithdrawals.useQuery(
-    { safeAddress: safeAddress!, limit: 10 },
-    {
-      enabled: !!safeAddress && !isDemoMode,
-      refetchInterval: 10000,
-    },
-  );
-
-  const recentDeposits = isDemoMode ? demoRecentDeposits : realDeposits.data;
-  const recentWithdrawals = isDemoMode
-    ? demoRecentWithdrawals
-    : realWithdrawals.data;
-
-  // Combine and sort transactions
-  const recentTransactions = useMemo(() => {
-    const deposits = recentDeposits || [];
-    const withdrawals = recentWithdrawals || [];
-
-    const allTransactions = [
-      ...deposits.map((d) => ({ ...d, type: 'deposit' as const })),
-      ...withdrawals.map((w) => ({ ...w, type: 'withdrawal' as const })),
-    ];
-
-    return allTransactions
-      .sort((a, b) => b.timestamp - a.timestamp)
-      .slice(0, 10);
-  }, [recentDeposits, recentWithdrawals]);
-
-  // Compute vault view models
-  const vaultsVM = useMemo(() => {
-    return BASE_VAULTS.map((v) => {
-      const stat = vaultStatsMany?.find(
-        (s) => s.vaultAddress.toLowerCase() === v.address.toLowerCase(),
-      );
-      const pos = userPositions?.find(
-        (p) => p.vaultAddress.toLowerCase() === v.address.toLowerCase(),
-      );
-
-      const balanceUsd = pos?.assetsUsd ? Number(pos.assetsUsd) : 0;
-      const apy =
-        stat?.netApy != null
-          ? Number(stat.netApy)
-          : stat?.apy != null
-            ? Number(stat.apy)
-            : 8.0; // Default APY
-
-      const earnedUsd = stat?.yield ? Number(stat.yield) / 1e6 : 0;
-
-      return {
-        id: v.id,
-        name: v.name,
-        risk: v.risk,
-        curator: v.curator,
-        address: v.address,
-        appUrl: v.appUrl,
-        apy,
-        balanceUsd,
-        earnedUsd,
-        isAuto: v.id === 'seamless',
-      };
-    });
-  }, [BASE_VAULTS, vaultStatsMany, userPositions]);
-
-  // Calculate totals
-  const totalSaved = vaultsVM.reduce((sum, v) => sum + v.balanceUsd, 0);
-  const totalEarned = vaultsVM.reduce((sum, v) => sum + v.earnedUsd, 0);
-
-  const isLoading =
-    isLoadingSafes ||
-    isLoadingState ||
-    (!isDemoMode &&
-      (realVaultStats.isLoading ||
-        realDeposits.isLoading ||
-        realWithdrawals.isLoading));
-
-  // Redirect logic
-  useEffect(() => {
-    if (
-      !isDemoMode &&
-      !isLoadingSafes &&
-      !safesError &&
-      safesData !== undefined &&
-      safesData.length === 0
-    ) {
-      router.push('/onboarding/create-safe');
-    }
-  }, [isDemoMode, isLoadingSafes, safesError, safesData, router]);
-
-  if (isLoading || !savingsState) {
+  // Loading state
+  if (isLoadingSafes || isLoadingState) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen bg-[#F7F7F2] flex items-center justify-center">
         <LoadingSpinner />
       </div>
     );
   }
 
-  return (
-    <div className="min-h-screen">
-      <div className="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6 md:py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-semibold text-foreground mb-2">
-            Savings
-          </h1>
-          <p className="text-muted-foreground">
-            Grow your wealth with high-yield vaults on Base
-          </p>
+  // Error state
+  if (safesError || !safeAddress) {
+    return (
+      <div className="min-h-screen bg-[#F7F7F2]">
+        <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-16">
+          <Alert className="border-[#101010]/10">
+            <AlertDescription className="text-[#101010]/70">
+              Unable to load savings account. Please try again later.
+            </AlertDescription>
+          </Alert>
         </div>
+      </div>
+    );
+  }
 
-        <div className="space-y-6">
-          {savingsState.enabled && (
-            <Card className="rounded-lg border p-5 transition-all hover:shadow-md border-primary/20 bg-primary/5 p-6">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="font-medium mb-1">Auto-Savings</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Saving {savingsState.allocation}% of deposits
-                      automatically
-                    </p>
-                  </div>
-                  <Link href="/dashboard/savings/settings">
-                    <Button variant="outline" size="sm">
-                      <Settings className="mr-2 h-3 w-3" />
-                      Settings
-                    </Button>
-                  </Link>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {!savingsState.enabled && (
-            <div className="w-full flex justify-center">
-              {!isEarnModuleInitialized ? (
-                <Card className="max-w-md">
-                  <CardHeader className="text-center">
-                    <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-                      <Wallet className="h-6 w-6 text-primary" />
-                    </div>
-                    <CardTitle>Set Up Your Savings Account</CardTitle>
-                    <CardDescription>
-                      Enable automatic savings with high-yield returns
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="text-center space-y-2">
-                      <p className="text-sm text-muted-foreground">
-                        Your savings will earn{' '}
-                        {savingsState?.apy?.toFixed(2) || '8.00'}% APY in the
-                        Seamless vault
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        Withdraw anytime with no penalties
-                      </p>
-                    </div>
-                    {isDemoMode ? (
-                      <Button
-                        className="w-full"
-                        onClick={() =>
-                          alert('Demo: Savings account would be opened here')
-                        }
-                      >
-                        Open Savings Account
-                      </Button>
-                    ) : (
-                      <OpenSavingsAccountButton
-                        safeAddress={safeAddress as Address}
-                        onSuccess={() => {
-                          setTimeout(() => {
-                            window.location.reload();
-                          }, 2000);
-                        }}
-                      />
-                    )}
-                  </CardContent>
-                </Card>
-              ) : (
-                <Card className="max-w-md">
-                  <CardHeader className="text-center">
-                    <CardTitle>Enable Auto-Savings</CardTitle>
-                    <CardDescription>
-                      Set up automatic savings to grow your wealth
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="text-center">
-                    <p className="text-sm text-muted-foreground mb-4">
-                      Configure your auto-savings preferences in settings
-                    </p>
-                    <Link href="/dashboard/savings/settings">
-                      <Button>
-                        <Settings className="mr-2 h-4 w-4" />
-                        Go to Settings
-                      </Button>
-                    </Link>
-                  </CardContent>
-                </Card>
-              )}
+  return (
+    <div className="min-h-screen bg-[#F7F7F2]">
+      {/* Header Section */}
+      <div className="border-b border-[#101010]/10 bg-white">
+        <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="uppercase tracking-[0.14em] text-[11px] sm:text-[12px] text-[#101010]/60">
+                High-Yield Savings
+              </p>
+              <h1 className="mt-2 font-serif text-[28px] sm:text-[36px] leading-[1.1] tracking-[-0.01em] text-[#101010]">
+                Earn 8% APY
+              </h1>
             </div>
-          )}
+            <Link
+              href="/dashboard/tools/earn-module"
+              className="text-[14px] text-[#1B29FF] hover:text-[#1420CC] underline decoration-[#1B29FF]/30 underline-offset-[4px] transition-colors"
+            >
+              Advanced Settings →
+            </Link>
+          </div>
+        </div>
+      </div>
 
-          {isEarnModuleInitialized && (
-            <div className="space-y-4">
-              {!savingsState.enabled && (
-                <Alert className="border-0 bg-muted/50 mb-4">
-                  <Info className="h-4 w-4" />
-                  <AlertDescription>
-                    Enable auto-savings to automatically save a portion of your
-                    deposits
-                  </AlertDescription>
-                </Alert>
-              )}
+      {/* Main Content */}
+      <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
+        {/* Not Initialized State */}
+        {!isEarnModuleInitialized ? (
+          <div className="border border-[#101010]/10 bg-white rounded-md p-8 text-center">
+            <Wallet className="h-12 w-12 text-[#101010]/40 mx-auto mb-4" />
+            <h2 className="text-[20px] font-medium text-[#101010] mb-2">
+              Activate Your Savings Account
+            </h2>
+            <p className="text-[14px] text-[#101010]/70 mb-6 max-w-[400px] mx-auto">
+              Start earning 8% APY on your idle cash. No minimum balance, no
+              lock-ups.
+            </p>
+            <OpenSavingsAccountButton />
+          </div>
+        ) : (
+          <div className="space-y-6">
+            {/* Balance Overview */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-px bg-[#101010]/10">
+              {/* Current Balance */}
+              <div className="bg-white p-6">
+                <p className="uppercase tracking-[0.14em] text-[12px] text-[#101010]/60">
+                  Total Balance
+                </p>
+                <p className="mt-2 text-[32px] sm:text-[40px] font-medium tabular-nums text-[#101010]">
+                  {formatUsd(totalPositionValue)}
+                </p>
+                {totalPositionValue > 0 && (
+                  <AnimatedYieldBadge
+                    principal={totalPositionValue}
+                    apy={8}
+                    className="mt-2"
+                  />
+                )}
+              </div>
 
-              {/* Animated Yield Counter Card */}
-              {totalSaved > 0 && (
-                <div className="rounded-2xl bg-[#0040FF]/10 ring-1 ring-[#DDE7FF] p-6 md:p-8">
-                  <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-slate-900 text-xl md:text-2xl font-semibold tracking-tight">
-                      Your Yield Performance
-                    </h2>
-                    <div className="inline-flex items-center gap-2 rounded-full bg-emerald-50 ring-1 ring-emerald-200 px-3 py-1">
-                      <span className="size-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                      <span className="text-emerald-700 text-sm font-medium">
-                        Live
-                      </span>
-                    </div>
-                  </div>
+              {/* APY */}
+              <div className="bg-white p-6">
+                <p className="uppercase tracking-[0.14em] text-[12px] text-[#101010]/60">
+                  Current APY
+                </p>
+                <p className="mt-2 text-[32px] sm:text-[40px] font-medium tabular-nums text-[#1B29FF]">
+                  8.0%
+                </p>
+                <p className="mt-2 text-[13px] text-[#101010]/70">
+                  Compounding daily
+                </p>
+              </div>
 
-                  {/* Total Earned Slab */}
-                  <div className="rounded-xl bg-white ring-1 ring-slate-200 overflow-hidden mb-4">
-                    <div className="bg-[radial-gradient(75%_120%_at_0%_0%,#ECFDF5_0%,white_45%)] p-5 md:p-7">
-                      <p className="text-sm text-slate-600 mb-2">
-                        Total Earned
-                      </p>
-                      <p className="text-3xl md:text-4xl font-semibold text-emerald-700 font-mono tabular-nums tracking-tight">
-                        +{formatUsdWithPrecision(totalEarned, 2)}
-                      </p>
-                    </div>
-                  </div>
+              {/* Daily Earnings */}
+              <div className="bg-white p-6">
+                <p className="uppercase tracking-[0.14em] text-[12px] text-[#101010]/60">
+                  Daily Earnings
+                </p>
+                <p className="mt-2 text-[32px] sm:text-[40px] font-medium tabular-nums text-[#1B29FF]">
+                  {formatUsd((totalPositionValue * 0.08) / 365)}
+                </p>
+                <p className="mt-2 text-[13px] text-[#101010]/70">
+                  Auto-compounded
+                </p>
+              </div>
+            </div>
 
-                  {/* Metric Rows */}
-                  <div className="divide-y divide-slate-100 rounded-xl bg-white ring-1 ring-slate-200">
-                    <div className="flex items-center justify-between px-4 md:px-5 py-3 hover:bg-emerald-50/40 transition-colors">
-                      <span className="text-slate-700">Principal Amount</span>
-                      <span className="font-mono tabular-nums text-slate-900 font-medium">
-                        {formatUsd(totalSaved)}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between px-4 md:px-5 py-3 hover:bg-emerald-50/40 transition-colors">
-                      <span className="text-slate-700">Daily Earnings</span>
-                      <span className="font-mono tabular-nums text-emerald-700 font-medium">
-                        +
-                        {formatUsdWithPrecision(
-                          (totalSaved * (vaultsVM[0]?.apy || 8.0)) / 100 / 365,
-                          2,
-                        )}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between px-4 md:px-5 py-3 hover:bg-emerald-50/40 transition-colors">
-                      <span className="text-slate-700">Monthly Earnings</span>
-                      <span className="font-mono tabular-nums text-emerald-700 font-medium">
-                        +
-                        {formatUsdWithPrecision(
-                          (totalSaved * (vaultsVM[0]?.apy || 8.0)) / 100 / 12,
-                          2,
-                        )}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between px-4 md:px-5 py-3 hover:bg-emerald-50/40 transition-colors">
-                      <span className="text-slate-700">Yearly Projection</span>
-                      <span className="font-mono tabular-nums text-emerald-700 font-semibold">
-                        +
-                        {formatUsd(
-                          (totalSaved * (vaultsVM[0]?.apy || 8.0)) / 100,
-                        )}
-                      </span>
-                    </div>
-                  </div>
+            {/* Live Yield Counter */}
+            {totalPositionValue > 0 && (
+              <div className="border border-[#101010]/10 bg-white rounded-md p-6">
+                <p className="uppercase tracking-[0.14em] text-[12px] text-[#101010]/60 mb-4">
+                  Live Yield Accumulation
+                </p>
+                <AnimatedYieldCounter
+                  principal={totalPositionValue}
+                  apy={8}
+                  showDaily={true}
+                  showMonthly={true}
+                  showYearly={true}
+                />
+              </div>
+            )}
 
-                  {/* Current APY Footer */}
-                  <div className="mt-4 text-slate-600 text-sm">
-                    Current APY:{' '}
-                    <span className="font-semibold text-[#0040FF]">
-                      {(vaultsVM[0]?.apy || 8.0).toFixed(2)}%
-                    </span>
-                  </div>
+            {/* Action Buttons */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <button
+                onClick={() => setShowDeposit(true)}
+                className="flex items-center justify-between p-6 border border-[#101010]/10 bg-white rounded-md hover:border-[#1B29FF]/30 transition-colors group"
+              >
+                <div className="text-left">
+                  <p className="text-[16px] font-medium text-[#101010] group-hover:text-[#1B29FF] transition-colors">
+                    Deposit Funds
+                  </p>
+                  <p className="text-[13px] text-[#101010]/70 mt-1">
+                    Add funds to start earning
+                  </p>
                 </div>
-              )}
+                <ArrowDownLeft className="h-5 w-5 text-[#101010]/40 group-hover:text-[#1B29FF] transition-colors" />
+              </button>
 
-              <div className="border-0 shadow-none bg-transparent p-0">
-                <div className="pb-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="text-lg">Vaults</h3>
-                      <p className="text-sm">High-yield USDC vaults on Base</p>
-                    </div>
-                    <Image src={BaseLogo} alt="Base" width={48} />
-                  </div>
+              <button
+                onClick={() => setShowWithdraw(true)}
+                className="flex items-center justify-between p-6 border border-[#101010]/10 bg-white rounded-md hover:border-[#1B29FF]/30 transition-colors group"
+              >
+                <div className="text-left">
+                  <p className="text-[16px] font-medium text-[#101010] group-hover:text-[#1B29FF] transition-colors">
+                    Withdraw Funds
+                  </p>
+                  <p className="text-[13px] text-[#101010]/70 mt-1">
+                    Transfer back to checking
+                  </p>
                 </div>
-                <div className="space-y-3">
-                  {vaultsVM.map((v) => (
+                <ArrowUpRight className="h-5 w-5 text-[#101010]/40 group-hover:text-[#1B29FF] transition-colors" />
+              </button>
+            </div>
+
+            {/* Vault Positions */}
+            {userPositions && userPositions.length > 0 && (
+              <div className="border border-[#101010]/10 bg-white rounded-md">
+                <div className="p-6 border-b border-[#101010]/10">
+                  <p className="uppercase tracking-[0.14em] text-[12px] text-[#101010]/60">
+                    Active Positions
+                  </p>
+                  <h2 className="mt-2 text-[20px] font-medium text-[#101010]">
+                    Yield Sources
+                  </h2>
+                </div>
+                <div className="divide-y divide-[#101010]/10">
+                  {userPositions.map((position, index) => (
                     <div
-                      key={v.id}
-                      className={`rounded-lg border bg-card p-5 transition-all hover:shadow-md ${
-                        v.isAuto
-                          ? 'border-primary/20 bg-primary/5'
-                          : 'border-border'
-                      } ${
-                        expandedAction?.vaultId === v.id
-                          ? 'ring-2 ring-primary/50 shadow-md'
-                          : ''
-                      }`}
+                      key={index}
+                      className="p-6 flex items-center justify-between"
                     >
-                      <div className="flex items-start justify-between mb-4">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <h3 className="font-medium text-base">{v.name}</h3>
-                            {v.isAuto && (
-                              <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
-                                AUTO
-                              </span>
-                            )}
-                            {v.balanceUsd > 0 && (
-                              <AnimatedYieldBadge
-                                principal={v.balanceUsd}
-                                apy={v.apy}
-                                className="scale-90"
-                              />
-                            )}
-                          </div>
-                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                            <span>{v.curator}</span>
-                            <span>•</span>
-                            <span
-                              className={`font-medium ${
-                                v.risk === 'Conservative'
-                                  ? 'text-green-600'
-                                  : v.risk === 'Balanced'
-                                    ? 'text-yellow-600'
-                                    : 'text-red-600'
-                              }`}
-                            >
-                              {v.risk}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-3 gap-4 mb-4">
-                        <div>
-                          <p className="text-xs text-muted-foreground mb-1">
-                            Balance
-                          </p>
-                          <p className="font-semibold text-sm">
-                            {formatUsd(v.balanceUsd)}
-                          </p>
+                      <div className="flex items-center gap-4">
+                        <div className="h-10 w-10 rounded-full bg-[#1B29FF]/10 flex items-center justify-center">
+                          <DollarSign className="h-5 w-5 text-[#1B29FF]" />
                         </div>
                         <div>
-                          <p className="text-xs text-muted-foreground mb-1">
-                            APY
+                          <p className="text-[14px] font-medium text-[#101010]">
+                            {position.vaultName}
                           </p>
-                          <p className="font-semibold text-sm">
-                            {v.apy.toFixed(2)}%
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-muted-foreground mb-1">
-                            Earned
-                          </p>
-                          <p className="font-semibold text-sm text-green-600">
-                            +{formatUsdWithPrecision(v.earnedUsd, 6)}
+                          <p className="text-[13px] text-[#101010]/70">
+                            Earning 8% APY
                           </p>
                         </div>
                       </div>
-
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant={
-                            expandedAction?.vaultId === v.id &&
-                            expandedAction.action === 'deposit'
-                              ? 'default'
-                              : 'outline'
-                          }
-                          size="sm"
-                          className="flex-1"
-                          onClick={() => {
-                            if (isDemoMode) {
-                              alert('Demo: Deposit interface would open here');
-                            } else if (
-                              expandedAction?.vaultId === v.id &&
-                              expandedAction.action === 'deposit'
-                            ) {
-                              setExpandedAction(null);
-                            } else {
-                              setExpandedAction({
-                                vaultId: v.id,
-                                vaultAddress: v.address,
-                                vaultName: v.name,
-                                action: 'deposit',
-                              });
-                            }
-                          }}
-                        >
-                          <ArrowDownToLine className="h-3 w-3 mr-1" />
-                          Deposit
-                        </Button>
-                        {v.balanceUsd > 0 && (
-                          <Button
-                            variant={
-                              expandedAction?.vaultId === v.id &&
-                              expandedAction.action === 'withdraw'
-                                ? 'default'
-                                : 'outline'
-                            }
-                            size="sm"
-                            className="flex-1"
-                            onClick={() => {
-                              if (isDemoMode) {
-                                alert(
-                                  'Demo: Withdraw interface would open here',
-                                );
-                              } else if (
-                                expandedAction?.vaultId === v.id &&
-                                expandedAction.action === 'withdraw'
-                              ) {
-                                setExpandedAction(null);
-                              } else {
-                                setExpandedAction({
-                                  vaultId: v.id,
-                                  vaultAddress: v.address,
-                                  vaultName: v.name,
-                                  action: 'withdraw',
-                                });
-                              }
-                            }}
-                          >
-                            <ArrowUpRight className="h-3 w-3 mr-1" />
-                            Withdraw
-                          </Button>
-                        )}
-                      </div>
-
-                      {!isDemoMode && expandedAction?.vaultId === v.id && (
-                        <div className="mt-4 pt-4 border-t">
-                          {expandedAction.action === 'deposit' ? (
-                            <DepositEarnCard
-                              safeAddress={safeAddress as `0x${string}`}
-                              vaultAddress={v.address as `0x${string}`}
-                              onDepositSuccess={() => {
-                                setExpandedAction(null);
-                              }}
-                            />
-                          ) : (
-                            <WithdrawEarnCard
-                              safeAddress={safeAddress as `0x${string}`}
-                              vaultAddress={v.address as `0x${string}`}
-                              onWithdrawSuccess={() => {
-                                setExpandedAction(null);
-                              }}
-                            />
-                          )}
-                        </div>
-                      )}
+                      <p className="text-[16px] font-medium tabular-nums text-[#101010]">
+                        {formatUsd(position.assetsUsd || 0)}
+                      </p>
                     </div>
                   ))}
                 </div>
               </div>
-            </div>
-          )}
+            )}
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base font-medium">
-                Recent Activity
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {recentTransactions.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-8">
-                  No recent activity
-                </p>
-              ) : (
-                <div className="space-y-3">
-                  {recentTransactions.map((tx) => (
-                    <div
-                      key={tx.id}
-                      className="flex items-center justify-between py-2 border-b last:border-0"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div
-                          className={`p-2 rounded-full ${
-                            tx.type === 'deposit'
-                              ? 'bg-green-100 text-green-700'
-                              : 'bg-orange-100 text-orange-700'
-                          }`}
-                        >
-                          {tx.type === 'deposit' ? (
-                            <ArrowDownLeft className="h-4 w-4" />
-                          ) : (
-                            <ArrowUpRight className="h-4 w-4" />
-                          )}
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium">
-                            {tx.type === 'deposit' ? 'Auto-save' : 'Withdrawal'}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {new Date(tx.timestamp).toLocaleString()}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p
-                          className={`text-sm font-medium ${
-                            tx.type === 'deposit'
-                              ? 'text-green-700'
-                              : 'text-orange-700'
-                          }`}
-                        >
-                          {tx.type === 'deposit' ? '+' : '-'}
-                          {formatUsdWithPrecision(
-                            tx.type === 'deposit' && tx.skimmedAmount
-                              ? tx.skimmedAmount
-                              : tx.amount,
-                          )}
-                        </p>
-                        {tx.type === 'deposit' && tx.skimmedAmount && (
-                          <p className="text-xs text-muted-foreground">
-                            From {formatUsd(tx.amount)} deposit
-                          </p>
-                        )}
-                        {tx.type === 'withdrawal' &&
-                          tx.status === 'pending' && (
-                            <p className="text-xs text-amber-600">Pending</p>
-                          )}
-                      </div>
-                    </div>
-                  ))}
+            {/* Info Section */}
+            <div className="border border-[#101010]/10 bg-[#F6F5EF] rounded-md p-6">
+              <div className="flex gap-3">
+                <Info className="h-5 w-5 text-[#101010]/60 flex-shrink-0 mt-0.5" />
+                <div className="space-y-2">
+                  <p className="text-[14px] text-[#101010]/80">
+                    Your funds are automatically allocated to vetted DeFi
+                    protocols earning stable yields. Withdraw anytime with no
+                    penalties.
+                  </p>
+                  <Link
+                    href="/dashboard/tools/earn-module"
+                    className="inline-flex items-center text-[14px] text-[#1B29FF] hover:text-[#1420CC] transition-colors"
+                  >
+                    Learn more about yield sources →
+                  </Link>
                 </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
+
+      {/* Modals */}
+      {showDeposit && (
+        <DepositEarnCard
+          onClose={() => setShowDeposit(false)}
+          safeAddress={safeAddress as Address}
+        />
+      )}
+      {showWithdraw && (
+        <WithdrawEarnCard
+          onClose={() => setShowWithdraw(false)}
+          safeAddress={safeAddress as Address}
+        />
+      )}
     </div>
   );
 }
