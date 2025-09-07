@@ -80,6 +80,15 @@ interface AlignDirectDetailsType {
 export default function AdminPanel() {
   const [adminToken, setAdminToken] = useState('');
   const [isTokenValid, setIsTokenValid] = useState(false);
+
+  // Load admin token from session storage on mount
+  useEffect(() => {
+    const storedToken = sessionStorage.getItem('adminToken');
+    if (storedToken) {
+      setAdminToken(storedToken);
+      setIsTokenValid(true);
+    }
+  }, []);
   const [userToDelete, setUserToDelete] = useState<{
     privyDid: string;
     email: string;
@@ -314,6 +323,8 @@ export default function AdminPanel() {
       toast.error('Please enter an admin token');
       return;
     }
+    // Store admin token in session storage
+    sessionStorage.setItem('adminToken', adminToken);
     setIsTokenValid(true); // This will trigger the users query via `enabled` flag
   };
 
@@ -439,6 +450,21 @@ export default function AdminPanel() {
         </Card>
       ) : (
         <>
+          {/* Admin Logout Button */}
+          <div className="flex justify-end mb-4">
+            <Button
+              variant="outline"
+              onClick={() => {
+                sessionStorage.removeItem('adminToken');
+                setAdminToken('');
+                setIsTokenValid(false);
+                toast.success('Logged out successfully');
+              }}
+            >
+              Logout Admin
+            </Button>
+          </div>
+
           {/* Platform Stats */}
           <Card className="mb-8">
             <CardHeader>
@@ -853,6 +879,24 @@ export default function AdminPanel() {
                                         Select a user and open dialog to fetch
                                         details.
                                       </p>
+                                    )}
+
+                                    {/* Full JSON Display Section */}
+                                    {alignDirectDetails && (
+                                      <div className="mt-6 space-y-2">
+                                        <h4 className="font-semibold text-sm">
+                                          Raw JSON Data (Full Response)
+                                        </h4>
+                                        <div className="bg-gray-50 border border-gray-200 rounded-md p-3 max-h-96 overflow-auto">
+                                          <pre className="text-xs text-gray-700 whitespace-pre-wrap">
+                                            {JSON.stringify(
+                                              alignDirectDetails,
+                                              null,
+                                              2,
+                                            )}
+                                          </pre>
+                                        </div>
+                                      </div>
                                     )}
                                   </div>
 

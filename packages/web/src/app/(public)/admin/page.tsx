@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import AdminPanel from '@/components/admin/admin-panel';
 import KycKanbanBoard from '@/components/admin/kyc-kanban-board';
 import { Button } from '@/components/ui/button';
@@ -23,6 +23,15 @@ export default function AdminPage() {
   const [activeView, setActiveView] = useState<'table' | 'kanban'>('table');
   const [isSyncing, setIsSyncing] = useState(false);
 
+  // Load admin token from session storage on mount
+  useEffect(() => {
+    const storedToken = sessionStorage.getItem('adminToken');
+    if (storedToken) {
+      setAdminToken(storedToken);
+      setIsTokenValid(true);
+    }
+  }, []);
+
   const {
     data: usersData,
     isLoading: isLoadingUsers,
@@ -42,6 +51,8 @@ export default function AdminPage() {
       toast.error('Please enter an admin token');
       return;
     }
+    // Store admin token in session storage
+    sessionStorage.setItem('adminToken', adminToken);
     setIsTokenValid(true);
   };
 
@@ -136,8 +147,10 @@ export default function AdminPage() {
           <Button
             variant="outline"
             onClick={() => {
+              sessionStorage.removeItem('adminToken');
               setIsTokenValid(false);
               setAdminToken('');
+              toast.success('Logged out successfully');
             }}
           >
             Log Out
