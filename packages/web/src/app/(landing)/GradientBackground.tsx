@@ -29,8 +29,8 @@ export function GradientBackground({
     colorBack: 'rgba(246, 245, 239, 0)', // Transparent background
     softness: 0.3, // Softer edges for better blending
     intensity: 0.1, // Slightly more intense
-    noise: 0.20, // Less noise for cleaner look
-    shape: variant === 'hero' ? 'blob' : 'wave' as const,
+    noise: 0.2, // Less noise for cleaner look
+    shape: (variant === 'hero' ? 'blob' : 'wave') as 'blob' | 'wave',
     scale: variant === 'hero' ? 1.8 : 1.5, // Larger scale to cover more area
     speed: variant === 'hero' ? 0.2 : 0.8, // Increased speed for more visible animation
     style: {
