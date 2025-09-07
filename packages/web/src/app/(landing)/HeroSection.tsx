@@ -2,29 +2,15 @@
 
 import React from 'react';
 import Link from 'next/link';
-import dynamic from 'next/dynamic';
+import { GradientBackground } from './GradientBackground';
 import { BrowserFrame } from '@/components/BrowserFrame';
-
-// Dynamic import with SSR disabled for Three.js
-const ThreeBackground = dynamic(
-  () =>
-    import('./ThreeBackground').then((mod) => ({
-      default: mod.ThreeBackground,
-    })),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="absolute inset-0 -z-10 bg-gradient-to-br from-blue-50/20 to-transparent" />
-    ),
-  },
-);
 
 export function HeroSection() {
   return (
     <>
       {/* Hero */}
       <section className="relative border-b border-[#101010]/10 bg-[#F6F5EF] overflow-hidden min-h-[80vh] sm:min-h-[85vh] lg:min-h-[90vh] flex items-center">
-        <ThreeBackground className="z-0" />
+        <GradientBackground variant="hero" />
         <div className="relative z-10 mx-auto max-w-[1200px] px-4 sm:px-6 lg:px-8 py-16 sm:py-20 lg:py-24 w-full">
           <p className="uppercase tracking-[0.14em] sm:tracking-[0.18em] text-[11px] sm:text-[12px] lg:text-[13px] font-medium text-[#101010]/70">
             Insured yield for startups
@@ -58,7 +44,7 @@ export function HeroSection() {
 
       {/* Demo Panel - Bank Statement Style */}
       <section className="relative border-y border-[#101010]/10 bg-white/90 overflow-hidden">
-        <ThreeBackground className="z-0" variant="c" />
+        <GradientBackground variant="demo" />
         <div className="relative z-10 mx-auto max-w-[1200px] px-4 sm:px-6 lg:px-8 py-8 sm:py-12 lg:py-16">
           {/* Demo indicator - subtle and premium */}
           <div className="flex justify-center mb-4">

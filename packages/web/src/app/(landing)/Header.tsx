@@ -6,7 +6,7 @@ import Image from 'next/image';
 
 export function Header() {
   return (
-    <header className="border-b border-[#101010]/10 bg-[#F7F7F2]">
+    <header className="border-b border-[#101010]/10 bg-transparent">
       <div className="mx-auto max-w-[1200px] px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
         <div className="flex items-center justify-between">
           <Link href="/" className="flex items-center ">
