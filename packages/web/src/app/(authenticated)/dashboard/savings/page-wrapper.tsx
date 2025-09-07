@@ -299,7 +299,7 @@ export default function SavingsPageWrapper() {
         ) : (
           <div className="space-y-12">
             {/* Portfolio Overview - Grid Layout */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-px bg-[#101010]/10">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-px bg-[#101010]/10">
               <div className="bg-white p-6">
                 <p className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60 mb-2">
                   Total Balance
@@ -311,7 +311,7 @@ export default function SavingsPageWrapper() {
 
               <div className="bg-white p-6">
                 <p className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60 mb-2">
-                  Total Earned
+                  Earnings (Live)
                 </p>
                 <p className="font-serif text-[28px] sm:text-[32px] leading-[1.1] tabular-nums text-[#1B29FF]">
                   +
@@ -329,15 +329,6 @@ export default function SavingsPageWrapper() {
                 </p>
                 <p className="font-serif text-[28px] sm:text-[32px] leading-[1.1] tabular-nums text-[#1B29FF]">
                   {averageApy.toFixed(1)}%
-                </p>
-              </div>
-
-              <div className="bg-white p-6">
-                <p className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60 mb-2">
-                  Daily Yield
-                </p>
-                <p className="font-serif text-[28px] sm:text-[32px] leading-[1.1] tabular-nums text-[#101010]">
-                  {formatUsd((totalSaved * averageApy) / 100 / 365)}
                 </p>
               </div>
             </div>
