@@ -140,6 +140,14 @@ export default function SavingsPageWrapper() {
 
   // Compute vault view models
   const vaultsVM = useMemo(() => {
+    // Debug log to see what data we're getting
+    if (vaultStatsMany && vaultStatsMany.length > 0) {
+      console.log('Vault Stats:', vaultStatsMany);
+    }
+    if (userPositions && userPositions.length > 0) {
+      console.log('User Positions:', userPositions);
+    }
+
     return BASE_VAULTS.map((v) => {
       const stat = vaultStatsMany?.find(
         (s) => s.vaultAddress.toLowerCase() === v.address.toLowerCase(),
@@ -161,7 +169,22 @@ export default function SavingsPageWrapper() {
       // If APY is less than 1, it's likely a decimal representation, multiply by 100
       const apy = apyRaw < 1 ? apyRaw * 100 : apyRaw;
 
-      const earnedUsd = stat?.yield ? Number(stat.yield) / 1e6 : 0;
+      // Try multiple fields for earned amount
+      // Handle BigInt conversion for yield field
+      let earnedUsd = 0;
+
+      // Use stat?.yield which we know exists
+      if (stat?.yield) {
+        // Handle both BigInt and number types
+        const yieldValue =
+          typeof stat.yield === 'bigint'
+            ? Number(stat.yield) / 1e6
+            : Number(stat.yield) / 1e6;
+        earnedUsd = yieldValue;
+      } else if (balanceUsd > 0 && apy > 0) {
+        // Estimate earned based on balance and APY (assuming 30 days)
+        earnedUsd = (balanceUsd * (apy / 100) * 30) / 365;
+      }
 
       return {
         id: v.id,
