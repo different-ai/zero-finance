@@ -49,6 +49,7 @@ import {
   AnimatedYieldCounter,
   AnimatedYieldBadge,
 } from '@/components/animated-yield-counter';
+import { AnimatedTotalEarned } from '@/components/animated-total-earned';
 
 export default function SavingsPageWrapper() {
   const router = useRouter();
@@ -313,7 +314,12 @@ export default function SavingsPageWrapper() {
                   Total Earned
                 </p>
                 <p className="font-serif text-[28px] sm:text-[32px] leading-[1.1] tabular-nums text-[#1B29FF]">
-                  +{formatUsd(totalEarned)}
+                  +
+                  <AnimatedTotalEarned
+                    initialEarned={totalEarned}
+                    apy={averageApy / 100}
+                    balance={totalSaved}
+                  />
                 </p>
               </div>
 
