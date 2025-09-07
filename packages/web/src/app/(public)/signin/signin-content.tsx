@@ -9,6 +9,7 @@ import Image from 'next/image';
 import { useSearchParams } from 'next/navigation';
 import { usePostHog } from 'posthog-js/react';
 import { api } from '@/trpc/react';
+import { OrangeDAOLogo } from '@/components/orange-dao-logo';
 
 export type SourceType = 'adhd' | 'e-commerce' | 'solo' | null;
 
@@ -55,16 +56,16 @@ export default function SignInContent() {
       {/* Header */}
       <div className="border-b border-[#101010]/10 bg-white">
         <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <Link href="/" className="flex items-center gap-2">
+          <Link href="/" className="flex items-center">
             <Image
               src="/new-logo-bluer.png"
               alt="Zero Finance"
-              width={32}
-              height={32}
-              className="w-8 h-8 object-contain"
+              width={24}
+              height={24}
+              className="w-6 h-6 object-contain"
             />
-            <span className="text-lg font-medium text-[#101010] tracking-tight">
-              Zero Finance
+            <span className="ml-1 text-[14px] font-bold text-[#101010] tracking-tight">
+              finance
             </span>
           </Link>
         </div>
@@ -89,7 +90,7 @@ export default function SignInContent() {
 
             <div className="space-y-4 mb-12">
               {[
-                'FDIC-equivalent insurance coverage',
+                'DeFi-powered high yields',
                 'Same-day ACH transfers',
                 'Works like your existing bank',
                 'Start earning in 2 minutes',
@@ -107,7 +108,7 @@ export default function SignInContent() {
             <div className="grid grid-cols-2 gap-6 pt-8 border-t border-[#101010]/10">
               <div>
                 <p className="text-[24px] font-medium tabular-nums text-[#101010]">
-                  $75M+
+                  $1M+
                 </p>
                 <p className="text-[12px] uppercase tracking-[0.14em] text-[#101010]/60 mt-1">
                   Total Deposits
@@ -115,7 +116,7 @@ export default function SignInContent() {
               </div>
               <div>
                 <p className="text-[24px] font-medium tabular-nums text-[#101010]">
-                  1,000+
+                  100+
                 </p>
                 <p className="text-[12px] uppercase tracking-[0.14em] text-[#101010]/60 mt-1">
                   Active Companies
@@ -196,22 +197,13 @@ export default function SignInContent() {
               </div>
             </div>
 
-            {/* Security badges */}
+            {/* Backed by Orange DAO */}
             <div className="mt-8 pt-8 border-t border-[#101010]/10">
-              <p className="text-[11px] uppercase tracking-[0.14em] text-[#101010]/60 mb-3 text-center">
-                Trusted By
+              <p className="text-[11px] uppercase tracking-[0.14em] text-[#101010]/60 mb-4 text-center">
+                Backed By
               </p>
-              <div className="flex items-center justify-center gap-6 opacity-60">
-                <img
-                  src="/logos/yc-logo.svg"
-                  alt="Y Combinator"
-                  className="h-6 w-auto"
-                />
-                <img
-                  src="/logos/a16z-logo.svg"
-                  alt="a16z"
-                  className="h-6 w-auto"
-                />
+              <div className="flex items-center justify-center">
+                <OrangeDAOLogo className="h-8 w-auto opacity-70" />
               </div>
             </div>
           </div>

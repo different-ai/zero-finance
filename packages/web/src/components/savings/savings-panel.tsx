@@ -104,8 +104,11 @@ export default function SavingsPanel({
   return (
     // add a card around the content
     <div className="w-full space-y-6">
-      <div className="bg-white p-6 rounded-card-lg shadow-premium-subtle">
-        <div className="w-full max-w-lg space-y-6">
+      {/*     display: flex
+;
+    justify-content: center; */}
+      <div className="bg-white p-6 rounded-card-lg shadow-premium-subtle flex justify-center">
+        <div className="w-full space-y-6">
       {/* Header */}
       <div className="text-center">
         <div className="inline-flex items-center justify-center w-14 h-14 bg-primary/10 rounded-full mb-4">

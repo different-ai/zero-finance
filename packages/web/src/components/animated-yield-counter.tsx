@@ -61,18 +61,25 @@ export function AnimatedYieldCounter({
 
     // Animate yield accumulation
     if (!isPaused) {
-      const animate = () => {
+      let lastTime = performance.now();
+
+      const animate = (currentTime: number) => {
+        const deltaTime = currentTime - lastTime;
+        lastTime = currentTime;
+
         setCurrentYield((prev) => {
-          // Add yield for 100ms (0.1 second)
-          const yieldPer100ms = daily / (24 * 60 * 60 * 10);
-          return prev + yieldPer100ms;
+          // Calculate yield per millisecond for smooth animation
+          const yieldPerMs = daily / (24 * 60 * 60 * 1000);
+          // Speed up animation by 10x for better visibility
+          const speedMultiplier = 10;
+          return prev + yieldPerMs * deltaTime * speedMultiplier;
         });
         animationRef.current = requestAnimationFrame(animate);
       };
 
       // Start animation after a short delay
       const timeoutId = setTimeout(() => {
-        animate();
+        animationRef.current = requestAnimationFrame(animate);
       }, 100);
 
       return () => {
@@ -84,11 +91,18 @@ export function AnimatedYieldCounter({
     }
   }, [principal, apy, startDate, isPaused]);
 
-  const formatCurrency = (value: number) => {
+  const formatCurrency = (value: number, useExtraDecimals = false) => {
+    const options = useExtraDecimals
+      ? formatOptions
+      : {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        };
+
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD',
-      ...formatOptions,
+      ...options,
     }).format(value);
   };
 
@@ -98,63 +112,69 @@ export function AnimatedYieldCounter({
 
   return (
     <div className={cn('space-y-3', className)}>
-      {/* Live Yield Counter */}
-      <div className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 rounded-lg p-4">
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-sm font-medium text-green-900 dark:text-green-100">
-            Total Earned
+      {/* Live Yield Counter - Following Design System */}
+      <div className="border border-[#101010]/10 bg-[#F7F7F2] p-6 mb-4">
+        <div className="flex items-center justify-between mb-3">
+          <span className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60">
+            Earnings (Live)
           </span>
           {!isPaused && (
-            <span className="flex items-center gap-1">
+            <span className="flex items-center gap-2">
               <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#1B29FF] opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-[#1B29FF]"></span>
               </span>
-              <span className="text-xs text-green-600 dark:text-green-400">
-                Live
+              <span className="text-[11px] uppercase tracking-wider text-[#1B29FF]">
+                Accumulating
               </span>
             </span>
           )}
         </div>
-        <div className="text-2xl font-bold text-green-600 dark:text-green-400 font-mono">
-          {formatCurrency(currentYield)}
+        <div className="font-serif text-[36px] leading-[1.1] text-[#101010] tabular-nums">
+          {formatCurrency(currentYield, true)}
         </div>
       </div>
 
-      {/* Yield Projections */}
-      <div className="grid gap-2">
+      {/* Yield Projections - Clean Design */}
+      <div className="space-y-3">
         {showDaily && (
-          <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-            <span className="text-sm text-muted-foreground">Daily</span>
-            <span className="text-sm font-semibold font-mono">
+          <div className="flex items-center justify-between py-3 border-b border-[#101010]/10">
+            <span className="text-[14px] text-[#101010]/70">Daily Yield</span>
+            <span className="text-[16px] font-medium tabular-nums text-[#101010]">
               +{formatCurrency(dailyYield)}
             </span>
           </div>
         )}
 
         {showMonthly && (
-          <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-            <span className="text-sm text-muted-foreground">Next Month</span>
-            <span className="text-sm font-semibold font-mono text-green-600 dark:text-green-400">
+          <div className="flex items-center justify-between py-3 border-b border-[#101010]/10">
+            <span className="text-[14px] text-[#101010]/70">
+              30-Day Projection
+            </span>
+            <span className="text-[16px] font-medium tabular-nums text-[#1B29FF]">
               +{formatCurrency(monthlyYield)}
             </span>
           </div>
         )}
 
         {showYearly && (
-          <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-            <span className="text-sm text-muted-foreground">Annual</span>
-            <span className="text-sm font-semibold font-mono">
+          <div className="flex items-center justify-between py-3">
+            <span className="text-[14px] text-[#101010]/70">
+              Annual Projection
+            </span>
+            <span className="text-[16px] font-medium tabular-nums text-[#101010]">
               +{formatCurrency(yearlyYield)}
             </span>
           </div>
         )}
       </div>
 
-      {/* APY Display */}
-      <div className="text-center pt-2 border-t">
-        <span className="text-xs text-muted-foreground">Current APY: </span>
-        <span className="text-sm font-bold text-green-600 dark:text-green-400">
+      {/* APY Display - Design System */}
+      <div className="mt-4 pt-4 border-t border-[#101010]/10 flex items-center justify-between">
+        <span className="text-[12px] uppercase tracking-wider text-[#101010]/60">
+          Current APY
+        </span>
+        <span className="text-[18px] font-medium tabular-nums text-[#1B29FF]">
           {apy.toFixed(2)}%
         </span>
       </div>

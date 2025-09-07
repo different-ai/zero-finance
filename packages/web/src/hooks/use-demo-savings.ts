@@ -102,21 +102,31 @@ export function useDemoUserPositions() {
 
   if (!isDemoMode) return null;
 
+  // Calculate earned amount based on demo balance and time
+  const calculateEarned = (balance: number) => {
+    if (balance === 0) return 0;
+    // Assume 30 days of earnings at 8% APY
+    return (balance * 0.08 * 30) / 365;
+  };
+
   const baseVaults = [
     {
       vaultAddress: '0x616a4E1db48e22028f6bbf20444Cd3b8e3273738',
       vaultName: 'Seamless USDC',
       assetsUsd: demoStep >= 5 ? demoSavingsBalance : 0,
+      earned: demoStep >= 5 ? calculateEarned(demoSavingsBalance) : 0,
     },
     {
       vaultAddress: '0xTreasuryBills',
       vaultName: 'Treasury Bills',
       assetsUsd: 0,
+      earned: 0,
     },
     {
       vaultAddress: '0xBlueChipLending',
       vaultName: 'Blue Chip Lending',
       assetsUsd: 0,
+      earned: 0,
     },
   ];
 

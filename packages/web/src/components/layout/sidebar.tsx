@@ -92,30 +92,26 @@ export function Sidebar() {
   };
 
   return (
-    <aside className="bg-gray-50 flex flex-col h-full relative border-r border-gray-200">
+    <aside className="bg-white flex flex-col h-full relative border-r border-[#101010]/10">
       {/* Logo section */}
-      <Link href="/dashboard" className="block px-6 py-7 group">
-        <div className="flex items-center gap-3 ml-[-10px] justify-center scale-110">
-          {/* add a sort glow from below adds a bit of contrast slightly animated */}
-          <div className="absolute inset-0 bg-[#0040FF]/10 backdrop-blur-sm rounded-md ml-2" />
-          <div className="relative">
-            <div className="flex items-center justify-center  transition-all duration-300 rounded-md p-2">
-              <div className="absolute -inset-1 bg-gradient-to-r  opacity-25 group-hover:opacity-40 transition duration-300 flex items-center justify-center" />
-              <Image
-                src="/new-logo-bluer.png"
-                alt="Zero Finance"
-                width={32}
-                height={32}
-                className="h-8 w-8"
-              />
-              <span className="text-xl text-[#0040FF]">finance</span>
-            </div>
-          </div>
+      <Link
+        href="/dashboard"
+        className="block px-6 py-7 border-b border-[#101010]/10"
+      >
+        <div className="flex items-center gap-2">
+          <Image
+            src="/new-logo-bluer.png"
+            alt="Zero Finance"
+            width={32}
+            height={32}
+            className="h-8 w-8"
+          />
+          <span className="text-xl font-medium text-[#1B29FF]">finance</span>
         </div>
       </Link>
 
       {/* Navigation */}
-      <nav className="px-3 pb-3">
+      <nav className="px-4 py-4">
         <div className="space-y-1">
           {navigationItems.map((item) => {
             const isActive =
@@ -129,12 +125,14 @@ export function Sidebar() {
               return (
                 <div
                   key={item.name}
-                  className="flex items-center gap-3 px-4 py-3 text-gray-400 cursor-not-allowed opacity-50"
+                  className="flex items-center gap-3 px-3 py-2.5 text-[#101010]/40 cursor-not-allowed"
                 >
                   {React.createElement(item.icon, {
                     className: 'h-[18px] w-[18px]',
                   })}
-                  <span className="text-[15px] font-medium">{item.name}</span>
+                  <span className="text-sm uppercase tracking-wider">
+                    {item.name}
+                  </span>
                 </div>
               );
             }
@@ -144,10 +142,10 @@ export function Sidebar() {
                 key={item.name}
                 href={item.href}
                 className={cn(
-                  'group relative flex items-center gap-3 px-4 py-3 rounded-md transition-all duration-200',
+                  'group relative flex items-center gap-3 px-3 py-2.5 transition-all duration-200',
                   isActive
-                    ? 'bg-gradient-to-r from-[#DDE0F2]/40 to-[#DDE0F2]/10 '
-                    : 'hover:bg-white ',
+                    ? 'bg-[#1B29FF] text-white'
+                    : 'hover:bg-[#F7F7F2] text-[#101010]/70 hover:text-[#101010]',
                 )}
                 aria-current={isActive ? 'page' : undefined}
               >
@@ -155,27 +153,20 @@ export function Sidebar() {
                   className: cn(
                     'h-[18px] w-[18px] transition-all duration-200',
                     isActive
-                      ? 'text-[#0040FF]'
-                      : 'text-gray-500 group-hover:text-gray-700',
+                      ? 'text-white'
+                      : 'text-[#101010]/60 group-hover:text-[#101010]',
                   ),
                 })}
                 <span
                   className={cn(
-                    'text-[15px] font-medium transition-all duration-200',
+                    'text-sm uppercase tracking-wider transition-all duration-200',
                     isActive
-                      ? 'text-gray-900'
-                      : 'text-gray-600 group-hover:text-gray-900',
+                      ? 'text-white'
+                      : 'text-[#101010]/70 group-hover:text-[#101010]',
                   )}
                 >
                   {item.name}
                 </span>
-
-                {/* Premium hover effect */}
-                {!isActive && (
-                  <div className="absolute right-4 opacity-0 group-hover:opacity-100 transition-all duration-300">
-                    <div className="h-1.5 w-1.5 bg-gradient-to-r from-[#0040FF] to-[#0040FF]/50 rounded-full" />
-                  </div>
-                )}
               </Link>
             );
           })}
@@ -184,27 +175,23 @@ export function Sidebar() {
 
       {/* Promotional CTA Section */}
       {showPromo && (
-        <div className="mx-3 mb-4 p-4 bg-gradient-to-br from-[#0040FF]/10 to-[#0040FF]/5 rounded-xl border border-[#0040FF]/20 relative overflow-hidden mt-auto">
-          {/* Background decoration */}
-          <div className="absolute top-0 right-0 w-24 h-24 bg-[#0040FF]/30 rounded-full blur-2xl" />
-          <div className="absolute bottom-0 left-0 w-16 h-16 bg-[#0040FF]/30 rounded-full blur-xl" />
-
+        <div className="mx-4 mb-4 p-4 bg-[#F7F7F2] border border-[#101010]/10 relative overflow-hidden mt-auto">
           {/* Close button */}
           <button
             onClick={handleDismissPromo}
-            className="absolute top-2 right-2 p-1 hover:bg-gray-200/50 rounded-md transition-colors"
+            className="absolute top-2 right-2 p-1 hover:bg-[#101010]/5 transition-colors"
             aria-label="Dismiss promotion"
           >
-            <X className="h-4 w-4 text-gray-500" />
+            <X className="h-4 w-4 text-[#101010]/40" />
           </button>
 
           {/* Content */}
           <div className="relative z-10">
-            <h3 className="text-base font-semibold mb-2 flex items-center gap-2 text-gray-900 whitespace-nowrap">
+            <h3 className="text-sm font-medium mb-2 flex items-center gap-2 text-[#101010]">
               Get 0 Finance AI
-              <Sparkles className="h-4 w-4 text-[#0040FF] flex-shrink-0" />
+              <Sparkles className="h-4 w-4 text-[#1B29FF] flex-shrink-0" />
             </h3>
-            <p className="text-sm text-gray-600 mb-4 leading-relaxed">
+            <p className="text-xs text-[#101010]/60 mb-4 leading-relaxed">
               Your own AI CFO. Unlimited categorizations, auto-labeling, and
               more.
             </p>
@@ -212,7 +199,7 @@ export function Sidebar() {
               href="https://buy.polar.sh/polar_cl_FJM7jQ61Kj8vMDH4H1KrcsGdstxyeozSXdgvc2FL0yb"
               target="_blank"
               rel="noopener noreferrer"
-              className="block w-full py-2.5 px-4 bg-[#0040FF] hover:bg-[#0040FF]/80 text-white font-medium rounded-lg transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98] shadow-lg shadow-[#0040FF]/25 text-center"
+              className="block w-full py-2.5 px-4 bg-[#1B29FF] hover:bg-[#1B29FF]/90 text-white text-xs uppercase tracking-wider text-center transition-all duration-200"
             >
               Purchase now
             </a>
@@ -224,63 +211,63 @@ export function Sidebar() {
       <div className="flex-1" />
 
       {/* Bottom utility navigation */}
-      <div className="px-3 pb-3 space-y-1">
+      <div className="px-4 pb-3 space-y-1">
         <button
           onClick={() => window.open('/support', '_blank')}
-          className="w-full flex items-center gap-3 px-4 py-3 rounded-md hover:bg-white transition-colors group"
+          className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-[#F7F7F2] transition-colors group"
         >
-          <Phone className="h-[18px] w-[18px] text-gray-500 group-hover:text-gray-700 transition-colors" />
-          <span className="text-[15px] font-medium text-gray-600 group-hover:text-gray-900 transition-colors">
+          <Phone className="h-[18px] w-[18px] text-[#101010]/60 group-hover:text-[#101010] transition-colors" />
+          <span className="text-sm uppercase tracking-wider text-[#101010]/70 group-hover:text-[#101010] transition-colors">
             Support
           </span>
         </button>
 
         <button
           onClick={() => router.push('/dashboard/feedback')}
-          className="w-full flex items-center gap-3 px-4 py-3 rounded-md hover:bg-white transition-colors group"
+          className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-[#F7F7F2] transition-colors group"
         >
-          <MessageSquare className="h-[18px] w-[18px] text-gray-500 group-hover:text-gray-700 transition-colors" />
-          <span className="text-[15px] font-medium text-gray-600 group-hover:text-gray-900 transition-colors">
+          <MessageSquare className="h-[18px] w-[18px] text-[#101010]/60 group-hover:text-[#101010] transition-colors" />
+          <span className="text-sm uppercase tracking-wider text-[#101010]/70 group-hover:text-[#101010] transition-colors">
             Feedback
           </span>
         </button>
 
         <Link
           href="/dashboard/settings"
-          className="flex items-center gap-3 px-4 py-3 rounded-md hover:bg-white transition-colors group"
+          className="flex items-center gap-3 px-3 py-2.5 hover:bg-[#F7F7F2] transition-colors group"
         >
-          <Settings className="h-[18px] w-[18px] text-gray-500 group-hover:text-gray-700 transition-colors" />
-          <span className="text-[15px] font-medium text-gray-600 group-hover:text-gray-900 transition-colors">
+          <Settings className="h-[18px] w-[18px] text-[#101010]/60 group-hover:text-[#101010] transition-colors" />
+          <span className="text-sm uppercase tracking-wider text-[#101010]/70 group-hover:text-[#101010] transition-colors">
             Settings
           </span>
         </Link>
       </div>
 
       {/* User section */}
-      <div className="border-t border-gray-200 bg-white">
+      <div className="border-t border-[#101010]/10 bg-[#F7F7F2]">
         {authenticated && user && (
           <div className="p-4">
             <div className="relative" ref={dropdownRef}>
               <button
                 onClick={() => setDropdownOpen(!dropdownOpen)}
-                className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 transition-colors"
+                className="w-full flex items-center gap-3 p-3 hover:bg-white/50 transition-colors"
               >
                 <div className="relative">
-                  <div className="h-10 w-10 rounded-sm bg-gradient-to-br from-[#0040FF]/10 to-[#0040FF]/20 flex items-center justify-center text-white font-medium text-sm ">
+                  <div className="h-10 w-10 bg-[#1B29FF] flex items-center justify-center text-white font-medium text-sm">
                     {user?.email?.address?.[0]?.toUpperCase() || (
                       <User className="h-5 w-5" />
                     )}
                   </div>
-                  <div className="absolute -bottom-0.5 -right-0.5 h-3 w-3 bg-green-500 border-2 border-white" />
+                  <div className="absolute -bottom-0.5 -right-0.5 h-3 w-3 bg-[#1B29FF] border-2 border-white" />
                 </div>
                 <div className="flex-1 text-left">
-                  <p className="text-sm font-medium text-gray-900 truncate">
+                  <p className="text-sm font-medium text-[#101010] truncate">
                     {user?.email?.address?.split('@')[0] || 'User'}
                   </p>
                 </div>
                 <ChevronDown
                   className={cn(
-                    'h-4 w-4 text-gray-400 transition-transform duration-200',
+                    'h-4 w-4 text-[#101010]/40 transition-transform duration-200',
                     dropdownOpen && 'rotate-180',
                   )}
                 />
@@ -288,29 +275,29 @@ export function Sidebar() {
 
               {/* Dropdown menu */}
               {dropdownOpen && (
-                <div className="absolute bottom-full left-0 right-0 mb-2 bg-white border border-gray-200 rounded-xl shadow-lg py-2 z-50">
+                <div className="absolute bottom-full left-0 right-0 mb-2 bg-white border border-[#101010]/10 shadow-lg py-2 z-50">
                   <Link
                     href="/dashboard"
-                    className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                    className="flex items-center gap-3 px-4 py-2.5 text-sm text-[#101010]/70 hover:bg-[#F7F7F2] hover:text-[#101010] transition-colors"
                     onClick={() => setDropdownOpen(false)}
                   >
-                    <LayoutDashboard className="h-4 w-4 text-gray-400" />
+                    <LayoutDashboard className="h-4 w-4 text-[#101010]/40" />
                     Dashboard
                   </Link>
                   <Link
                     href="/dashboard/settings"
-                    className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                    className="flex items-center gap-3 px-4 py-2.5 text-sm text-[#101010]/70 hover:bg-[#F7F7F2] hover:text-[#101010] transition-colors"
                     onClick={() => setDropdownOpen(false)}
                   >
-                    <Settings className="h-4 w-4 text-gray-400" />
+                    <Settings className="h-4 w-4 text-[#101010]/40" />
                     Settings
                   </Link>
-                  <div className="border-t border-gray-100 my-2"></div>
+                  <div className="border-t border-[#101010]/10 my-2"></div>
                   <button
                     onClick={handleLogout}
-                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors text-left"
+                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-[#101010]/70 hover:bg-[#F7F7F2] hover:text-[#101010] transition-colors text-left"
                   >
-                    <LogOut className="h-4 w-4 text-gray-400" />
+                    <LogOut className="h-4 w-4 text-[#101010]/40" />
                     Sign Out
                   </button>
                 </div>

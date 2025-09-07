@@ -87,11 +87,8 @@ export default async function DashboardPage() {
       {/* Header Section */}
       <div className="border-b border-[#101010]/10 bg-white">
         <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <p className="uppercase tracking-[0.14em] text-[11px] sm:text-[12px] text-[#101010]/60">
+          <h1 className="font-serif text-[28px] sm:text-[36px] leading-[1.1] tracking-[-0.01em] text-[#101010]">
             Dashboard
-          </p>
-          <h1 className="mt-2 font-serif text-[28px] sm:text-[36px] leading-[1.1] tracking-[-0.01em] text-[#101010]">
-            Your Business Account
           </h1>
         </div>
       </div>
@@ -121,8 +118,6 @@ export default async function DashboardPage() {
               <TransactionTabsDemo />
             </Suspense>
           </div>
-
-         
         </div>
       </div>
     </div>

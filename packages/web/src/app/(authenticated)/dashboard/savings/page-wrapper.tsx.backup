@@ -140,14 +140,6 @@ export default function SavingsPageWrapper() {
 
   // Compute vault view models
   const vaultsVM = useMemo(() => {
-    // Debug log to see what data we're getting
-    if (vaultStatsMany && vaultStatsMany.length > 0) {
-      console.log('Vault Stats:', vaultStatsMany);
-    }
-    if (userPositions && userPositions.length > 0) {
-      console.log('User Positions:', userPositions);
-    }
-
     return BASE_VAULTS.map((v) => {
       const stat = vaultStatsMany?.find(
         (s) => s.vaultAddress.toLowerCase() === v.address.toLowerCase(),
@@ -169,22 +161,7 @@ export default function SavingsPageWrapper() {
       // If APY is less than 1, it's likely a decimal representation, multiply by 100
       const apy = apyRaw < 1 ? apyRaw * 100 : apyRaw;
 
-      // Try multiple fields for earned amount
-      // Handle BigInt conversion for yield field
-      let earnedUsd = 0;
-
-      // Use stat?.yield which we know exists
-      if (stat?.yield) {
-        // Handle both BigInt and number types
-        const yieldValue =
-          typeof stat.yield === 'bigint'
-            ? Number(stat.yield) / 1e6
-            : Number(stat.yield) / 1e6;
-        earnedUsd = yieldValue;
-      } else if (balanceUsd > 0 && apy > 0) {
-        // Estimate earned based on balance and APY (assuming 30 days)
-        earnedUsd = (balanceUsd * (apy / 100) * 30) / 365;
-      }
+      const earnedUsd = stat?.yield ? Number(stat.yield) / 1e6 : 0;
 
       return {
         id: v.id,
@@ -271,11 +248,10 @@ export default function SavingsPageWrapper() {
             High-Yield Savings
           </p>
           <h1 className="mt-2 font-serif text-[32px] sm:text-[48px] lg:text-[56px] leading-[1.1] tracking-[-0.01em] text-[#101010]">
-            Earn up to 10% APY
+            Earn up to {averageApy.toFixed(1)}% APY
           </h1>
           <p className="mt-3 text-[14px] sm:text-[16px] leading-[1.5] text-[#101010]/80 max-w-[65ch]">
-            Deposit your idle cash into vetted DeFi vaults. No lock-ups,
-            withdraw anytime.
+            Deposit your idle cash into vetted DeFi vaults. No lock-ups, withdraw anytime.
           </p>
         </div>
       </div>
@@ -307,7 +283,7 @@ export default function SavingsPageWrapper() {
                   {formatUsd(totalSaved)}
                 </p>
               </div>
-
+              
               <div className="bg-white p-6">
                 <p className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60 mb-2">
                   Total Earned
@@ -316,7 +292,7 @@ export default function SavingsPageWrapper() {
                   +{formatUsd(totalEarned)}
                 </p>
               </div>
-
+              
               <div className="bg-white p-6">
                 <p className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60 mb-2">
                   Average APY
@@ -325,13 +301,13 @@ export default function SavingsPageWrapper() {
                   {averageApy.toFixed(1)}%
                 </p>
               </div>
-
+              
               <div className="bg-white p-6">
                 <p className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60 mb-2">
                   Daily Yield
                 </p>
                 <p className="font-serif text-[28px] sm:text-[32px] leading-[1.1] tabular-nums text-[#101010]">
-                  {formatUsd((totalSaved * averageApy) / 100 / 365)}
+                  {formatUsd((totalSaved * averageApy / 100) / 365)}
                 </p>
               </div>
             </div>
@@ -348,11 +324,6 @@ export default function SavingsPageWrapper() {
                   showDaily={true}
                   showMonthly={true}
                   showYearly={true}
-                  formatOptions={{
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits:
-                      totalSaved < 1000 ? 8 : totalSaved < 10000 ? 6 : 4,
-                  }}
                 />
               </div>
             )}
@@ -401,9 +372,8 @@ export default function SavingsPageWrapper() {
                     <div
                       key={vault.id}
                       className={cn(
-                        'grid grid-cols-12 gap-3 p-4 items-center transition-colors hover:bg-[#F7F7F2]/50',
-                        index !== vaultsVM.length - 1 &&
-                          'border-b border-[#101010]/5',
+                        "grid grid-cols-12 gap-3 p-4 items-center transition-colors hover:bg-[#F7F7F2]/50",
+                        index !== vaultsVM.length - 1 && "border-b border-[#101010]/5"
                       )}
                     >
                       <div className="col-span-5">
@@ -423,13 +393,13 @@ export default function SavingsPageWrapper() {
                           </div>
                         </div>
                       </div>
-
+                      
                       <div className="col-span-2 text-right">
                         <p className="text-[18px] font-medium tabular-nums text-[#1B29FF]">
                           {vault.apy.toFixed(1)}%
                         </p>
                       </div>
-
+                      
                       <div className="col-span-2 text-right">
                         <p className="text-[16px] tabular-nums text-[#101010]">
                           {formatUsd(vault.balanceUsd)}
@@ -440,28 +410,24 @@ export default function SavingsPageWrapper() {
                           </p>
                         )}
                       </div>
-
+                      
                       <div className="col-span-3 flex justify-end gap-1">
                         <button
-                          onClick={() =>
-                            setSelectedVault({
-                              action: 'deposit',
-                              vaultAddress: vault.address,
-                              vaultName: vault.name,
-                            })
-                          }
+                          onClick={() => setSelectedVault({
+                            action: 'deposit',
+                            vaultAddress: vault.address,
+                            vaultName: vault.name,
+                          })}
                           className="px-2.5 py-1 text-[12px] text-white bg-[#1B29FF] hover:bg-[#1420CC] transition-colors"
                         >
                           Deposit
                         </button>
                         <button
-                          onClick={() =>
-                            setSelectedVault({
-                              action: 'withdraw',
-                              vaultAddress: vault.address,
-                              vaultName: vault.name,
-                            })
-                          }
+                          onClick={() => setSelectedVault({
+                            action: 'withdraw',
+                            vaultAddress: vault.address,
+                            vaultName: vault.name,
+                          })}
                           className="px-2.5 py-1 text-[12px] text-[#101010] border border-[#101010]/10 hover:bg-[#F7F7F2] transition-colors"
                         >
                           Withdraw
@@ -487,9 +453,8 @@ export default function SavingsPageWrapper() {
                     <div
                       key={vault.id}
                       className={cn(
-                        'p-4 space-y-3',
-                        index !== vaultsVM.length - 1 &&
-                          'border-b border-[#101010]/5',
+                        "p-4 space-y-3",
+                        index !== vaultsVM.length - 1 && "border-b border-[#101010]/5"
                       )}
                     >
                       {/* Vault Header */}
@@ -533,25 +498,21 @@ export default function SavingsPageWrapper() {
                       {/* Actions */}
                       <div className="flex gap-2 pt-2">
                         <button
-                          onClick={() =>
-                            setSelectedVault({
-                              action: 'deposit',
-                              vaultAddress: vault.address,
-                              vaultName: vault.name,
-                            })
-                          }
+                          onClick={() => setSelectedVault({
+                            action: 'deposit',
+                            vaultAddress: vault.address,
+                            vaultName: vault.name,
+                          })}
                           className="flex-1 px-3 py-2 text-[13px] text-white bg-[#1B29FF] hover:bg-[#1420CC] transition-colors"
                         >
                           Deposit
                         </button>
                         <button
-                          onClick={() =>
-                            setSelectedVault({
-                              action: 'withdraw',
-                              vaultAddress: vault.address,
-                              vaultName: vault.name,
-                            })
-                          }
+                          onClick={() => setSelectedVault({
+                            action: 'withdraw',
+                            vaultAddress: vault.address,
+                            vaultName: vault.name,
+                          })}
                           className="flex-1 px-3 py-2 text-[13px] text-[#101010] border border-[#101010]/10 hover:bg-[#F7F7F2] transition-colors"
                         >
                           Withdraw
@@ -569,7 +530,6 @@ export default function SavingsPageWrapper() {
                       </div>
                     </div>
                   ))}
-                </div>
               </div>
             </div>
 
@@ -632,9 +592,9 @@ export default function SavingsPageWrapper() {
           </DialogHeader>
           {selectedVault.vaultAddress && (
             <DepositEarnCard
+              onClose={closeModal}
               safeAddress={safeAddress as Address}
               vaultAddress={selectedVault.vaultAddress as Address}
-              onDepositSuccess={closeModal}
             />
           )}
         </DialogContent>
@@ -654,9 +614,9 @@ export default function SavingsPageWrapper() {
           </DialogHeader>
           {selectedVault.vaultAddress && (
             <WithdrawEarnCard
+              onClose={closeModal}
               safeAddress={safeAddress as Address}
               vaultAddress={selectedVault.vaultAddress as Address}
-              onWithdrawSuccess={closeModal}
             />
           )}
         </DialogContent>
