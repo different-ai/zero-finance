@@ -13,6 +13,8 @@ import {
   FileText,
   RefreshCw,
   UserPlus,
+  AlertTriangle,
+  Paperclip,
 } from 'lucide-react';
 
 interface AdminUserDisplay {
@@ -51,7 +53,7 @@ export default function KycKanbanBoard({
   onRefresh,
 }: KycKanbanBoardProps) {
   const [expandedColumns, setExpandedColumns] = useState<Set<string>>(
-    new Set(['no_kyc', 'pending', 'approved', 'rejected']),
+    new Set(['no_kyc', 'needs_documents', 'pending', 'approved', 'rejected']),
   );
 
   const toggleColumn = (columnId: string) => {
@@ -120,13 +122,33 @@ export default function KycKanbanBoard({
       users: users?.filter((u) => !u.alignCustomerId && u.kycStatus) || [],
     },
     {
+      id: 'needs_documents',
+      title: 'Needs Documents',
+      icon: <AlertTriangle className="h-4 w-4" />,
+      color: 'text-purple-700',
+      bgColor: 'bg-purple-50',
+      borderColor: 'border-purple-200',
+      users:
+        users?.filter(
+          (u) =>
+            u.kycSubStatus === 'kyc_form_resubmission_required' ||
+            (u.kycStatus === 'pending' &&
+              u.kycSubStatus === 'kyc_form_resubmission_required'),
+        ) || [],
+    },
+    {
       id: 'pending',
-      title: 'Pending',
+      title: 'Under Review',
       icon: <Clock className="h-4 w-4" />,
       color: 'text-yellow-700',
       bgColor: 'bg-yellow-50',
       borderColor: 'border-yellow-200',
-      users: users?.filter((u) => u.kycStatus === 'pending') || [],
+      users:
+        users?.filter(
+          (u) =>
+            u.kycStatus === 'pending' &&
+            u.kycSubStatus !== 'kyc_form_resubmission_required',
+        ) || [],
     },
     {
       id: 'approved',
@@ -228,16 +250,45 @@ export default function KycKanbanBoard({
                     column.users.map((user) => (
                       <Card
                         key={user.privyDid}
-                        className="cursor-pointer hover:shadow-md transition-shadow bg-white"
+                        className={`cursor-pointer hover:shadow-md transition-shadow bg-white ${
+                          user.kycSubStatus === 'kyc_form_resubmission_required'
+                            ? 'ring-2 ring-purple-400'
+                            : ''
+                        }`}
                         onClick={() => onUserClick?.(user)}
                       >
                         <CardContent className="p-3">
                           <div className="space-y-2">
+                            {/* Document Alert Banner */}
+                            {user.kycSubStatus ===
+                              'kyc_form_resubmission_required' && (
+                              <div className="bg-purple-100 border border-purple-300 rounded p-2 flex items-center gap-2">
+                                <AlertTriangle className="h-4 w-4 text-purple-700 flex-shrink-0" />
+                                <div className="flex-1">
+                                  <p className="text-xs font-semibold text-purple-900">
+                                    Additional Documents Required
+                                  </p>
+                                  <p className="text-xs text-purple-700">
+                                    User needs to submit more documents for
+                                    verification
+                                  </p>
+                                </div>
+                              </div>
+                            )}
+
                             <div className="flex items-start justify-between">
                               <div className="min-w-0 flex-1">
-                                <p className="text-sm font-medium text-gray-900 truncate">
-                                  {user.email}
-                                </p>
+                                <div className="flex items-center gap-2">
+                                  <p className="text-sm font-medium text-gray-900 truncate">
+                                    {user.email}
+                                  </p>
+                                  {user.kycSubStatus ===
+                                    'kyc_form_resubmission_required' && (
+                                    <span title="Documents needed">
+                                      <Paperclip className="h-3 w-3 text-purple-600" />
+                                    </span>
+                                  )}
+                                </div>
                                 <p className="text-xs text-gray-500 truncate">
                                   {user.businessName || 'No business name'}
                                 </p>
@@ -246,10 +297,18 @@ export default function KycKanbanBoard({
 
                             {user.kycSubStatus && (
                               <Badge
-                                className={`text-xs ${getSubStatusColor(user.kycSubStatus)}`}
+                                className={`text-xs ${
+                                  user.kycSubStatus ===
+                                  'kyc_form_resubmission_required'
+                                    ? 'bg-purple-100 text-purple-800 border border-purple-300'
+                                    : getSubStatusColor(user.kycSubStatus)
+                                }`}
                                 variant="secondary"
                               >
-                                {getSubStatusLabel(user.kycSubStatus)}
+                                {user.kycSubStatus ===
+                                'kyc_form_resubmission_required'
+                                  ? '⚠️ Needs Documents'
+                                  : getSubStatusLabel(user.kycSubStatus)}
                               </Badge>
                             )}
 
@@ -263,15 +322,25 @@ export default function KycKanbanBoard({
                             </div>
 
                             {user.kycFlowLink && (
-                              <a
-                                href={user.kycFlowLink}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-xs text-blue-600 hover:underline block"
-                                onClick={(e) => e.stopPropagation()}
-                              >
-                                KYC Flow Link →
-                              </a>
+                              <div className="flex items-center gap-2">
+                                <a
+                                  href={user.kycFlowLink}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className={`text-xs hover:underline block flex-1 ${
+                                    user.kycSubStatus ===
+                                    'kyc_form_resubmission_required'
+                                      ? 'text-purple-600 font-semibold'
+                                      : 'text-blue-600'
+                                  }`}
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  {user.kycSubStatus ===
+                                  'kyc_form_resubmission_required'
+                                    ? '📎 Upload Documents →'
+                                    : 'KYC Flow Link →'}
+                                </a>
+                              </div>
                             )}
                           </div>
                         </CardContent>
