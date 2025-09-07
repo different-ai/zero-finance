@@ -113,27 +113,6 @@ export function AnimatedYieldCounter({
   return (
     <div className={cn('space-y-3', className)}>
       {/* Live Yield Counter - Following Design System */}
-      <div className="border border-[#101010]/10 bg-[#F7F7F2] p-6 mb-4">
-        <div className="flex items-center justify-between mb-3">
-          <span className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60">
-            Earnings (Live)
-          </span>
-          {!isPaused && (
-            <span className="flex items-center gap-2">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#1B29FF] opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-[#1B29FF]"></span>
-              </span>
-              <span className="text-[11px] uppercase tracking-wider text-[#1B29FF]">
-                Accumulating
-              </span>
-            </span>
-          )}
-        </div>
-        <div className="font-serif text-[36px] leading-[1.1] text-[#101010] tabular-nums">
-          {formatCurrency(currentYield, true)}
-        </div>
-      </div>
 
       {/* Yield Projections - Clean Design */}
       <div className="space-y-3">
