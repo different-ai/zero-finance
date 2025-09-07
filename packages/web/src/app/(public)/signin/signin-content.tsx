@@ -3,12 +3,11 @@
 import React, { useEffect } from 'react';
 import { usePrivy } from '@privy-io/react-auth';
 import { Button } from '@/components/ui/button';
-import { LogIn, Check, Building2, Mail } from 'lucide-react';
+import { LogIn, Check, Building2, Mail, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useSearchParams } from 'next/navigation';
 import { usePostHog } from 'posthog-js/react';
-import { OrangeDAOLogo } from '@/components/orange-dao-logo';
 import { api } from '@/trpc/react';
 
 export type SourceType = 'adhd' | 'e-commerce' | 'solo' | null;
@@ -52,151 +51,168 @@ export default function SignInContent() {
   };
 
   return (
-    <div className="min-h-screen w-full bg-gradient-to-b from-[#eef4ff] to-[#dfe7ff] flex items-center justify-center p-4 sm:p-6">
-      {/* Background decorations */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-20 left-1/4 w-72 h-72 bg-[#0040FF]/10 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute bottom-20 right-1/4 w-72 h-72 bg-[#0040FF]/10 rounded-full blur-3xl animate-pulse delay-1000"></div>
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-[#DDE0F2]/20 rounded-full blur-3xl"></div>
+    <div className="min-h-screen bg-[#F7F7F2]">
+      {/* Header */}
+      <div className="border-b border-[#101010]/10 bg-white">
+        <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <Link href="/" className="flex items-center gap-2">
+            <Image
+              src="/new-logo-bluer.png"
+              alt="Zero Finance"
+              width={32}
+              height={32}
+              className="w-8 h-8 object-contain"
+            />
+            <span className="text-lg font-medium text-[#101010] tracking-tight">
+              Zero Finance
+            </span>
+          </Link>
+        </div>
       </div>
 
-      <div className="w-full max-w-6xl mx-auto bg-white/90 backdrop-blur-sm rounded-2xl shadow-2xl overflow-hidden border border-white/40 grid grid-cols-1 lg:grid-cols-2 relative">
-        {/* Left side - Simple Marketing Content */}
-        <div className="p-8 lg:p-12 bg-gradient-to-br from-[#0040FF]/5 to-[#DDE0F2]/20 flex flex-col justify-between">
-          <div>
-            {/* Logo */}
-            <Link href="/" className="flex items-center gap-2 mb-8">
-              <Image
-                src="/new-logo-bluer.png"
-                alt="Zero Finance"
-                width={40}
-                height={40}
-                className="w-10 h-10 object-contain"
-              />
-              <span className="text-xl font-semibold text-[#0040FF] tracking-tight">
-                finance
-              </span>
-            </Link>
+      <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 lg:py-20">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-px bg-[#101010]/10 max-w-5xl mx-auto">
+          {/* Left side - Value Proposition */}
+          <div className="bg-white p-8 lg:p-12">
+            <div className="mb-8">
+              <p className="uppercase tracking-[0.14em] text-[12px] text-[#101010]/60 mb-3">
+                Business Savings Account
+              </p>
+              <h1 className="font-serif text-[36px] sm:text-[48px] lg:text-[56px] leading-[0.96] tracking-[-0.015em] text-[#101010] mb-6">
+                Earn <span className="text-[#1B29FF]">8% APY</span>
+              </h1>
+              <p className="text-[16px] leading-[1.5] text-[#101010]/80 max-w-[400px]">
+                High-yield savings for startups. No minimums, no lock-ups, full
+                liquidity.
+              </p>
+            </div>
 
-            {/* Focused value prop */}
-            <h2 className="text-4xl lg:text-5xl font-extrabold leading-tight text-[#0f1e46] mb-6">
-              Earn <span className="text-[#0040FF]">8-10%</span> on business
-              savings
-            </h2>
-            <ul className="space-y-4 mb-8">
+            <div className="space-y-4 mb-12">
               {[
-                'Insured high-yield accounts for business',
-                'Simple ACH transfers - works like your bank',
-                'No minimums, no lock-ups, full liquidity',
+                'FDIC-equivalent insurance coverage',
+                'Same-day ACH transfers',
+                'Works like your existing bank',
+                'Start earning in 2 minutes',
               ].map((item, index) => (
-                <li key={index} className="flex items-start gap-3">
-                  <div className="w-6 h-6 rounded-full bg-[#0040FF]/10 flex items-center justify-center flex-shrink-0 mt-0.5">
-                    <Check className="w-4 h-4 text-[#0040FF]" />
+                <div key={index} className="flex items-start gap-3">
+                  <div className="h-5 w-5 rounded-full bg-[#1B29FF]/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <Check className="h-3 w-3 text-[#1B29FF]" />
                   </div>
-                  <span className="text-[#5a6b91] text-lg">{item}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Backed by Orange DAO */}
-          <div className="mt-6">
-            <p className="text-xs text-[#5a6b91] mb-3 uppercase tracking-wider">
-              Backed by
-            </p>
-            <a
-              href="https://www.orangedao.xyz/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-block opacity-70 hover:opacity-100 transition-opacity"
-            >
-              <OrangeDAOLogo className="h-8 w-auto" />
-            </a>
-          </div>
-        </div>
-
-        {/* Right side - Signin */}
-        <div className="p-8 lg:p-12 bg-white flex flex-col justify-center">
-          {/* Invite badge */}
-          {inviteToken && (
-            <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-              <div className="flex items-start gap-3">
-                <div className="p-2 bg-blue-100 rounded-lg">
-                  <Building2 className="h-5 w-5 text-blue-600" />
+                  <span className="text-[14px] text-[#101010]/70">{item}</span>
                 </div>
-                <div className="flex-1">
-                  <h3 className="font-medium text-blue-900 mb-1">
-                    🎉 You're invited to join a company!
-                  </h3>
-                  {inviteCompany ? (
-                    <div className="space-y-1">
-                      <p className="text-sm text-blue-800 font-medium">
-                        {inviteCompany.name}
-                      </p>
-                      <p className="text-xs text-blue-700 flex items-center gap-1">
-                        <Mail className="h-3 w-3" />
-                        {inviteCompany.email}
-                      </p>
-                      <p className="text-xs text-blue-600">
-                        Sign in to accept this invitation and start creating
-                        invoices
-                      </p>
-                    </div>
-                  ) : (
-                    <p className="text-sm text-blue-700">
-                      Sign in to accept your company invitation
+              ))}
+            </div>
+
+            {/* Stats */}
+            <div className="grid grid-cols-2 gap-6 pt-8 border-t border-[#101010]/10">
+              <div>
+                <p className="text-[24px] font-medium tabular-nums text-[#101010]">
+                  $75M+
+                </p>
+                <p className="text-[12px] uppercase tracking-[0.14em] text-[#101010]/60 mt-1">
+                  Total Deposits
+                </p>
+              </div>
+              <div>
+                <p className="text-[24px] font-medium tabular-nums text-[#101010]">
+                  1,000+
+                </p>
+                <p className="text-[12px] uppercase tracking-[0.14em] text-[#101010]/60 mt-1">
+                  Active Companies
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Right side - Sign In */}
+          <div className="bg-[#F6F5EF] p-8 lg:p-12 flex flex-col justify-center">
+            {/* Invite Section */}
+            {inviteToken && inviteCompany && (
+              <div className="mb-8 p-4 bg-white border border-[#101010]/10 rounded-md">
+                <div className="flex items-start gap-3">
+                  <Building2 className="h-5 w-5 text-[#1B29FF] mt-0.5" />
+                  <div className="flex-1">
+                    <p className="text-[14px] font-medium text-[#101010] mb-1">
+                      Company Invitation
                     </p>
-                  )}
+                    <p className="text-[14px] text-[#101010]/70">
+                      {inviteCompany.name}
+                    </p>
+                    <p className="text-[13px] text-[#101010]/60 flex items-center gap-1 mt-1">
+                      <Mail className="h-3 w-3" />
+                      {inviteCompany.email}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="space-y-6">
+              <div className="text-center">
+                <h2 className="text-[24px] font-medium text-[#101010] mb-2">
+                  {inviteToken ? 'Accept Invitation' : 'Get Started'}
+                </h2>
+                <p className="text-[14px] text-[#101010]/70">
+                  {inviteToken
+                    ? 'Sign in to join your company'
+                    : 'Sign in or create your account'}
+                </p>
+              </div>
+
+              {/* Already authenticated message */}
+              {authenticated && user && (
+                <div className="p-4 bg-white border border-[#101010]/10 rounded-md">
+                  <p className="text-[13px] text-[#101010]/70 text-center">
+                    Signed in as {user.email?.address}. Redirecting...
+                  </p>
+                </div>
+              )}
+
+              {/* Sign In Button */}
+              {!authenticated && (
+                <Button
+                  onClick={handleSignIn}
+                  className="w-full bg-[#1B29FF] hover:bg-[#1420CC] text-white font-medium py-3 px-6 rounded-md transition-colors text-[16px] flex items-center justify-center gap-2"
+                >
+                  <LogIn className="h-5 w-5" />
+                  Sign In / Sign Up
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
+              )}
+
+              <div className="space-y-3">
+                <p className="text-[12px] text-[#101010]/60 text-center">
+                  Secure authentication powered by Privy
+                </p>
+
+                <div className="text-center">
+                  <Link
+                    href={source ? `/${source}` : '/'}
+                    className="text-[14px] text-[#101010]/70 hover:text-[#1B29FF] transition-colors"
+                  >
+                    ← Back to {source ? `${source} page` : 'home'}
+                  </Link>
                 </div>
               </div>
             </div>
-          )}
 
-          <div className="mb-8 text-center">
-            <h1 className="text-3xl font-bold mb-3 text-[#0f1e46]">
-              {inviteToken ? "You've been invited!" : 'Welcome to 0 finance'}
-            </h1>
-            <p className="text-[#5a6b91] text-lg">
-              {inviteToken
-                ? 'Sign in to accept your company invitation'
-                : 'Sign in or create your account'}
-            </p>
-          </div>
-
-          {/* Display user info if somehow authenticated before redirect */}
-          {authenticated && user && (
-            <div className="mb-6 p-4 bg-[#DDE0F2]/20 rounded-lg border border-[#0040FF]/10">
-              <p className="text-sm text-[#5a6b91] text-center">
-                Already signed in as {user.email?.address ?? 'your account'}.
-                Redirecting to dashboard...
+            {/* Security badges */}
+            <div className="mt-8 pt-8 border-t border-[#101010]/10">
+              <p className="text-[11px] uppercase tracking-[0.14em] text-[#101010]/60 mb-3 text-center">
+                Trusted By
               </p>
-            </div>
-          )}
-
-          {!authenticated && (
-            <Button
-              onClick={handleSignIn}
-              className="w-full bg-[#0040FF] hover:bg-[#0040FF]/90 text-white font-semibold py-4 px-8 rounded-lg transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] shadow-lg shadow-[#0040FF]/25 text-lg flex items-center justify-center gap-2"
-            >
-              <LogIn className="w-5 h-5" />
-              Sign In / Sign Up
-            </Button>
-          )}
-
-          <div className="mt-6 text-center">
-            <p className="text-sm text-[#5a6b91]">
-              Secure authentication powered by Privy
-            </p>
-            <div className="mt-4">
-              <Link
-                href={source ? `/${source}` : '/'}
-                className="text-[#5a6b91] hover:text-[#0040FF] transition-colors font-medium"
-              >
-                ← Back to{' '}
-                {source
-                  ? `${source.charAt(0).toUpperCase() + source.slice(1)} page`
-                  : 'Home'}
-              </Link>
+              <div className="flex items-center justify-center gap-6 opacity-60">
+                <img
+                  src="/logos/yc-logo.svg"
+                  alt="Y Combinator"
+                  className="h-6 w-auto"
+                />
+                <img
+                  src="/logos/a16z-logo.svg"
+                  alt="a16z"
+                  className="h-6 w-auto"
+                />
+              </div>
             </div>
           </div>
         </div>

@@ -74,7 +74,16 @@ async function checkAndUpdateKycStatus(
   alignCustomerId: string,
   userId: string,
   currentStatus: string,
-): Promise<{ statusChanged: boolean; oldStatus: string; newStatus: string }> {
+  currentSubStatus?: string | null,
+): Promise<{
+  statusChanged: boolean;
+  subStatusChanged: boolean;
+  oldStatus: string;
+  newStatus: string;
+  oldSubStatus?: string | null;
+  newSubStatus?: string | null;
+  kycFlowLink?: string | null;
+}> {
   try {
     const customer = await alignApi.getCustomer(alignCustomerId);
     const latestKyc =
@@ -86,17 +95,27 @@ async function checkAndUpdateKycStatus(
       );
       return {
         statusChanged: false,
+        subStatusChanged: false,
         oldStatus: currentStatus,
         newStatus: currentStatus,
+        oldSubStatus: currentSubStatus,
+        newSubStatus: currentSubStatus,
       };
     }
 
-    // Skip if status hasn't changed
-    if (latestKyc.status === currentStatus) {
+    // Check if either status or sub_status has changed
+    const statusChanged = latestKyc.status !== currentStatus;
+    const subStatusChanged = latestKyc.sub_status !== currentSubStatus;
+
+    // Skip if nothing has changed
+    if (!statusChanged && !subStatusChanged) {
       return {
         statusChanged: false,
+        subStatusChanged: false,
         oldStatus: currentStatus,
         newStatus: currentStatus,
+        oldSubStatus: currentSubStatus,
+        newSubStatus: currentSubStatus,
       };
     }
 
@@ -112,13 +131,17 @@ async function checkAndUpdateKycStatus(
       .where(eq(users.privyDid, userId));
 
     console.log(
-      `[kyc-processor] Updated KYC status for user ${userId}: ${currentStatus} -> ${latestKyc.status}`,
+      `[kyc-processor] Updated KYC for user ${userId}: status ${currentStatus} -> ${latestKyc.status}, sub_status ${currentSubStatus} -> ${latestKyc.sub_status}`,
     );
 
     return {
-      statusChanged: true,
+      statusChanged,
+      subStatusChanged,
       oldStatus: currentStatus,
       newStatus: latestKyc.status,
+      oldSubStatus: currentSubStatus,
+      newSubStatus: latestKyc.sub_status,
+      kycFlowLink: latestKyc.kyc_flow_link,
     };
   } catch (error) {
     console.error(
@@ -135,15 +158,29 @@ async function checkAndUpdateKycStatus(
 async function sendKycNotification(
   userId: string,
   email: string,
+  notificationType: 'approved' | 'resubmission_required' = 'approved',
+  kycFlowLink?: string | null,
 ): Promise<{ success: boolean; message?: string }> {
+  const eventName =
+    notificationType === 'approved'
+      ? LoopsEvent.KYC_APPROVED
+      : LoopsEvent.KYC_REQUIRES_MORE_DOCUMENTS;
+
+  const eventProperties: Record<string, any> = {
+    kycProvider: 'align',
+  };
+
+  if (notificationType === 'approved') {
+    eventProperties.completedAt = new Date().toISOString();
+  } else if (notificationType === 'resubmission_required' && kycFlowLink) {
+    eventProperties.url = kycFlowLink;
+  }
+
   const response = await loopsApi.sendEvent(
     email,
-    LoopsEvent.KYC_APPROVED,
+    eventName,
     userId,
-    {
-      kycProvider: 'align',
-      completedAt: new Date().toISOString(),
-    },
+    eventProperties,
   );
 
   if (response.success) {
@@ -207,11 +244,12 @@ async function processKycUpdatesAndNotifications(): Promise<
           user.alignCustomerId,
           user.privyDid,
           user.kycStatus || 'none',
+          user.kycSubStatus,
         );
 
-        if (statusUpdate.statusChanged) {
+        if (statusUpdate.statusChanged || statusUpdate.subStatusChanged) {
           console.log(
-            `[kyc-processor] Status changed for ${user.privyDid}: ${statusUpdate.oldStatus} -> ${statusUpdate.newStatus}`,
+            `[kyc-processor] Status changed for ${user.privyDid}: status ${statusUpdate.oldStatus} -> ${statusUpdate.newStatus}, sub_status ${statusUpdate.oldSubStatus} -> ${statusUpdate.newSubStatus}`,
           );
 
           results.push({
@@ -223,7 +261,7 @@ async function processKycUpdatesAndNotifications(): Promise<
             success: true,
           });
 
-          // If newly approved, send notification immediately
+          // If newly approved, send approval notification
           if (
             statusUpdate.oldStatus !== 'approved' &&
             statusUpdate.newStatus === 'approved'
@@ -231,6 +269,7 @@ async function processKycUpdatesAndNotifications(): Promise<
             const notificationResult = await sendKycNotification(
               user.privyDid,
               email,
+              'approved',
             );
 
             results.push({
@@ -242,7 +281,33 @@ async function processKycUpdatesAndNotifications(): Promise<
             });
 
             console.log(
-              `[kyc-processor] ${notificationResult.success ? '✅' : '❌'} Notification for newly approved user ${user.privyDid}`,
+              `[kyc-processor] ${notificationResult.success ? '✅' : '❌'} Approval notification for user ${user.privyDid}`,
+            );
+          }
+
+          // If sub_status changed to resubmission_required, send resubmission notification
+          if (
+            statusUpdate.newStatus === 'pending' &&
+            statusUpdate.newSubStatus === 'kyc_form_resubmission_required' &&
+            statusUpdate.oldSubStatus !== 'kyc_form_resubmission_required'
+          ) {
+            const notificationResult = await sendKycNotification(
+              user.privyDid,
+              email,
+              'resubmission_required',
+              statusUpdate.kycFlowLink,
+            );
+
+            results.push({
+              userId: user.privyDid,
+              email,
+              action: 'notification_sent',
+              success: notificationResult.success,
+              error: notificationResult.message,
+            });
+
+            console.log(
+              `[kyc-processor] ${notificationResult.success ? '✅' : '❌'} Resubmission notification for user ${user.privyDid}`,
             );
           }
         } else {
@@ -305,6 +370,7 @@ async function processKycUpdatesAndNotifications(): Promise<
         const notificationResult = await sendKycNotification(
           user.privyDid,
           email,
+          'approved',
         );
 
         results.push({

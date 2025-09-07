@@ -1,11 +1,10 @@
-import { z } from 'zod';
-
 const LOOPS_API_KEY = process.env.LOOPS_API_KEY;
 const LOOPS_API_BASE_URL = 'https://app.loops.so/api/v1';
 
 export const LoopsEvent = {
   KYC_APPROVED: 'kyc-approved',
   KYC_PENDING_REVIEW: 'kyc-pending-review',
+  KYC_REQUIRES_MORE_DOCUMENTS: 'kyc-requires-more-document',
 } as const;
 
 export type LoopsEventName = (typeof LoopsEvent)[keyof typeof LoopsEvent];
@@ -16,7 +15,9 @@ class LoopsApiClient {
 
   constructor(apiKey = LOOPS_API_KEY, baseUrl = LOOPS_API_BASE_URL) {
     if (!apiKey) {
-      console.warn('LOOPS_API_KEY is not set. Loops functionality will be disabled.');
+      console.warn(
+        'LOOPS_API_KEY is not set. Loops functionality will be disabled.',
+      );
       this.apiKey = 'placeholder-missing-api-key';
     } else {
       this.apiKey = apiKey;
@@ -78,10 +79,12 @@ class LoopsApiClient {
     }
 
     if (this.apiKey === 'placeholder-missing-api-key') {
-      console.warn('LoopsService: API key not configured. Skipping event send.');
+      console.warn(
+        'LoopsService: API key not configured. Skipping event send.',
+      );
       return { success: false, message: 'Loops API key not configured.' };
     }
-    
+
     const payload = {
       email,
       userId,
@@ -98,16 +101,20 @@ class LoopsApiClient {
       });
 
       if (response.success) {
-        console.log(`Successfully sent event '${eventName}' for ${email} to Loops.`);
+        console.log(
+          `Successfully sent event '${eventName}' for ${email} to Loops.`,
+        );
       }
 
       return response;
-
     } catch (error) {
-        console.error(`Failed to send event for ${email} to Loops`, error);
-        return { success: false, message: error instanceof Error ? error.message : 'Unknown error' };
+      console.error(`Failed to send event for ${email} to Loops`, error);
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : 'Unknown error',
+      };
     }
   }
 }
 
-export const loopsApi = new LoopsApiClient();  
+export const loopsApi = new LoopsApiClient();

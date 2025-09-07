@@ -122,18 +122,7 @@ export default async function DashboardPage() {
             </Suspense>
           </div>
 
-          {/* Active Agents Section */}
-          <div className="border border-[#101010]/10 bg-white rounded-md">
-            <div className="p-6 border-b border-[#101010]/10">
-              <p className="uppercase tracking-[0.14em] text-[12px] text-[#101010]/60">
-                Automation
-              </p>
-              <h2 className="mt-2 text-[20px] font-medium text-[#101010]">
-                Active Agents
-              </h2>
-            </div>
-            <ActiveAgents />
-          </div>
+         
         </div>
       </div>
     </div>

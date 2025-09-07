@@ -144,6 +144,21 @@ export function OnboardingTasksCard({ initialData }: OnboardingTasksProps) {
       ),
     };
   } else if (
+    kycStatus === 'pending' &&
+    kycStep?.kycSubStatus === 'kyc_form_resubmission_required'
+  ) {
+    kycContent = {
+      icon: <AlertTriangle className="h-6 w-6 text-yellow-500" />,
+      title: 'Additional Documents Required',
+      description:
+        'We need additional documents to complete your verification. Please check your email for details.',
+      button: (
+        <Button asChild size="sm" className="w-full sm:w-auto">
+          <Link href="/onboarding/kyc">Submit Documents</Link>
+        </Button>
+      ),
+    };
+  } else if (
     kycStep?.kycSubStatus === 'kyc_form_submission_accepted' ||
     kycMarkedDone
   ) {
