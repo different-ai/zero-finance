@@ -6,7 +6,7 @@ import { BankTransfersList } from './bank-transfers-list';
 
 export function TransactionTabs() {
   return (
-    <Tabs defaultValue="bank" className="w-full">
+    <Tabs defaultValue="bank" className="w-full p-6">
       <TabsList className="mb-4 overflow-x-auto">
         <TabsTrigger value="bank">Bank Transfers</TabsTrigger>
         <TabsTrigger value="crypto">Crypto Transfers</TabsTrigger>
