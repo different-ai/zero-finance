@@ -30,7 +30,7 @@ export function GradientBackground({
     softness: 0.9, // Softer edges for better blending
     intensity: 0.4, // Slightly more intense
     noise: 0.15, // Less noise for cleaner look
-    shape: 'circle' as const,
+    shape: 'sphere' as const,
     scale: 2.0, // Larger scale to cover more area
     speed: 0.15, // Slower, more subtle animation
     style: {
