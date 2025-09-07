@@ -27,35 +27,35 @@ export function GradientBackground({
 
   const sharedProps = {
     colorBack: 'rgba(246, 245, 239, 0)', // Transparent background
-    softness: 0.9, // Softer edges for better blending
-    intensity: 0.4, // Slightly more intense
-    noise: 0.15, // Less noise for cleaner look
-    shape: 'wave' as const,
-    scale: 2.0, // Larger scale to cover more area
-    speed: 0.8, // Increased speed for more visible animation
+    softness: 0.3, // Softer edges for better blending
+    intensity: 0.1, // Slightly more intense
+    noise: 0.20, // Less noise for cleaner look
+    shape: variant === 'hero' ? 'blob' : 'wave' as const,
+    scale: variant === 'hero' ? 1.8 : 1.5, // Larger scale to cover more area
+    speed: variant === 'hero' ? 0.2 : 0.8, // Increased speed for more visible animation
     style: {
       position: 'absolute' as const,
       inset: 0,
       width: '100%',
       height: '100%',
-      opacity: variant === 'hero' ? 0.6 : 0.4,
+      // opacity: variant === 'hero' ? 0.6 : 0.4,
     },
   };
 
   return (
     <div
-      className={`fixed inset-0 ${className}`}
+      className={`absolute inset-0 ${className}`}
       style={{
         pointerEvents: 'none',
-        zIndex: -1, // Behind everything including header
+        // zIndex: -1, // Behind everything including header
       }}
     >
       <GrainGradient
         {...sharedProps}
         colors={variant === 'hero' ? heroColors : demoColors}
-        offsetX={variant === 'hero' ? 0.5 : 0.3} // Push to the right
+        offsetX={variant === 'hero' ? 0.9 : 0.3} // Push to the right
         offsetY={variant === 'hero' ? -0.5 : -0.3} // Push to the top
-        rotation={variant === 'hero' ? -45 : -30} // Angle from top-right
+        rotation={variant === 'hero' ? 180 : -30} // Angle from top-right
       />
     </div>
   );

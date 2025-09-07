@@ -9,8 +9,10 @@ export function HeroSection() {
   return (
     <>
       {/* Hero */}
-      <section className="relative border-b border-[#101010]/10 bg-[#F6F5EF] overflow-hidden min-h-[80vh] sm:min-h-[85vh] lg:min-h-[90vh] flex items-center">
-        <GradientBackground variant="hero" />
+      <section className="relative border-b border-[#101010]/10 bg-[#F6F5EF] overflow-hidden min-h-[80vh] sm:min-h-[85vh] lg:min-h-[90vh] flex items-center ">
+        {/* <GradientBackground variant="hero" className="z-10 bg-transparent top-[-100px]" /> */}
+        {/* <GradientBackground variant="hero" className="z-0 bg-[#F6F5EF] rotate-180 bottom-[-100px]" /> */}
+        <GradientBackground variant="hero" className="z-0 bg-[#F6F5EF] " />
         <div className="relative z-10 mx-auto max-w-[1200px] px-4 sm:px-6 lg:px-8 py-16 sm:py-20 lg:py-24 w-full">
           <p className="uppercase tracking-[0.14em] sm:tracking-[0.18em] text-[11px] sm:text-[12px] lg:text-[13px] font-medium text-[#101010]/70">
             Insured yield for startups
@@ -40,11 +42,13 @@ export function HeroSection() {
             </Link>
           </div>
         </div>
+
       </section>
+      
 
       {/* Demo Panel - Bank Statement Style */}
       <section className="relative border-y border-[#101010]/10 bg-white/90 overflow-hidden">
-        <GradientBackground variant="demo" />
+        <GradientBackground variant="demo" className="z-0 bg-[#F6F5EF]"/>
         <div className="relative z-10 mx-auto max-w-[1200px] px-4 sm:px-6 lg:px-8 py-8 sm:py-12 lg:py-16">
           {/* Demo indicator - subtle and premium */}
           <div className="flex justify-center mb-4">
