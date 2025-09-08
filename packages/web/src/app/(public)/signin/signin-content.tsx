@@ -105,7 +105,7 @@ export default function SignInContent() {
             </div>
 
             {/* Stats */}
-            <div className="grid grid-cols-2 gap-6 pt-8 border-t border-[#101010]/10">
+            {/* <div className="grid grid-cols-2 gap-6 pt-8 border-t border-[#101010]/10">
               <div>
                 <p className="text-[24px] font-medium tabular-nums text-[#101010]">
                   $1M+
@@ -122,7 +122,7 @@ export default function SignInContent() {
                   Active Companies
                 </p>
               </div>
-            </div>
+            </div> */}
           </div>
 
           {/* Right side - Sign In */}
@@ -183,7 +183,12 @@ export default function SignInContent() {
 
               <div className="space-y-3">
                 <p className="text-[12px] text-[#101010]/60 text-center">
-                  Secure authentication powered by Privy
+                  Secure authentication powered by{' '}
+                  <img
+                    src="/Privy_Brandmark_Black.svg"
+                    alt="Privy"
+                    className="inline-block h-4 "
+                  />
                 </p>
 
                 <div className="text-center">
@@ -191,7 +196,7 @@ export default function SignInContent() {
                     href={source ? `/${source}` : '/'}
                     className="text-[14px] text-[#101010]/70 hover:text-[#1B29FF] transition-colors"
                   >
-                    ← Back to {source ? `${source} page` : 'home'}
+                    ← Back to {'Landing'}
                   </Link>
                 </div>
               </div>
