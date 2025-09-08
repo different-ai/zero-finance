@@ -87,7 +87,10 @@ export default async function DashboardPage() {
       {/* Header Section */}
       <div className="border-b border-[#101010]/10 bg-white">
         <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <h1 className="font-serif text-[28px] sm:text-[36px] leading-[1.1] tracking-[-0.01em] text-[#101010]">
+          <p className="uppercase tracking-[0.18em] text-[12px] text-[#101010]/60">
+            OVERVIEW
+          </p>
+          <h1 className="mt-1 font-serif text-[32px] sm:text-[36px] leading-[0.98] tracking-[-0.01em] text-[#101010]">
             Dashboard
           </h1>
         </div>
@@ -105,12 +108,12 @@ export default async function DashboardPage() {
           <OnboardingData />
 
           {/* Transactions Section */}
-          <div className="border border-[#101010]/10 bg-white rounded-md">
-            <div className="p-6 border-b border-[#101010]/10">
-              <p className="uppercase tracking-[0.14em] text-[12px] text-[#101010]/60">
-                Recent Activity
+          <div className="bg-white border border-[#101010]/10 rounded-[12px] shadow-[0_2px_8px_rgba(16,16,16,0.04)]">
+            <div className="p-5 sm:p-6 border-b border-[#101010]/10">
+              <p className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60">
+                RECENT ACTIVITY
               </p>
-              <h2 className="mt-2 text-[20px] font-medium text-[#101010]">
+              <h2 className="mt-2 font-serif text-[24px] sm:text-[28px] leading-[1.1] tracking-[-0.01em] text-[#101010]">
                 Transactions & Transfers
               </h2>
             </div>

@@ -1,7 +1,12 @@
 import { z } from 'zod';
 import { router, protectedProcedure } from '../create-router';
 import { db } from '@/db';
-import { userSafes, earnDeposits, earnWithdrawals, autoEarnConfigs } from '@/db/schema';
+import {
+  userSafes,
+  earnDeposits,
+  earnWithdrawals,
+  autoEarnConfigs,
+} from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { TRPCError } from '@trpc/server';
 import { USDC_ADDRESS } from '@/lib/constants';
@@ -44,8 +49,6 @@ const publicClient = createPublicClient({
   transport: http(BASE_RPC_URL),
 });
 
-
-
 //   /**
 //    * @dev Initiates the auto-earn process for the specified token and amount.
 //    *      This overload assumes the caller is already an authorized relayer.
@@ -69,11 +72,11 @@ const autoEarnModuleAbi = parseAbi([
 ]);
 
 const SAFE_IS_MODULE_ENABLED_ABI = parseAbi([
-  'function isModuleEnabled(address module) external view returns (bool)'
+  'function isModuleEnabled(address module) external view returns (bool)',
 ]);
 
 const EARN_MODULE_IS_INITIALIZED_ABI = parseAbi([
-  'function isInitialized(address smartAccount) public view returns (bool)'
+  'function isInitialized(address smartAccount) public view returns (bool)',
 ]);
 
 // ABIs for FluidkeyEarnModule view functions and ERC4626 event
@@ -93,7 +96,7 @@ const ERC4626_VAULT_ABI = parseAbi([
 const ERC4626_VAULT_ABI_EXTENDED = parseAbi([
   'event Deposit(address indexed caller, address indexed owner, uint256 assets, uint256 shares)',
   'function convertToAssets(uint256 shares) public view returns (uint256 assets)',
-  'function asset() public view returns (address)', 
+  'function asset() public view returns (address)',
   'function decimals() public view returns (uint8)',
   'function balanceOf(address owner) public view returns (uint256)',
 ]);
@@ -102,11 +105,9 @@ const ERC4626_VAULT_ABI_EXTENDED = parseAbi([
 const ERC4626_VAULT_ABI_FOR_INFO = parseAbi([
   'function balanceOf(address owner) external view returns (uint256 shares)',
   'function convertToAssets(uint256 shares) external view returns (uint256 assets)',
-  'function decimals() external view returns (uint8)', 
-  'function asset() external view returns (address)'
+  'function decimals() external view returns (uint8)',
+  'function asset() external view returns (address)',
 ]);
-
-
 
 export const earnRouter = router({
   recordInstall: protectedProcedure
@@ -148,11 +149,12 @@ export const earnRouter = router({
         if (!isModuleInitializedOnChain) {
           throw new TRPCError({
             code: 'PRECONDITION_FAILED',
-            message: 'Earn module is not yet initialized on-chain for this Safe. Please complete the on-chain installation step.',
+            message:
+              'Earn module is not yet initialized on-chain for this Safe. Please complete the on-chain installation step.',
           });
         }
       } else {
-         throw new TRPCError({
+        throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
           message: 'Auto-earn module address not configured on the server.',
         });
@@ -228,7 +230,8 @@ export const earnRouter = router({
       if (!safeUserLink.isEarnModuleEnabled) {
         throw new TRPCError({
           code: 'PRECONDITION_FAILED',
-          message: 'Auto-earn is not enabled (recorded in DB) for this Safe. Please use the "Enable Earn Module" steps first.',
+          message:
+            'Auto-earn is not enabled (recorded in DB) for this Safe. Please use the "Enable Earn Module" steps first.',
         });
       }
       // Then, double check on-chain initialization status as source of truth
@@ -242,7 +245,8 @@ export const earnRouter = router({
       if (!isModuleInitializedOnChain) {
         throw new TRPCError({
           code: 'PRECONDITION_FAILED',
-          message: 'Auto-earn module is not initialized on-chain for this Safe. Please complete the full installation process.',
+          message:
+            'Auto-earn module is not initialized on-chain for this Safe. Please complete the full installation process.',
         });
       }
 
@@ -269,7 +273,10 @@ export const earnRouter = router({
         );
 
         // Wait for transaction receipt
-        const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash, confirmations: 1 });
+        const receipt = await publicClient.waitForTransactionReceipt({
+          hash: txHash,
+          confirmations: 1,
+        });
 
         if (receipt.status !== 'success') {
           throw new TRPCError({
@@ -277,8 +284,10 @@ export const earnRouter = router({
             message: `Transaction ${txHash} failed or was reverted. Status: ${receipt.status}`,
           });
         }
-        
-        console.log(`Transaction ${txHash} confirmed. Status: ${receipt.status}. Fetching vault and parsing logs...`);
+
+        console.log(
+          `Transaction ${txHash} confirmed. Status: ${receipt.status}. Fetching vault and parsing logs...`,
+        );
 
         // 1. Get configHash for the safe
         const configHash = await publicClient.readContract({
@@ -289,25 +298,29 @@ export const earnRouter = router({
         });
 
         if (configHash === 0n) {
-            throw new TRPCError({
-                code: 'INTERNAL_SERVER_ERROR',
-                message: `Safe ${safeAddress} does not have a valid earn module config hash set. Module might not be fully initialized.`,
-            });
+          throw new TRPCError({
+            code: 'INTERNAL_SERVER_ERROR',
+            message: `Safe ${safeAddress} does not have a valid earn module config hash set. Module might not be fully initialized.`,
+          });
         }
         console.log(`Config hash for safe ${safeAddress}: ${configHash}`);
 
         // 2. Get actual token address to use (handle NATIVE_TOKEN case)
         let effectiveTokenAddress = tokenAddress;
-        if (tokenAddress.toLowerCase() === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee'.toLowerCase()) {
-            effectiveTokenAddress = await publicClient.readContract({
-                address: AUTO_EARN_MODULE_ADDRESS,
-                abi: FLUIDKEY_EARN_MODULE_VIEW_ABI,
-                functionName: 'wrappedNative',
-                args: [],
-            });
-            console.log(`Native token detected, using wrapped native: ${effectiveTokenAddress}`);
+        if (
+          tokenAddress.toLowerCase() ===
+          '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee'.toLowerCase()
+        ) {
+          effectiveTokenAddress = await publicClient.readContract({
+            address: AUTO_EARN_MODULE_ADDRESS,
+            abi: FLUIDKEY_EARN_MODULE_VIEW_ABI,
+            functionName: 'wrappedNative',
+            args: [],
+          });
+          console.log(
+            `Native token detected, using wrapped native: ${effectiveTokenAddress}`,
+          );
         }
-
 
         // 3. Get vaultAddress for the token and current chainId from the module's config
         const vaultAddress = await publicClient.readContract({
@@ -317,14 +330,19 @@ export const earnRouter = router({
           args: [configHash, currentChainId, effectiveTokenAddress],
         });
 
-        if (!vaultAddress || vaultAddress === '0x0000000000000000000000000000000000000000') {
-            throw new TRPCError({
-                code: 'INTERNAL_SERVER_ERROR',
-                message: `Could not find vault address for token ${effectiveTokenAddress} (original: ${tokenAddress}) with config hash ${configHash} on chain ${currentChainId}.`,
-            });
+        if (
+          !vaultAddress ||
+          vaultAddress === '0x0000000000000000000000000000000000000000'
+        ) {
+          throw new TRPCError({
+            code: 'INTERNAL_SERVER_ERROR',
+            message: `Could not find vault address for token ${effectiveTokenAddress} (original: ${tokenAddress}) with config hash ${configHash} on chain ${currentChainId}.`,
+          });
         }
-        console.log(`Vault address for token ${effectiveTokenAddress} on chain ${currentChainId} with hash ${configHash}: ${vaultAddress}`);
-        
+        console.log(
+          `Vault address for token ${effectiveTokenAddress} on chain ${currentChainId} with hash ${configHash}: ${vaultAddress}`,
+        );
+
         // 4. Parse logs to find Deposit event from the determined vaultAddress
         let sharesReceived = 0n;
         let foundDepositEvent = false;
@@ -339,7 +357,12 @@ export const earnRouter = router({
               });
 
               if (decodedEvent.eventName === 'Deposit') {
-                const { caller, owner, assets: depositedAssets, shares } = decodedEvent.args as {
+                const {
+                  caller,
+                  owner,
+                  assets: depositedAssets,
+                  shares,
+                } = decodedEvent.args as {
                   caller: Address;
                   owner: Address;
                   assets: bigint;
@@ -348,11 +371,16 @@ export const earnRouter = router({
                 // Ensure the deposit was for the correct safe and amount.
                 // The module executes `deposit(amountToSave, safe)` so `owner` should be `safeAddress`.
                 // `caller` will be the module itself.
-                if (owner.toLowerCase() === safeAddress.toLowerCase() && depositedAssets === amount) {
+                if (
+                  owner.toLowerCase() === safeAddress.toLowerCase() &&
+                  depositedAssets === amount
+                ) {
                   sharesReceived = shares;
                   foundDepositEvent = true;
-                  console.log(`Deposit event found for vault ${vaultAddress}: owner ${owner}, assets ${depositedAssets}, shares ${sharesReceived}`);
-                  break; 
+                  console.log(
+                    `Deposit event found for vault ${vaultAddress}: owner ${owner}, assets ${depositedAssets}, shares ${sharesReceived}`,
+                  );
+                  break;
                 }
               }
             } catch (e) {
@@ -366,8 +394,10 @@ export const earnRouter = router({
           // Fallback: If logs didn't yield shares, or if Deposit event structure is different.
           // This part is tricky as direct share calculation post-tx without event isn't standard.
           // For now, we'll rely on the event. If this fails, we should log an error.
-          console.error(`Could not find or verify Deposit event for tx ${txHash} from vault ${vaultAddress} for safe ${safeAddress} and amount ${amount}. Shares received will be 0.`);
-           throw new TRPCError({
+          console.error(
+            `Could not find or verify Deposit event for tx ${txHash} from vault ${vaultAddress} for safe ${safeAddress} and amount ${amount}. Shares received will be 0.`,
+          );
+          throw new TRPCError({
             code: 'INTERNAL_SERVER_ERROR',
             message: `Failed to parse Deposit event from vault ${vaultAddress} for tx ${txHash}. Cannot determine shares received.`,
           });
@@ -389,16 +419,22 @@ export const earnRouter = router({
           userDid: privyDid,
           safeAddress: safeAddress,
           vaultAddress: vaultAddress,
-          tokenAddress: effectiveTokenAddress, 
+          tokenAddress: effectiveTokenAddress,
           assetsDeposited: amount,
           sharesReceived: sharesReceived,
           txHash: txHash,
           timestamp: new Date(),
           depositPercentage: depositPercentage, // Store the percentage used at deposit time
         });
-        console.log(`Deposit recorded in DB for tx ${txHash} with percentage ${depositPercentage}.`);
+        console.log(
+          `Deposit recorded in DB for tx ${txHash} with percentage ${depositPercentage}.`,
+        );
 
-        return { success: true, txHash, sharesReceived: sharesReceived.toString() };
+        return {
+          success: true,
+          txHash,
+          sharesReceived: sharesReceived.toString(),
+        };
       } catch (error: any) {
         console.error('Failed to trigger auto-earn:', error);
         throw new TRPCError({
@@ -409,10 +445,18 @@ export const earnRouter = router({
     }),
 
   isSafeModuleActivelyEnabled: protectedProcedure
-    .input(z.object({ 
-      safeAddress: z.string().length(42).transform(val => getAddress(val)),
-      moduleAddress: z.string().length(42).transform(val => getAddress(val)),
-    }))
+    .input(
+      z.object({
+        safeAddress: z
+          .string()
+          .length(42)
+          .transform((val) => getAddress(val)),
+        moduleAddress: z
+          .string()
+          .length(42)
+          .transform((val) => getAddress(val)),
+      }),
+    )
     .query(async ({ input }) => {
       const { safeAddress, moduleAddress } = input;
       try {
@@ -424,7 +468,10 @@ export const earnRouter = router({
         });
         return { isEnabled };
       } catch (error: any) {
-        console.error(`Failed to check if module ${moduleAddress} is enabled for safe ${safeAddress}:`, error);
+        console.error(
+          `Failed to check if module ${moduleAddress} is enabled for safe ${safeAddress}:`,
+          error,
+        );
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
           message: `Failed to query module status on-chain: ${error.message || 'Unknown error'}`,
@@ -433,10 +480,15 @@ export const earnRouter = router({
     }),
 
   getEarnModuleOnChainInitializationStatus: protectedProcedure
-    .input(z.object({
-      safeAddress: z.string().length(42).transform(val => getAddress(val)),
-      // moduleAddress is implicitly AUTO_EARN_MODULE_ADDRESS for this specific check
-    }))
+    .input(
+      z.object({
+        safeAddress: z
+          .string()
+          .length(42)
+          .transform((val) => getAddress(val)),
+        // moduleAddress is implicitly AUTO_EARN_MODULE_ADDRESS for this specific check
+      }),
+    )
     .query(async ({ input }) => {
       const { safeAddress } = input;
       console.log('on chain initialization status check for safe', safeAddress);
@@ -460,7 +512,10 @@ export const earnRouter = router({
         console.log('isInitializedResult', isInitializedResult);
         return { isInitializedOnChain: isInitializedResult };
       } catch (error: any) {
-        console.error(`Failed to check if earn module is initialized for safe ${safeAddress} on module ${AUTO_EARN_MODULE_ADDRESS}:`, error);
+        console.error(
+          `Failed to check if earn module is initialized for safe ${safeAddress} on module ${AUTO_EARN_MODULE_ADDRESS}:`,
+          error,
+        );
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
           message: `Failed to query earn module initialization status on-chain: ${error.message || 'Unknown error'}`,
@@ -470,9 +525,14 @@ export const earnRouter = router({
 
   // New 'stats' query
   stats: protectedProcedure
-    .input(z.object({ 
-        safeAddress: z.string().length(42).transform(val => getAddress(val)),
-    }))
+    .input(
+      z.object({
+        safeAddress: z
+          .string()
+          .length(42)
+          .transform((val) => getAddress(val)),
+      }),
+    )
     .query(async ({ ctx, input }) => {
       const { safeAddress } = input;
       const privyDid = ctx.userId;
@@ -501,7 +561,8 @@ export const earnRouter = router({
       }
 
       const deposits = await db.query.earnDeposits.findMany({
-        where: (earnDepositsTable, { eq }) => eq(earnDepositsTable.safeAddress, safeAddress),
+        where: (earnDepositsTable, { eq }) =>
+          eq(earnDepositsTable.safeAddress, safeAddress),
       });
 
       console.log('deposits', deposits);
@@ -513,7 +574,12 @@ export const earnRouter = router({
       // Group deposits by vault
       const byVault: Record<
         string,
-        { principal: bigint; shares: bigint; tokenAddress: Address; tokenDecimals: number }
+        {
+          principal: bigint;
+          shares: bigint;
+          tokenAddress: Address;
+          tokenDecimals: number;
+        }
       > = {};
 
       for (const dep of deposits) {
@@ -553,12 +619,12 @@ export const earnRouter = router({
       const statsPromises = Object.entries(byVault).map(
         async ([vaultAddressStr, data]) => {
           const vaultAddress = vaultAddressStr as Address;
-          
+
           // APY is fetched separately via GraphQL in the statsByVault endpoint
           // We don't need to fetch it here
           let supplyApyPct = 0;
 
-          // If shares are 0 in the database (due to failed event parsing), 
+          // If shares are 0 in the database (due to failed event parsing),
           // try to get the actual balance from the vault
           let actualShares = data.shares;
           if (actualShares === 0n && data.principal > 0n) {
@@ -569,7 +635,9 @@ export const earnRouter = router({
                 functionName: 'balanceOf',
                 args: [safeAddress],
               });
-              console.log(`Fetched actual shares from vault for ${safeAddress}: ${actualShares}`);
+              console.log(
+                `Fetched actual shares from vault for ${safeAddress}: ${actualShares}`,
+              );
             } catch (e) {
               console.warn(`Could not fetch actual shares from vault: ${e}`);
             }
@@ -625,9 +693,14 @@ export const earnRouter = router({
     }),
 
   apy: protectedProcedure
-    .input(z.object({
-      safeAddress: z.string().length(42).transform(val => getAddress(val)),
-    }))
+    .input(
+      z.object({
+        safeAddress: z
+          .string()
+          .length(42)
+          .transform((val) => getAddress(val)),
+      }),
+    )
     .query(async ({ ctx, input }) => {
       const { safeAddress } = input;
       const privyDid = ctx.userId;
@@ -661,7 +734,9 @@ export const earnRouter = router({
         });
 
         if (configHash === 0n) {
-          console.warn(`No configHash found for safe ${safeAddress}. Module might not be installed or configured for this safe.`);
+          console.warn(
+            `No configHash found for safe ${safeAddress}. Module might not be installed or configured for this safe.`,
+          );
           return { apy: null };
         }
 
@@ -675,12 +750,19 @@ export const earnRouter = router({
 
         console.log('vaultAddress for APY lookup:', vaultAddress);
 
-        if (!vaultAddress || vaultAddress === '0x0000000000000000000000000000000000000000') {
-          console.warn(`No vault address configured for USDC token (${USDC_BASE_ADDRESS}) with config hash ${configHash} on chain ${currentChainId} for safe ${safeAddress}.`);
+        if (
+          !vaultAddress ||
+          vaultAddress === '0x0000000000000000000000000000000000000000'
+        ) {
+          console.warn(
+            `No vault address configured for USDC token (${USDC_BASE_ADDRESS}) with config hash ${configHash} on chain ${currentChainId} for safe ${safeAddress}.`,
+          );
           return { apy: null };
         }
-        
-        console.log(`Target vault for APY for safe ${safeAddress} is ${vaultAddress}`);
+
+        console.log(
+          `Target vault for APY for safe ${safeAddress} is ${vaultAddress}`,
+        );
 
         // Morpho GraphQL API is the primary method
         try {
@@ -697,39 +779,57 @@ export const earnRouter = router({
                       }
                     }
                   }`,
-              variables: { address: vaultAddress.toLowerCase(), chainId: base.id }
+              variables: {
+                address: vaultAddress.toLowerCase(),
+                chainId: base.id,
+              },
             }),
           });
           if (!response.ok) {
-            throw new Error(`GraphQL API request failed with status ${response.status}`);
+            throw new Error(
+              `GraphQL API request failed with status ${response.status}`,
+            );
           }
           const result = await response.json();
           if (result.errors) {
             console.error('Morpho GraphQL API errors:', result.errors);
-            throw new Error(`GraphQL API returned errors: ${JSON.stringify(result.errors)}`);
+            throw new Error(
+              `GraphQL API returned errors: ${JSON.stringify(result.errors)}`,
+            );
           }
 
           if (result.data?.vaultByAddress?.state?.apy !== undefined) {
             supplyApyPct = Number(result.data.vaultByAddress.state.apy);
           } else {
-            console.warn(`APY missing from GraphQL response for vault ${vaultAddress}.`);
+            console.warn(
+              `APY missing from GraphQL response for vault ${vaultAddress}.`,
+            );
             supplyApyPct = null;
           }
         } catch (graphQlError: any) {
-          console.error(`Morpho GraphQL API call failed for vault ${vaultAddress} in apy resolver: ${graphQlError.message}`);
+          console.error(
+            `Morpho GraphQL API call failed for vault ${vaultAddress} in apy resolver: ${graphQlError.message}`,
+          );
           supplyApyPct = null; // Ensure APY is null if GraphQL also fails
         }
-        
-        return { apy: supplyApyPct !== null ? Number(supplyApyPct) * 100 : null };
 
+        return {
+          apy: supplyApyPct !== null ? Number(supplyApyPct) * 100 : null,
+        };
       } catch (error: any) {
         console.error(`Failed to fetch APY for safe ${safeAddress}:`, error);
         // Log more specific errors if possible
         if (error.message?.includes('configHash')) {
-             throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: `Failed to retrieve module config hash for safe: ${error.message}` });
+          throw new TRPCError({
+            code: 'INTERNAL_SERVER_ERROR',
+            message: `Failed to retrieve module config hash for safe: ${error.message}`,
+          });
         }
         if (error.message?.includes('vaultAddress')) {
-             throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: `Failed to retrieve vault address from module config: ${error.message}` });
+          throw new TRPCError({
+            code: 'INTERNAL_SERVER_ERROR',
+            message: `Failed to retrieve vault address from module config: ${error.message}`,
+          });
         }
         // The specific supplyAPY error is now handled inside the inner try-catch
         throw new TRPCError({
@@ -766,7 +866,10 @@ export const earnRouter = router({
       // Verify Safe belongs to user
       const safeRecord = await db.query.userSafes.findFirst({
         where: (tbl, { and, eq }) =>
-          and(eq(tbl.userDid, userId), eq(tbl.safeAddress, safeAddress as `0x${string}`)),
+          and(
+            eq(tbl.userDid, userId),
+            eq(tbl.safeAddress, safeAddress as `0x${string}`),
+          ),
       });
 
       if (!safeRecord) {
@@ -786,7 +889,9 @@ export const earnRouter = router({
         const [shares, assetAddress] = await Promise.all([
           publicClient.readContract({
             address: vaultAddress,
-            abi: parseAbi(['function balanceOf(address owner) external view returns (uint256)']),
+            abi: parseAbi([
+              'function balanceOf(address owner) external view returns (uint256)',
+            ]),
             functionName: 'balanceOf',
             args: [safeAddress],
           }),
@@ -801,7 +906,9 @@ export const earnRouter = router({
         // Convert shares to assets
         const assets = await publicClient.readContract({
           address: vaultAddress,
-          abi: parseAbi(['function convertToAssets(uint256 shares) external view returns (uint256)']),
+          abi: parseAbi([
+            'function convertToAssets(uint256 shares) external view returns (uint256)',
+          ]),
           functionName: 'convertToAssets',
           args: [shares],
         });
@@ -862,7 +969,10 @@ export const earnRouter = router({
       // Verify Safe belongs to user
       const safeRecord = await db.query.userSafes.findFirst({
         where: (tbl, { and, eq }) =>
-          and(eq(tbl.userDid, userId), eq(tbl.safeAddress, ownerAddress as `0x${string}`)),
+          and(
+            eq(tbl.userDid, userId),
+            eq(tbl.safeAddress, ownerAddress as `0x${string}`),
+          ),
       });
 
       if (!safeRecord) {
@@ -880,7 +990,9 @@ export const earnRouter = router({
       try {
         const allowance = await publicClient.readContract({
           address: tokenAddress,
-          abi: parseAbi(['function allowance(address owner, address spender) external view returns (uint256)']),
+          abi: parseAbi([
+            'function allowance(address owner, address spender) external view returns (uint256)',
+          ]),
           functionName: 'allowance',
           args: [ownerAddress, spenderAddress],
         });
@@ -921,15 +1033,24 @@ export const earnRouter = router({
       // Verify Safe belongs to user
       const safeRecord = await db.query.userSafes.findFirst({
         where: (tbl, { and, eq }) =>
-          and(eq(tbl.userDid, userId), eq(tbl.safeAddress, safeAddress as `0x${string}`)),
+          and(
+            eq(tbl.userDid, userId),
+            eq(tbl.safeAddress, safeAddress as `0x${string}`),
+          ),
       });
       if (!safeRecord) {
-        throw new TRPCError({ code: 'NOT_FOUND', message: 'Safe not found for user' });
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Safe not found for user',
+        });
       }
 
       const config = await db.query.autoEarnConfigs.findFirst({
         where: (tbl, { and, eq }) =>
-          and(eq(tbl.userDid, userId), eq(tbl.safeAddress, safeAddress as `0x${string}`)),
+          and(
+            eq(tbl.userDid, userId),
+            eq(tbl.safeAddress, safeAddress as `0x${string}`),
+          ),
       });
 
       return {
@@ -960,10 +1081,16 @@ export const earnRouter = router({
       // verify safe ownership
       const safeRecord = await db.query.userSafes.findFirst({
         where: (tbl, { and, eq }) =>
-          and(eq(tbl.userDid, userId), eq(tbl.safeAddress, safeAddress as `0x${string}`)),
+          and(
+            eq(tbl.userDid, userId),
+            eq(tbl.safeAddress, safeAddress as `0x${string}`),
+          ),
       });
       if (!safeRecord) {
-        throw new TRPCError({ code: 'NOT_FOUND', message: 'Safe not found for user' });
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Safe not found for user',
+        });
       }
 
       // Check if earn module is initialized on-chain before enabling
@@ -977,7 +1104,8 @@ export const earnRouter = router({
         if (!isModuleInitializedOnChain) {
           throw new TRPCError({
             code: 'PRECONDITION_FAILED',
-            message: 'Earn module is not yet initialized on-chain for this Safe. Please complete the on-chain installation step first.',
+            message:
+              'Earn module is not yet initialized on-chain for this Safe. Please complete the on-chain installation step first.',
           });
         }
       }
@@ -985,7 +1113,11 @@ export const earnRouter = router({
       // upsert auto-earn config
       await db
         .insert(autoEarnConfigs)
-        .values({ userDid: userId, safeAddress: safeAddress as `0x${string}`, pct })
+        .values({
+          userDid: userId,
+          safeAddress: safeAddress as `0x${string}`,
+          pct,
+        })
         .onConflictDoUpdate({
           target: [autoEarnConfigs.userDid, autoEarnConfigs.safeAddress],
           set: { pct },
@@ -1021,10 +1153,16 @@ export const earnRouter = router({
       // verify safe ownership
       const safeRecord = await db.query.userSafes.findFirst({
         where: (tbl, { and, eq }) =>
-          and(eq(tbl.userDid, userId), eq(tbl.safeAddress, safeAddress as `0x${string}`)),
+          and(
+            eq(tbl.userDid, userId),
+            eq(tbl.safeAddress, safeAddress as `0x${string}`),
+          ),
       });
       if (!safeRecord) {
-        throw new TRPCError({ code: 'NOT_FOUND', message: 'Safe not found for user' });
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Safe not found for user',
+        });
       }
 
       // Delete the auto-earn config
@@ -1051,15 +1189,35 @@ export const earnRouter = router({
    * getState – lightweight summary used by FE settings page
    */
   getState: protectedProcedure
-    .input(z.object({ safeAddress: z.string().length(42).transform(v=>getAddress(v)) }))
+    .input(
+      z.object({
+        safeAddress: z
+          .string()
+          .length(42)
+          .transform((v) => getAddress(v)),
+      }),
+    )
     .query(async ({ ctx, input }) => {
       const userDid = ctx.userId;
-      if (!userDid) throw new TRPCError({code:'UNAUTHORIZED'});
+      if (!userDid) throw new TRPCError({ code: 'UNAUTHORIZED' });
 
-      const safe = await db.query.userSafes.findFirst({ where:(t,{and,eq})=>and(eq(t.userDid,userDid), eq(t.safeAddress, input.safeAddress as `0x${string}`)) });
-      if (!safe) throw new TRPCError({code:'NOT_FOUND', message:'Safe not found'});
+      const safe = await db.query.userSafes.findFirst({
+        where: (t, { and, eq }) =>
+          and(
+            eq(t.userDid, userDid),
+            eq(t.safeAddress, input.safeAddress as `0x${string}`),
+          ),
+      });
+      if (!safe)
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Safe not found' });
 
-      const cfg = await db.query.autoEarnConfigs.findFirst({ where:(t,{and,eq})=>and(eq(t.userDid,userDid), eq(t.safeAddress,input.safeAddress as `0x${string}`)) });
+      const cfg = await db.query.autoEarnConfigs.findFirst({
+        where: (t, { and, eq }) =>
+          and(
+            eq(t.userDid, userDid),
+            eq(t.safeAddress, input.safeAddress as `0x${string}`),
+          ),
+      });
       return {
         enabled: safe.isEarnModuleEnabled,
         allocation: cfg?.pct ?? 0,
@@ -1088,15 +1246,22 @@ export const earnRouter = router({
       // Verify Safe belongs to user
       const safeRecord = await db.query.userSafes.findFirst({
         where: (tbl, { and, eq }) =>
-          and(eq(tbl.userDid, userId), eq(tbl.safeAddress, safeAddress as `0x${string}`)),
+          and(
+            eq(tbl.userDid, userId),
+            eq(tbl.safeAddress, safeAddress as `0x${string}`),
+          ),
       });
       if (!safeRecord) {
-        throw new TRPCError({ code: 'NOT_FOUND', message: 'Safe not found for user' });
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Safe not found for user',
+        });
       }
 
       // Fetch recent earn deposits
       const deposits = await db.query.earnDeposits.findMany({
-        where: (tbl, { eq }) => eq(tbl.safeAddress, safeAddress as `0x${string}`),
+        where: (tbl, { eq }) =>
+          eq(tbl.safeAddress, safeAddress as `0x${string}`),
         orderBy: (tbl, { desc }) => [desc(tbl.timestamp)],
         limit,
       });
@@ -1104,14 +1269,17 @@ export const earnRouter = router({
       // Transform to match VaultTransaction interface
       // Note: For display purposes, we need to calculate the original deposit amount
       // The assetsDeposited is the amount that was saved (after percentage calculation)
-      return deposits.map(deposit => {
+      return deposits.map((deposit) => {
         // Convert from smallest unit to decimal (USDC has 6 decimals)
         const savedAmountInDecimals = Number(deposit.assetsDeposited) / 1e6;
-        
+
         // Use the percentage stored at the time of deposit, or default to 10% for historical deposits
         const percentage = deposit.depositPercentage || 10;
-        const originalDepositAmount = percentage > 0 ? (savedAmountInDecimals * 100) / percentage : savedAmountInDecimals;
-        
+        const originalDepositAmount =
+          percentage > 0
+            ? (savedAmountInDecimals * 100) / percentage
+            : savedAmountInDecimals;
+
         return {
           id: deposit.id,
           type: 'deposit' as const,
@@ -1149,24 +1317,32 @@ export const earnRouter = router({
       // Verify Safe belongs to user
       const safeRecord = await db.query.userSafes.findFirst({
         where: (tbl, { and, eq }) =>
-          and(eq(tbl.userDid, userId), eq(tbl.safeAddress, safeAddress as `0x${string}`)),
+          and(
+            eq(tbl.userDid, userId),
+            eq(tbl.safeAddress, safeAddress as `0x${string}`),
+          ),
       });
       if (!safeRecord) {
-        throw new TRPCError({ code: 'NOT_FOUND', message: 'Safe not found for user' });
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Safe not found for user',
+        });
       }
 
       // Fetch recent earn withdrawals
       const withdrawals = await db.query.earnWithdrawals.findMany({
-        where: (tbl, { eq }) => eq(tbl.safeAddress, safeAddress as `0x${string}`),
+        where: (tbl, { eq }) =>
+          eq(tbl.safeAddress, safeAddress as `0x${string}`),
         orderBy: (tbl, { desc }) => [desc(tbl.timestamp)],
         limit,
       });
 
       // Transform to match VaultTransaction interface
-      return withdrawals.map(withdrawal => {
+      return withdrawals.map((withdrawal) => {
         // Convert from smallest unit to decimal (USDC has 6 decimals)
-        const withdrawnAmountInDecimals = Number(withdrawal.assetsWithdrawn) / 1e6;
-        
+        const withdrawnAmountInDecimals =
+          Number(withdrawal.assetsWithdrawn) / 1e6;
+
         return {
           id: withdrawal.id,
           type: 'withdrawal' as const,
@@ -1188,26 +1364,55 @@ export const earnRouter = router({
   recordWithdrawal: protectedProcedure
     .input(
       z.object({
-        safeAddress: z.string().refine((val) => /^0x[a-fA-F0-9]{40}$/.test(val)).transform(val => getAddress(val)),
-        vaultAddress: z.string().refine((val) => /^0x[a-fA-F0-9]{40}$/.test(val)).transform(val => getAddress(val)),
-        tokenAddress: z.string().refine((val) => /^0x[a-fA-F0-9]{40}$/.test(val)).transform(val => getAddress(val)),
-        assetsWithdrawn: z.string().refine((val) => /^\d+$/.test(val)).transform((val) => BigInt(val)),
-        sharesBurned: z.string().refine((val) => /^\d+$/.test(val)).transform((val) => BigInt(val)),
+        safeAddress: z
+          .string()
+          .refine((val) => /^0x[a-fA-F0-9]{40}$/.test(val))
+          .transform((val) => getAddress(val)),
+        vaultAddress: z
+          .string()
+          .refine((val) => /^0x[a-fA-F0-9]{40}$/.test(val))
+          .transform((val) => getAddress(val)),
+        tokenAddress: z
+          .string()
+          .refine((val) => /^0x[a-fA-F0-9]{40}$/.test(val))
+          .transform((val) => getAddress(val)),
+        assetsWithdrawn: z
+          .string()
+          .refine((val) => /^\d+$/.test(val))
+          .transform((val) => BigInt(val)),
+        sharesBurned: z
+          .string()
+          .refine((val) => /^\d+$/.test(val))
+          .transform((val) => BigInt(val)),
         userOpHash: z.string().optional(),
         txHash: z.string().optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.user.id;
-      const { safeAddress, vaultAddress, tokenAddress, assetsWithdrawn, sharesBurned, userOpHash, txHash } = input;
+      const {
+        safeAddress,
+        vaultAddress,
+        tokenAddress,
+        assetsWithdrawn,
+        sharesBurned,
+        userOpHash,
+        txHash,
+      } = input;
 
       // Verify Safe belongs to user
       const safeRecord = await db.query.userSafes.findFirst({
         where: (tbl, { and, eq }) =>
-          and(eq(tbl.userDid, userId), eq(tbl.safeAddress, safeAddress as `0x${string}`)),
+          and(
+            eq(tbl.userDid, userId),
+            eq(tbl.safeAddress, safeAddress as `0x${string}`),
+          ),
       });
       if (!safeRecord) {
-        throw new TRPCError({ code: 'NOT_FOUND', message: 'Safe not found for user' });
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Safe not found for user',
+        });
       }
 
       // For now, use userOpHash as txHash if no txHash provided (AA transactions)
@@ -1235,7 +1440,15 @@ export const earnRouter = router({
    * setAllocation – pass-through to setAutoEarnPct (for existing UI call site)
    */
   setAllocation: protectedProcedure
-    .input(z.object({ safeAddress: z.string().length(42).transform(v=>getAddress(v)), percentage: z.number().int().min(0).max(100) }))
+    .input(
+      z.object({
+        safeAddress: z
+          .string()
+          .length(42)
+          .transform((v) => getAddress(v)),
+        percentage: z.number().int().min(0).max(100),
+      }),
+    )
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.user.id;
       const { safeAddress, percentage } = input;
@@ -1243,10 +1456,16 @@ export const earnRouter = router({
       // verify safe ownership
       const safeRecord = await db.query.userSafes.findFirst({
         where: (tbl, { and, eq }) =>
-          and(eq(tbl.userDid, userId), eq(tbl.safeAddress, safeAddress as `0x${string}`)),
+          and(
+            eq(tbl.userDid, userId),
+            eq(tbl.safeAddress, safeAddress as `0x${string}`),
+          ),
       });
       if (!safeRecord) {
-        throw new TRPCError({ code: 'NOT_FOUND', message: 'Safe not found for user' });
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Safe not found for user',
+        });
       }
 
       if (percentage === 0) {
@@ -1276,14 +1495,19 @@ export const earnRouter = router({
           if (!isModuleInitializedOnChain) {
             throw new TRPCError({
               code: 'PRECONDITION_FAILED',
-              message: 'Earn module is not yet initialized on-chain for this Safe. Please complete the on-chain installation step first.',
+              message:
+                'Earn module is not yet initialized on-chain for this Safe. Please complete the on-chain installation step first.',
             });
           }
         }
 
         await db
           .insert(autoEarnConfigs)
-          .values({ userDid: userId, safeAddress: safeAddress as `0x${string}`, pct: percentage })
+          .values({
+            userDid: userId,
+            safeAddress: safeAddress as `0x${string}`,
+            pct: percentage,
+          })
           .onConflictDoUpdate({
             target: [autoEarnConfigs.userDid, autoEarnConfigs.safeAddress],
             set: { pct: percentage },
@@ -1300,10 +1524,20 @@ export const earnRouter = router({
 
   // Multi-vault stats endpoint
   statsByVault: protectedProcedure
-    .input(z.object({ 
-      safeAddress: z.string().length(42).transform(val => getAddress(val)),
-      vaultAddresses: z.array(z.string().length(42).transform(val => getAddress(val)))
-    }))
+    .input(
+      z.object({
+        safeAddress: z
+          .string()
+          .length(42)
+          .transform((val) => getAddress(val)),
+        vaultAddresses: z.array(
+          z
+            .string()
+            .length(42)
+            .transform((val) => getAddress(val)),
+        ),
+      }),
+    )
     .query(async ({ ctx, input }) => {
       const { safeAddress, vaultAddresses } = input;
       const privyDid = ctx.userId;
@@ -1337,13 +1571,15 @@ export const earnRouter = router({
           // Try to get APY from Morpho GraphQL
           let apy = 0;
           let netApy = 0;
-          
+
           try {
-            const response = await fetch('https://blue-api.morpho.org/graphql', {
-              method: 'POST',
-              headers: { 'content-type': 'application/json' },
-              body: JSON.stringify({
-                query: `
+            const response = await fetch(
+              'https://blue-api.morpho.org/graphql',
+              {
+                method: 'POST',
+                headers: { 'content-type': 'application/json' },
+                body: JSON.stringify({
+                  query: `
                   query ($address: String!, $chainId: Int!) {
                     vaultByAddress(address: $address, chainId: $chainId) {
                       address
@@ -1353,10 +1589,14 @@ export const earnRouter = router({
                       }
                     }
                   }`,
-                variables: { address: vaultAddress.toLowerCase(), chainId: BASE_CHAIN_ID }
-              }),
-            });
-            
+                  variables: {
+                    address: vaultAddress.toLowerCase(),
+                    chainId: BASE_CHAIN_ID,
+                  },
+                }),
+              },
+            );
+
             if (response.ok) {
               const result = await response.json();
               if (result.data?.vaultByAddress?.state) {
@@ -1370,39 +1610,40 @@ export const earnRouter = router({
 
           // Get deposits for this vault
           const deposits = await db.query.earnDeposits.findMany({
-            where: (earnDepositsTable, { and, eq }) => 
+            where: (earnDepositsTable, { and, eq }) =>
               and(
                 eq(earnDepositsTable.safeAddress, safeAddress),
-                eq(earnDepositsTable.vaultAddress, vaultAddress)
+                eq(earnDepositsTable.vaultAddress, vaultAddress),
               ),
           });
 
-          let principal = 0n;
+          let totalDeposited = 0n;
           let shares = 0n;
-          
+
           for (const dep of deposits) {
-            principal += dep.assetsDeposited;
+            totalDeposited += dep.assetsDeposited;
             shares += dep.sharesReceived;
           }
 
           // Get withdrawals for this vault
           const withdrawals = await db.query.earnWithdrawals.findMany({
-            where: (earnWithdrawalsTable, { and, eq }) => 
+            where: (earnWithdrawalsTable, { and, eq }) =>
               and(
                 eq(earnWithdrawalsTable.safeAddress, safeAddress),
-                eq(earnWithdrawalsTable.vaultAddress, vaultAddress)
+                eq(earnWithdrawalsTable.vaultAddress, vaultAddress),
               ),
           });
 
+          let totalWithdrawn = 0n;
           for (const withdrawal of withdrawals) {
-            principal -= withdrawal.assetsWithdrawn;
+            totalWithdrawn += withdrawal.assetsWithdrawn;
             shares -= withdrawal.sharesBurned;
           }
 
           // Get current value if there are shares
           let currentAssets = 0n;
           let yieldAmount = 0n;
-          
+
           if (shares > 0n) {
             try {
               currentAssets = await publicClient.readContract({
@@ -1411,22 +1652,32 @@ export const earnRouter = router({
                 functionName: 'convertToAssets',
                 args: [shares],
               });
-              yieldAmount = currentAssets - principal;
+              // Correct yield calculation: (current value + withdrawn) - deposited
+              yieldAmount = currentAssets + totalWithdrawn - totalDeposited;
             } catch (e) {
-              console.warn(`Failed to get current assets for vault ${vaultAddress}:`, e);
+              console.warn(
+                `Failed to get current assets for vault ${vaultAddress}:`,
+                e,
+              );
             }
+          } else {
+            // If no shares left, yield is withdrawn - deposited
+            yieldAmount = totalWithdrawn - totalDeposited;
           }
 
           return {
             vaultAddress,
             apy,
             netApy,
-            principal,
+            principal: totalDeposited - totalWithdrawn, // Net principal for display
             currentAssets,
             yield: yieldAmount,
           };
         } catch (error) {
-          console.error(`Error fetching stats for vault ${vaultAddress}:`, error);
+          console.error(
+            `Error fetching stats for vault ${vaultAddress}:`,
+            error,
+          );
           return {
             vaultAddress,
             apy: 0,
@@ -1444,10 +1695,20 @@ export const earnRouter = router({
 
   // User positions across vaults - using on-chain data directly
   userPositions: protectedProcedure
-    .input(z.object({
-      userSafe: z.string().length(42).transform(val => getAddress(val)),
-      vaultAddresses: z.array(z.string().length(42).transform(val => getAddress(val)))
-    }))
+    .input(
+      z.object({
+        userSafe: z
+          .string()
+          .length(42)
+          .transform((val) => getAddress(val)),
+        vaultAddresses: z.array(
+          z
+            .string()
+            .length(42)
+            .transform((val) => getAddress(val)),
+        ),
+      }),
+    )
     .query(async ({ ctx, input }) => {
       const { userSafe, vaultAddresses } = input;
       const privyDid = ctx.userId;
@@ -1483,23 +1744,27 @@ export const earnRouter = router({
             // Get shares balance
             const shares = await publicClient.readContract({
               address: vaultAddress as Address,
-              abi: parseAbi(['function balanceOf(address) view returns (uint256)']),
+              abi: parseAbi([
+                'function balanceOf(address) view returns (uint256)',
+              ]),
               functionName: 'balanceOf',
               args: [userSafe],
             });
-            
+
             if (shares > 0n) {
               // Convert shares to assets
               const assets = await publicClient.readContract({
                 address: vaultAddress as Address,
-                abi: parseAbi(['function convertToAssets(uint256) view returns (uint256)']),
+                abi: parseAbi([
+                  'function convertToAssets(uint256) view returns (uint256)',
+                ]),
                 functionName: 'convertToAssets',
                 args: [shares],
               });
-              
+
               // Convert to USD (USDC has 6 decimals)
               const assetsUsd = Number(assets) / 1e6;
-              
+
               return {
                 vaultAddress,
                 shares: shares.toString(),
@@ -1507,23 +1772,26 @@ export const earnRouter = router({
                 assetsUsd,
               };
             }
-            
+
             return {
               vaultAddress,
-              shares: "0",
-              assets: "0",
+              shares: '0',
+              assets: '0',
               assetsUsd: 0,
             };
           } catch (error) {
-            console.error(`Error fetching position for vault ${vaultAddress}:`, error);
+            console.error(
+              `Error fetching position for vault ${vaultAddress}:`,
+              error,
+            );
             return {
               vaultAddress,
-              shares: "0",
-              assets: "0",
+              shares: '0',
+              assets: '0',
               assetsUsd: 0,
             };
           }
-        })
+        }),
       );
 
       return positions;
@@ -1531,10 +1799,18 @@ export const earnRouter = router({
 
   // Set auto-vault selection
   setAutoVault: protectedProcedure
-    .input(z.object({
-      safeAddress: z.string().length(42).transform(val => getAddress(val)),
-      autoVaultAddress: z.string().length(42).transform(val => getAddress(val))
-    }))
+    .input(
+      z.object({
+        safeAddress: z
+          .string()
+          .length(42)
+          .transform((val) => getAddress(val)),
+        autoVaultAddress: z
+          .string()
+          .length(42)
+          .transform((val) => getAddress(val)),
+      }),
+    )
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.user.id;
       const { safeAddress, autoVaultAddress } = input;
@@ -1542,29 +1818,39 @@ export const earnRouter = router({
       // Verify safe ownership
       const safeRecord = await db.query.userSafes.findFirst({
         where: (tbl, { and, eq }) =>
-          and(eq(tbl.userDid, userId), eq(tbl.safeAddress, safeAddress as `0x${string}`)),
+          and(
+            eq(tbl.userDid, userId),
+            eq(tbl.safeAddress, safeAddress as `0x${string}`),
+          ),
       });
-      
+
       if (!safeRecord) {
-        throw new TRPCError({ code: 'NOT_FOUND', message: 'Safe not found for user' });
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Safe not found for user',
+        });
       }
 
       // Verify the vault address is one of the allowed Base vaults
       const isValidVault = BASE_USDC_VAULTS.some(
-        v => v.address.toLowerCase() === autoVaultAddress.toLowerCase()
+        (v) => v.address.toLowerCase() === autoVaultAddress.toLowerCase(),
       );
-      
+
       if (!isValidVault) {
-        throw new TRPCError({ 
-          code: 'BAD_REQUEST', 
-          message: 'Invalid vault address. Must be one of the supported Base USDC vaults.' 
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message:
+            'Invalid vault address. Must be one of the supported Base USDC vaults.',
         });
       }
 
       // Check if config exists
       const existingConfig = await db.query.autoEarnConfigs.findFirst({
         where: (tbl, { and, eq }) =>
-          and(eq(tbl.userDid, userId), eq(tbl.safeAddress, safeAddress as `0x${string}`)),
+          and(
+            eq(tbl.userDid, userId),
+            eq(tbl.safeAddress, safeAddress as `0x${string}`),
+          ),
       });
 
       if (existingConfig) {
@@ -1575,8 +1861,8 @@ export const earnRouter = router({
           .where(
             and(
               eq(autoEarnConfigs.userDid, userId),
-              eq(autoEarnConfigs.safeAddress, safeAddress as `0x${string}`)
-            )
+              eq(autoEarnConfigs.safeAddress, safeAddress as `0x${string}`),
+            ),
           );
       } else {
         // Create new config with default 10% and the selected vault
@@ -1593,9 +1879,14 @@ export const earnRouter = router({
 
   // Get auto-vault config including the selected vault
   getAutoVaultConfig: protectedProcedure
-    .input(z.object({
-      safeAddress: z.string().length(42).transform(val => getAddress(val))
-    }))
+    .input(
+      z.object({
+        safeAddress: z
+          .string()
+          .length(42)
+          .transform((val) => getAddress(val)),
+      }),
+    )
     .query(async ({ ctx, input }) => {
       const userId = ctx.user.id;
       const { safeAddress } = input;
@@ -1603,16 +1894,25 @@ export const earnRouter = router({
       // Verify Safe belongs to user
       const safeRecord = await db.query.userSafes.findFirst({
         where: (tbl, { and, eq }) =>
-          and(eq(tbl.userDid, userId), eq(tbl.safeAddress, safeAddress as `0x${string}`)),
+          and(
+            eq(tbl.userDid, userId),
+            eq(tbl.safeAddress, safeAddress as `0x${string}`),
+          ),
       });
-      
+
       if (!safeRecord) {
-        throw new TRPCError({ code: 'NOT_FOUND', message: 'Safe not found for user' });
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Safe not found for user',
+        });
       }
 
       const config = await db.query.autoEarnConfigs.findFirst({
         where: (tbl, { and, eq }) =>
-          and(eq(tbl.userDid, userId), eq(tbl.safeAddress, safeAddress as `0x${string}`)),
+          and(
+            eq(tbl.userDid, userId),
+            eq(tbl.safeAddress, safeAddress as `0x${string}`),
+          ),
       });
 
       return {

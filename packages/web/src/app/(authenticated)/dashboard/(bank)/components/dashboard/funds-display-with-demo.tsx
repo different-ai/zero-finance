@@ -118,16 +118,25 @@ export function FundsDisplayWithDemo({
   // Check if user has any virtual accounts
   const hasVirtualAccounts = achAccount || ibanAccount;
 
+  // Format balance with proper tabular number display
+  const formatBalance = (amount: number) => {
+    const absAmount = Math.abs(amount);
+    const [integer, decimal] = absAmount.toFixed(2).split('.');
+    return { integer, decimal, isNegative: amount < 0 };
+  };
+
+  const balanceDisplay = formatBalance(displayBalance);
+
   return (
-    <Card className="bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition-shadow">
-      <CardHeader className="pb-2">
+    <Card className="bg-white border border-[#101010]/10 rounded-[12px] shadow-[0_2px_8px_rgba(16,16,16,0.04)]">
+      <CardHeader className="p-5 sm:p-6 pb-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-10 h-10 bg-[#0050ff] rounded-full flex items-center justify-center shadow-md shadow-[#0050ff]/20">
+            <div className="w-10 h-10 bg-[#1B29FF] rounded-full flex items-center justify-center">
               <span className="text-white font-semibold text-lg">$</span>
             </div>
             <div>
-              <p className="text-gray-600 text-sm font-medium">
+              <p className="text-[#101010]/60 text-sm font-medium">
                 {isDemoMode ? 'Demo Account' : 'Personal'} · USD
               </p>
             </div>
@@ -139,11 +148,19 @@ export function FundsDisplayWithDemo({
           )}
         </div>
       </CardHeader>
-      <CardContent className="space-y-6">
+      <CardContent className="p-5 sm:p-6 pt-0 space-y-6">
         <div className="flex items-center justify-between">
-          <div className="text-5xl font-bold text-gray-800">
-            {displayBalance < 0 ? '-' : ''}
-            {formatCurrency(Math.abs(displayBalance))}
+          <div className="font-serif tabular-nums text-[#101010]">
+            {balanceDisplay.isNegative && (
+              <span className="text-red-600">-</span>
+            )}
+            <span className="align-baseline text-[18px] mr-1">$</span>
+            <span className="text-[40px] sm:text-[48px] leading-none font-bold">
+              {parseInt(balanceDisplay.integer).toLocaleString()}
+            </span>
+            <span className="align-top text-[22px] ml-[2px]">
+              .{balanceDisplay.decimal}
+            </span>
           </div>
         </div>
 
@@ -151,15 +168,14 @@ export function FundsDisplayWithDemo({
           <Dialog open={isMoveModalOpen} onOpenChange={setIsMoveModalOpen}>
             <DialogTrigger asChild>
               <Button
-                className="flex-1 inline-flex items-center justify-center py-3 bg-[#0050ff] hover:bg-[#0050ff]/90 text-white font-semibold rounded-md transition-all hover:scale-[1.02] active:scale-[0.97] shadow-lg shadow-[#0050ff]/25 gap-3 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                className="inline-flex items-center justify-center px-5 py-2.5 text-[14px] font-medium text-white bg-[#1B29FF] hover:bg-[#1420CC] rounded-md transition-colors"
                 title={
                   !hasVirtualAccounts && !isDemoMode
                     ? 'Connect a bank account to enable transfers'
                     : undefined
                 }
               >
-                <CreditCard className="h-5 w-5" />
-                Move
+                Move money →
               </Button>
             </DialogTrigger>
             <DialogContent
@@ -187,9 +203,11 @@ export function FundsDisplayWithDemo({
             }
           >
             <DialogTrigger asChild>
-              <Button className="flex-1 inline-flex items-center justify-center py-3 bg-white hover:bg-gray-50 text-gray-700 font-medium rounded-md transition-all hover:scale-[1.01] active:scale-[0.99] border border-gray-200 shadow-sm hover:shadow-md gap-3">
-                <Info className="h-5 w-5" />
-                Details
+              <Button
+                variant="ghost"
+                className="text-[13px] text-[#101010] underline decoration-[#101010]/30 underline-offset-[4px] hover:text-[#1B29FF] hover:decoration-[#1B29FF] hover:bg-transparent px-0"
+              >
+                View details
               </Button>
             </DialogTrigger>
             <DialogContent className="bg-white border-gray-200 text-gray-800 max-w-3xl max-h-[90vh] overflow-y-auto">

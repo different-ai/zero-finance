@@ -88,150 +88,112 @@ function DemoTransactionHistory() {
       : []),
   ];
 
+  // Group transactions by day
+  const groupTransactionsByDay = (txs: typeof transactions) => {
+    const groups: Record<string, typeof transactions> = {};
+    txs.forEach((tx) => {
+      const date = new Date(tx.timestamp);
+      const today = new Date();
+      const yesterday = new Date(today);
+      yesterday.setDate(yesterday.getDate() - 1);
+      
+      let dayLabel: string;
+      if (date.toDateString() === today.toDateString()) {
+        dayLabel = 'TODAY';
+      } else if (date.toDateString() === yesterday.toDateString()) {
+        dayLabel = 'YESTERDAY';
+      } else {
+        dayLabel = date.toLocaleDateString('en-US', { 
+          month: 'short', 
+          day: 'numeric', 
+          year: 'numeric' 
+        }).toUpperCase();
+      }
+      
+      if (!groups[dayLabel]) {
+        groups[dayLabel] = [];
+      }
+      groups[dayLabel].push(tx);
+    });
+    return groups;
+  };
+
+  const bankTransactions = transactions.filter(tx => tx.type !== 'yield' && tx.type !== 'savings');
+  const cryptoTransactions = transactions.filter(tx => tx.type === 'savings' || tx.type === 'yield');
+  const groupedBankTransactions = groupTransactionsByDay(bankTransactions);
+  const groupedCryptoTransactions = groupTransactionsByDay(cryptoTransactions);
+
   return (
-    <Tabs defaultValue="bank" className="w-full">
-      <TabsList className="mb-4 overflow-x-auto">
-        <TabsTrigger value="bank">Bank Transfers</TabsTrigger>
-        <TabsTrigger value="crypto">Crypto Transfers</TabsTrigger>
-      </TabsList>
+    <div className="w-full p-5 sm:p-6 pt-0">
+      {/* Segmented Control */}
+      <div className="inline-flex p-[2px] rounded-md border border-[#101010]/10 bg-white text-[12px] mb-6">
+        <button 
+          onClick={() => {}} 
+          className="px-3 py-1.5 rounded-[6px] bg-[#1B29FF] text-white font-medium"
+        >
+          Bank transfers {bankTransactions.length > 0 && `(${bankTransactions.length})`}
+        </button>
+        <button 
+          onClick={() => {}} 
+          className="px-3 py-1.5 rounded-[6px] text-[#101010]/80 hover:bg-[#F7F7F2] font-medium"
+        >
+          Crypto {cryptoTransactions.length > 0 && `(${cryptoTransactions.length})`}
+        </button>
+      </div>
 
-      <TabsContent value="bank">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Recent Transactions</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {transactions.map((tx) => (
-                <div
-                  key={tx.id}
-                  className="flex items-center justify-between py-3 border-b last:border-0"
-                >
-                  <div className="flex items-center gap-3">
-                    <div
-                      className={`p-2 rounded-full ${
-                        tx.type === 'deposit' || tx.type === 'yield'
-                          ? 'bg-green-100'
-                          : tx.type === 'savings'
-                            ? 'bg-blue-100'
-                            : 'bg-orange-100'
-                      }`}
-                    >
-                      {tx.type === 'deposit' || tx.type === 'yield' ? (
-                        <ArrowDownLeft
-                          className={`h-4 w-4 ${
-                            tx.type === 'yield'
-                              ? 'text-green-700'
-                              : 'text-green-600'
-                          }`}
-                        />
-                      ) : (
-                        <ArrowUpRight
-                          className={`h-4 w-4 ${
-                            tx.type === 'savings'
-                              ? 'text-blue-600'
-                              : 'text-orange-600'
-                          }`}
-                        />
-                      )}
-                    </div>
-                    <div>
-                      <p className="font-medium text-sm">{tx.description}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {tx.from || tx.to} •{' '}
-                        {new Date(tx.timestamp).toLocaleString()}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p
-                      className={`font-semibold ${
-                        tx.type === 'deposit' || tx.type === 'yield'
-                          ? 'text-green-600'
-                          : tx.type === 'savings'
-                            ? 'text-blue-600'
-                            : 'text-orange-600'
-                      }`}
-                    >
-                      {tx.type === 'deposit' || tx.type === 'yield' ? '+' : '-'}
-                      {formatUsd(tx.amount)}
-                    </p>
-                    <Badge variant="outline" className="text-xs">
-                      {tx.status}
-                    </Badge>
-                  </div>
+      {/* Bank Transfers List */}
+      <div className="divide-y divide-[#101010]/8">
+        {Object.entries(groupedBankTransactions).map(([day, dayTransactions]) => (
+          <div key={day}>
+            <p className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60 mt-6 mb-3 first:mt-0">
+              {day}
+            </p>
+            {dayTransactions.map((tx) => (
+              <div
+                key={tx.id}
+                className="grid grid-cols-[28px_1fr_auto] items-center py-3 border-b border-[#101010]/8 last:border-0"
+              >
+                <div className="h-7 w-7 rounded-full bg-[#F7F7F2] inline-flex items-center justify-center">
+                  {tx.type === 'deposit' || tx.type === 'yield' ? (
+                    <ArrowDownLeft className="h-4 w-4 text-[#1B29FF]" />
+                  ) : (
+                    <ArrowUpRight className="h-4 w-4 text-[#101010]" />
+                  )}
                 </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      </TabsContent>
+                <div className="min-w-0 px-3">
+                  <p className="truncate text-[14px] text-[#101010] font-medium">
+                    {tx.description}
+                  </p>
+                  <p className="text-[12px] text-[#101010]/60">
+                    {tx.from || tx.to} · {tx.status === 'completed' ? 'Completed' : tx.status}
+                  </p>
+                </div>
+                <div className="text-right tabular-nums">
+                  <span className={`text-[14px] ${
+                    tx.type === 'deposit' || tx.type === 'yield' 
+                      ? 'text-[#1B29FF]' 
+                      : 'text-[#101010]'
+                  }`}>
+                    {tx.type === 'deposit' || tx.type === 'yield' ? '+' : '-'}
+                    {Math.abs(tx.amount).toLocaleString('en-US', {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2
+                    })}
+                  </span>
+                  <span className="ml-1 text-[12px] text-[#101010]/60">USD</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        ))}
+        {bankTransactions.length === 0 && (
+          <p className="text-sm text-[#101010]/60 py-8 text-center">No bank transactions yet</p>
+        )}
+      </div>
+    </div>
+  );
 
-      <TabsContent value="crypto">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Crypto Transactions</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {transactions
-                .filter((tx) => tx.type === 'savings' || tx.type === 'yield')
-                .map((tx) => (
-                  <div
-                    key={tx.id}
-                    className="flex items-center justify-between py-3 border-b last:border-0"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div
-                        className={`p-2 rounded-full ${
-                          tx.type === 'yield' ? 'bg-green-100' : 'bg-blue-100'
-                        }`}
-                      >
-                        <DollarSign
-                          className={`h-4 w-4 ${
-                            tx.type === 'yield'
-                              ? 'text-green-600'
-                              : 'text-blue-600'
-                          }`}
-                        />
-                      </div>
-                      <div>
-                        <p className="font-medium text-sm">{tx.description}</p>
-                        <p className="text-xs text-muted-foreground">
-                          USDC on Base •{' '}
-                          {new Date(tx.timestamp).toLocaleString()}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p
-                        className={`font-semibold ${
-                          tx.type === 'yield'
-                            ? 'text-green-600'
-                            : 'text-blue-600'
-                        }`}
-                      >
-                        {tx.type === 'yield' ? '+' : ''}
-                        {formatUsd(tx.amount)}
-                      </p>
-                      <Badge variant="outline" className="text-xs">
-                        On-chain
-                      </Badge>
-                    </div>
-                  </div>
-                ))}
-              {transactions.filter(
-                (tx) => tx.type === 'savings' || tx.type === 'yield',
-              ).length === 0 && (
-                <p className="text-sm text-muted-foreground">
-                  No crypto transactions yet
-                </p>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      </TabsContent>
-    </Tabs>
+
   );
 }
 
