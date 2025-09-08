@@ -142,26 +142,30 @@ export function Sidebar() {
                 key={item.name}
                 href={item.href}
                 className={cn(
-                  'group relative flex items-center gap-3 px-3 py-2.5 transition-all duration-200',
+                  'group relative flex items-center gap-2 px-3 py-2 transition-colors duration-150',
                   isActive
-                    ? 'bg-[#1B29FF] text-white'
+                    ? 'text-[#101010]'
                     : 'hover:bg-[#F7F7F2] text-[#101010]/70 hover:text-[#101010]',
                 )}
                 aria-current={isActive ? 'page' : undefined}
               >
+                {/* Active rail indicator */}
+                {isActive && (
+                  <span className="absolute left-0 top-1/2 -translate-y-1/2 h-6 w-[2px] bg-[#1B29FF] rounded-full" />
+                )}
                 {React.createElement(item.icon, {
                   className: cn(
-                    'h-[18px] w-[18px] transition-all duration-200',
+                    'h-4 w-4 transition-colors duration-150',
                     isActive
-                      ? 'text-white'
+                      ? 'text-[#101010]'
                       : 'text-[#101010]/60 group-hover:text-[#101010]',
                   ),
                 })}
                 <span
                   className={cn(
-                    'text-sm uppercase tracking-wider transition-all duration-200',
+                    'text-[13px] font-medium transition-colors duration-150',
                     isActive
-                      ? 'text-white'
+                      ? 'text-[#101010]'
                       : 'text-[#101010]/70 group-hover:text-[#101010]',
                   )}
                 >
@@ -214,37 +218,37 @@ export function Sidebar() {
       <div className="px-4 pb-3 space-y-1">
         <button
           onClick={() => window.open('/support', '_blank')}
-          className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-[#F7F7F2] transition-colors group"
+          className="w-full flex items-center gap-2 px-3 py-2 hover:bg-[#F7F7F2] transition-colors duration-150 group"
         >
-          <Phone className="h-[18px] w-[18px] text-[#101010]/60 group-hover:text-[#101010] transition-colors" />
-          <span className="text-sm uppercase tracking-wider text-[#101010]/70 group-hover:text-[#101010] transition-colors">
+          <Phone className="h-4 w-4 text-[#101010]/60 group-hover:text-[#101010] transition-colors duration-150" />
+          <span className="text-[13px] font-medium text-[#101010]/70 group-hover:text-[#101010] transition-colors duration-150">
             Support
           </span>
         </button>
 
         <button
           onClick={() => router.push('/dashboard/feedback')}
-          className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-[#F7F7F2] transition-colors group"
+          className="w-full flex items-center gap-2 px-3 py-2 hover:bg-[#F7F7F2] transition-colors duration-150 group"
         >
-          <MessageSquare className="h-[18px] w-[18px] text-[#101010]/60 group-hover:text-[#101010] transition-colors" />
-          <span className="text-sm uppercase tracking-wider text-[#101010]/70 group-hover:text-[#101010] transition-colors">
+          <MessageSquare className="h-4 w-4 text-[#101010]/60 group-hover:text-[#101010] transition-colors duration-150" />
+          <span className="text-[13px] font-medium text-[#101010]/70 group-hover:text-[#101010] transition-colors duration-150">
             Feedback
           </span>
         </button>
 
         <Link
           href="/dashboard/settings"
-          className="flex items-center gap-3 px-3 py-2.5 hover:bg-[#F7F7F2] transition-colors group"
+          className="flex items-center gap-2 px-3 py-2 hover:bg-[#F7F7F2] transition-colors duration-150 group"
         >
-          <Settings className="h-[18px] w-[18px] text-[#101010]/60 group-hover:text-[#101010] transition-colors" />
-          <span className="text-sm uppercase tracking-wider text-[#101010]/70 group-hover:text-[#101010] transition-colors">
+          <Settings className="h-4 w-4 text-[#101010]/60 group-hover:text-[#101010] transition-colors duration-150" />
+          <span className="text-[13px] font-medium text-[#101010]/70 group-hover:text-[#101010] transition-colors duration-150">
             Settings
           </span>
         </Link>
       </div>
 
       {/* User section */}
-      <div className="border-t border-[#101010]/10 bg-[#F7F7F2]">
+      <div className="border-t-2 border-[#101010]/10 bg-[#F7F7F2]">
         {authenticated && user && (
           <div className="p-4">
             <div className="relative" ref={dropdownRef}>
