@@ -126,6 +126,13 @@ export const users = pgTable('users', {
   createdAt: timestamp('created_at', { withTimezone: true })
     .defaultNow()
     .notNull(),
+  // User identity fields
+  firstName: text('first_name'),
+  lastName: text('last_name'),
+  companyName: text('company_name'),
+  beneficiaryType: text('beneficiary_type', {
+    enum: ['individual', 'business'],
+  }),
   // Align-specific fields
   alignCustomerId: text('align_customer_id').unique(), // Customer ID from Align API
   kycProvider: text('kyc_provider', { enum: ['align', 'other'] }), // KYC provider

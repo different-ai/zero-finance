@@ -45,14 +45,36 @@ const formatCurrency = (amount: number): string => {
   }).format(amount);
 };
 
+const getRecipientName = (source: any, userData: any) => {
+  if (source.sourceAccountType === 'iban') {
+    // EUR/SEPA accounts always use Bridge Building
+    return 'Bridge Building Sp.z.o.o.';
+  } else if (source.sourceAccountType === 'us_ach') {
+    // USD/ACH accounts use registered company or individual name
+    if (userData?.companyName) {
+      return userData.companyName;
+    } else if (userData?.firstName && userData?.lastName) {
+      return `${userData.firstName} ${userData.lastName}`;
+    } else if (source.sourceBankBeneficiaryName) {
+      return source.sourceBankBeneficiaryName;
+    }
+    return 'Account Holder';
+  }
+  return source.sourceBankBeneficiaryName || 'Account Holder';
+};
+
 interface FundsDisplayProps {
   totalBalance?: number;
   walletAddress?: string;
+  fundingSources?: any[];
+  userData?: any;
 }
 
 export function FundsDisplay({
   totalBalance = 0,
   walletAddress,
+  fundingSources: propFundingSources,
+  userData: propUserData,
 }: FundsDisplayProps) {
   const [isCopied, setIsCopied] = useState(false);
   const [copiedField, setCopiedField] = useState<string | null>(null);
@@ -60,14 +82,18 @@ export function FundsDisplay({
   const { ready, authenticated, user } = usePrivy();
   const isMobile = useIsMobile();
 
-  // Use tRPC to fetch funding sources
+  // Use tRPC to fetch funding sources and user data
   const {
-    data: fundingSources = [],
+    data: accountData,
     isLoading: isLoadingFundingSources,
     refetch: refetchFundingSources,
   } = api.align.getVirtualAccountDetails.useQuery(undefined, {
-    enabled: ready && authenticated && !!user?.id,
+    enabled: ready && authenticated && !!user?.id && !propFundingSources,
   });
+
+  const fundingSources =
+    propFundingSources || accountData?.fundingSources || [];
+  const userData = propUserData || accountData?.userData;
 
   // Handle copying to clipboard
   const copyToClipboard = (text: string, field: string) => {
@@ -256,6 +282,15 @@ export function FundsDisplay({
                                     {source.sourceCurrency?.toUpperCase()}
                                   </p>
                                 </div>
+                              </div>
+
+                              <div>
+                                <p className="text-xs text-gray-600 mb-1">
+                                  Recipient Name / Beneficiary
+                                </p>
+                                <p className="font-medium">
+                                  {getRecipientName(source, userData)}
+                                </p>
                               </div>
 
                               <div className="bg-gray-50 rounded-lg p-3 space-y-2">

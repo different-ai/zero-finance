@@ -266,21 +266,6 @@ export default function SavingsPageWrapper() {
   return (
     <div className="min-h-screen bg-[#F7F7F2]">
       {/* Header Section */}
-      <div className="border-b border-[#101010]/10 bg-white">
-        <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-          <p className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60">
-            High-Yield Savings
-          </p>
-          <h1 className="mt-2 font-serif text-[32px] sm:text-[48px] lg:text-[56px] leading-[1.1] tracking-[-0.01em] text-[#101010]">
-            Earn up to 10% APY
-          </h1>
-          <p className="mt-3 text-[14px] sm:text-[16px] leading-[1.5] text-[#101010]/80 max-w-[65ch]">
-            Deposit your idle cash into vetted DeFi vaults. No lock-ups,
-            withdraw anytime.
-          </p>
-        </div>
-      </div>
-
       {/* Main Content */}
       <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {/* Not Initialized State */}

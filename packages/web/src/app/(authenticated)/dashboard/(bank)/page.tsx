@@ -85,16 +85,6 @@ export default async function DashboardPage() {
   return (
     <div className="min-h-screen bg-[#F7F7F2]">
       {/* Header Section */}
-      <div className="border-b border-[#101010]/10 bg-white">
-        <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <p className="uppercase tracking-[0.18em] text-[12px] text-[#101010]/60">
-            OVERVIEW
-          </p>
-          <h1 className="mt-1 font-serif text-[32px] sm:text-[36px] leading-[0.98] tracking-[-0.01em] text-[#101010]">
-            Dashboard
-          </h1>
-        </div>
-      </div>
 
       {/* Main Content */}
       <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">

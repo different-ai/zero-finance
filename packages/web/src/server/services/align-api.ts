@@ -22,6 +22,10 @@ class AlignApiError extends Error {
 export const alignCustomerSchema = z.object({
   customer_id: z.string(),
   email: z.string().email(),
+  first_name: z.string().optional(),
+  last_name: z.string().optional(),
+  company_name: z.string().optional(),
+  beneficiary_type: z.enum(['individual', 'business']).optional(),
   kycs: z
     .array(
       z.object({

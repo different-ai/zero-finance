@@ -39,7 +39,7 @@ async function fetchAndUpdateKycStatus(
       customer.kycs && customer.kycs.length > 0 ? customer.kycs[0] : null;
 
     if (latestKyc) {
-      // Update DB with latest status
+      // Update DB with latest status and customer details
       await db
         .update(users)
         .set({
@@ -47,6 +47,11 @@ async function fetchAndUpdateKycStatus(
           kycFlowLink: latestKyc.kyc_flow_link,
           kycSubStatus: latestKyc.sub_status,
           kycProvider: 'align',
+          // Store customer name details
+          firstName: customer.first_name || null,
+          lastName: customer.last_name || null,
+          companyName: customer.company_name || null,
+          beneficiaryType: customer.beneficiary_type || null,
         })
         .where(eq(users.privyDid, userId));
 
@@ -341,7 +346,7 @@ export const alignRouter = router({
         const kycStatusToSet = kycSession?.status ?? 'pending';
         const kycFlowLinkToSet = kycSession?.kyc_flow_link || null;
 
-        // Update user with new customer ID and KYC status
+        // Update user with new customer ID, KYC status, and name details
         await db
           .update(users)
           .set({
@@ -349,6 +354,12 @@ export const alignRouter = router({
             kycStatus: kycStatusToSet,
             kycFlowLink: kycFlowLinkToSet,
             kycProvider: 'align',
+            // Store the provided name details
+            firstName: input.firstName,
+            lastName: input.lastName,
+            companyName: input.businessName || null,
+            beneficiaryType:
+              beneficiaryType === 'corporate' ? 'business' : beneficiaryType,
           })
           .where(eq(users.privyDid, userId));
 
@@ -660,7 +671,21 @@ export const alignRouter = router({
       (source) => source.sourceProvider === 'align',
     );
 
-    return alignSources;
+    // Also get user details for recipient name
+    const user = await db.query.users.findFirst({
+      where: eq(users.privyDid, userFromPrivy.id),
+      columns: {
+        firstName: true,
+        lastName: true,
+        companyName: true,
+        beneficiaryType: true,
+      },
+    });
+
+    return {
+      fundingSources: alignSources,
+      userData: user,
+    };
   }),
 
   /**

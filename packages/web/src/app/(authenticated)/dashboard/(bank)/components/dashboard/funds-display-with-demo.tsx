@@ -47,6 +47,24 @@ const formatCurrency = (amount: number): string => {
   }).format(amount);
 };
 
+const getRecipientName = (source: any, userData: any) => {
+  if (source.sourceAccountType === 'iban') {
+    // EUR/SEPA accounts always use Bridge Building
+    return 'Bridge Building Sp.z.o.o.';
+  } else if (source.sourceAccountType === 'us_ach') {
+    // USD/ACH accounts use registered company or individual name
+    if (userData?.companyName) {
+      return userData.companyName;
+    } else if (userData?.firstName && userData?.lastName) {
+      return `${userData.firstName} ${userData.lastName}`;
+    } else if (source.sourceBankBeneficiaryName) {
+      return source.sourceBankBeneficiaryName;
+    }
+    return 'Account Holder';
+  }
+  return source.sourceBankBeneficiaryName || 'Account Holder';
+};
+
 interface FundsDisplayWithDemoProps {
   totalBalance?: number;
   walletAddress?: string;
@@ -75,7 +93,7 @@ export function FundsDisplayWithDemo({
 
   // Use tRPC to fetch funding sources (real mode)
   const {
-    data: realFundingSources = [],
+    data: realAccountData,
     isLoading: isLoadingRealFundingSources,
     refetch: refetchFundingSources,
   } = api.align.getVirtualAccountDetails.useQuery(undefined, {
@@ -86,7 +104,10 @@ export function FundsDisplayWithDemo({
   const demoFundingSources = isDemoMode ? getDemoVirtualAccounts(demoStep) : [];
 
   // Use demo or real funding sources
-  const fundingSources = isDemoMode ? demoFundingSources : realFundingSources;
+  const fundingSources = isDemoMode
+    ? demoFundingSources
+    : realAccountData?.fundingSources || [];
+  const userData = isDemoMode ? null : realAccountData?.userData;
   const isLoadingFundingSources = isDemoMode
     ? false
     : isLoadingRealFundingSources;
@@ -207,7 +228,7 @@ export function FundsDisplayWithDemo({
                 variant="ghost"
                 className="text-[13px] text-[#101010] underline decoration-[#101010]/30 underline-offset-[4px] hover:text-[#1B29FF] hover:decoration-[#1B29FF] hover:bg-transparent px-0"
               >
-                View details
+                Account Details
               </Button>
             </DialogTrigger>
             <DialogContent className="bg-white border-gray-200 text-gray-800 max-w-3xl max-h-[90vh] overflow-y-auto">
@@ -319,6 +340,15 @@ export function FundsDisplayWithDemo({
                                     {source.sourceCurrency?.toUpperCase()}
                                   </p>
                                 </div>
+                              </div>
+
+                              <div>
+                                <p className="text-xs text-gray-600 mb-1">
+                                  Recipient Name / Beneficiary
+                                </p>
+                                <p className="font-medium">
+                                  {getRecipientName(source, userData)}
+                                </p>
                               </div>
 
                               <div className="bg-gray-50 rounded-lg p-3 space-y-2">

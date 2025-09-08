@@ -146,7 +146,7 @@ function ActionItem({ action }: { action: CardAction }) {
             ) : (
               <ChevronRight className="h-3 w-3" />
             )}
-            View details
+            Account Details
           </button>
         ) : null}
 
