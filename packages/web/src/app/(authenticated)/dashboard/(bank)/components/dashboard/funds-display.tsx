@@ -183,8 +183,8 @@ export function FundsDisplay({
 
           <Dialog onOpenChange={(open) => open && refetchFundingSources()}>
             <DialogTrigger asChild>
-              <Button className="flex-1 inline-flex items-center justify-center px-6 py-3 text-[16px] font-medium text-[#101010] bg-white hover:bg-[#F7F7F2] border border-[#101010]/10 transition-colors gap-2">
-                <Info className="h-5 w-5" />
+              <Button className="flex-1 inline-flex items-center justify-center px-6 py-3 text-[16px] font-medium text-[#101010] bg-white hover:bg-[#F7F7F2] hover:text-[#1B29FF] border border-[#101010]/10 hover:border-[#1B29FF]/20 transition-all duration-150 gap-2 group">
+                <Info className="h-5 w-5 text-[#101010]/60 group-hover:text-[#1B29FF] transition-colors" />
                 Account Details
               </Button>
             </DialogTrigger>

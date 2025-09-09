@@ -54,6 +54,7 @@ import { AnimatedTotalEarned } from '@/components/animated-total-earned';
 export default function SavingsPageWrapper() {
   const router = useRouter();
   const { isDemoMode, demoStep } = useDemoMode();
+  const [hasInitialLoad, setHasInitialLoad] = useState(false);
 
   // Get safe data
   const {
@@ -218,6 +219,13 @@ export default function SavingsPageWrapper() {
         realVaultStatsMany.isLoading ||
         realUserPositions.isLoading));
 
+  // Track initial load completion
+  useEffect(() => {
+    if (!isLoading && !hasInitialLoad) {
+      setHasInitialLoad(true);
+    }
+  }, [isLoading, hasInitialLoad]);
+
   // Redirect logic
   useEffect(() => {
     if (
@@ -231,11 +239,51 @@ export default function SavingsPageWrapper() {
     }
   }, [isDemoMode, isLoadingSafes, safesError, safesData, router]);
 
-  // Loading state
+  // Loading state with skeleton
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[#F7F7F2] flex items-center justify-center">
-        <LoadingSpinner />
+      <div className="min-h-screen bg-[#F7F7F2] animate-in fade-in duration-300">
+        {/* Header Section */}
+        <div className="border-b border-[#101010]/10 bg-white">
+          <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+            <div className="h-3 w-32 bg-[#101010]/5 rounded animate-pulse mb-3" />
+            <div className="h-12 w-96 bg-[#101010]/5 rounded animate-pulse mb-3" />
+            <div className="h-4 w-full max-w-[65ch] bg-[#101010]/5 rounded animate-pulse" />
+          </div>
+        </div>
+
+        {/* Main Content Skeleton */}
+        <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-12">
+          <div className="space-y-12">
+            {/* Portfolio Overview Skeleton */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-px bg-[#101010]/10">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="bg-white p-6">
+                  <div className="h-3 w-24 bg-[#101010]/5 rounded animate-pulse mb-2" />
+                  <div className="h-8 w-32 bg-[#101010]/5 rounded animate-pulse" />
+                </div>
+              ))}
+            </div>
+
+            {/* Yield Counter Skeleton */}
+            <div className="bg-white border border-[#101010]/10 p-8">
+              <div className="h-3 w-48 bg-[#101010]/5 rounded animate-pulse mb-6" />
+              <div className="h-16 w-64 bg-[#101010]/5 rounded animate-pulse" />
+            </div>
+
+            {/* Vaults Table Skeleton */}
+            <div className="bg-white border border-[#101010]/10">
+              <div className="p-4 border-b border-[#101010]/10 bg-[#F7F7F2]">
+                <div className="h-4 w-full bg-[#101010]/5 rounded animate-pulse" />
+              </div>
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="p-4 border-b border-[#101010]/5">
+                  <div className="h-6 w-full bg-[#101010]/5 rounded animate-pulse" />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
     );
   }

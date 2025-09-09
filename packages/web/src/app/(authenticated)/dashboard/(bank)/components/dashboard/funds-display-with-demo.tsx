@@ -216,10 +216,8 @@ export function FundsDisplayWithDemo({
             }
           >
             <DialogTrigger asChild>
-              <Button
-                variant="ghost"
-                className="inline-flex items-center text-[15px] text-[#101010] hover:text-[#1B29FF] underline decoration-[#101010]/30 underline-offset-[4px] hover:decoration-[#1B29FF] transition-colors"
-              >
+              <Button className="flex-1 inline-flex items-center justify-center px-6 py-3 text-[16px] font-medium text-[#101010] bg-white hover:bg-[#F7F7F2] hover:text-[#1B29FF] border border-[#101010]/10 hover:border-[#1B29FF]/20 transition-all duration-150 gap-2 group">
+                <Info className="h-5 w-5 text-[#101010]/60 group-hover:text-[#1B29FF] transition-colors" />
                 Account Details
               </Button>
             </DialogTrigger>
