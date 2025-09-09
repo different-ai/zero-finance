@@ -1,9 +1,6 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { CreditCard, Ban, ArrowRight, Building, Shield, BellRing, Landmark } from 'lucide-react';
-import { PageHeader } from '@/components/layout/page-header';
+import { CreditCard, Shield, BellRing, ArrowRight } from 'lucide-react';
 
 export const metadata: Metadata = {
   title: 'Settings - Hypr',
@@ -12,88 +9,106 @@ export const metadata: Metadata = {
 
 export default function SettingsPage() {
   return (
-    <div className="container max-w-6xl pb-12">
-      <PageHeader
-        title="Settings"
-        description="Manage your accounts, profiles, and preferences"
-      />
+    <div className="min-h-screen bg-[#F7F7F2]">
+      {/* Hero Section */}
+      <section className="bg-[#F6F5EF] border-b border-[#101010]/10 py-16">
+        <div className="max-w-[1200px] mx-auto px-4">
+          <p className="uppercase tracking-[0.18em] text-[12px] text-[#101010]/70">
+            Account Management
+          </p>
+          <h1 className="mt-3 font-serif text-[48px] sm:text-[56px] leading-[0.96] tracking-[-0.01em] text-[#101010]">
+            Settings
+          </h1>
+          <p className="mt-4 text-[16px] leading-[1.5] text-[#101010]/80 max-w-[65ch]">
+            Manage your accounts, profiles, and preferences
+          </p>
+        </div>
+      </section>
 
-      <div className="grid gap-6 mt-8 md:grid-cols-2">
-        {/* Payment Methods Card */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <CreditCard className="h-5 w-5" />
-              <span>Funding Sources</span>
-            </CardTitle>
-            <CardDescription>
-              Manage your payment methods and bank connections
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ul className="space-y-2">
-              {/* Virtual bank account setup is now in the onboarding flow on the dashboard */}
-              {/* Add more payment method options here */}
-            </ul>
-            <p className="text-sm text-gray-600">
-              Virtual bank account setup is available in your dashboard onboarding flow.
-            </p>
-          </CardContent>
-          <CardFooter>
-            <Button variant="outline" className="w-full" asChild>
-              <Link href="/settings/funding-sources">
-                Manage All Funding Sources
-              </Link>
-            </Button>
-          </CardFooter>
-        </Card>
+      {/* Settings Grid */}
+      <section className="bg-white py-12 sm:py-16">
+        <div className="max-w-[1200px] mx-auto px-4">
+          <div className="grid gap-px bg-[#101010]/10 md:grid-cols-2 lg:grid-cols-3">
+            {/* Funding Sources Card */}
+            <div className="bg-white p-8">
+              <div className="flex items-start gap-4">
+                <CreditCard className="h-5 w-5 text-[#1B29FF] mt-1" />
+                <div className="flex-1">
+                  <h2 className="font-serif text-[24px] leading-[1.1] text-[#101010]">
+                    Funding Sources
+                  </h2>
+                  <p className="mt-2 text-[14px] leading-[1.5] text-[#101010]/70">
+                    Manage your payment methods and bank connections
+                  </p>
+                  <p className="mt-4 text-[13px] text-[#101010]/60">
+                    Virtual bank account setup is available in your dashboard
+                    onboarding flow.
+                  </p>
+                  <Link
+                    href="/settings/funding-sources"
+                    className="inline-flex items-center mt-6 text-[15px] text-[#101010] hover:text-[#1B29FF] underline decoration-[#101010]/30 underline-offset-[4px] hover:decoration-[#1B29FF] transition-colors"
+                  >
+                    Manage All Funding Sources
+                    <ArrowRight className="ml-1 h-4 w-4" />
+                  </Link>
+                </div>
+              </div>
+            </div>
 
-        {/* Security Card */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Shield className="h-5 w-5" />
-              <span>Security</span>
-            </CardTitle>
-            <CardDescription>
-              Manage your account security and access
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-gray-600 mb-4">
-              Update your wallet connections, recovery options, and access controls.
-            </p>
-          </CardContent>
-          <CardFooter>
-            <Button variant="outline" className="w-full">
-              Security Settings
-            </Button>
-          </CardFooter>
-        </Card>
+            {/* Security Card */}
+            <div className="bg-white p-8">
+              <div className="flex items-start gap-4">
+                <Shield className="h-5 w-5 text-[#1B29FF] mt-1" />
+                <div className="flex-1">
+                  <h2 className="font-serif text-[24px] leading-[1.1] text-[#101010]">
+                    Security
+                  </h2>
+                  <p className="mt-2 text-[14px] leading-[1.5] text-[#101010]/70">
+                    Manage your account security and access
+                  </p>
+                  <p className="mt-4 text-[13px] text-[#101010]/60">
+                    Update your wallet connections, recovery options, and access
+                    controls.
+                  </p>
+                  <Link
+                    href="/settings/security"
+                    className="inline-flex items-center mt-6 text-[15px] text-[#101010] hover:text-[#1B29FF] underline decoration-[#101010]/30 underline-offset-[4px] hover:decoration-[#1B29FF] transition-colors"
+                  >
+                    Security Settings
+                    <ArrowRight className="ml-1 h-4 w-4" />
+                  </Link>
+                </div>
+              </div>
+            </div>
 
-        {/* Notifications Card */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <BellRing className="h-5 w-5" />
-              <span>Notifications</span>
-            </CardTitle>
-            <CardDescription>
-              Manage your notification preferences
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-gray-600 mb-4">
-              Control how you receive notifications about invoices, payments, and other events.
-            </p>
-          </CardContent>
-          <CardFooter>
-            <Button variant="outline" className="w-full">
-              Notification Preferences
-            </Button>
-          </CardFooter>
-        </Card>
-      </div>
+            {/* Notifications Card */}
+            <div className="bg-white p-8">
+              <div className="flex items-start gap-4">
+                <BellRing className="h-5 w-5 text-[#1B29FF] mt-1" />
+                <div className="flex-1">
+                  <h2 className="font-serif text-[24px] leading-[1.1] text-[#101010]">
+                    Notifications
+                  </h2>
+                  <p className="mt-2 text-[14px] leading-[1.5] text-[#101010]/70">
+                    Manage your notification preferences
+                  </p>
+                  <p className="mt-4 text-[13px] text-[#101010]/60">
+                    Control how you receive notifications about invoices,
+                    payments, and other events.
+                  </p>
+                  <Link
+                    href="/settings/notifications"
+                    className="inline-flex items-center mt-6 text-[15px] text-[#101010] hover:text-[#1B29FF] underline decoration-[#101010]/30 underline-offset-[4px] hover:decoration-[#1B29FF] transition-colors"
+                  >
+                    Notification Preferences
+                    <ArrowRight className="ml-1 h-4 w-4" />
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
     </div>
   );
-} 
+}
