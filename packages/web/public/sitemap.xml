@@ -2,7 +2,7 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <!-- Main pages -->
   <url>
-    <loc>https://0finance.com/</loc>
+    <loc>https://0.finance/</loc>
     <lastmod>2025-01-06</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
@@ -10,21 +10,21 @@
   
   <!-- Product pages -->
   <url>
-    <loc>https://0finance.com/high-yield-startup-savings</loc>
+    <loc>https://0.finance/high-yield-startup-savings</loc>
     <lastmod>2025-01-06</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
   
   <url>
-    <loc>https://0finance.com/startup-treasury</loc>
+    <loc>https://0.finance/startup-treasury</loc>
     <lastmod>2025-01-06</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
   
   <url>
-    <loc>https://0finance.com/extend-runway</loc>
+    <loc>https://0.finance/extend-runway</loc>
     <lastmod>2025-01-06</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
@@ -32,7 +32,7 @@
   
   <!-- Tools -->
   <url>
-    <loc>https://0finance.com/runway-calculator</loc>
+    <loc>https://0.finance/runway-calculator</loc>
     <lastmod>2025-01-06</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
@@ -40,14 +40,14 @@
   
   <!-- Comparison pages -->
   <url>
-    <loc>https://0finance.com/compare</loc>
+    <loc>https://0.finance/compare</loc>
     <lastmod>2025-01-06</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   
   <url>
-    <loc>https://0finance.com/compare-extended</loc>
+    <loc>https://0.finance/compare-extended</loc>
     <lastmod>2025-01-06</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
@@ -55,7 +55,7 @@
   
   <!-- Auth pages -->
   <url>
-    <loc>https://0finance.com/signin</loc>
+    <loc>https://0.finance/signin</loc>
     <lastmod>2025-01-06</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -63,14 +63,14 @@
   
   <!-- Legal pages -->
   <url>
-    <loc>https://0finance.com/legal</loc>
+    <loc>https://0.finance/legal</loc>
     <lastmod>2025-01-06</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>
   </url>
   
   <url>
-    <loc>https://0finance.com/privacy</loc>
+    <loc>https://0.finance/privacy</loc>
     <lastmod>2025-01-06</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>

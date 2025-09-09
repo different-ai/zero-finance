@@ -9,7 +9,7 @@ const nextConfig = {
   // Image optimization for better Core Web Vitals
   images: {
     formats: ['image/avif', 'image/webp'],
-    domains: ['0finance.com'],
+    domains: ['0.finance'],
     minimumCacheTTL: 60,
   },
 

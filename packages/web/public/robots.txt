@@ -10,7 +10,7 @@ Disallow: /_next/
 Disallow: /static/
 
 # Sitemap location
-Sitemap: https://0finance.com/sitemap.xml
+Sitemap: https://0.finance/sitemap.xml
 
 # Crawl-delay for respectful crawling
 Crawl-delay: 1

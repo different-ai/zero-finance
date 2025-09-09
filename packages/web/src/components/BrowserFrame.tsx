@@ -9,7 +9,7 @@ interface BrowserFrameProps {
 
 export function BrowserFrame({
   children,
-  url = 'app.0finance.com',
+  url = 'app.0.finance',
   className = '',
   showDemoBadge = false,
 }: BrowserFrameProps) {

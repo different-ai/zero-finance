@@ -4,8 +4,8 @@ export function OrganizationSchema() {
     '@type': 'Organization',
     name: '0 Finance',
     alternateName: 'Zero Finance',
-    url: 'https://0finance.com',
-    logo: 'https://0finance.com/new-logo-bluer.png',
+    url: 'https://0.finance',
+    logo: 'https://0.finance/new-logo-bluer.png',
     description:
       '8% yield savings account for startups with smart contract insurance',
     sameAs: [
@@ -116,7 +116,7 @@ export function ProductSchema() {
     },
     offers: {
       '@type': 'Offer',
-      url: 'https://0finance.com/signin',
+      url: 'https://0.finance/signin',
       priceCurrency: 'USD',
       price: '0',
       availability: 'https://schema.org/InStock',

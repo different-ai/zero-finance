@@ -39,11 +39,11 @@ export default function ExtendRunwayBlogPost() {
     <>
       <BreadcrumbSchema
         items={[
-          { name: 'Home', url: 'https://0finance.com' },
-          { name: 'Blog', url: 'https://0finance.com/blog' },
+          { name: 'Home', url: 'https://0.finance' },
+          { name: 'Blog', url: 'https://0.finance/blog' },
           {
             name: 'How to Extend Runway',
-            url: 'https://0finance.com/blog/how-to-extend-startup-runway-without-raising',
+            url: 'https://0.finance/blog/how-to-extend-startup-runway-without-raising',
           },
         ]}
       />
