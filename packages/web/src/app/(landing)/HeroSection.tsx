@@ -15,17 +15,19 @@ export function HeroSection() {
         <GradientBackground variant="hero" className="z-0 bg-[#F6F5EF] " />
         <div className="relative z-10 mx-auto max-w-[1200px] px-4 sm:px-6 lg:px-8 py-16 sm:py-20 lg:py-24 w-full">
           <p className="uppercase tracking-[0.14em] sm:tracking-[0.18em] text-[11px] sm:text-[12px] lg:text-[13px] font-medium text-[#101010]/70">
-            Insured yield for startups
+            Turn idle cash into headcount
           </p>
           <h1 className="mt-3 font-serif text-[36px] sm:text-[52px] md:text-[72px] lg:text-[88px] leading-[0.96] tracking-[-0.015em] text-[#101010]">
             <span className="block text-[#1B29FF] text-[44px] sm:text-[64px] md:text-[88px] lg:text-[108px] leading-[0.9]">
-              8% Yield
+              Your idle cash
             </span>{' '}
-            on Your <span className="italic">Startup&apos;s</span> Savings
+            could hire your <span className="italic">next engineer</span>
           </h1>
           <p className="mt-4 sm:mt-6 max-w-[62ch] text-[15px] sm:text-[16px] lg:text-[18px] leading-[1.5] text-[#222]">
-            Open a business account. Deposit USD, EUR, or USDC. Earn
-            automatically. Withdraw any time.
+            Get 8% APY on treasury funds without leaving your current bank .
+            Open US or EU account numbers, wire USD EUR or USDC, we place funds
+            into vetted yield with defined insurance coverage, you withdraw any
+            time.
           </p>
           <div className="mt-8 sm:mt-10 flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6">
             <Link
@@ -42,13 +44,11 @@ export function HeroSection() {
             </Link>
           </div>
         </div>
-
       </section>
-      
 
       {/* Demo Panel - Bank Statement Style */}
       <section className="relative border-y border-[#101010]/10 bg-white/90 overflow-hidden">
-        <GradientBackground variant="demo" className="z-0 bg-[#F6F5EF]"/>
+        <GradientBackground variant="demo" className="z-0 bg-[#F6F5EF]" />
         <div className="relative z-10 mx-auto max-w-[1200px] px-4 sm:px-6 lg:px-8 py-8 sm:py-12 lg:py-16">
           {/* Demo indicator - subtle and premium */}
           <div className="flex justify-center mb-4">
@@ -72,7 +72,7 @@ export function HeroSection() {
                       $2,480,930.22
                     </div>
                     <div className="mt-1 text-[13px] sm:text-[14px] text-[#1B29FF] font-medium">
-                      +$679.45 today (10% APY)
+                      +$679.45 today (8% APY)
                     </div>
                   </div>
                   <div className="sm:text-right">
@@ -188,10 +188,10 @@ export function HeroSection() {
       <section className="bg-[#F6F5EF] border-t border-[#101010]/10 py-8 sm:py-12 lg:py-16">
         <div className="mx-auto max-w-[1200px] px-4 sm:px-6 lg:px-8">
           <p className="uppercase tracking-[0.14em] sm:tracking-[0.18em] text-[11px] sm:text-[12px] text-[#101010]/60">
-            See how it works
+            Simple as any savings account
           </p>
           <h2 className="mt-2 font-serif text-[24px] sm:text-[30px] lg:text-[36px] leading-[1.1] tracking-[-0.01em] text-[#101010]">
-            Deposit → Earn → Spend
+            Connect → Sweep → Earn
           </h2>
           <div className="mt-6 sm:mt-8 grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-[#101010]/10 border border-[#101010]/10 bg-white">
             <div className="p-4 sm:p-6">
@@ -199,11 +199,11 @@ export function HeroSection() {
                 1
               </div>
               <h3 className="mt-2 text-[15px] sm:text-[16px] font-medium text-[#101010]">
-                Deposit funds
+                Connect your bank
               </h3>
               <p className="mt-1 text-[13px] sm:text-[14px] text-[#101010]/70">
-                Open US or EU account numbers instantly and wire USD, EUR, or
-                USDC.
+                Link Mercury, Brex, or any bank via Plaid. Set your operating
+                balance threshold.
               </p>
             </div>
             <div className="p-4 sm:p-6">
@@ -211,11 +211,11 @@ export function HeroSection() {
                 2
               </div>
               <h3 className="mt-2 text-[15px] sm:text-[16px] font-medium text-[#101010]">
-                Earn 8% APY
+                Auto-sweep idle cash
               </h3>
               <p className="mt-1 text-[13px] sm:text-[14px] text-[#101010]/70">
-                Funds sweep to regulated yield partners. No lockups. Withdraw
-                any time.
+                Funds above your threshold automatically sweep to earn 8% APY.
+                No manual transfers.
               </p>
             </div>
             <div className="p-4 sm:p-6">
@@ -223,11 +223,11 @@ export function HeroSection() {
                 3
               </div>
               <h3 className="mt-2 text-[15px] sm:text-[16px] font-medium text-[#101010]">
-                Spend with card
+                Connect your bank
               </h3>
               <p className="mt-1 text-[13px] sm:text-[14px] text-[#101010]/70">
-                Set limits and pay via ACH, SEPA, or corporate card from the
-                same account.
+                Link Mercury, Brex, or any bank via Plaid. Set your operating
+                balance threshold.
               </p>
               <div className="mt-3 flex items-center">
                 <img
