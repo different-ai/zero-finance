@@ -9,15 +9,12 @@ import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import {
   Loader2,
-  CircleDollarSign,
   ArrowRight,
   CheckCircle2,
   Banknote,
   Globe,
   Check,
   ArrowLeft,
-  User,
-  MapPin,
   Wallet,
   Receipt,
 } from 'lucide-react';
@@ -50,8 +47,8 @@ import { Progress } from '@/components/ui/progress';
 import { useSafeRelay } from '@/hooks/use-safe-relay';
 import { MetaTransactionData } from '@safe-global/safe-core-sdk-types';
 import { type UserFundingSourceDisplayData } from '@/actions/get-user-funding-sources';
-import { trpc } from '@/utils/trpc';
 import { USDC_ADDRESS } from '@/lib/constants';
+import { Combobox, type ComboboxOption } from '@/components/ui/combo-box';
 
 // --- Types and Schemas ---
 
@@ -136,6 +133,89 @@ const erc20AbiBalanceOf = [
 
 const USDC_BASE_ADDRESS = USDC_ADDRESS as Address;
 
+// Country list for dropdown
+const COUNTRIES: ComboboxOption[] = [
+  { value: 'US', label: 'United States' },
+  { value: 'GB', label: 'United Kingdom' },
+  { value: 'CA', label: 'Canada' },
+  { value: 'AU', label: 'Australia' },
+  { value: 'NZ', label: 'New Zealand' },
+  { value: 'IE', label: 'Ireland' },
+  // European countries
+  { value: 'AT', label: 'Austria' },
+  { value: 'BE', label: 'Belgium' },
+  { value: 'BG', label: 'Bulgaria' },
+  { value: 'HR', label: 'Croatia' },
+  { value: 'CY', label: 'Cyprus' },
+  { value: 'CZ', label: 'Czech Republic' },
+  { value: 'DK', label: 'Denmark' },
+  { value: 'EE', label: 'Estonia' },
+  { value: 'FI', label: 'Finland' },
+  { value: 'FR', label: 'France' },
+  { value: 'DE', label: 'Germany' },
+  { value: 'GR', label: 'Greece' },
+  { value: 'HU', label: 'Hungary' },
+  { value: 'IS', label: 'Iceland' },
+  { value: 'IT', label: 'Italy' },
+  { value: 'LV', label: 'Latvia' },
+  { value: 'LI', label: 'Liechtenstein' },
+  { value: 'LT', label: 'Lithuania' },
+  { value: 'LU', label: 'Luxembourg' },
+  { value: 'MT', label: 'Malta' },
+  { value: 'NL', label: 'Netherlands' },
+  { value: 'NO', label: 'Norway' },
+  { value: 'PL', label: 'Poland' },
+  { value: 'PT', label: 'Portugal' },
+  { value: 'RO', label: 'Romania' },
+  { value: 'SK', label: 'Slovakia' },
+  { value: 'SI', label: 'Slovenia' },
+  { value: 'ES', label: 'Spain' },
+  { value: 'SE', label: 'Sweden' },
+  { value: 'CH', label: 'Switzerland' },
+  // Asian countries
+  { value: 'CN', label: 'China' },
+  { value: 'HK', label: 'Hong Kong' },
+  { value: 'IN', label: 'India' },
+  { value: 'ID', label: 'Indonesia' },
+  { value: 'IL', label: 'Israel' },
+  { value: 'JP', label: 'Japan' },
+  { value: 'MY', label: 'Malaysia' },
+  { value: 'PH', label: 'Philippines' },
+  { value: 'SG', label: 'Singapore' },
+  { value: 'KR', label: 'South Korea' },
+  { value: 'TW', label: 'Taiwan' },
+  { value: 'TH', label: 'Thailand' },
+  { value: 'AE', label: 'United Arab Emirates' },
+  { value: 'VN', label: 'Vietnam' },
+  // Latin American countries
+  { value: 'AR', label: 'Argentina' },
+  { value: 'BR', label: 'Brazil' },
+  { value: 'CL', label: 'Chile' },
+  { value: 'CO', label: 'Colombia' },
+  { value: 'CR', label: 'Costa Rica' },
+  { value: 'DO', label: 'Dominican Republic' },
+  { value: 'EC', label: 'Ecuador' },
+  { value: 'GT', label: 'Guatemala' },
+  { value: 'HN', label: 'Honduras' },
+  { value: 'MX', label: 'Mexico' },
+  { value: 'PA', label: 'Panama' },
+  { value: 'PY', label: 'Paraguay' },
+  { value: 'PE', label: 'Peru' },
+  { value: 'UY', label: 'Uruguay' },
+  { value: 'VE', label: 'Venezuela' },
+  // African countries
+  { value: 'EG', label: 'Egypt' },
+  { value: 'KE', label: 'Kenya' },
+  { value: 'MA', label: 'Morocco' },
+  { value: 'NG', label: 'Nigeria' },
+  { value: 'ZA', label: 'South Africa' },
+  // Other countries
+  { value: 'RU', label: 'Russia' },
+  { value: 'SA', label: 'Saudi Arabia' },
+  { value: 'TR', label: 'Turkey' },
+  { value: 'UA', label: 'Ukraine' },
+].sort((a, b) => a.label.localeCompare(b.label));
+
 // Helper function to build pre-validated signature for Safe
 function buildPrevalidatedSig(owner: Address): Hex {
   return `0x000000000000000000000000${owner.slice(
@@ -197,17 +277,15 @@ export function SimplifiedOffRamp({
     primarySafeAddress || undefined,
   );
   // Find bank account details from funding sources - handle both types
-  const getAccountType = (source: any) => source.sourceAccountType || source.accountType;
-  
+  const getAccountType = (source: any) =>
+    source.sourceAccountType || source.accountType;
+
   const achAccount = fundingSources.find(
     (source) => getAccountType(source) === 'us_ach',
   );
   const ibanAccount = fundingSources.find(
     (source) => getAccountType(source) === 'iban',
   );
-
-  // Check if user has any virtual accounts
-  const hasVirtualAccounts = achAccount || ibanAccount;
 
   useEffect(() => {
     if (fetchedPrimarySafeAddress) {
@@ -219,7 +297,7 @@ export function SimplifiedOffRamp({
   const mergedDefaultValues: Partial<OffRampFormValues> = {
     destinationType: !ibanAccount || !achAccount ? 'crypto' : 'ach',
     accountHolderType: 'individual',
-    country: '',
+    country: 'US', // Default to US with ISO code
     city: '',
     streetLine1: '',
     streetLine2: '',
@@ -633,7 +711,10 @@ export function SimplifiedOffRamp({
                     <p>Description: {prefillFromInvoice.description}</p>
                   )}
                   {prefillFromInvoice.amount && (
-                    <p>Amount: {prefillFromInvoice.amount} {prefillFromInvoice.currency || 'USDC'}</p>
+                    <p>
+                      Amount: {prefillFromInvoice.amount}{' '}
+                      {prefillFromInvoice.currency || 'USDC'}
+                    </p>
                   )}
                 </div>
               </div>
@@ -1198,13 +1279,21 @@ export function SimplifiedOffRamp({
                   >
                     Country
                   </Label>
-                  <Input
-                    id="country"
-                    placeholder="United States"
-                    {...register('country', {
-                      required: 'Country is required',
-                    })}
-                    className="border-2 focus:border-blue-500 focus:ring-blue-500/20"
+                  <Controller
+                    control={control}
+                    name="country"
+                    rules={{ required: 'Country is required' }}
+                    render={({ field }) => (
+                      <Combobox
+                        options={COUNTRIES}
+                        value={field.value}
+                        onChange={field.onChange}
+                        placeholder="Select country..."
+                        searchPlaceholder="Search countries..."
+                        emptyPlaceholder="No country found."
+                        triggerClassName="border-2 focus:border-blue-500 focus:ring-blue-500/20"
+                      />
+                    )}
                   />
                   {errors.country && (
                     <p className="text-xs text-red-500 mt-1">
@@ -1451,7 +1540,9 @@ export function SimplifiedOffRamp({
                       <span className="text-sm text-gray-600">Address:</span>
                       <span className="text-sm font-medium">
                         {watch('streetLine1')}, {watch('city')},{' '}
-                        {watch('postalCode')}, {watch('country')}
+                        {watch('postalCode')},{' '}
+                        {COUNTRIES.find((c) => c.value === watch('country'))
+                          ?.label || watch('country')}
                       </span>
                     </div>
                   )}

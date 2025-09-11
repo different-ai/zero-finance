@@ -1191,18 +1191,135 @@ export const alignRouter = router({
               message: 'Bank account holder country is required.',
             });
           }
+
           const lowerCaseCountry = countryName.toLowerCase().trim();
+          console.log(
+            '[mapCountryToISO] Input country:',
+            countryName,
+            '-> lowercase:',
+            lowerCaseCountry,
+          );
+
           const mapping: { [key: string]: string } = {
+            // Common variations for United States
             'united states': 'US',
+            'united states of america': 'US',
             usa: 'US',
             us: 'US',
+            'u.s.': 'US',
+            'u.s.a.': 'US',
+            america: 'US',
+
+            // Common variations for United Kingdom
+            'united kingdom': 'GB',
+            uk: 'GB',
+            'u.k.': 'GB',
+            'great britain': 'GB',
+            britain: 'GB',
+            england: 'GB',
+            scotland: 'GB',
+            wales: 'GB',
+            'northern ireland': 'GB',
+
+            // Canada
             canada: 'CA',
             ca: 'CA',
+
+            // European countries
+            germany: 'DE',
+            de: 'DE',
+            deutschland: 'DE',
+            france: 'FR',
+            fr: 'FR',
+            spain: 'ES',
+            es: 'ES',
+            españa: 'ES',
+            italy: 'IT',
+            it: 'IT',
+            italia: 'IT',
+            netherlands: 'NL',
+            nl: 'NL',
+            holland: 'NL',
             belgium: 'BE',
             be: 'BE',
-            // Add more mappings as needed
+            switzerland: 'CH',
+            ch: 'CH',
+            austria: 'AT',
+            at: 'AT',
+            portugal: 'PT',
+            pt: 'PT',
+            ireland: 'IE',
+            ie: 'IE',
+            poland: 'PL',
+            pl: 'PL',
+            sweden: 'SE',
+            se: 'SE',
+            norway: 'NO',
+            no: 'NO',
+            denmark: 'DK',
+            dk: 'DK',
+            finland: 'FI',
+            fi: 'FI',
+
+            // Other major countries
+            australia: 'AU',
+            au: 'AU',
+            'new zealand': 'NZ',
+            nz: 'NZ',
+            japan: 'JP',
+            jp: 'JP',
+            china: 'CN',
+            cn: 'CN',
+            india: 'IN',
+            in: 'IN',
+            brazil: 'BR',
+            br: 'BR',
+            mexico: 'MX',
+            mx: 'MX',
+            argentina: 'AR',
+            ar: 'AR',
+            'south africa': 'ZA',
+            za: 'ZA',
+            singapore: 'SG',
+            sg: 'SG',
+            'hong kong': 'HK',
+            hk: 'HK',
+            'south korea': 'KR',
+            korea: 'KR',
+            kr: 'KR',
+            israel: 'IL',
+            il: 'IL',
+            'united arab emirates': 'AE',
+            uae: 'AE',
+            ae: 'AE',
+            'saudi arabia': 'SA',
+            sa: 'SA',
           };
-          const isoCode = mapping[lowerCaseCountry] || countryName;
+
+          // First check if it's already a 2-letter ISO code
+          if (
+            countryName.length === 2 &&
+            countryName === countryName.toUpperCase()
+          ) {
+            console.log('[mapCountryToISO] Already ISO code:', countryName);
+            return countryName;
+          }
+
+          const isoCode = mapping[lowerCaseCountry];
+
+          if (!isoCode) {
+            console.error(
+              '[mapCountryToISO] No mapping found for country:',
+              countryName,
+            );
+            // If no mapping found and it's not a 2-letter code, throw an error
+            throw new TRPCError({
+              code: 'BAD_REQUEST',
+              message: `Invalid country "${countryName}". Please use a valid country name or ISO code (e.g., "United States" or "US").`,
+            });
+          }
+
+          console.log('[mapCountryToISO] Mapped to ISO code:', isoCode);
           return isoCode;
         }
 
@@ -1344,11 +1461,21 @@ export const alignRouter = router({
         }
 
         // --- Apply Country Code Mapping (before final validation) ---\
+        console.log(
+          '[createOfframpTransfer] Country before mapping:',
+          validatedAlignPayloadBankAccount.account_holder_address?.country,
+        );
+
         if (validatedAlignPayloadBankAccount.account_holder_address?.country) {
           validatedAlignPayloadBankAccount.account_holder_address.country =
             mapCountryToISO(
               validatedAlignPayloadBankAccount.account_holder_address.country,
             );
+
+          console.log(
+            '[createOfframpTransfer] Country after mapping:',
+            validatedAlignPayloadBankAccount.account_holder_address.country,
+          );
         }
 
         // --- Final Validation & API Call --- \
@@ -1388,8 +1515,12 @@ export const alignRouter = router({
 
         // Log the exact payload being sent to Align
         console.log(
-          'Sending payload to Align createOfframpTransfer:',
+          '[createOfframpTransfer] Final payload to Align API:',
           JSON.stringify(alignParams, null, 2),
+        );
+        console.log(
+          '[createOfframpTransfer] Specifically, destination_bank_account:',
+          JSON.stringify(alignParams.destination_bank_account, null, 2),
         );
 
         // Create offramp transfer in Align
