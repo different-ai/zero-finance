@@ -556,34 +556,17 @@ class AlignApiClient {
   async getCustomer(customerId: string): Promise<AlignCustomer> {
     const response = await this.fetchWithAuth(`/v0/customers/${customerId}`);
 
-    // Clean null values that would fail Zod validation
-    const cleanedResponse = { ...response };
-
-    // Remove null optional fields
-    if (cleanedResponse.company_name === null) {
-      delete cleanedResponse.company_name;
-    }
-    if (cleanedResponse.first_name === null) {
-      delete cleanedResponse.first_name;
-    }
-    if (cleanedResponse.last_name === null) {
-      delete cleanedResponse.last_name;
-    }
-    if (cleanedResponse.beneficiary_type === null) {
-      delete cleanedResponse.beneficiary_type;
-    }
-
     // Handle case where kycs is an object instead of an array
-    if (
-      cleanedResponse &&
-      cleanedResponse.kycs &&
-      !Array.isArray(cleanedResponse.kycs)
-    ) {
+    if (response && response.kycs && !Array.isArray(response.kycs)) {
       // Transform the object into an array with one item
-      cleanedResponse.kycs = [cleanedResponse.kycs];
+      const transformedResponse = {
+        ...response,
+        kycs: [response.kycs],
+      };
+      return alignCustomerSchema.parse(transformedResponse);
     }
 
-    return alignCustomerSchema.parse(cleanedResponse);
+    return alignCustomerSchema.parse(response);
   }
 
   /**
