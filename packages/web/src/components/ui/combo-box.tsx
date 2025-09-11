@@ -83,9 +83,15 @@ export function Combobox({
                   key={option.value}
                   value={option.label} // Use label for filtering/searching
                   keywords={[option.value, option.label]} // Add keywords for better search
-                  onSelect={() => {
-                    onChange(option.value);
-                    setOpen(false);
+                  onSelect={(currentValue) => {
+                    // Find the option by matching the label
+                    const selectedOpt = options.find(
+                      (opt) => opt.label.toLowerCase() === currentValue.toLowerCase()
+                    );
+                    if (selectedOpt) {
+                      onChange(selectedOpt.value);
+                      setOpen(false);
+                    }
                   }}
                 >
                   <Check
