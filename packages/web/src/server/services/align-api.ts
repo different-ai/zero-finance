@@ -471,9 +471,9 @@ class AlignApiClient {
   ): Promise<AlignCustomer> {
     const payload = {
       email,
-      first_name: firstName,
-      last_name: lastName,
-      company_name: companyName,
+      ...(firstName && { first_name: firstName }),
+      ...(lastName && { last_name: lastName }),
+      ...(companyName && { company_name: companyName }),
       beneficiary_type: beneficiaryType,
     };
     console.log('payload', payload);
