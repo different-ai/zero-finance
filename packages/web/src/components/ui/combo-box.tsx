@@ -5,8 +5,19 @@ import { Check, ChevronsUpDown } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 
 export interface ComboboxOption {
   value: string;
@@ -25,16 +36,16 @@ interface ComboboxProps {
   triggerClassName?: string;
 }
 
-export function Combobox({ 
-  options, 
-  value, 
-  onChange, 
-  placeholder = "Select option...", 
-  searchPlaceholder = "Search options...", 
-  emptyPlaceholder = "No option found.",
+export function Combobox({
+  options,
+  value,
+  onChange,
+  placeholder = 'Select option...',
+  searchPlaceholder = 'Search options...',
+  emptyPlaceholder = 'No option found.',
   disabled = false,
   className,
-  triggerClassName
+  triggerClassName,
 }: ComboboxProps) {
   const [open, setOpen] = React.useState(false);
 
@@ -47,21 +58,20 @@ export function Combobox({
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className={cn("w-full justify-between", triggerClassName)}
+          className={cn('w-full justify-between', triggerClassName)}
           disabled={disabled}
         >
-          {selectedOption
-            ? selectedOption.label
-            : placeholder}
+          {selectedOption ? selectedOption.label : placeholder}
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent 
-        className={cn("w-[--radix-popover-trigger-width] p-0", className)} 
-        side="bottom" 
+      <PopoverContent
+        className={cn('w-[--radix-popover-trigger-width] p-0 z-50', className)}
+        side="bottom"
         align="start"
         sideOffset={4}
         collisionPadding={10}
+        avoidCollisions={true}
       >
         <Command>
           <CommandInput placeholder={searchPlaceholder} />
@@ -71,18 +81,17 @@ export function Combobox({
               {options.map((option) => (
                 <CommandItem
                   key={option.value}
-                  value={option.value} // Command uses value for filtering
-                  onSelect={(currentValue: string) => {
-                    // Find the option corresponding to the currentValue (which is option.value)
-                    const selected = options.find(opt => opt.value.toLowerCase() === currentValue.toLowerCase());
-                    onChange(selected ? selected.value : "");
+                  value={option.label} // Use label for filtering/searching
+                  keywords={[option.value, option.label]} // Add keywords for better search
+                  onSelect={() => {
+                    onChange(option.value);
                     setOpen(false);
                   }}
                 >
                   <Check
                     className={cn(
-                      "mr-2 h-4 w-4",
-                      value === option.value ? "opacity-100" : "opacity-0"
+                      'mr-2 h-4 w-4',
+                      value === option.value ? 'opacity-100' : 'opacity-0',
                     )}
                   />
                   {option.label}
@@ -94,4 +103,4 @@ export function Combobox({
       </PopoverContent>
     </Popover>
   );
-} 
+}
