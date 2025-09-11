@@ -33,8 +33,18 @@ async function fetchAndUpdateKycStatus(
   alignCustomerId: string,
   userId: string,
 ) {
+  console.log(
+    '[fetchAndUpdateKycStatus] Starting for customerId:',
+    alignCustomerId,
+    'userId:',
+    userId,
+  );
   try {
     const customer = await alignApi.getCustomer(alignCustomerId);
+    console.log(
+      '[fetchAndUpdateKycStatus] Customer data received:',
+      JSON.stringify(customer, null, 2),
+    );
     const latestKyc =
       customer.kycs && customer.kycs.length > 0 ? customer.kycs[0] : null;
 
@@ -56,13 +66,21 @@ async function fetchAndUpdateKycStatus(
         .where(eq(users.privyDid, userId));
 
       console.log(
-        `Updated KYC status for user ${userId}: status=${latestKyc.status}, sub_status=${latestKyc.sub_status}`,
+        `[fetchAndUpdateKycStatus] Updated KYC status for user ${userId}: status=${latestKyc.status}, sub_status=${latestKyc.sub_status}`,
       );
     }
 
+    console.log(
+      '[fetchAndUpdateKycStatus] Returning KYC data:',
+      JSON.stringify(latestKyc, null, 2),
+    );
     return latestKyc;
   } catch (error) {
-    console.error('Error fetching KYC status from Align:', error);
+    console.error('[fetchAndUpdateKycStatus] Error:', error);
+    if (error instanceof Error) {
+      console.error('[fetchAndUpdateKycStatus] Error message:', error.message);
+      console.error('[fetchAndUpdateKycStatus] Error stack:', error.stack);
+    }
     throw error;
   }
 }
@@ -1104,10 +1122,20 @@ export const alignRouter = router({
       }
 
       // Fetch fresh KYC status from Align API before checking
+      console.log(
+        '[createOfframpTransfer] Fetching KYC status for user:',
+        userId,
+        'alignCustomerId:',
+        user.alignCustomerId,
+      );
       try {
         const latestKyc = await fetchAndUpdateKycStatus(
           user.alignCustomerId,
           userId,
+        );
+        console.log(
+          '[createOfframpTransfer] KYC status fetched:',
+          JSON.stringify(latestKyc, null, 2),
         );
 
         if (latestKyc) {

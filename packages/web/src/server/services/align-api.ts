@@ -351,6 +351,15 @@ class AlignApiClient {
     const method = options.method || 'GET';
     const body = options.body ? String(options.body) : ''; // Ensure body is string for hashing
 
+    // Log request details
+    console.log('[Align API Request]', {
+      method,
+      endpoint,
+      url,
+      body: body ? JSON.parse(body) : undefined,
+      timestamp: new Date().toISOString(),
+    });
+
     // --- Record/Replay Logic ---
     const fixturesDir = path.join(__dirname, '__fixtures__/align-api');
     const requestHash = crypto
@@ -422,6 +431,15 @@ class AlignApiClient {
       // If response is OK, try to parse JSON
       const data = await response.json();
 
+      // Log successful response
+      console.log('[Align API Response]', {
+        method,
+        endpoint,
+        status: response.status,
+        data: JSON.stringify(data, null, 2),
+        timestamp: new Date().toISOString(),
+      });
+
       // --- Record Logic ---
       if (process.env.ALIGN_RECORD === 'true') {
         console.log(
@@ -469,6 +487,14 @@ class AlignApiClient {
     companyName?: string,
     beneficiaryType: 'individual' | 'corporate' = 'individual',
   ): Promise<AlignCustomer> {
+    console.log('[createCustomer] Input params:', {
+      email,
+      firstName,
+      lastName,
+      companyName,
+      beneficiaryType,
+    });
+
     const payload = {
       email,
       ...(firstName && { first_name: firstName }),
@@ -476,14 +502,29 @@ class AlignApiClient {
       ...(companyName && { company_name: companyName }),
       beneficiary_type: beneficiaryType,
     };
-    console.log('payload', payload);
+    console.log(
+      '[createCustomer] Payload to send:',
+      JSON.stringify(payload, null, 2),
+    );
 
     const response = await this.fetchWithAuth('/v0/customers', {
       method: 'POST',
       body: JSON.stringify(payload),
     });
 
-    return alignCustomerSchema.parse(response);
+    console.log(
+      '[createCustomer] Response received:',
+      JSON.stringify(response, null, 2),
+    );
+
+    try {
+      const parsed = alignCustomerSchema.parse(response);
+      console.log('[createCustomer] Successfully parsed customer data');
+      return parsed;
+    } catch (error) {
+      console.error('[createCustomer] Zod parsing error:', error);
+      throw error;
+    }
   }
 
   /**
@@ -491,6 +532,7 @@ class AlignApiClient {
    * This is used for recovery when a customer exists in Align but not in our db
    */
   async searchCustomerByEmail(email: string): Promise<AlignCustomer | null> {
+    console.log('[searchCustomerByEmail] Searching for email:', email);
     try {
       // Using the proper customers endpoint with email query parameter
       const response = await this.fetchWithAuth(
@@ -499,7 +541,10 @@ class AlignApiClient {
           method: 'GET',
         },
       );
-      console.log('response searchCustomerByEmail', response);
+      console.log(
+        '[searchCustomerByEmail] Raw response:',
+        JSON.stringify(response, null, 2),
+      );
 
       // Handle new response format with items array
       if (
@@ -532,8 +577,21 @@ class AlignApiClient {
         if (customerData.updated_at)
           alignCustomer.updated_at = customerData.updated_at;
 
-        console.log('Found customer by email:', alignCustomer);
-        return alignCustomerSchema.parse(alignCustomer);
+        console.log(
+          '[searchCustomerByEmail] Constructed customer object:',
+          JSON.stringify(alignCustomer, null, 2),
+        );
+
+        try {
+          const parsed = alignCustomerSchema.parse(alignCustomer);
+          console.log(
+            '[searchCustomerByEmail] Successfully parsed customer data',
+          );
+          return parsed;
+        } catch (error) {
+          console.error('[searchCustomerByEmail] Zod parsing error:', error);
+          throw error;
+        }
       } else if (Array.isArray(response) && response.length > 0) {
         // Fallback for older API format (direct array)
         return alignCustomerSchema.parse(response[0]);
@@ -554,19 +612,49 @@ class AlignApiClient {
    * Get customer details from Align
    */
   async getCustomer(customerId: string): Promise<AlignCustomer> {
+    console.log('[getCustomer] Fetching customer:', customerId);
     const response = await this.fetchWithAuth(`/v0/customers/${customerId}`);
+
+    console.log(
+      '[getCustomer] Raw response:',
+      JSON.stringify(response, null, 2),
+    );
 
     // Handle case where kycs is an object instead of an array
     if (response && response.kycs && !Array.isArray(response.kycs)) {
+      console.log('[getCustomer] Converting kycs object to array');
       // Transform the object into an array with one item
       const transformedResponse = {
         ...response,
         kycs: [response.kycs],
       };
-      return alignCustomerSchema.parse(transformedResponse);
+
+      console.log(
+        '[getCustomer] Before parsing:',
+        JSON.stringify(transformedResponse, null, 2),
+      );
+      try {
+        const parsed = alignCustomerSchema.parse(transformedResponse);
+        console.log('[getCustomer] Successfully parsed customer data');
+        return parsed;
+      } catch (error) {
+        console.error('[getCustomer] Zod parsing error:', error);
+        throw error;
+      }
     }
 
-    return alignCustomerSchema.parse(response);
+    console.log(
+      '[getCustomer] Before parsing (no transformation):',
+      JSON.stringify(response, null, 2),
+    );
+    try {
+      const parsed = alignCustomerSchema.parse(response);
+      console.log('[getCustomer] Successfully parsed customer data');
+      return parsed;
+    } catch (error) {
+      console.error('[getCustomer] Zod parsing error:', error);
+      throw error;
+    }
   }
 
   /**
