@@ -31,6 +31,7 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 
 import { Skeleton } from '@/components/ui/skeleton';
 import { TeamTab } from './team-tab';
@@ -50,6 +51,24 @@ export default function CompanySettingsPage() {
   const [sharedData, setSharedData] = useState<Record<string, string>>({});
   const [isSaving, setIsSaving] = useState(false);
   const [copiedLink, setCopiedLink] = useState<string | null>(null);
+
+  // Tab routing
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const pathname = usePathname();
+  const [tab, setTab] = useState<string>('info');
+
+  useEffect(() => {
+    const t = searchParams?.get('tab');
+    if (t && t !== tab) setTab(t);
+  }, [searchParams]);
+
+  const handleTabChange = (value: string) => {
+    setTab(value);
+    const sp = new URLSearchParams(searchParams?.toString());
+    sp.set('tab', value);
+    router.replace(`${pathname}?${sp.toString()}`);
+  };
 
   // Fetch company data
   const {
@@ -197,10 +216,10 @@ export default function CompanySettingsPage() {
         companyId: company.id,
         memberId,
       });
-      toast.success('Member removed successfully');
+      toast.success('Contractor removed successfully');
       refetchMembers();
     } catch (error) {
-      toast.error('Failed to remove member');
+      toast.error('Failed to remove contractor');
     }
   };
 
@@ -242,11 +261,11 @@ export default function CompanySettingsPage() {
           Company Settings
         </h1>
         <p className="text-gray-600 mt-2">
-          Manage your company information and invite team members
+          Manage your company information and invite contractors and team
         </p>
       </div>
 
-      <Tabs defaultValue="info" className="space-y-6">
+      <Tabs value={tab} onValueChange={handleTabChange} className="space-y-6">
         <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="info">Company Info</TabsTrigger>
           <TabsTrigger value="shared">Shared Data</TabsTrigger>
@@ -497,7 +516,7 @@ export default function CompanySettingsPage() {
                           {membersData.stats.totalMembers}
                         </p>
                         <p className="text-xs text-muted-foreground">
-                          Total Members
+                          Total Contractors
                         </p>
                       </div>
                     </div>
@@ -538,15 +557,34 @@ export default function CompanySettingsPage() {
 
             {/* Active Contractors */}
             <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Users className="h-5 w-5" />
-                  Active Contractors
-                </CardTitle>
-                <CardDescription>
-                  External contractors who can create invoices using your
-                  company data
-                </CardDescription>
+              <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <Users className="h-5 w-5" />
+                    Active Contractors
+                  </CardTitle>
+                  <CardDescription>
+                    External contractors who can create invoices using your
+                    company data.
+                    <span className="block mt-1 text-xs text-gray-500">
+                      Contractors see “Bill to:{' '}
+                      {company?.name || 'your company'}”. They fill “Bill from”
+                      with their details.
+                    </span>
+                  </CardDescription>
+                </div>
+                <div className="flex gap-2">
+                  <Button onClick={handleCreateInviteLink}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Invite contractor
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => router.push('/dashboard/create-invoice')}
+                  >
+                    Pay a contractor
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent>
                 {membersData?.members.length ? (
@@ -601,7 +639,7 @@ export default function CompanySettingsPage() {
                   </div>
                 ) : (
                   <p className="text-center text-gray-500 py-8">
-                    No members yet. Send invite links to add team members.
+                    No contractors yet. Create invite links to add contractors.
                   </p>
                 )}
               </CardContent>
