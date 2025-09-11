@@ -57,6 +57,9 @@ const nextConfig = {
     ignoreDuringBuilds: true,
   },
   reactStrictMode: true,
+  typescript: {
+    tsconfigPath: './tsconfig.next.json',
+  },
   // Optimize for Vercel build memory limits
   experimental: {
     webpackMemoryOptimizations: true,
