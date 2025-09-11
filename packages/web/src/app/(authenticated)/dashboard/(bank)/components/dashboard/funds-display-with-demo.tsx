@@ -38,6 +38,71 @@ import { api } from '@/trpc/react';
 import { useDemoMode } from '@/context/demo-mode-context';
 import { getDemoVirtualAccounts } from '@/utils/demo-trpc';
 
+// Demo transfer data for different scenarios
+const getDemoTransferData = (demoStep: number) => {
+  // Different demo data based on the demo step
+  const demoScenarios = [
+    // Step 0-2: Empty/initial state
+    undefined,
+    undefined,
+    undefined,
+    // Step 3: US Bank Transfer
+    {
+      destinationType: 'ach' as const,
+      amount: '500',
+      accountHolderType: 'individual' as const,
+      accountHolderFirstName: 'Demo',
+      accountHolderLastName: 'User',
+      bankName: 'Chase Bank',
+      country: 'US',
+      city: 'San Francisco',
+      streetLine1: '123 Demo Street',
+      streetLine2: 'Suite 100',
+      postalCode: '94102',
+      accountNumber: '123456789',
+      routingNumber: '021000021',
+    },
+    // Step 4: EUR Bank Transfer
+    {
+      destinationType: 'iban' as const,
+      amount: '1000',
+      accountHolderType: 'individual' as const,
+      accountHolderFirstName: 'European',
+      accountHolderLastName: 'Demo',
+      bankName: 'Deutsche Bank',
+      country: 'DE',
+      city: 'Berlin',
+      streetLine1: 'Friedrichstraße 50',
+      postalCode: '10117',
+      iban: 'DE89370400440532013000',
+      bic: 'COBADEFFXXX',
+    },
+    // Step 5: Business Transfer
+    {
+      destinationType: 'ach' as const,
+      amount: '10000',
+      accountHolderType: 'business' as const,
+      accountHolderBusinessName: 'Demo Corporation Inc.',
+      bankName: 'Bank of America',
+      country: 'US',
+      city: 'New York',
+      streetLine1: '456 Business Ave',
+      streetLine2: 'Floor 20',
+      postalCode: '10001',
+      accountNumber: '987654321',
+      routingNumber: '026009593',
+    },
+    // Step 6+: Crypto Transfer
+    {
+      destinationType: 'crypto' as const,
+      amount: '250',
+      cryptoAddress: '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb4',
+    },
+  ];
+
+  return demoScenarios[Math.min(demoStep, demoScenarios.length - 1)];
+};
+
 const formatCurrency = (amount: number): string => {
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
@@ -194,19 +259,22 @@ export function FundsDisplayWithDemo({
             <DialogContent
               className={`p-0 ${isMobile ? 'h-screen max-h-screen w-screen max-w-none m-0 rounded-none' : 'max-w-2xl'}`}
             >
-              {isDemoMode ? (
-                <div className="p-6">
-                  <DialogHeader>
-                    <DialogTitle>Demo: Transfer Funds</DialogTitle>
-                  </DialogHeader>
-                  <p className="text-sm text-muted-foreground mt-4">
-                    In the live app, you can transfer funds via ACH, wire, or
-                    SEPA to your bank accounts.
-                  </p>
-                </div>
-              ) : (
-                <SimplifiedOffRamp fundingSources={fundingSources} />
-              )}
+              <SimplifiedOffRamp
+                fundingSources={fundingSources}
+                defaultValues={
+                  isDemoMode ? getDemoTransferData(demoStep) : undefined
+                }
+                prefillFromInvoice={
+                  isDemoMode && demoStep >= 3
+                    ? {
+                        amount: getDemoTransferData(demoStep)?.amount,
+                        currency: 'USD',
+                        vendorName: 'Demo Vendor',
+                        description: 'Demo transfer for testing',
+                      }
+                    : undefined
+                }
+              />
             </DialogContent>
           </Dialog>
 
