@@ -22,10 +22,10 @@ class AlignApiError extends Error {
 export const alignCustomerSchema = z.object({
   customer_id: z.string(),
   email: z.string().email(),
-  first_name: z.string().optional(),
-  last_name: z.string().optional(),
-  company_name: z.string().optional(),
-  beneficiary_type: z.enum(['individual', 'business']).optional(),
+  first_name: z.string().nullish(),
+  last_name: z.string().nullish(),
+  company_name: z.string().nullish(),
+  beneficiary_type: z.enum(['individual', 'business']).nullish(),
   kycs: z
     .array(
       z.object({
@@ -511,15 +511,26 @@ class AlignApiClient {
         // Get the first matching customer from items array
         const customerData = response.items[0];
 
-        // Create a schema-compatible object
-        const alignCustomer = {
-          customer_id: customerData.customer_id,
+        // Create a schema-compatible object, excluding null values
+        const alignCustomer: any = {
+          customer_id: customerData.customer_id || customerData.id,
           email: customerData.email,
-          kycs: [], // Initialize with empty kycs array
-          // Include optional fields if they exist in the API response
-          created_at: customerData.created_at,
-          updated_at: customerData.updated_at,
+          kycs: customerData.kycs || [], // Initialize with empty kycs array if null
         };
+
+        // Only add optional fields if they have non-null values
+        if (customerData.first_name)
+          alignCustomer.first_name = customerData.first_name;
+        if (customerData.last_name)
+          alignCustomer.last_name = customerData.last_name;
+        if (customerData.company_name)
+          alignCustomer.company_name = customerData.company_name;
+        if (customerData.beneficiary_type)
+          alignCustomer.beneficiary_type = customerData.beneficiary_type;
+        if (customerData.created_at)
+          alignCustomer.created_at = customerData.created_at;
+        if (customerData.updated_at)
+          alignCustomer.updated_at = customerData.updated_at;
 
         console.log('Found customer by email:', alignCustomer);
         return alignCustomerSchema.parse(alignCustomer);
@@ -545,17 +556,34 @@ class AlignApiClient {
   async getCustomer(customerId: string): Promise<AlignCustomer> {
     const response = await this.fetchWithAuth(`/v0/customers/${customerId}`);
 
-    // Handle case where kycs is an object instead of an array
-    if (response && response.kycs && !Array.isArray(response.kycs)) {
-      // Transform the object into an array with one item
-      const transformedResponse = {
-        ...response,
-        kycs: [response.kycs],
-      };
-      return alignCustomerSchema.parse(transformedResponse);
+    // Clean null values that would fail Zod validation
+    const cleanedResponse = { ...response };
+
+    // Remove null optional fields
+    if (cleanedResponse.company_name === null) {
+      delete cleanedResponse.company_name;
+    }
+    if (cleanedResponse.first_name === null) {
+      delete cleanedResponse.first_name;
+    }
+    if (cleanedResponse.last_name === null) {
+      delete cleanedResponse.last_name;
+    }
+    if (cleanedResponse.beneficiary_type === null) {
+      delete cleanedResponse.beneficiary_type;
     }
 
-    return alignCustomerSchema.parse(response);
+    // Handle case where kycs is an object instead of an array
+    if (
+      cleanedResponse &&
+      cleanedResponse.kycs &&
+      !Array.isArray(cleanedResponse.kycs)
+    ) {
+      // Transform the object into an array with one item
+      cleanedResponse.kycs = [cleanedResponse.kycs];
+    }
+
+    return alignCustomerSchema.parse(cleanedResponse);
   }
 
   /**
