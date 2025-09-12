@@ -58,7 +58,7 @@ export async function generateMetadata({
       siteName: 'We Love Your Startup',
       images: [
         {
-          url: `https://weloveyourstartup.com/api/og?company=${params.slug}`,
+          url: `/startups/${params.slug}/opengraph-image`,
           width: 1200,
           height: 630,
           alt: `${company.name} - We Love Your Startup`,
@@ -71,7 +71,7 @@ export async function generateMetadata({
       card: 'summary_large_image',
       title: `${company.name} - We Love Your Startup`,
       description: `${company.name} could save ${formattedSavings}/year with Zero Finance`,
-      images: company.founders[0]?.avatar ? [company.founders[0].avatar] : [],
+      images: [`/startups/${params.slug}/opengraph-image`],
     },
     alternates: {
       canonical: `https://weloveyourstartup.com/startups/${params.slug}`,
