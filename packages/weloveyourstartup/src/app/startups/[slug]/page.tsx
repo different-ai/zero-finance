@@ -58,7 +58,7 @@ export async function generateMetadata({
       siteName: 'We Love Your Startup',
       images: [
         {
-          url: `/startups/${params.slug}/opengraph-image`,
+          url: `https://weloveyourstartup.com/api/og?company=${params.slug}`,
           width: 1200,
           height: 630,
           alt: `${company.name} - We Love Your Startup`,
@@ -71,7 +71,7 @@ export async function generateMetadata({
       card: 'summary_large_image',
       title: `${company.name} - We Love Your Startup`,
       description: `${company.name} could save ${formattedSavings}/year with Zero Finance`,
-      images: [`/startups/${params.slug}/opengraph-image`],
+      images: [`https://weloveyourstartup.com/api/og?company=${params.slug}`],
     },
     alternates: {
       canonical: `https://weloveyourstartup.com/startups/${params.slug}`,
@@ -367,40 +367,6 @@ export default function StartupPage({ params }: PageProps) {
           </div>
         </section>
 
-        {/* Why We Love Them */}
-        {company.whyWeLoveThem && (
-          <section className="bg-white py-12 sm:py-16">
-            <div className="mx-auto max-w-[1200px] px-4 sm:px-6 lg:px-8">
-              <div className="max-w-[800px] mx-auto text-center">
-                <p className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60">
-                  Our Take
-                </p>
-                <h2 className="mt-2 font-serif text-[30px] sm:text-[36px] leading-[1.1] tracking-[-0.01em] text-[#101010]">
-                  Why We Love {company.name} ❤️
-                </h2>
-                <p className="mt-6 text-[16px] sm:text-[18px] leading-[1.5] text-[#101010]/80">
-                  {company.whyWeLoveThem}
-                </p>
-                {company.funFact && (
-                  <p className="mt-4 text-[16px] sm:text-[18px] leading-[1.5] text-[#101010]/80">
-                    {company.funFact}
-                  </p>
-                )}
-                <p className="mt-4 text-[16px] sm:text-[18px] leading-[1.5] text-[#101010]/80">
-                  With their funding sitting idle in a traditional bank, they're
-                  missing out on
-                  <span className="font-medium text-primary-blue">
-                    {' '}
-                    {formatCurrency(calculateSavings(company.funding.amount))}
-                  </span>{' '}
-                  per year. That's real money that could extend their runway or
-                  fund new experiments. 💸
-                </p>
-              </div>
-            </div>
-          </section>
-        )}
-
         {/* CTA Section */}
         <section className="bg-bg-warm py-12 sm:py-16 border-t border-[#101010]/10">
           <div className="mx-auto max-w-[800px] px-4 sm:px-6 lg:px-8 text-center">
@@ -418,12 +384,16 @@ export default function StartupPage({ params }: PageProps) {
               per year to build the future.
             </p>
             <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-center items-center">
-              <Link
-                href="https://0.finance"
-                className="inline-flex items-center px-8 py-4 text-[16px] font-medium text-white bg-primary-blue hover:bg-primary-blue-hover rounded-md transition-all hover:scale-105"
-              >
-                Start Earning 8% APY →
-              </Link>
+              <div className="relative">
+                {/* Animated ring behind button */}
+                <div className="absolute inset-0 rounded-md bg-primary-blue/20 blur-xl animate-pulse"></div>
+                <Link
+                  href="https://0.finance"
+                  className="relative inline-flex items-center px-8 py-4 text-[16px] font-medium text-white bg-primary-blue hover:bg-primary-blue-hover rounded-md transition-all hover:scale-105 pulse-ring glow-effect"
+                >
+                  Start Earning 8% APY →
+                </Link>
+              </div>
               <Link
                 href="https://cal.com/team/0finance/30"
                 className="inline-flex items-center text-[15px] text-[#101010] hover:text-primary-blue underline decoration-[#101010]/30 underline-offset-[4px] hover:decoration-primary-blue transition-colors"

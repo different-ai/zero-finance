@@ -40,5 +40,46 @@
     100% {
       background-position: 0% 50%;
     }
+
+    /* Pulse ring animation for CTA button */
+    @keyframes pulse-ring {
+      0% {
+        transform: scale(0.95);
+        box-shadow: 0 0 0 0 rgba(27, 41, 255, 0.7);
+      }
+
+      70% {
+        transform: scale(1);
+        box-shadow: 0 0 0 20px rgba(27, 41, 255, 0);
+      }
+
+      100% {
+        transform: scale(0.95);
+        box-shadow: 0 0 0 0 rgba(27, 41, 255, 0);
+      }
+    }
+
+    .pulse-ring {
+      animation: pulse-ring 2s cubic-bezier(0.455, 0.03, 0.515, 0.955) infinite;
+    }
+
+    /* Glow effect */
+    @keyframes glow {
+      0%,
+      100% {
+        box-shadow:
+          0 0 20px rgba(27, 41, 255, 0.3),
+          0 0 40px rgba(27, 41, 255, 0.2);
+      }
+      50% {
+        box-shadow:
+          0 0 30px rgba(27, 41, 255, 0.5),
+          0 0 60px rgba(27, 41, 255, 0.3);
+      }
+    }
+
+    .glow-effect {
+      animation: glow 2s ease-in-out infinite;
+    }
   }
 }
