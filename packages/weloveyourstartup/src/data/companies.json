@@ -6,6 +6,7 @@
       "tagline": "AI hands for every Windows desktop",
       "description": "🤖 Giving AI hands to automate the global economy. Transform manual workflows into automated processes with AI agents that achieve 95% success rate and <20s latency.",
       "longDescription": "The global economy runs on legacy Windows software with no APIs. AI is exponentially smarter but can't operate in this environment because it has no hands. Mediar gives AI its hands. They've built AI agents that watch users work, compile automations autonomously, and scale across hundreds of desktops.",
+      "logo": "https://www.mediar.ai/icon.svg",
       "website": "https://mediar.ai",
       "twitter": "https://x.com/MediarAI",
       "category": "AI Automation",

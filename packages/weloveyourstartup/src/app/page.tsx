@@ -91,13 +91,25 @@ export default function Home() {
 
               <div className="mt-8 bg-bg-warm border border-[#101010]/10 p-6 sm:p-8">
                 <div className="flex items-start justify-between">
-                  <div>
-                    <h3 className="text-[24px] font-medium text-[#101010]">
-                      {company.name}
-                    </h3>
-                    <p className="mt-2 text-[14px] text-[#101010]/70 max-w-[45ch]">
-                      {company.description}
-                    </p>
+                  <div className="flex items-start gap-3">
+                    {company.logo && (
+                      <img
+                        src={company.logo}
+                        alt={`${company.name} Logo`}
+                        width={32}
+                        height={32}
+                        className="mt-1"
+                        style={{ color: 'transparent' }}
+                      />
+                    )}
+                    <div>
+                      <h3 className="text-[24px] font-medium text-[#101010]">
+                        {company.name}
+                      </h3>
+                      <p className="mt-2 text-[14px] text-[#101010]/70 max-w-[45ch]">
+                        {company.description}
+                      </p>
+                    </div>
                   </div>
                   <span className="px-3 py-1 bg-primary-blue/10 text-primary-blue text-[12px] font-medium rounded-full">
                     {company.category}
@@ -203,10 +215,21 @@ export default function Home() {
                 href={`/startups/${startup.id}`}
                 className="bg-white p-6 hover:bg-bg-cream transition-colors group"
               >
-                <div className="flex items-start justify-between">
-                  <h3 className="text-[18px] font-medium text-[#101010] group-hover:text-primary-blue transition-colors">
-                    {startup.name}
-                  </h3>
+                <div className="flex items-start justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    {startup.logo && (
+                      <img
+                        src={startup.logo}
+                        alt={`${startup.name} Logo`}
+                        width={20}
+                        height={20}
+                        style={{ color: 'transparent' }}
+                      />
+                    )}
+                    <h3 className="text-[18px] font-medium text-[#101010] group-hover:text-primary-blue transition-colors">
+                      {startup.name}
+                    </h3>
+                  </div>
                   <span className="text-[11px] uppercase tracking-[0.14em] text-[#101010]/60">
                     {startup.category}
                   </span>

@@ -23,6 +23,7 @@ export interface Company {
   tagline: string;
   description: string;
   longDescription?: string;
+  logo?: string;
   website: string;
   twitter?: string;
   category: string;

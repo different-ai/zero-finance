@@ -187,13 +187,25 @@ export default function StartupPage({ params }: PageProps) {
               {/* Left: Company Info */}
               <div className="bg-white border border-[#101010]/10 p-8 lg:p-10 animate-fade-in">
                 <div className="flex items-start justify-between mb-6">
-                  <div>
-                    <h1 className="text-[36px] sm:text-[42px] font-serif text-[#101010] leading-[0.96]">
-                      {company.name}
-                    </h1>
-                    <span className="inline-block mt-2 px-3 py-1 bg-primary-blue/10 text-primary-blue text-[12px] font-medium rounded-full">
-                      {company.showcase?.emoji || '🚀'} {company.category}
-                    </span>
+                  <div className="flex items-start gap-4">
+                    {company.logo && (
+                      <img
+                        src={company.logo}
+                        alt={`${company.name} Logo`}
+                        width={48}
+                        height={48}
+                        className="mt-2"
+                        style={{ color: 'transparent' }}
+                      />
+                    )}
+                    <div>
+                      <h1 className="text-[36px] sm:text-[42px] font-serif text-[#101010] leading-[0.96]">
+                        {company.name}
+                      </h1>
+                      <span className="inline-block mt-2 px-3 py-1 bg-primary-blue/10 text-primary-blue text-[12px] font-medium rounded-full">
+                        {company.showcase?.emoji || '🚀'} {company.category}
+                      </span>
+                    </div>
                   </div>
                 </div>
 
