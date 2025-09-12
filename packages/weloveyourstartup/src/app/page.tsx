@@ -1,16 +1,11 @@
 'use client';
 
-import { getFeaturedCompany, data } from '@/lib/data';
-import { SavingsCalculator } from '@/components/SavingsCalculator';
+import { getCompanies } from '@/lib/data';
 import Link from 'next/link';
 import Image from 'next/image';
 
 export default function Home() {
-  const company = getFeaturedCompany();
-
-  if (!company) {
-    return <div>No featured company found</div>;
-  }
+  const companies = getCompanies();
 
   const formatCurrency = (value: number) => {
     if (value >= 1000000) {
@@ -31,13 +26,9 @@ export default function Home() {
     return yearlyDifference;
   };
 
-  const calculateMonthlyYield = (amount: number) => {
-    return (amount * 0.08) / 12;
-  };
-
   return (
     <div className="min-h-screen bg-bg-cream">
-      {/* Main Showcase Section - Mediar */}
+      {/* Hero Section */}
       <section className="relative bg-bg-warm border-b border-[#101010]/10 overflow-hidden">
         <div className="absolute inset-0 opacity-30">
           <div className="absolute top-0 left-1/4 w-96 h-96 bg-primary-blue/10 rounded-full filter blur-3xl animate-pulse-slow"></div>
@@ -47,220 +38,224 @@ export default function Home() {
           ></div>
         </div>
 
-        <div className="relative z-10 mx-auto max-w-[1200px] px-4 sm:px-6 lg:px-8 py-12 sm:py-16 lg:py-20">
-          {/* Small intro */}
-          <div className="text-center mb-12">
-            <p className="uppercase tracking-[0.18em] text-[11px] text-[#101010]/60 animate-fade-in">
-              We Love Your Startup 💙
+        <div className="relative z-10 mx-auto max-w-[1200px] px-4 sm:px-6 lg:px-8 py-16 sm:py-20 lg:py-24">
+          <div className="text-center">
+            <p className="uppercase tracking-[0.18em] text-[12px] text-[#101010]/70 animate-fade-in">
+              By Zero Finance
             </p>
-            <h1 className="mt-2 font-serif text-[32px] sm:text-[40px] lg:text-[48px] leading-[1.1] tracking-[-0.015em] text-[#101010] animate-slide-up">
-              Today's Featured Founder Friends
+            <h1 className="mt-3 font-serif text-[48px] sm:text-[64px] lg:text-[88px] leading-[0.96] tracking-[-0.015em] text-[#101010] animate-slide-up">
+              We Love Your{' '}
+              <span className="text-primary-blue italic">Startup</span>
             </h1>
-          </div>
+            <p
+              className="mt-6 max-w-[65ch] mx-auto text-[16px] sm:text-[18px] leading-[1.5] text-[#101010]/80 animate-fade-in"
+              style={{ animationDelay: '0.2s' }}
+            >
+              A curated directory of founders we admire. See how much their idle
+              cash could be earning with Zero Finance's 8% APY savings accounts.
+            </p>
 
-          {/* Mediar Showcase */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
-            {/* Left: Company Info */}
-            <div className="bg-white border border-[#101010]/10 p-8 lg:p-10 animate-fade-in">
-              <div className="flex items-start justify-between mb-6">
-                <div>
-                  <h2 className="text-[36px] sm:text-[42px] font-serif text-[#101010] leading-[0.96]">
-                    {company.name}
-                  </h2>
-                  <span className="inline-block mt-2 px-3 py-1 bg-primary-blue/10 text-primary-blue text-[12px] font-medium rounded-full">
-                    {company.showcase?.emoji || '🚀'} {company.category}
-                  </span>
-                </div>
-              </div>
-
-              <p className="text-[16px] sm:text-[18px] leading-[1.5] text-[#101010]/80 mb-8">
-                {company.description}
-              </p>
-
-              {/* Founders */}
-              <div className="mb-8">
-                <p className="text-[11px] uppercase tracking-[0.14em] text-[#101010]/60 mb-4">
-                  The Brilliant Minds 🧠
-                </p>
-                <div className="space-y-4">
-                  {company.founders.map((founder) => (
-                    <div
-                      key={founder.id}
-                      className="flex items-center gap-4 group"
-                    >
-                      {founder.avatar && (
-                        <Image
-                          src={founder.avatar}
-                          alt={founder.name}
-                          width={56}
-                          height={56}
-                          className="rounded-full border-2 border-transparent group-hover:border-primary-blue transition-all"
-                        />
-                      )}
-                      <div className="flex-1">
-                        <a
-                          href={founder.twitter}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-[18px] font-medium text-[#101010] hover:text-primary-blue transition-colors flex items-center gap-2"
-                        >
-                          {founder.name}
-                          <span className="text-[14px] text-primary-blue">
-                            →
-                          </span>
-                        </a>
-                        <p className="text-[14px] text-[#101010]/60">
-                          {founder.role}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Stats */}
-              <div className="grid grid-cols-2 gap-4 p-4 bg-bg-cream border border-[#101010]/10 rounded-md">
-                <div>
-                  <p className="text-[11px] uppercase tracking-[0.14em] text-[#101010]/60">
-                    💰 Funding
-                  </p>
-                  <p className="mt-1 text-[24px] font-medium text-primary-blue tabular-nums">
-                    {formatCurrency(company.funding.amount)}
-                  </p>
-                  <p className="text-[12px] text-[#101010]/60">
-                    {company.funding.round} • {company.funding.date}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-[11px] uppercase tracking-[0.14em] text-[#101010]/60">
-                    📈 Could Save/Year
-                  </p>
-                  <p className="mt-1 text-[24px] font-medium text-[#1B29FF] tabular-nums">
-                    +{formatCurrency(calculateSavings(company.funding.amount))}
-                  </p>
-                  <p className="text-[12px] text-[#101010]/60">
-                    with Zero Finance
-                  </p>
-                </div>
-              </div>
-
-              {/* Links */}
-              <div className="mt-6 flex flex-wrap gap-4">
-                {company.website && (
-                  <a
-                    href={company.website}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center px-4 py-2 text-[14px] font-medium text-white bg-[#101010] hover:bg-[#101010]/80 rounded-md transition-colors"
-                  >
-                    Visit Mediar 🌐
-                  </a>
-                )}
-                {company.twitter && (
-                  <a
-                    href={company.twitter}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center px-4 py-2 text-[14px] font-medium text-primary-blue border border-primary-blue hover:bg-primary-blue hover:text-white rounded-md transition-colors"
-                  >
-                    Follow on X 🐦
-                  </a>
-                )}
-              </div>
-            </div>
-
-            {/* Right: Interactive Calculator */}
-            <div className="animate-fade-in" style={{ animationDelay: '0.2s' }}>
-              <div className="bg-white border border-[#101010]/10 p-8 lg:p-10">
-                <p className="text-[11px] uppercase tracking-[0.14em] text-[#101010]/60 mb-3">
-                  🎯 What if Mediar used Zero Finance?
-                </p>
-                <h3 className="text-[24px] font-serif text-[#101010] mb-6">
-                  Calculate Their Potential
-                </h3>
-
-                <SavingsCalculator defaultAmount={company.funding.amount} />
-
-                {/* Fun Stats */}
-                <div className="mt-8 p-4 bg-primary-blue/5 border border-primary-blue/20 rounded-md">
-                  <p className="text-[14px] font-medium text-[#101010] mb-3">
-                    💡 With {formatCurrency(company.funding.amount)} earning 8%
-                    APY:
-                  </p>
-                  <ul className="space-y-2 text-[13px] text-[#101010]/80">
-                    <li>
-                      ☕{' '}
-                      {Math.floor(
-                        calculateMonthlyYield(company.funding.amount) / 5,
-                      )}
-                      coffees per month
-                    </li>
-                    <li>
-                      💻{' '}
-                      {Math.floor(
-                        calculateMonthlyYield(company.funding.amount) / 1500,
-                      )}
-                      MacBook Pros per year
-                    </li>
-                    <li>
-                      🚀{' '}
-                      {Math.floor(
-                        calculateSavings(company.funding.amount) / 50000,
-                      )}
-                      % of a new engineer's salary
-                    </li>
-                  </ul>
-                </div>
-              </div>
+            <div
+              className="mt-8 flex flex-col sm:flex-row gap-4 justify-center items-center animate-fade-in"
+              style={{ animationDelay: '0.3s' }}
+            >
+              <Link
+                href="https://0.finance"
+                className="inline-flex items-center px-6 py-3 text-[16px] font-medium text-white bg-primary-blue hover:bg-primary-blue-hover rounded-md transition-all hover:scale-105"
+              >
+                Open Zero Account →
+              </Link>
+              <a
+                href="#directory"
+                className="inline-flex items-center text-[15px] text-[#101010] hover:text-primary-blue underline decoration-[#101010]/30 underline-offset-[4px] hover:decoration-primary-blue transition-colors"
+              >
+                Browse Startups
+              </a>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Why We Love Them */}
-      <section className="bg-white py-12 sm:py-16">
+      {/* Featured Startup */}
+      {companies
+        .filter((c) => c.showcase?.featured)
+        .map((company) => (
+          <section key={company.id} className="bg-white py-12 sm:py-16">
+            <div className="mx-auto max-w-[1200px] px-4 sm:px-6 lg:px-8">
+              <p className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60">
+                Featured Startup 🌟
+              </p>
+              <h2 className="mt-2 font-serif text-[30px] sm:text-[36px] leading-[1.1] tracking-[-0.01em] text-[#101010]">
+                This Week's Highlight
+              </h2>
+
+              <div className="mt-8 bg-bg-warm border border-[#101010]/10 p-6 sm:p-8">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <h3 className="text-[24px] font-medium text-[#101010]">
+                      {company.name}
+                    </h3>
+                    <p className="mt-2 text-[14px] text-[#101010]/70 max-w-[45ch]">
+                      {company.description}
+                    </p>
+                  </div>
+                  <span className="px-3 py-1 bg-primary-blue/10 text-primary-blue text-[12px] font-medium rounded-full">
+                    {company.category}
+                  </span>
+                </div>
+
+                <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div>
+                    <p className="text-[11px] uppercase tracking-[0.14em] text-[#101010]/60">
+                      Founders
+                    </p>
+                    <div className="mt-2 space-y-2">
+                      {company.founders.map((founder) => (
+                        <div
+                          key={founder.id}
+                          className="flex items-center gap-2"
+                        >
+                          {founder.avatar && (
+                            <Image
+                              src={founder.avatar}
+                              alt={founder.name}
+                              width={32}
+                              height={32}
+                              className="rounded-full"
+                            />
+                          )}
+                          <a
+                            href={founder.twitter}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-[13px] text-[#101010] hover:text-primary-blue transition-colors"
+                          >
+                            {founder.name}
+                          </a>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <p className="text-[11px] uppercase tracking-[0.14em] text-[#101010]/60">
+                      Funding
+                    </p>
+                    <p className="mt-1 text-[20px] font-medium text-primary-blue tabular-nums">
+                      {formatCurrency(company.funding.amount)}
+                    </p>
+                    <p className="text-[12px] text-[#101010]/60">
+                      {company.funding.round} • {company.funding.date}
+                    </p>
+                  </div>
+
+                  <div>
+                    <p className="text-[11px] uppercase tracking-[0.14em] text-[#101010]/60">
+                      Potential Savings
+                    </p>
+                    <p className="mt-1 text-[20px] font-medium text-[#1B29FF] tabular-nums">
+                      +
+                      {formatCurrency(calculateSavings(company.funding.amount))}
+                    </p>
+                    <p className="text-[12px] text-[#101010]/60">
+                      per year with Zero
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-6 flex gap-4">
+                  <Link
+                    href={`/startups/${company.id}`}
+                    className="inline-flex items-center px-4 py-2 text-[14px] font-medium text-white bg-primary-blue hover:bg-primary-blue-hover rounded-md transition-colors"
+                  >
+                    View Full Profile →
+                  </Link>
+                  {company.website && (
+                    <a
+                      href={company.website}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center px-4 py-2 text-[14px] font-medium text-primary-blue border border-primary-blue hover:bg-primary-blue hover:text-white rounded-md transition-colors"
+                    >
+                      Visit Website
+                    </a>
+                  )}
+                </div>
+              </div>
+            </div>
+          </section>
+        ))}
+
+      {/* All Startups Directory */}
+      <section id="directory" className="bg-bg-warm py-12 sm:py-16">
         <div className="mx-auto max-w-[1200px] px-4 sm:px-6 lg:px-8">
-          <div className="max-w-[800px] mx-auto text-center">
-            <p className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60">
-              Why We Love Mediar ❤️
-            </p>
-            <h2 className="mt-2 font-serif text-[30px] sm:text-[36px] leading-[1.1] tracking-[-0.01em] text-[#101010]">
-              Building the Future of Memory
-            </h2>
-            <p className="mt-6 text-[16px] sm:text-[18px] leading-[1.5] text-[#101010]/80">
-              Mediar is solving a fundamental human problem: our limited memory.
-              By capturing everything you see and hear, they're creating a true
-              second brain that never forgets. This isn't just another AI
-              tool—it's augmented intelligence that makes you superhuman. 🦸
-            </p>
-            <p className="mt-4 text-[16px] sm:text-[18px] leading-[1.5] text-[#101010]/80">
-              With their funding sitting idle in a traditional bank, they're
-              missing out on
-              <span className="font-medium text-primary-blue">
-                {' '}
-                {formatCurrency(calculateSavings(company.funding.amount))}
-              </span>{' '}
-              per year. That's real money that could extend their runway or fund
-              new experiments. 💸
-            </p>
+          <p className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60">
+            Directory
+          </p>
+          <h2 className="mt-2 font-serif text-[30px] sm:text-[36px] leading-[1.1] tracking-[-0.01em] text-[#101010]">
+            All Startups We Love
+          </h2>
+
+          <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-px bg-[#101010]/10">
+            {companies.map((startup) => (
+              <Link
+                key={startup.id}
+                href={`/startups/${startup.id}`}
+                className="bg-white p-6 hover:bg-bg-cream transition-colors group"
+              >
+                <div className="flex items-start justify-between">
+                  <h3 className="text-[18px] font-medium text-[#101010] group-hover:text-primary-blue transition-colors">
+                    {startup.name}
+                  </h3>
+                  <span className="text-[11px] uppercase tracking-[0.14em] text-[#101010]/60">
+                    {startup.category}
+                  </span>
+                </div>
+                <p className="mt-2 text-[13px] text-[#101010]/70 line-clamp-2">
+                  {startup.description}
+                </p>
+                <div className="mt-4 flex items-center justify-between">
+                  <span className="text-[14px] font-medium text-primary-blue tabular-nums">
+                    {formatCurrency(startup.funding.amount)}
+                  </span>
+                  <span className="text-[12px] text-[#101010]/60">
+                    {startup.funding.round}
+                  </span>
+                </div>
+                <div className="mt-3 text-[11px] text-[#101010]/50">
+                  Could save{' '}
+                  {formatCurrency(calculateSavings(startup.funding.amount))}
+                  /year
+                </div>
+              </Link>
+            ))}
           </div>
+
+          {companies.length === 1 && (
+            <div className="mt-8 text-center">
+              <p className="text-[14px] text-[#101010]/60">
+                More amazing startups coming soon! 🚀
+              </p>
+              <a
+                href="https://x.com/0dotfinance"
+                className="mt-2 inline-flex items-center text-[14px] text-primary-blue hover:underline"
+              >
+                Nominate a startup on X →
+              </a>
+            </div>
+          )}
         </div>
       </section>
 
       {/* CTA Section */}
-      <section className="bg-bg-warm py-12 sm:py-16 border-t border-[#101010]/10">
+      <section className="bg-white py-12 sm:py-16 border-t border-[#101010]/10">
         <div className="mx-auto max-w-[800px] px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="font-serif text-[30px] sm:text-[36px] leading-[1.1] tracking-[-0.01em] text-[#101010]">
-            Hey {company.founders.map((f) => f.name.split(' ')[0]).join(' & ')}!
-            👋
+            Your Startup Could Be Next
           </h2>
           <p className="mt-4 text-[16px] sm:text-[18px] leading-[1.5] text-[#101010]/80 max-w-[55ch] mx-auto">
-            Your idle cash could be earning 8% APY instead of 4%. That's an
-            extra{' '}
-            <span className="font-medium text-primary-blue">
-              {formatCurrency(calculateSavings(company.funding.amount))}
-            </span>{' '}
-            per year to build the future of augmented memory.
+            Join the growing list of startups earning 8% APY on their idle cash.
+            Stop leaving money on the table.
           </p>
           <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-center items-center">
             <Link
@@ -273,31 +268,9 @@ export default function Home() {
               href="https://cal.com/team/0finance/30"
               className="inline-flex items-center text-[15px] text-[#101010] hover:text-primary-blue underline decoration-[#101010]/30 underline-offset-[4px] hover:decoration-primary-blue transition-colors"
             >
-              Book a Demo with Zero Finance
+              Book a Demo
             </Link>
           </div>
-        </div>
-      </section>
-
-      {/* Coming Soon */}
-      <section className="bg-white py-12 sm:py-16 border-t border-[#101010]/10">
-        <div className="mx-auto max-w-[800px] px-4 sm:px-6 lg:px-8 text-center">
-          <p className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60">
-            Coming Soon 🔜
-          </p>
-          <h2 className="mt-2 font-serif text-[24px] sm:text-[30px] leading-[1.1] tracking-[-0.01em] text-[#101010]">
-            More Amazing Founders
-          </h2>
-          <p className="mt-4 text-[14px] sm:text-[16px] leading-[1.5] text-[#101010]/60 max-w-[45ch] mx-auto">
-            We'll be featuring more incredible startups soon. Know a founder who
-            should be here? Let us know!
-          </p>
-          <a
-            href="https://x.com/0dotfinance"
-            className="mt-6 inline-flex items-center text-[14px] text-primary-blue hover:underline"
-          >
-            Nominate a Startup on X →
-          </a>
         </div>
       </section>
 

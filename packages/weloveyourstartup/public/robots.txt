@@ -1,0 +1,29 @@
+# Robots.txt for weloveyourstartup.com
+User-agent: *
+Allow: /
+
+# Sitemap location
+Sitemap: https://weloveyourstartup.com/sitemap.xml
+
+# Allow all major search engines
+User-agent: Googlebot
+Allow: /
+
+User-agent: Bingbot
+Allow: /
+
+User-agent: Slurp
+Allow: /
+
+User-agent: DuckDuckBot
+Allow: /
+
+# Block bad bots
+User-agent: AhrefsBot
+Disallow: /
+
+User-agent: SemrushBot
+Disallow: /
+
+# Crawl delay for respectful crawling
+Crawl-delay: 1
