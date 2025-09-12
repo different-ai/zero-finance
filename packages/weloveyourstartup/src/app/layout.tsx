@@ -3,7 +3,10 @@ import './globals.css';
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://weloveyourstartup.com'),
-  title: 'We Love Your Startup - Founders Directory by Zero Finance',
+  title: {
+    default: 'We Love Your Startup',
+    template: '%s', // This ensures page titles are used as-is without appending site name
+  },
   description:
     'A curated directory of founders we admire. Calculate how much their idle cash could earn with Zero Finance.',
   openGraph: {

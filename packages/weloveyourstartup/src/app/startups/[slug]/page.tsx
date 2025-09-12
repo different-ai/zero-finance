@@ -39,38 +39,38 @@ export async function generateMetadata({
   }).format(yearlyDifference);
 
   return {
-    title: `${company.name} - We Love Your Startup | Zero Finance`,
-    description: `${company.description} With $${(company.funding.amount / 1000000).toFixed(1)}M in funding, ${company.name} could save ${formattedSavings}/year with Zero Finance's 8% APY.`,
+    title: `${company.name} - ${company.tagline}`,
+    description: company.description,
     keywords: [
       company.name,
       company.category,
+      company.tagline,
+      ...company.founders.map((f) => f.name),
+      'AI automation',
       'startup',
       'funding',
-      'savings',
-      'Zero Finance',
-      ...company.founders.map((f) => f.name),
     ],
     authors: company.founders.map((f) => ({ name: f.name })),
     openGraph: {
       title: `${company.name} - ${company.tagline}`,
       description: company.description,
       url: `https://weloveyourstartup.com/startups/${params.slug}`,
-      siteName: 'We Love Your Startup',
+      siteName: company.name,
       images: [
         {
           url: `https://weloveyourstartup.com/api/og?company=${params.slug}`,
           width: 1200,
           height: 630,
-          alt: `${company.name} - We Love Your Startup`,
+          alt: `${company.name}`,
         },
       ],
       locale: 'en_US',
-      type: 'article',
+      type: 'website',
     },
     twitter: {
       card: 'summary_large_image',
-      title: `${company.name} - We Love Your Startup`,
-      description: `${company.name} could save ${formattedSavings}/year with Zero Finance`,
+      title: `${company.name} - ${company.tagline}`,
+      description: company.description,
       images: [`https://weloveyourstartup.com/api/og?company=${params.slug}`],
     },
     alternates: {
