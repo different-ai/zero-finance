@@ -290,10 +290,15 @@ export function SavingsCalculator({
                 )}
 
                 {remainingBudget > 500 && (
-                  <p className="text-[12px] text-[#101010]/70">
-                    Plus {formatCompactCurrency(remainingBudget)}/mo left over!
-                    🎊
-                  </p>
+                  <div className="p-3 bg-gradient-to-r from-[#10B981]/10 to-primary-blue/10 border border-[#10B981]/30 rounded-md">
+                    <p className="text-[16px] font-medium text-[#10B981]">
+                      Plus {formatCompactCurrency(remainingBudget)}/mo left
+                      over! 🎊
+                    </p>
+                    <p className="text-[12px] text-[#101010]/70 mt-1">
+                      That's extra runway or pure profit
+                    </p>
+                  </div>
                 )}
               </>
             ) : (

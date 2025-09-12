@@ -109,6 +109,10 @@ export default function StartupPage({ params }: PageProps) {
     return (amount * 0.08) / 12;
   };
 
+  const calculateYearlySavings = (amount: number) => {
+    return calculateSavings(amount);
+  };
+
   // JSON-LD Structured Data
   const jsonLd = {
     '@context': 'https://schema.org',
@@ -202,11 +206,14 @@ export default function StartupPage({ params }: PageProps) {
                   <h2 className="text-[11px] uppercase tracking-[0.14em] text-[#101010]/60 mb-4">
                     The Brilliant Minds 🧠
                   </h2>
-                  <div className="space-y-4">
+                  <div className="grid grid-cols-1 gap-3">
                     {company.founders.map((founder) => (
-                      <div
+                      <a
                         key={founder.id}
-                        className="flex items-center gap-4 group"
+                        href={founder.twitter}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-4 p-3 bg-bg-cream hover:bg-primary-blue/5 rounded-lg transition-all group"
                       >
                         {founder.avatar && (
                           <Image
@@ -214,26 +221,21 @@ export default function StartupPage({ params }: PageProps) {
                             alt={founder.name}
                             width={56}
                             height={56}
-                            className="rounded-full border-2 border-transparent group-hover:border-primary-blue transition-all"
+                            className="rounded-full border-2 border-white shadow-sm group-hover:shadow-md group-hover:border-primary-blue/20 transition-all"
                           />
                         )}
                         <div className="flex-1">
-                          <a
-                            href={founder.twitter}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-[18px] font-medium text-[#101010] hover:text-primary-blue transition-colors flex items-center gap-2"
-                          >
+                          <div className="text-[18px] font-medium text-[#101010] group-hover:text-primary-blue transition-colors">
                             {founder.name}
-                            <span className="text-[14px] text-primary-blue">
-                              →
-                            </span>
-                          </a>
+                          </div>
                           <p className="text-[14px] text-[#101010]/60">
                             {founder.role}
                           </p>
                         </div>
-                      </div>
+                        <span className="text-[14px] text-primary-blue opacity-0 group-hover:opacity-100 transition-opacity">
+                          →
+                        </span>
+                      </a>
                     ))}
                   </div>
                 </div>
@@ -316,22 +318,22 @@ export default function StartupPage({ params }: PageProps) {
                         ☕{' '}
                         {Math.floor(
                           calculateMonthlyYield(company.funding.amount) / 5,
-                        )}
+                        ).toLocaleString()}{' '}
                         coffees per month
                       </li>
                       <li>
                         💻{' '}
                         {Math.floor(
-                          calculateMonthlyYield(company.funding.amount) / 1500,
-                        )}
+                          calculateYearlySavings(company.funding.amount) / 3000,
+                        )}{' '}
                         MacBook Pros per year
                       </li>
                       <li>
-                        🚀{' '}
+                        🏖️{' '}
                         {Math.floor(
-                          calculateSavings(company.funding.amount) / 50000,
-                        )}
-                        % of a new engineer's salary
+                          calculateMonthlyYield(company.funding.amount) / 5000,
+                        )}{' '}
+                        team retreats per month
                       </li>
                     </ul>
                   </div>
@@ -347,10 +349,10 @@ export default function StartupPage({ params }: PageProps) {
             <div className="mx-auto max-w-[1200px] px-4 sm:px-6 lg:px-8">
               <div className="max-w-[800px] mx-auto text-center">
                 <p className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60">
-                  Why We Love {company.name} ❤️
+                  Our Take
                 </p>
                 <h2 className="mt-2 font-serif text-[30px] sm:text-[36px] leading-[1.1] tracking-[-0.01em] text-[#101010]">
-                  {company.tagline}
+                  Why We Love {company.name} ❤️
                 </h2>
                 <p className="mt-6 text-[16px] sm:text-[18px] leading-[1.5] text-[#101010]/80">
                   {company.whyWeLoveThem}
