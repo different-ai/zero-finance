@@ -252,6 +252,18 @@ export default function StartupPage({ params }: PageProps) {
                   </div>
                 </div>
 
+                {/* Why We Love Them - Brief */}
+                {company.whyWeLoveThem && (
+                  <div className="mb-6 p-4 bg-gradient-to-r from-primary-blue/5 to-primary-blue/10 border border-primary-blue/20 rounded-md">
+                    <p className="text-[11px] uppercase tracking-[0.14em] text-primary-blue font-medium mb-2">
+                      Why We Love {company.name} ❤️
+                    </p>
+                    <p className="text-[14px] text-[#101010]/80 leading-relaxed">
+                      {company.whyWeLoveThem}
+                    </p>
+                  </div>
+                )}
+
                 {/* Stats */}
                 <div className="grid grid-cols-2 gap-4 p-4 bg-bg-cream border border-[#101010]/10 rounded-md">
                   <div>
