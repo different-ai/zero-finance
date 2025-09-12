@@ -1,0 +1,110 @@
+{
+  "companies": [
+    {
+      "id": "mediar",
+      "name": "Mediar",
+      "tagline": "AI hands for every Windows desktop",
+      "description": "🤖 Giving AI hands to automate the global economy. Transform manual workflows into automated processes with AI agents that achieve 95% success rate and <20s latency.",
+      "longDescription": "The global economy runs on legacy Windows software with no APIs. AI is exponentially smarter but can't operate in this environment because it has no hands. Mediar gives AI its hands. They've built AI agents that watch users work, compile automations autonomously, and scale across hundreds of desktops.",
+      "website": "https://mediar.ai",
+      "twitter": "https://x.com/MediarAI",
+      "category": "AI Automation",
+      "whyWeLoveThem": "Mediar is solving a massive problem: bridging the gap between AI intelligence and legacy software that powers 90% of enterprise operations. While others dream about AI agents, Mediar ships production-ready automation that cuts costs by 90% on repetitive work.",
+      "funFact": "Their AI learns from watching humans work for just 1 day before achieving 95% automation success rate - faster than training a new employee! 🚀",
+      "funding": {
+        "amount": 2800000,
+        "round": "Pre-Seed",
+        "date": "2024",
+        "valuation": 40000000,
+        "leadInvestors": [
+          "F.inc",
+          "Top Harvest Capital",
+          "Seed Club Ventures",
+          "LG Technology Ventures"
+        ],
+        "announcement": "We raised $2.8M to bring AI hands to every Windows desktop."
+      },
+      "founders": [
+        {
+          "id": "louis030195",
+          "name": "Louis Beaumont",
+          "role": "Co-founder & CEO",
+          "twitter": "https://x.com/louis030195",
+          "avatar": "https://pbs.twimg.com/profile_images/1878823799917084672/EBSefEUo_400x400.jpg",
+          "bio": "Building AI that never forgets. Previously built Screenpipe."
+        },
+        {
+          "id": "m13v_",
+          "name": "Matt",
+          "role": "Co-founder",
+          "twitter": "https://x.com/m13v_",
+          "avatar": "https://pbs.twimg.com/profile_images/1749288192958935040/dPXHmIy__400x400.jpg",
+          "bio": "Engineering the future of automation."
+        }
+      ],
+      "metrics": {
+        "automationSuccess": "95%",
+        "deploymentTime": "24-48 hours",
+        "latency": "<20s",
+        "costSavings": "90%"
+      },
+      "showcase": {
+        "primaryColor": "#1B29FF",
+        "gradient": "from-blue-500 to-purple-600",
+        "emoji": "🤖",
+        "featured": true,
+        "order": 1
+      }
+    }
+  ],
+  "calculatorConfig": {
+    "bankRate": 4.0,
+    "zeroRate": 8.0,
+    "defaultAmount": 2800000,
+    "minAmount": 100000,
+    "maxAmount": 10000000,
+    "step": 50000
+  },
+  "expenses": [
+    { "name": "AWS", "cost": 2000, "icon": "☁️" },
+    { "name": "Notion", "cost": 500, "icon": "📝" },
+    { "name": "Slack", "cost": 1200, "icon": "💬" },
+    { "name": "Vercel", "cost": 800, "icon": "▲" },
+    { "name": "GitHub", "cost": 600, "icon": "🐙" },
+    { "name": "Figma", "cost": 900, "icon": "🎨" },
+    { "name": "Linear", "cost": 400, "icon": "📊" },
+    { "name": "Office Space", "cost": 5000, "icon": "🏢" },
+    { "name": "Team Lunches", "cost": 2000, "icon": "🍕" },
+    { "name": "Conference Budget", "cost": 3000, "icon": "🎤" }
+  ],
+  "teamMembers": [
+    { "role": "Part-time Intern", "salary": 20000, "icon": "🎓" },
+    { "role": "Full-time Intern", "salary": 35000, "icon": "📚" },
+    { "role": "Virtual Assistant", "salary": 40000, "icon": "💼" },
+    { "role": "Junior Content Writer", "salary": 45000, "icon": "✍️" },
+    { "role": "Community Manager", "salary": 50000, "icon": "🌐" },
+    { "role": "Social Media Manager", "salary": 55000, "icon": "📱" },
+    { "role": "Content Writer", "salary": 60000, "icon": "📝" },
+    { "role": "Junior Designer", "salary": 65000, "icon": "🎨" },
+    { "role": "Customer Success", "salary": 70000, "icon": "🤝" },
+    { "role": "Sales Development Rep", "salary": 75000, "icon": "📞" },
+    { "role": "Junior Engineer", "salary": 80000, "icon": "👨‍💻" },
+    { "role": "Data Analyst", "salary": 85000, "icon": "📊" },
+    { "role": "Growth Marketer", "salary": 90000, "icon": "📈" },
+    { "role": "QA Engineer", "salary": 95000, "icon": "🔍" },
+    { "role": "Account Executive", "salary": 100000, "icon": "💰" },
+    { "role": "Product Manager", "salary": 110000, "icon": "🎯" },
+    { "role": "Product Designer", "salary": 120000, "icon": "🖌️" },
+    { "role": "DevOps Engineer", "salary": 130000, "icon": "⚙️" },
+    { "role": "Data Scientist", "salary": 140000, "icon": "🔬" },
+    { "role": "Senior Engineer", "salary": 150000, "icon": "🧑‍💻" },
+    { "role": "Senior Product Manager", "salary": 160000, "icon": "🎯" },
+    { "role": "Staff Engineer", "salary": 180000, "icon": "⭐" },
+    { "role": "Engineering Manager", "salary": 190000, "icon": "👔" },
+    { "role": "Head of Product", "salary": 200000, "icon": "🚀" },
+    { "role": "Principal Engineer", "salary": 220000, "icon": "💎" },
+    { "role": "VP Engineering", "salary": 250000, "icon": "🏆" },
+    { "role": "VP Sales", "salary": 260000, "icon": "📈" },
+    { "role": "CTO (Fractional)", "salary": 300000, "icon": "🔮" }
+  ]
+}
