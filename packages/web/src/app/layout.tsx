@@ -10,16 +10,21 @@ import type { Metadata } from 'next';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: '0 Finance - 8% APY Insured Savings for Startups',
+  title: '0 Finance - Turn idle cash into headcount',
   description:
-    'Turn idle cash into headcount. Get 8% APY on treasury funds without leaving your current bank. FDIC insured up to $5M.',
+    'Your idle cash could hire your next engineer. Get 8% APY on treasury funds without leaving your current bank. Open US or EU account numbers, wire USD EUR or USDC.',
   keywords: [
+    'idle cash',
+    'treasury funds',
+    '8% APY',
     'startup treasury',
+    'headcount',
     'high yield savings',
-    'FDIC insured',
+    'USDC',
     'business banking',
-    'crypto treasury',
-    'USDC savings',
+    'vetted yield',
+    'insurance coverage',
+    'next engineer',
   ],
   authors: [{ name: '0 Finance' }],
   creator: '0 Finance',
@@ -32,7 +37,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: '0 Finance - Your idle cash could hire your next engineer',
     description:
-      'Get 8% APY on treasury funds. Open US or EU accounts, wire USD/EUR/USDC. FDIC insured up to $5M. $1M+ waitlist AUM.',
+      'Get 8% APY on treasury funds without leaving your current bank. Open US or EU account numbers, wire USD EUR or USDC, we place funds into vetted yield with defined insurance coverage, you withdraw any time.',
     url: 'https://0.finance',
     siteName: '0 Finance',
     images: [
@@ -40,7 +45,7 @@ export const metadata: Metadata = {
         url: 'https://0.finance/opengraph-image.png',
         width: 1200,
         height: 630,
-        alt: '0 Finance - 8% APY Insured Savings',
+        alt: '0 Finance - Turn idle cash into headcount',
       },
     ],
     locale: 'en_US',
@@ -48,9 +53,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: '0 Finance - 8% APY Insured Savings',
+    title: '0 Finance - Turn idle cash into headcount',
     description:
-      'Turn idle cash into headcount. Get 8% APY on treasury funds without leaving your current bank.',
+      'Your idle cash could hire your next engineer. Get 8% APY on treasury funds without leaving your current bank.',
     site: '@0finance',
     creator: '@0finance',
     images: ['https://0.finance/opengraph-image.png'],
