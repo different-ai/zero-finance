@@ -3,10 +3,29 @@ import { getCompanyById } from '@/lib/data';
 
 export const runtime = 'edge';
 
+// Helper to load images
+async function loadImage(url: string): Promise<string | null> {
+  try {
+    const response = await fetch(url);
+    const arrayBuffer = await response.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+    const base64 = buffer.toString('base64');
+    const mimeType = response.headers.get('content-type') || 'image/png';
+    return `data:${mimeType};base64,${base64}`;
+  } catch (error) {
+    console.error('Error loading image:', url, error);
+    return null;
+  }
+}
+
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const companyId = searchParams.get('company');
+
+    // Load Zero logo - using the hosted version for edge runtime
+    const zeroLogoUrl = 'https://weloveyourstartup.com/new-logo-bluer.png';
+    const zeroLogo = await loadImage(zeroLogoUrl);
 
     if (!companyId) {
       return new ImageResponse(
@@ -29,6 +48,14 @@ export async function GET(request: Request) {
                 alignItems: 'center',
               }}
             >
+              {zeroLogo && (
+                <img
+                  src={zeroLogo}
+                  width={60}
+                  height={60}
+                  style={{ marginBottom: 20 }}
+                />
+              )}
               <h1
                 style={{
                   fontSize: 80,
@@ -58,6 +85,17 @@ export async function GET(request: Request) {
     if (!company) {
       return new Response('Company not found', { status: 404 });
     }
+
+    // Load company logo and founder avatars
+    const companyLogo = company.logo ? await loadImage(company.logo) : null;
+    const founderAvatars = await Promise.all(
+      company.founders.slice(0, 3).map(async (founder) => {
+        if (founder.avatar) {
+          return { id: founder.id, avatar: await loadImage(founder.avatar) };
+        }
+        return { id: founder.id, avatar: null };
+      }),
+    );
 
     const savings =
       company.funding.amount * 0.08 - company.funding.amount * 0.04;
@@ -103,27 +141,38 @@ export async function GET(request: Request) {
                 gap: '8px',
               }}
             >
-              <div
-                style={{
-                  width: '32px',
-                  height: '32px',
-                  backgroundColor: '#1B29FF',
-                  borderRadius: '8px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <span
+              {zeroLogo ? (
+                <img
+                  src={zeroLogo}
+                  width={32}
+                  height={32}
                   style={{
-                    color: 'white',
-                    fontSize: '18px',
-                    fontWeight: 'bold',
+                    borderRadius: '8px',
+                  }}
+                />
+              ) : (
+                <div
+                  style={{
+                    width: '32px',
+                    height: '32px',
+                    backgroundColor: '#1B29FF',
+                    borderRadius: '8px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
                   }}
                 >
-                  0
-                </span>
-              </div>
+                  <span
+                    style={{
+                      color: 'white',
+                      fontSize: '18px',
+                      fontWeight: 'bold',
+                    }}
+                  >
+                    0
+                  </span>
+                </div>
+              )}
               <span
                 style={{
                   fontSize: '20px',
@@ -176,28 +225,41 @@ export async function GET(request: Request) {
                   gap: '20px',
                 }}
               >
-                <div
-                  style={{
-                    width: '72px',
-                    height: '72px',
-                    backgroundColor: 'white',
-                    borderRadius: '16px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    border: '2px solid #1B29FF20',
-                  }}
-                >
-                  <span
+                {companyLogo ? (
+                  <img
+                    src={companyLogo}
+                    width={72}
+                    height={72}
                     style={{
-                      fontSize: '36px',
-                      fontWeight: 'bold',
-                      color: '#1B29FF',
+                      borderRadius: '16px',
+                      backgroundColor: 'white',
+                      border: '2px solid #1B29FF20',
+                    }}
+                  />
+                ) : (
+                  <div
+                    style={{
+                      width: '72px',
+                      height: '72px',
+                      backgroundColor: 'white',
+                      borderRadius: '16px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      border: '2px solid #1B29FF20',
                     }}
                   >
-                    M
-                  </span>
-                </div>
+                    <span
+                      style={{
+                        fontSize: '36px',
+                        fontWeight: 'bold',
+                        color: '#1B29FF',
+                      }}
+                    >
+                      {company.name[0]}
+                    </span>
+                  </div>
+                )}
                 <div style={{ display: 'flex', flexDirection: 'column' }}>
                   <h1
                     style={{
@@ -260,64 +322,82 @@ export async function GET(request: Request) {
                     flexWrap: 'wrap',
                   }}
                 >
-                  {company.founders.slice(0, 3).map((founder) => (
-                    <div
-                      key={founder.id}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                        backgroundColor: 'white',
-                        padding: '8px 12px',
-                        borderRadius: '8px',
-                      }}
-                    >
+                  {company.founders.slice(0, 3).map((founder) => {
+                    const founderAvatar = founderAvatars.find(
+                      (fa) => fa.id === founder.id,
+                    );
+                    return (
                       <div
+                        key={founder.id}
                         style={{
-                          width: '28px',
-                          height: '28px',
-                          borderRadius: '50%',
-                          backgroundColor: '#1B29FF',
                           display: 'flex',
                           alignItems: 'center',
-                          justifyContent: 'center',
+                          gap: '8px',
+                          backgroundColor: 'white',
+                          padding: '8px 12px',
+                          borderRadius: '8px',
                         }}
                       >
-                        <span
-                          style={{
-                            color: 'white',
-                            fontSize: '12px',
-                            fontWeight: 'bold',
-                          }}
+                        {founderAvatar?.avatar ? (
+                          <img
+                            src={founderAvatar.avatar}
+                            width={28}
+                            height={28}
+                            style={{
+                              borderRadius: '50%',
+                            }}
+                          />
+                        ) : (
+                          <div
+                            style={{
+                              width: '28px',
+                              height: '28px',
+                              borderRadius: '50%',
+                              backgroundColor: '#1B29FF',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                            }}
+                          >
+                            <span
+                              style={{
+                                color: 'white',
+                                fontSize: '12px',
+                                fontWeight: 'bold',
+                              }}
+                            >
+                              {founder.name
+                                .split(' ')
+                                .map((n) => n[0])
+                                .join('')}
+                            </span>
+                          </div>
+                        )}
+                        <div
+                          style={{ display: 'flex', flexDirection: 'column' }}
                         >
-                          {founder.name
-                            .split(' ')
-                            .map((n) => n[0])
-                            .join('')}
-                        </span>
+                          <span
+                            style={{
+                              fontSize: '14px',
+                              color: '#101010',
+                              fontWeight: '600',
+                            }}
+                          >
+                            {founder.name}
+                          </span>
+                          <span
+                            style={{
+                              fontSize: '11px',
+                              color: '#101010',
+                              opacity: 0.5,
+                            }}
+                          >
+                            {founder.role}
+                          </span>
+                        </div>
                       </div>
-                      <div style={{ display: 'flex', flexDirection: 'column' }}>
-                        <span
-                          style={{
-                            fontSize: '14px',
-                            color: '#101010',
-                            fontWeight: '600',
-                          }}
-                        >
-                          {founder.name}
-                        </span>
-                        <span
-                          style={{
-                            fontSize: '11px',
-                            color: '#101010',
-                            opacity: 0.5,
-                          }}
-                        >
-                          {founder.role}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             </div>
