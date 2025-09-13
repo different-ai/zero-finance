@@ -1,13 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -29,12 +22,13 @@ import {
   BarChart3,
   Shield,
   AlertCircle,
+  ChevronRight,
+  ArrowLeft,
 } from 'lucide-react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
-
 import { Skeleton } from '@/components/ui/skeleton';
 import { TeamTab } from './team-tab';
+import { cn } from '@/lib/utils';
 
 export default function CompanySettingsPage() {
   const [companyData, setCompanyData] = useState({
@@ -246,379 +240,496 @@ export default function CompanySettingsPage() {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto px-4 py-8 max-w-4xl">
-        <Skeleton className="h-8 w-48 mb-6" />
-        <Skeleton className="h-96 w-full" />
+      <div className="min-h-screen bg-[#F7F7F2]">
+        <div className="h-[60px] flex items-center px-4 sm:px-6 max-w-[1400px] mx-auto">
+          <Skeleton className="h-8 w-48" />
+        </div>
+        <div className="px-4 sm:px-6 py-6 sm:py-8 max-w-[1400px] mx-auto">
+          <Skeleton className="h-96 w-full" />
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-4xl">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-2">
-          <Building2 className="h-8 w-8" />
-          Company Settings
-        </h1>
-        <p className="text-gray-600 mt-2">
-          Manage your company information and invite contractors and team
-        </p>
+    <div className="min-h-screen bg-[#F7F7F2]">
+      {/* Header */}
+      <header className="sticky top-0 z-40 bg-[#F7F7F2] border-b border-[#101010]/10">
+        <div className="h-[60px] flex items-center px-4 sm:px-6 max-w-[1400px] mx-auto">
+          <p className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60 mr-3">
+            Settings
+          </p>
+          <h1 className="font-serif text-[28px] sm:text-[32px] leading-[1] text-[#101010] tracking-[-0.02em]">
+            Company
+          </h1>
+          <div className="ml-auto flex items-center gap-2 sm:gap-3">
+            <Button
+              onClick={() => router.push('/dashboard')}
+              variant="ghost"
+              className="text-[#101010]/60 hover:text-[#101010]"
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back
+            </Button>
+            <Button
+              onClick={handleSave}
+              disabled={isSaving}
+              className="bg-[#1B29FF] text-white hover:bg-[#1B29FF]/90 border-0"
+            >
+              {isSaving ? 'Saving...' : 'Save Changes'}
+            </Button>
+          </div>
+        </div>
+      </header>
+
+      {/* Tab Navigation */}
+      <div className="sticky top-[60px] z-30 bg-[#F7F7F2]/80 backdrop-blur border-b border-[#101010]/10">
+        <div className="h-[48px] flex items-center px-4 sm:px-6 max-w-[1400px] mx-auto">
+          <div className="flex gap-1">
+            {[
+              { value: 'info', label: 'Company Info' },
+              { value: 'shared', label: 'Shared Data' },
+              { value: 'contractors', label: 'Contractors' },
+              { value: 'team', label: 'Team' },
+              { value: 'invites', label: 'Invite Links' },
+            ].map((item) => (
+              <button
+                key={item.value}
+                onClick={() => handleTabChange(item.value)}
+                className={cn(
+                  'px-4 py-2 text-sm font-medium rounded-md transition-colors',
+                  tab === item.value
+                    ? 'bg-[#101010] text-white'
+                    : 'text-[#101010]/60 hover:text-[#101010] hover:bg-[#101010]/5',
+                )}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
 
-      <Tabs value={tab} onValueChange={handleTabChange} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-5">
-          <TabsTrigger value="info">Company Info</TabsTrigger>
-          <TabsTrigger value="shared">Shared Data</TabsTrigger>
-          <TabsTrigger value="contractors">Contractors</TabsTrigger>
-          <TabsTrigger value="team">Team</TabsTrigger>
-          <TabsTrigger value="invites">Invite Links</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="info">
-          <Card>
-            <CardHeader>
-              <CardTitle>Company Information</CardTitle>
-              <CardDescription>
-                This information will be used in invoices and shared with team
-                members
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="name">Company Name</Label>
-                  <Input
-                    id="name"
-                    value={companyData.name}
-                    onChange={(e) =>
-                      setCompanyData((prev) => ({
-                        ...prev,
-                        name: e.target.value,
-                      }))
-                    }
-                    placeholder="Acme Corp"
-                  />
+      {/* Main Content */}
+      <main className="px-4 sm:px-6 py-6 sm:py-8 max-w-[1400px] mx-auto">
+        {/* Company Info Tab */}
+        {tab === 'info' && (
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6">
+            <div className="lg:col-span-8">
+              <div className="bg-white border border-[#101010]/10 rounded-lg shadow-sm">
+                <div className="border-b border-[#101010]/10 px-5 sm:px-6 py-4">
+                  <h2 className="font-serif text-[20px] sm:text-[24px] text-[#101010] tracking-[-0.02em]">
+                    Company Information
+                  </h2>
+                  <p className="text-sm text-[#666666] mt-1">
+                    This information will be used in invoices and shared with
+                    team members
+                  </p>
                 </div>
-                <div>
-                  <Label htmlFor="email">Company Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={companyData.email}
-                    onChange={(e) =>
-                      setCompanyData((prev) => ({
-                        ...prev,
-                        email: e.target.value,
-                      }))
-                    }
-                    placeholder="billing@acme.com"
-                  />
-                </div>
-              </div>
+                <div className="p-5 sm:p-6 space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label
+                        htmlFor="name"
+                        className="text-sm font-medium text-[#101010]"
+                      >
+                        Company Name
+                      </Label>
+                      <Input
+                        id="name"
+                        value={companyData.name}
+                        onChange={(e) =>
+                          setCompanyData((prev) => ({
+                            ...prev,
+                            name: e.target.value,
+                          }))
+                        }
+                        placeholder="Acme Corp"
+                        className="mt-1.5 border-[#E5E5E5] focus:border-[#1B29FF] focus:ring-[#1B29FF]"
+                      />
+                    </div>
+                    <div>
+                      <Label
+                        htmlFor="email"
+                        className="text-sm font-medium text-[#101010]"
+                      >
+                        Company Email
+                      </Label>
+                      <Input
+                        id="email"
+                        type="email"
+                        value={companyData.email}
+                        onChange={(e) =>
+                          setCompanyData((prev) => ({
+                            ...prev,
+                            email: e.target.value,
+                          }))
+                        }
+                        placeholder="billing@acme.com"
+                        className="mt-1.5 border-[#E5E5E5] focus:border-[#1B29FF] focus:ring-[#1B29FF]"
+                      />
+                    </div>
+                  </div>
 
-              <div>
-                <Label htmlFor="address">Street Address</Label>
-                <Input
-                  id="address"
-                  value={companyData.address}
-                  onChange={(e) =>
-                    setCompanyData((prev) => ({
-                      ...prev,
-                      address: e.target.value,
-                    }))
-                  }
-                  placeholder="123 Main St, Suite 100"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="city">City</Label>
-                  <Input
-                    id="city"
-                    value={companyData.city}
-                    onChange={(e) =>
-                      setCompanyData((prev) => ({
-                        ...prev,
-                        city: e.target.value,
-                      }))
-                    }
-                    placeholder="San Francisco"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="postalCode">Postal Code</Label>
-                  <Input
-                    id="postalCode"
-                    value={companyData.postalCode}
-                    onChange={(e) =>
-                      setCompanyData((prev) => ({
-                        ...prev,
-                        postalCode: e.target.value,
-                      }))
-                    }
-                    placeholder="94105"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <Label htmlFor="country">Country</Label>
-                <Input
-                  id="country"
-                  value={companyData.country}
-                  onChange={(e) =>
-                    setCompanyData((prev) => ({
-                      ...prev,
-                      country: e.target.value,
-                    }))
-                  }
-                  placeholder="United States"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="taxId">Tax ID / EIN</Label>
-                  <Input
-                    id="taxId"
-                    value={companyData.taxId}
-                    onChange={(e) =>
-                      setCompanyData((prev) => ({
-                        ...prev,
-                        taxId: e.target.value,
-                      }))
-                    }
-                    placeholder="12-3456789"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="paymentTerms">Default Payment Terms</Label>
-                  <Input
-                    id="paymentTerms"
-                    value={companyData.paymentTerms}
-                    onChange={(e) =>
-                      setCompanyData((prev) => ({
-                        ...prev,
-                        paymentTerms: e.target.value,
-                      }))
-                    }
-                    placeholder="Net 30"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <Label htmlFor="paymentAddress">Crypto Payment Address</Label>
-                <Input
-                  id="paymentAddress"
-                  value={companyData.paymentAddress}
-                  onChange={(e) =>
-                    setCompanyData((prev) => ({
-                      ...prev,
-                      paymentAddress: e.target.value,
-                    }))
-                  }
-                  placeholder="Your wallet address for receiving payments"
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  This address will be used as the default payment address for
-                  crypto invoices
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="shared">
-          <Card>
-            <CardHeader>
-              <CardTitle>Shared Data</CardTitle>
-              <CardDescription>
-                Additional information that will be available to contractors
-                when creating invoices
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-3">
-                {Object.entries(sharedData).map(([key, value]) => (
-                  <div key={key} className="flex gap-2">
+                  <div>
+                    <Label
+                      htmlFor="address"
+                      className="text-sm font-medium text-[#101010]"
+                    >
+                      Street Address
+                    </Label>
                     <Input
-                      value={key}
-                      onChange={(e) => {
-                        const newKey = e.target.value;
-                        setSharedData((prev) => {
-                          const newData = { ...prev };
-                          delete newData[key];
-                          newData[newKey] = value;
-                          return newData;
-                        });
-                      }}
-                      placeholder="Field name"
-                      className="w-1/3"
-                    />
-                    <Input
-                      value={value}
+                      id="address"
+                      value={companyData.address}
                       onChange={(e) =>
-                        setSharedData((prev) => ({
+                        setCompanyData((prev) => ({
                           ...prev,
-                          [key]: e.target.value,
+                          address: e.target.value,
                         }))
                       }
-                      placeholder="Field value"
-                      className="flex-1"
+                      placeholder="123 Main St, Suite 100"
+                      className="mt-1.5 border-[#E5E5E5] focus:border-[#1B29FF] focus:ring-[#1B29FF]"
                     />
-                    <Button
-                      variant="destructive"
-                      size="icon"
-                      onClick={() => {
-                        setSharedData((prev) => {
-                          const newData = { ...prev };
-                          delete newData[key];
-                          return newData;
-                        });
-                      }}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
                   </div>
-                ))}
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label
+                        htmlFor="city"
+                        className="text-sm font-medium text-[#101010]"
+                      >
+                        City
+                      </Label>
+                      <Input
+                        id="city"
+                        value={companyData.city}
+                        onChange={(e) =>
+                          setCompanyData((prev) => ({
+                            ...prev,
+                            city: e.target.value,
+                          }))
+                        }
+                        placeholder="San Francisco"
+                        className="mt-1.5 border-[#E5E5E5] focus:border-[#1B29FF] focus:ring-[#1B29FF]"
+                      />
+                    </div>
+                    <div>
+                      <Label
+                        htmlFor="postalCode"
+                        className="text-sm font-medium text-[#101010]"
+                      >
+                        Postal Code
+                      </Label>
+                      <Input
+                        id="postalCode"
+                        value={companyData.postalCode}
+                        onChange={(e) =>
+                          setCompanyData((prev) => ({
+                            ...prev,
+                            postalCode: e.target.value,
+                          }))
+                        }
+                        placeholder="94105"
+                        className="mt-1.5 border-[#E5E5E5] focus:border-[#1B29FF] focus:ring-[#1B29FF]"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label
+                      htmlFor="country"
+                      className="text-sm font-medium text-[#101010]"
+                    >
+                      Country
+                    </Label>
+                    <Input
+                      id="country"
+                      value={companyData.country}
+                      onChange={(e) =>
+                        setCompanyData((prev) => ({
+                          ...prev,
+                          country: e.target.value,
+                        }))
+                      }
+                      placeholder="United States"
+                      className="mt-1.5 border-[#E5E5E5] focus:border-[#1B29FF] focus:ring-[#1B29FF]"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label
+                        htmlFor="taxId"
+                        className="text-sm font-medium text-[#101010]"
+                      >
+                        Tax ID / EIN
+                      </Label>
+                      <Input
+                        id="taxId"
+                        value={companyData.taxId}
+                        onChange={(e) =>
+                          setCompanyData((prev) => ({
+                            ...prev,
+                            taxId: e.target.value,
+                          }))
+                        }
+                        placeholder="12-3456789"
+                        className="mt-1.5 border-[#E5E5E5] focus:border-[#1B29FF] focus:ring-[#1B29FF]"
+                      />
+                    </div>
+                    <div>
+                      <Label
+                        htmlFor="paymentTerms"
+                        className="text-sm font-medium text-[#101010]"
+                      >
+                        Default Payment Terms
+                      </Label>
+                      <Input
+                        id="paymentTerms"
+                        value={companyData.paymentTerms}
+                        onChange={(e) =>
+                          setCompanyData((prev) => ({
+                            ...prev,
+                            paymentTerms: e.target.value,
+                          }))
+                        }
+                        placeholder="Net 30"
+                        className="mt-1.5 border-[#E5E5E5] focus:border-[#1B29FF] focus:ring-[#1B29FF]"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label
+                      htmlFor="paymentAddress"
+                      className="text-sm font-medium text-[#101010]"
+                    >
+                      Crypto Payment Address
+                    </Label>
+                    <Input
+                      id="paymentAddress"
+                      value={companyData.paymentAddress}
+                      onChange={(e) =>
+                        setCompanyData((prev) => ({
+                          ...prev,
+                          paymentAddress: e.target.value,
+                        }))
+                      }
+                      placeholder="Your wallet address for receiving payments"
+                      className="mt-1.5 border-[#E5E5E5] focus:border-[#1B29FF] focus:ring-[#1B29FF]"
+                    />
+                    <p className="text-xs text-[#666666] mt-1">
+                      This address will be used as the default payment address
+                      for crypto invoices
+                    </p>
+                  </div>
+                </div>
               </div>
+            </div>
+          </div>
+        )}
 
-              <Button
-                variant="outline"
-                onClick={() =>
-                  setSharedData((prev) => ({
-                    ...prev,
-                    [`field_${Object.keys(prev).length + 1}`]: '',
-                  }))
-                }
-                className="w-full"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Add Field
-              </Button>
-            </CardContent>
-          </Card>
-        </TabsContent>
+        {/* Shared Data Tab */}
+        {tab === 'shared' && (
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6">
+            <div className="lg:col-span-8">
+              <div className="bg-white border border-[#101010]/10 rounded-lg shadow-sm">
+                <div className="border-b border-[#101010]/10 px-5 sm:px-6 py-4">
+                  <h2 className="font-serif text-[20px] sm:text-[24px] text-[#101010] tracking-[-0.02em]">
+                    Shared Data
+                  </h2>
+                  <p className="text-sm text-[#666666] mt-1">
+                    Additional information that will be available to contractors
+                    when creating invoices
+                  </p>
+                </div>
+                <div className="p-5 sm:p-6 space-y-4">
+                  <div className="space-y-3">
+                    {Object.entries(sharedData).map(([key, value]) => (
+                      <div key={key} className="flex gap-2">
+                        <Input
+                          value={key}
+                          onChange={(e) => {
+                            const newKey = e.target.value;
+                            setSharedData((prev) => {
+                              const newData = { ...prev };
+                              delete newData[key];
+                              newData[newKey] = value;
+                              return newData;
+                            });
+                          }}
+                          placeholder="Field name"
+                          className="w-1/3 border-[#E5E5E5] focus:border-[#1B29FF] focus:ring-[#1B29FF]"
+                        />
+                        <Input
+                          value={value}
+                          onChange={(e) =>
+                            setSharedData((prev) => ({
+                              ...prev,
+                              [key]: e.target.value,
+                            }))
+                          }
+                          placeholder="Field value"
+                          className="flex-1 border-[#E5E5E5] focus:border-[#1B29FF] focus:ring-[#1B29FF]"
+                        />
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => {
+                            setSharedData((prev) => {
+                              const newData = { ...prev };
+                              delete newData[key];
+                              return newData;
+                            });
+                          }}
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
 
-        <TabsContent value="contractors">
-          <div className="space-y-6">
+                  <Button
+                    variant="outline"
+                    onClick={() =>
+                      setSharedData((prev) => ({
+                        ...prev,
+                        [`field_${Object.keys(prev).length + 1}`]: '',
+                      }))
+                    }
+                    className="w-full border-[#1B29FF] text-[#1B29FF] hover:bg-[#1B29FF]/5"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Field
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Contractors Tab */}
+        {tab === 'contractors' && (
+          <div className="space-y-5 sm:space-y-6">
             {/* Statistics Cards */}
             {membersData && (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <Card>
-                  <CardContent className="pt-6">
-                    <div className="flex items-center space-x-2">
-                      <Users className="h-4 w-4 text-blue-600" />
-                      <div>
-                        <p className="text-2xl font-bold">
-                          {membersData.stats.totalMembers}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          Total Contractors
-                        </p>
-                      </div>
+                <div className="bg-white border border-[#101010]/10 rounded-lg p-5 sm:p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-[32px] font-serif text-[#101010] tracking-[-0.02em] tabular-nums">
+                        {membersData.stats.totalMembers}
+                      </p>
+                      <p className="text-sm text-[#666666] mt-1">
+                        Total Contractors
+                      </p>
                     </div>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardContent className="pt-6">
-                    <div className="flex items-center space-x-2">
-                      <Mail className="h-4 w-4 text-green-600" />
-                      <div>
-                        <p className="text-2xl font-bold">
-                          {membersData.stats.totalInvites}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          Invites Sent
-                        </p>
-                      </div>
+                    <div className="h-10 w-10 rounded-full bg-[#1B29FF]/10 flex items-center justify-center">
+                      <Users className="h-5 w-5 text-[#1B29FF]" />
                     </div>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardContent className="pt-6">
-                    <div className="flex items-center space-x-2">
-                      <BarChart3 className="h-4 w-4 text-purple-600" />
-                      <div>
-                        <p className="text-2xl font-bold">
-                          {membersData.stats.totalInviteUses}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          Successful Joins
-                        </p>
-                      </div>
+                  </div>
+                </div>
+                <div className="bg-white border border-[#101010]/10 rounded-lg p-5 sm:p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-[32px] font-serif text-[#101010] tracking-[-0.02em] tabular-nums">
+                        {membersData.stats.totalInvites}
+                      </p>
+                      <p className="text-sm text-[#666666] mt-1">
+                        Invites Sent
+                      </p>
                     </div>
-                  </CardContent>
-                </Card>
+                    <div className="h-10 w-10 rounded-full bg-green-50 flex items-center justify-center">
+                      <Mail className="h-5 w-5 text-green-600" />
+                    </div>
+                  </div>
+                </div>
+                <div className="bg-white border border-[#101010]/10 rounded-lg p-5 sm:p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-[32px] font-serif text-[#101010] tracking-[-0.02em] tabular-nums">
+                        {membersData.stats.totalInviteUses}
+                      </p>
+                      <p className="text-sm text-[#666666] mt-1">
+                        Successful Joins
+                      </p>
+                    </div>
+                    <div className="h-10 w-10 rounded-full bg-purple-50 flex items-center justify-center">
+                      <BarChart3 className="h-5 w-5 text-purple-600" />
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
 
             {/* Active Contractors */}
-            <Card>
-              <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div className="bg-white border border-[#101010]/10 rounded-lg shadow-sm">
+              <div className="border-b border-[#101010]/10 px-5 sm:px-6 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
-                  <CardTitle className="flex items-center gap-2">
-                    <Users className="h-5 w-5" />
+                  <h2 className="font-serif text-[20px] sm:text-[24px] text-[#101010] tracking-[-0.02em]">
                     Active Contractors
-                  </CardTitle>
-                  <CardDescription>
+                  </h2>
+                  <p className="text-sm text-[#666666] mt-1">
                     External contractors who can create invoices using your
-                    company data.
-                    <span className="block mt-1 text-xs text-gray-500">
-                      Contractors see “Bill to:{' '}
-                      {company?.name || 'your company'}”. They fill “Bill from”
-                      with their details.
-                    </span>
-                  </CardDescription>
+                    company data
+                  </p>
+                  <p className="text-xs text-[#999999] mt-1">
+                    Contractors see "Bill to: {company?.name || 'your company'}
+                    ". They fill "Bill from" with their details.
+                  </p>
                 </div>
                 <div className="flex gap-2">
-                  <Button onClick={handleCreateInviteLink}>
+                  <Button
+                    onClick={handleCreateInviteLink}
+                    className="bg-[#1B29FF] text-white hover:bg-[#1B29FF]/90 border-0"
+                  >
                     <Plus className="h-4 w-4 mr-2" />
                     Invite contractor
                   </Button>
                   <Button
                     variant="outline"
                     onClick={() => router.push('/dashboard/create-invoice')}
+                    className="border-[#101010]/20 text-[#101010] hover:bg-[#101010]/5"
                   >
                     Pay a contractor
                   </Button>
                 </div>
-              </CardHeader>
-              <CardContent>
+              </div>
+              <div className="p-5 sm:p-6">
                 {membersData?.members.length ? (
                   <div className="space-y-3">
                     {membersData.members.map((member) => (
                       <div
                         key={member.id}
-                        className="flex items-center justify-between p-3 border rounded-lg"
+                        className="flex items-center justify-between p-4 border border-[#101010]/10 rounded-lg hover:bg-[#F7F7F2]/50 transition-colors"
                       >
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-1">
                             <div className="flex flex-col">
-                              <span className="font-medium text-sm">
+                              <span className="font-medium text-[#101010]">
                                 {member.businessName ||
                                   member.email ||
                                   'Unknown User'}
                               </span>
                               {member.email && (
-                                <span className="text-xs text-gray-600">
+                                <span className="text-xs text-[#666666]">
                                   {member.email}
                                 </span>
                               )}
                             </div>
                             <span
-                              className={`text-xs px-2 py-1 rounded-full ${
+                              className={cn(
+                                'text-xs px-2 py-1 rounded-full',
                                 member.role === 'owner'
-                                  ? 'bg-blue-100 text-blue-800'
-                                  : 'bg-gray-100 text-gray-800'
-                              }`}
+                                  ? 'bg-[#1B29FF]/10 text-[#1B29FF]'
+                                  : 'bg-[#101010]/5 text-[#101010]',
+                              )}
                             >
                               {member.role}
                             </span>
                           </div>
-                          <p className="text-xs text-gray-500 flex items-center gap-1">
+                          <p className="text-xs text-[#999999] flex items-center gap-1">
                             <Calendar className="h-3 w-3" />
                             Joined{' '}
                             {new Date(member.joinedAt).toLocaleDateString()}
@@ -626,10 +737,11 @@ export default function CompanySettingsPage() {
                         </div>
                         {member.role !== 'owner' && (
                           <Button
-                            variant="destructive"
+                            variant="ghost"
                             size="sm"
                             onClick={() => handleRemoveMember(member.id)}
                             disabled={removeMember.isPending}
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
                           >
                             <UserMinus className="h-4 w-4" />
                           </Button>
@@ -638,43 +750,42 @@ export default function CompanySettingsPage() {
                     ))}
                   </div>
                 ) : (
-                  <p className="text-center text-gray-500 py-8">
+                  <p className="text-center text-[#666666] py-8">
                     No contractors yet. Create invite links to add contractors.
                   </p>
                 )}
-              </CardContent>
-            </Card>
+              </div>
+            </div>
 
             {/* Pending Invitations */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Mail className="h-5 w-5" />
+            <div className="bg-white border border-[#101010]/10 rounded-lg shadow-sm">
+              <div className="border-b border-[#101010]/10 px-5 sm:px-6 py-4">
+                <h2 className="font-serif text-[20px] sm:text-[24px] text-[#101010] tracking-[-0.02em]">
                   Pending Invitations
-                </CardTitle>
-                <CardDescription>
+                </h2>
+                <p className="text-sm text-[#666666] mt-1">
                   Invite links that haven't been used yet
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
+                </p>
+              </div>
+              <div className="p-5 sm:p-6">
                 {inviteLinks.length ? (
                   <div className="space-y-3">
                     {inviteLinks.map((link) => (
                       <div
                         key={link.id}
-                        className="flex items-center justify-between p-3 border rounded-lg"
+                        className="flex items-center justify-between p-4 border border-[#101010]/10 rounded-lg hover:bg-[#F7F7F2]/50 transition-colors"
                       >
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-1">
-                            <span className="text-sm font-mono">
+                            <span className="text-sm font-mono text-[#101010]">
                               {window.location.origin}/signin?invite=
                               {link.token.slice(0, 8)}...
                             </span>
-                            <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full">
+                            <span className="text-xs bg-yellow-50 text-yellow-700 px-2 py-1 rounded-full">
                               {link.usedCount || 0} uses
                             </span>
                           </div>
-                          <p className="text-xs text-gray-500 flex items-center gap-1">
+                          <p className="text-xs text-[#999999] flex items-center gap-1">
                             <Calendar className="h-3 w-3" />
                             Created{' '}
                             {new Date(link.createdAt).toLocaleDateString()}
@@ -685,6 +796,7 @@ export default function CompanySettingsPage() {
                             variant="outline"
                             size="sm"
                             onClick={() => copyInviteLink(link.token)}
+                            className="border-[#101010]/20 text-[#101010] hover:bg-[#101010]/5"
                           >
                             {copiedLink === link.token ? (
                               <Check className="h-4 w-4" />
@@ -693,9 +805,10 @@ export default function CompanySettingsPage() {
                             )}
                           </Button>
                           <Button
-                            variant="destructive"
+                            variant="ghost"
                             size="sm"
                             onClick={() => handleDeleteInviteLink(link.id)}
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
@@ -704,45 +817,47 @@ export default function CompanySettingsPage() {
                     ))}
                   </div>
                 ) : (
-                  <p className="text-center text-gray-500 py-8">
+                  <p className="text-center text-[#666666] py-8">
                     No pending invitations. Create invite links to add
                     contractors.
                   </p>
                 )}
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           </div>
-        </TabsContent>
+        )}
 
         {/* Team Tab Content */}
-        <TabsContent value="team">
-          <TeamTab companyId={company?.id} />
-        </TabsContent>
+        {tab === 'team' && <TeamTab companyId={company?.id} />}
 
-        <TabsContent value="invites">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Link className="h-5 w-5" />
+        {/* Invite Links Tab */}
+        {tab === 'invites' && (
+          <div className="bg-white border border-[#101010]/10 rounded-lg shadow-sm">
+            <div className="border-b border-[#101010]/10 px-5 sm:px-6 py-4">
+              <h2 className="font-serif text-[20px] sm:text-[24px] text-[#101010] tracking-[-0.02em]">
                 Invite Links Management
-              </CardTitle>
-              <CardDescription>
+              </h2>
+              <p className="text-sm text-[#666666] mt-1">
                 Generate and manage links to invite contractors to join your
                 company
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="flex items-center justify-between p-4 bg-blue-50 rounded-lg border border-blue-200">
+              </p>
+            </div>
+            <div className="p-5 sm:p-6 space-y-6">
+              <div className="flex items-center justify-between p-4 bg-[#1B29FF]/5 rounded-lg border border-[#1B29FF]/20">
                 <div>
-                  <h3 className="font-medium text-blue-900">
+                  <h3 className="font-medium text-[#101010]">
                     How Invite Links Work
                   </h3>
-                  <p className="text-sm text-blue-700 mt-1">
+                  <p className="text-sm text-[#666666] mt-1">
                     Share these links with contractors. When they sign in,
                     they'll automatically join your company.
                   </p>
                 </div>
-                <Button onClick={handleCreateInviteLink} disabled={!company}>
+                <Button
+                  onClick={handleCreateInviteLink}
+                  disabled={!company}
+                  className="bg-[#1B29FF] text-white hover:bg-[#1B29FF]/90 border-0"
+                >
                   <Plus className="h-4 w-4 mr-2" />
                   Generate New Link
                 </Button>
@@ -752,27 +867,27 @@ export default function CompanySettingsPage() {
                 {inviteLinks.map((link) => (
                   <div
                     key={link.id}
-                    className="border rounded-lg p-4 space-y-3"
+                    className="border border-[#101010]/10 rounded-lg p-4 space-y-3 hover:bg-[#F7F7F2]/50 transition-colors"
                   >
                     <div className="flex items-start justify-between">
                       <div className="flex-1 space-y-2">
                         <div className="flex items-center gap-2">
-                          <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">
+                          <span className="text-xs bg-green-50 text-green-700 px-2 py-1 rounded-full">
                             Active
                           </span>
-                          <span className="text-xs text-gray-500">
+                          <span className="text-xs text-[#999999]">
                             Created{' '}
                             {new Date(link.createdAt).toLocaleDateString()}
                           </span>
                         </div>
 
-                        <div className="bg-gray-50 p-3 rounded border">
-                          <p className="text-sm font-mono break-all">
+                        <div className="bg-[#F7F7F2] p-3 rounded border border-[#101010]/10">
+                          <p className="text-sm font-mono break-all text-[#101010]">
                             {window.location.origin}/signin?invite={link.token}
                           </p>
                         </div>
 
-                        <div className="flex items-center gap-4 text-xs text-gray-500">
+                        <div className="flex items-center gap-4 text-xs text-[#999999]">
                           <span className="flex items-center gap-1">
                             <BarChart3 className="h-3 w-3" />
                             Used {link.usedCount || 0} times
@@ -789,7 +904,7 @@ export default function CompanySettingsPage() {
                           variant="outline"
                           size="sm"
                           onClick={() => copyInviteLink(link.token)}
-                          className="flex items-center gap-1"
+                          className="flex items-center gap-1 border-[#101010]/20 text-[#101010] hover:bg-[#101010]/5"
                         >
                           {copiedLink === link.token ? (
                             <>
@@ -804,9 +919,10 @@ export default function CompanySettingsPage() {
                           )}
                         </Button>
                         <Button
-                          variant="destructive"
+                          variant="ghost"
                           size="sm"
                           onClick={() => handleDeleteInviteLink(link.id)}
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -817,17 +933,18 @@ export default function CompanySettingsPage() {
 
                 {inviteLinks.length === 0 && (
                   <div className="text-center py-12">
-                    <Link className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                    <h3 className="text-lg font-medium text-gray-900 mb-2">
+                    <Link className="h-12 w-12 text-[#101010]/20 mx-auto mb-4" />
+                    <h3 className="text-lg font-medium text-[#101010] mb-2">
                       No invite links yet
                     </h3>
-                    <p className="text-gray-500 mb-4">
+                    <p className="text-[#666666] mb-4">
                       Create your first invite link to start adding contractors
                       to your company.
                     </p>
                     <Button
                       onClick={handleCreateInviteLink}
                       disabled={!company}
+                      className="bg-[#1B29FF] text-white hover:bg-[#1B29FF]/90 border-0"
                     >
                       <Plus className="h-4 w-4 mr-2" />
                       Create First Invite Link
@@ -835,36 +952,30 @@ export default function CompanySettingsPage() {
                   </div>
                 )}
               </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+            </div>
+          </div>
+        )}
+      </main>
 
-      <div className="mt-6 flex justify-between">
-        <Button
-          variant="destructive"
-          onClick={handleDeleteCompany}
-          disabled={deleteCompany.isPending}
-        >
-          {deleteCompany.isPending ? (
-            <>Deleting...</>
-          ) : (
-            <>
-              <Trash2 className="h-4 w-4 mr-2" />
-              Delete Company
-            </>
-          )}
-        </Button>
-        <Button onClick={handleSave} disabled={isSaving}>
-          {isSaving ? (
-            <>Saving...</>
-          ) : (
-            <>
-              <Save className="h-4 w-4 mr-2" />
-              Save Changes
-            </>
-          )}
-        </Button>
+      {/* Footer Actions */}
+      <div className="px-4 sm:px-6 pb-6 sm:pb-8 max-w-[1400px] mx-auto">
+        <div className="flex justify-between">
+          <Button
+            variant="ghost"
+            onClick={handleDeleteCompany}
+            disabled={deleteCompany.isPending}
+            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+          >
+            {deleteCompany.isPending ? (
+              <>Deleting...</>
+            ) : (
+              <>
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete Company
+              </>
+            )}
+          </Button>
+        </div>
       </div>
     </div>
   );
