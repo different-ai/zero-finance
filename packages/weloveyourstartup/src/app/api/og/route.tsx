@@ -258,7 +258,7 @@ export async function GET(request: Request) {
                       </div>
                     </div>
                   )}
-                  <div>
+                  <div style={{ display: 'flex', flexDirection: 'column' }}>
                     <h1
                       style={{
                         fontSize: '56px',
@@ -379,6 +379,8 @@ export async function GET(request: Request) {
                     padding: '28px',
                     boxShadow: '0 8px 24px rgba(0, 0, 0, 0.08)',
                     border: '2px solid rgba(27, 41, 255, 0.1)',
+                    display: 'flex',
+                    flexDirection: 'column',
                   }}
                 >
                   <div
@@ -426,6 +428,8 @@ export async function GET(request: Request) {
                     borderRadius: '20px',
                     padding: '28px',
                     boxShadow: '0 8px 24px rgba(27, 41, 255, 0.3)',
+                    display: 'flex',
+                    flexDirection: 'column',
                   }}
                 >
                   <div
