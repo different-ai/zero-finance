@@ -56,6 +56,7 @@ export async function GET(request: Request) {
                   style={{ marginBottom: 20 }}
                 />
               )}
+              {/* make sure this goes to the right */}
               <h1
                 style={{
                   fontSize: 80,
@@ -127,62 +128,13 @@ export async function GET(request: Request) {
           <div
             style={{
               display: 'flex',
-              justifyContent: 'space-between',
               alignItems: 'center',
               marginBottom: '48px',
               width: '100%',
+              justifyContent: 'flex-end',
             }}
           >
-            {/* Zero Finance Logo */}
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-              }}
-            >
-              {zeroLogo ? (
-                <img
-                  src={zeroLogo}
-                  width={32}
-                  height={32}
-                  style={{
-                    borderRadius: '8px',
-                  }}
-                />
-              ) : (
-                <div
-                  style={{
-                    width: '32px',
-                    height: '32px',
-                    backgroundColor: '#1B29FF',
-                    borderRadius: '8px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <span
-                    style={{
-                      color: 'white',
-                      fontSize: '18px',
-                      fontWeight: 'bold',
-                    }}
-                  >
-                    0
-                  </span>
-                </div>
-              )}
-              <span
-                style={{
-                  fontSize: '20px',
-                  fontWeight: 'bold',
-                  color: '#101010',
-                }}
-              >
-                finance
-              </span>
-            </div>
+            
 
             {/* Tagline */}
             <span
@@ -263,7 +215,7 @@ export async function GET(request: Request) {
                 <div style={{ display: 'flex', flexDirection: 'column' }}>
                   <h1
                     style={{
-                      fontSize: '56px',
+                      fontSize: '66px',
                       fontWeight: 'bold',
                       color: '#101010',
                       lineHeight: 1,
@@ -287,7 +239,7 @@ export async function GET(request: Request) {
               {/* Tagline */}
               <p
                 style={{
-                  fontSize: '22px',
+                  fontSize: '66px',
                   color: '#101010',
                   opacity: 0.8,
                   lineHeight: 1.4,
@@ -296,8 +248,63 @@ export async function GET(request: Request) {
                 {company.tagline || company.description.substring(0, 100)}
               </p>
 
-              {/* Founders */}
+             
+            </div>
+
+            {/* Right Column - Stats */}
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '20px',
+              }}
+            >
+              {/* Funding Card */}
               <div
+                style={{
+                  backgroundColor: 'white',
+                  borderRadius: '16px',
+                  padding: '24px',
+                  border: '2px solid #1B29FF20',
+                  display: 'flex',
+                  flexDirection: 'column',
+                }}
+              >
+                <span
+                  style={{
+                    fontSize: '12px',
+                    color: '#101010',
+                    opacity: 0.5,
+                    marginBottom: '8px',
+                    textTransform: 'uppercase',
+                    letterSpacing: '1px',
+                  }}
+                >
+                  💰 Raised
+                </span>
+                <span
+                  style={{
+                    fontSize: '48px',
+                    fontWeight: 'bold',
+                    color: '#1B29FF',
+                    lineHeight: 1,
+                  }}
+                >
+                  {formattedFunding}
+                </span>
+                <span
+                  style={{
+                    fontSize: '14px',
+                    color: '#101010',
+                    opacity: 0.6,
+                    marginTop: '6px',
+                  }}
+                >
+                  {company.funding.round} • {company.funding.date}
+                </span>
+              </div>
+               {/* Founders */}
+               <div
                 style={{
                   display: 'flex',
                   flexDirection: 'column',
@@ -328,6 +335,7 @@ export async function GET(request: Request) {
                     );
                     return (
                       <div
+
                         key={founder.id}
                         style={{
                           display: 'flex',
@@ -341,8 +349,8 @@ export async function GET(request: Request) {
                         {founderAvatar?.avatar ? (
                           <img
                             src={founderAvatar.avatar}
-                            width={28}
-                            height={28}
+                            width={96}
+                            height={96}
                             style={{
                               borderRadius: '50%',
                             }}
@@ -400,106 +408,9 @@ export async function GET(request: Request) {
                   })}
                 </div>
               </div>
-            </div>
 
-            {/* Right Column - Stats */}
-            <div
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '20px',
-              }}
-            >
-              {/* Funding Card */}
-              <div
-                style={{
-                  backgroundColor: 'white',
-                  borderRadius: '16px',
-                  padding: '24px',
-                  border: '2px solid #1B29FF20',
-                  display: 'flex',
-                  flexDirection: 'column',
-                }}
-              >
-                <span
-                  style={{
-                    fontSize: '12px',
-                    color: '#101010',
-                    opacity: 0.5,
-                    marginBottom: '8px',
-                    textTransform: 'uppercase',
-                    letterSpacing: '1px',
-                  }}
-                >
-                  💰 Raised
-                </span>
-                <span
-                  style={{
-                    fontSize: '48px',
-                    fontWeight: 'bold',
-                    color: '#1B29FF',
-                    lineHeight: 1,
-                  }}
-                >
-                  {formattedFunding}
-                </span>
-                <span
-                  style={{
-                    fontSize: '14px',
-                    color: '#101010',
-                    opacity: 0.6,
-                    marginTop: '6px',
-                  }}
-                >
-                  {company.funding.round} • {company.funding.date}
-                </span>
-              </div>
-
-              {/* Savings Card */}
-              <div
-                style={{
-                  backgroundColor: '#1B29FF',
-                  borderRadius: '16px',
-                  padding: '24px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                }}
-              >
-                <span
-                  style={{
-                    fontSize: '12px',
-                    color: 'white',
-                    opacity: 0.9,
-                    marginBottom: '8px',
-                    textTransform: 'uppercase',
-                    letterSpacing: '1px',
-                  }}
-                >
-                  📈 Could Save/Year
-                </span>
-                <span
-                  style={{
-                    fontSize: '48px',
-                    color: 'white',
-                    fontWeight: 'bold',
-                    lineHeight: 1,
-                  }}
-                >
-                  +{formattedSavings}
-                </span>
-                <span
-                  style={{
-                    fontSize: '14px',
-                    color: 'white',
-                    opacity: 0.9,
-                    marginTop: '6px',
-                  }}
-                >
-                  with Zero's 8% APY
-                </span>
               </div>
             </div>
-          </div>
 
           {/* Footer */}
           <div
@@ -522,15 +433,56 @@ export async function GET(request: Request) {
             >
               Your idle cash could be earning 8% APY
             </span>
-            <span
+            {/* Zero Finance Logo */}
+            <div
               style={{
-                fontSize: '16px',
-                color: '#1B29FF',
-                fontWeight: '600',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
               }}
             >
-              0.finance
-            </span>
+              {zeroLogo ? (
+                <img
+                  src={zeroLogo}
+                  width={32}
+                  height={32}
+                  style={{
+                    borderRadius: '8px',
+                  }}
+                />
+              ) : (
+                <div
+                  style={{
+                    width: '32px',
+                    height: '32px',
+                    backgroundColor: '#1B29FF',
+                    borderRadius: '8px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <span
+                    style={{
+                      color: 'white',
+                      fontSize: '18px',
+                      fontWeight: 'bold',
+                    }}
+                  >
+                    0
+                  </span>
+                </div>
+              )}
+              <span
+                style={{
+                  fontSize: '20px',
+                  fontWeight: 'bold',
+                  color: '#101010',
+                }}
+              >
+                finance
+              </span>
+            </div>
           </div>
         </div>
       ),

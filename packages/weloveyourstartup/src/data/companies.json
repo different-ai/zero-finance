@@ -15,7 +15,7 @@
       "funding": {
         "amount": 2800000,
         "round": "Pre-Seed",
-        "date": "2024",
+        "date": "2025",
         "valuation": 40000000,
         "leadInvestors": [
           "F.inc",
@@ -29,7 +29,7 @@
         {
           "id": "louis030195",
           "name": "Louis Beaumont",
-          "role": "Co-founder & CEO",
+          "role": "Co-founder",
           "twitter": "https://x.com/louis030195",
           "avatar": "https://pbs.twimg.com/profile_images/1878823799917084672/EBSefEUo_400x400.jpg",
           "bio": "Building AI that never forgets. Previously built Screenpipe."
