@@ -3,6 +3,7 @@ import { db } from '@/db';
 import { users, userProfilesTable } from '@/db/schema';
 import { eq, and, isNotNull, ne, or, isNull } from 'drizzle-orm';
 import { alignApi } from '@/server/services/align-api';
+import { featureConfig } from '@/lib/feature-config';
 
 interface SyncResult {
   userId: string;
@@ -189,6 +190,14 @@ async function syncAllKycStatuses(adminToken: string): Promise<SyncResult[]> {
 }
 
 export async function POST(req: NextRequest) {
+  // Skip if Align is not configured
+  if (!featureConfig.align.enabled) {
+    return NextResponse.json({
+      message: 'KYC sync skipped - Align not configured',
+      skipped: true,
+    });
+  }
+
   try {
     const body = await req.json();
     const { adminToken } = body;
@@ -232,6 +241,14 @@ export async function POST(req: NextRequest) {
 
 // Also support GET for cron jobs
 export async function GET(req: NextRequest) {
+  // Skip if Align is not configured
+  if (!featureConfig.align.enabled) {
+    return NextResponse.json({
+      message: 'KYC sync skipped - Align not configured',
+      skipped: true,
+    });
+  }
+
   const authHeader = req.headers.get('authorization');
   const cronSecret = process.env.CRON_SECRET;
 

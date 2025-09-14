@@ -5,6 +5,7 @@ import { eq, and, isNull, isNotNull, ne } from 'drizzle-orm';
 import { loopsApi, LoopsEvent } from '@/server/services/loops-service';
 import { alignApi } from '@/server/services/align-api';
 import { getPrivyClient } from '@/lib/auth';
+import { featureConfig } from '@/lib/feature-config';
 
 // Helper to validate the cron key (to protect endpoint from unauthorized access)
 function validateCronKey(req: NextRequest): boolean {
@@ -413,6 +414,14 @@ async function processKycUpdatesAndNotifications(): Promise<
 }
 
 export async function GET(req: NextRequest) {
+  // Skip if Align is not configured
+  if (!featureConfig.align.enabled) {
+    return NextResponse.json({
+      message: 'KYC processing skipped - Align not configured',
+      skipped: true,
+    });
+  }
+
   // Validate cron key for security (except in development)
   if (process.env.NODE_ENV !== 'development' && !validateCronKey(req)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
