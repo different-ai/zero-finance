@@ -8,6 +8,7 @@ import { earnRouter } from './earn-router';
 import { eq, and } from 'drizzle-orm';
 import { type Address } from 'viem';
 import { AUTO_EARN_MODULE_ADDRESS } from '@/lib/earn-module-constants';
+import { featureConfig } from '@/lib/feature-config';
 
 export const onboardingRouter = router({
   /**
@@ -204,19 +205,23 @@ export const onboardingRouter = router({
       columns: { safeAddress: true },
     });
 
-    const alignCaller = alignRouter.createCaller(ctx);
-    const alignCustomerPromise = alignCaller.getCustomerStatus();
+    // Only fetch Align data if it's enabled
+    let alignCustomer = null;
+    if (featureConfig.align.enabled) {
+      const alignCaller = alignRouter.createCaller(ctx);
+      alignCustomer = await alignCaller.getCustomerStatus();
+    }
 
-    const [user, primarySafe, alignCustomer] = await Promise.all([
+    const [user, primarySafe] = await Promise.all([
       userPromise,
       primarySafePromise,
-      alignCustomerPromise,
     ]);
 
-    const kycStatus =
-      alignCustomer && alignCustomer.kycStatus
+    const kycStatus = featureConfig.align.enabled
+      ? alignCustomer && alignCustomer.kycStatus
         ? alignCustomer.kycStatus
-        : 'not_started';
+        : 'not_started'
+      : 'not_required';
     const kycSubStatus = alignCustomer?.kycSubStatus;
     const hasBankAccount = !!alignCustomer?.alignVirtualAccountId;
     const kycMarkedDone = user?.kycMarkedDone ?? false;
@@ -274,11 +279,14 @@ export const onboardingRouter = router({
       },
     };
 
-    // Onboarding is complete when safe is created, KYC is approved, and savings is opened
+    // Onboarding is complete when:
+    // - Safe is created
+    // - KYC is approved (if required)
+    // - Savings is opened (if enabled)
     const isCompleted =
       steps.createSafe.isCompleted &&
-      steps.verifyIdentity.isCompleted &&
-      steps.openSavings.isCompleted;
+      (!featureConfig.kyc.required || steps.verifyIdentity.isCompleted) &&
+      (!featureConfig.earn.enabled || steps.openSavings.isCompleted);
 
     return {
       steps,
@@ -309,19 +317,23 @@ export const onboardingRouter = router({
       columns: { safeAddress: true },
     });
 
-    const alignCaller = alignRouter.createCaller(ctx);
-    const alignCustomerPromise = alignCaller.getCustomerStatus();
+    // Only fetch Align data if it's enabled
+    let alignCustomer = null;
+    if (featureConfig.align.enabled) {
+      const alignCaller = alignRouter.createCaller(ctx);
+      alignCustomer = await alignCaller.getCustomerStatus();
+    }
 
-    const [user, primarySafe, alignCustomer] = await Promise.all([
+    const [user, primarySafe] = await Promise.all([
       userPromise,
       primarySafePromise,
-      alignCustomerPromise,
     ]);
 
-    const alignKycStatus =
-      alignCustomer && alignCustomer.kycStatus
+    const alignKycStatus = featureConfig.align.enabled
+      ? alignCustomer && alignCustomer.kycStatus
         ? alignCustomer.kycStatus
-        : 'not_started';
+        : 'not_started'
+      : 'not_required';
     const kycSubStatus = alignCustomer?.kycSubStatus;
     const kycMarkedDone = user?.kycMarkedDone ?? false;
 
