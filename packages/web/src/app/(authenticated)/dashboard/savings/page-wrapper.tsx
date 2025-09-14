@@ -226,18 +226,7 @@ export default function SavingsPageWrapper() {
     }
   }, [isLoading, hasInitialLoad]);
 
-  // Redirect logic
-  useEffect(() => {
-    if (
-      !isDemoMode &&
-      !isLoadingSafes &&
-      !safesError &&
-      safesData !== undefined &&
-      safesData.length === 0
-    ) {
-      router.push('/onboarding/create-safe');
-    }
-  }, [isDemoMode, isLoadingSafes, safesError, safesData, router]);
+ 
 
   // Loading state with skeleton
   if (isLoading) {
