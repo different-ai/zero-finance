@@ -1,0 +1,7 @@
+{
+  "$schema": "https://vercel.com/schemas/project.json",
+  "ignoreCommand": "npx turbo-ignore",
+  "installCommand": "pnpm install",
+  "buildCommand": "pnpm turbo run build",
+  "framework": null
+}

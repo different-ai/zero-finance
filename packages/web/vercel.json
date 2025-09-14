@@ -1,4 +1,9 @@
 {
+  "$schema": "https://vercel.com/schemas/project.json",
+  "ignoreCommand": "git diff HEAD^ HEAD --quiet ./packages/web",
+  "buildCommand": "pnpm build:vercel",
+  "installCommand": "cd ../.. && pnpm install",
+  "framework": "nextjs",
   "crons": [
     {
       "path": "/api/cron/auto-earn",
