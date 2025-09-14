@@ -4,7 +4,6 @@ import React, { useState } from 'react';
 import { Header } from './header';
 import { HeroSection } from './hero-section';
 import { WhatYouGetSection } from './what-you-get-section';
-import { TestimonialSection } from './testimonial-section';
 import { FinalCTASection } from './final-cta-section';
 import { DepositModal } from './deposit-modal';
 import { TransferModal } from './transfer-modal';

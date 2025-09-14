@@ -153,6 +153,14 @@ export const users = pgTable('users', {
   }), // Status of notification
   // Flag to track if contact has been sent to Loops
   loopsContactSynced: boolean('loops_contact_synced').default(false).notNull(),
+  // User role to differentiate between startups and contractors
+  userRole: text('user_role', {
+    enum: ['startup', 'contractor'],
+  })
+    .default('startup')
+    .notNull(),
+  // Invite code used for contractor onboarding
+  contractorInviteCode: text('contractor_invite_code'),
 });
 
 // UserSafes table - Linking users to their various Safe addresses

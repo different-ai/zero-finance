@@ -32,9 +32,9 @@ const DEMO_STEP_KEY = 'zero-finance-demo-step';
 
 export function DemoModeProvider({ children }: { children: React.ReactNode }) {
   const [isDemoMode, setIsDemoMode] = useState(false);
-  const [demoStep, setDemoStep] = useState(0);
-  const [demoBalance, setDemoBalance] = useState(0);
-  const [demoSavingsBalance, setDemoSavingsBalance] = useState(0);
+  const [demoStep, setDemoStep] = useState(5); // Start at step 5 to show savings
+  const [demoBalance, setDemoBalance] = useState(2500000); // $2.5M in checking
+  const [demoSavingsBalance, setDemoSavingsBalance] = useState(2500000); // $2.5M in savings
 
   // Load demo mode from localStorage
   useEffect(() => {
@@ -42,21 +42,23 @@ export function DemoModeProvider({ children }: { children: React.ReactNode }) {
     const storedStep = localStorage.getItem(DEMO_STEP_KEY);
     if (stored === 'true') {
       setIsDemoMode(true);
-      setDemoStep(storedStep ? parseInt(storedStep) : 0);
-      // Set initial demo balances based on step
-      if (storedStep && parseInt(storedStep) >= 3) {
-        setDemoBalance(2500000); // $2.5M
-      }
-      if (storedStep && parseInt(storedStep) >= 5) {
-        setDemoSavingsBalance(200000); // $200k in savings
-      }
+      // Always show full demo data
+      setDemoStep(5); // Step 5 shows savings
+      setDemoBalance(2500000); // $2.5M in checking
+      setDemoSavingsBalance(2500000); // $2.5M in savings
     }
   }, []);
 
   const setDemoMode = (enabled: boolean) => {
     setIsDemoMode(enabled);
     localStorage.setItem(DEMO_MODE_KEY, enabled ? 'true' : 'false');
-    if (!enabled) {
+    if (enabled) {
+      // Set demo balances when enabling demo mode
+      setDemoStep(5);
+      setDemoBalance(2500000);
+      setDemoSavingsBalance(2500000);
+      localStorage.setItem(DEMO_STEP_KEY, '5');
+    } else {
       // Reset demo state when disabling
       setDemoStep(0);
       setDemoBalance(0);
@@ -69,14 +71,12 @@ export function DemoModeProvider({ children }: { children: React.ReactNode }) {
     setDemoStep(step);
     localStorage.setItem(DEMO_STEP_KEY, step.toString());
 
-    // Update balances based on step progression
-    if (step === 3) {
-      // After deposit step
-      setDemoBalance(2500000);
-    } else if (step === 5) {
-      // After savings activation
-      setDemoSavingsBalance(200000);
-      setDemoBalance(2300000); // Reduced main balance
+    // Always show full demo balances
+    if (step >= 3) {
+      setDemoBalance(2500000); // $2.5M in checking
+    }
+    if (step >= 5) {
+      setDemoSavingsBalance(2500000); // $2.5M in savings
     }
   };
 

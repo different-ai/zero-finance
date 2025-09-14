@@ -169,7 +169,11 @@ export default async function DashboardPage() {
           </div>
 
           {/* Onboarding Section - only for real users */}
-          {!isDemoMode && <OnboardingData />}
+          {!isDemoMode && (
+            <Suspense fallback={<LoadingCard />}>
+              <OnboardingData />
+            </Suspense>
+          )}
 
           {/* Savings/Yield Section - Just call the actual savings page */}
           <SavingsWrapper />

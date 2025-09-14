@@ -90,7 +90,7 @@ export default function SavingsPageWrapper() {
     );
 
   const isEarnModuleInitialized = isDemoMode
-    ? demoStep >= 5
+    ? true // Always show savings in demo mode
     : realEarnStatus.data?.isInitializedOnChain || false;
 
   // Fetch vault stats
@@ -225,8 +225,6 @@ export default function SavingsPageWrapper() {
       setHasInitialLoad(true);
     }
   }, [isLoading, hasInitialLoad]);
-
- 
 
   // Loading state with skeleton
   if (isLoading) {
@@ -382,7 +380,7 @@ export default function SavingsPageWrapper() {
                 <p className="uppercase tracking-[0.18em] text-[11px] text-[#101010]/60">
                   Available Strategies
                 </p>
-                              </div>
+              </div>
 
               {/* Vault Table - Responsive */}
               <div className="bg-white border border-[#101010]/10 overflow-x-auto">

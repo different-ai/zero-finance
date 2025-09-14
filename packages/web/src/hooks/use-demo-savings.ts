@@ -8,30 +8,18 @@ export function useDemoSavingsState(realState: any, isLoading: boolean) {
   const demoState = useMemo(() => {
     if (!isDemoMode) return null;
 
-    // Before step 5, savings not enabled
-    if (demoStep < 5) {
-      return {
-        enabled: false,
-        allocation: 0,
-        apy: 8.0,
-        totalSaved: 0,
-        totalEarned: 0,
-        currentBalance: 0,
-        vaultAddress: '0x616a4E1db48e22028f6bbf20444Cd3b8e3273738', // Seamless vault
-      };
-    }
-
-    // Step 5+: Savings enabled with 100% allocation
-    const dailyYield = (demoSavingsBalance * 0.08) / 365;
-    const accumulatedYield = demoStep >= 6 ? dailyYield : 0;
+    // Always show savings enabled in demo mode
+    // Calculate some earnings to show
+    const dailyYield = (2500000 * 0.08) / 365;
+    const accumulatedYield = dailyYield * 30; // Show 30 days of earnings
 
     return {
       enabled: true,
       allocation: 100, // 100% auto-save
       apy: 8.0,
-      totalSaved: demoSavingsBalance,
+      totalSaved: 2500000,
       totalEarned: accumulatedYield,
-      currentBalance: demoSavingsBalance + accumulatedYield,
+      currentBalance: 2500000 + accumulatedYield,
       vaultAddress: '0x616a4E1db48e22028f6bbf20444Cd3b8e3273738',
     };
   }, [isDemoMode, demoStep, demoSavingsBalance]);
@@ -56,7 +44,7 @@ export function useDemoEarnModuleStatus(realStatus: any, isLoading: boolean) {
   if (isDemoMode) {
     return {
       data: {
-        isInitializedOnChain: demoStep >= 5, // Initialized at step 5
+        isInitializedOnChain: true, // Always initialized in demo
       },
       isLoading: false,
       refetch: () => {},
@@ -76,13 +64,10 @@ export function useDemoVaultStats() {
 
   if (!isDemoMode) return null;
 
-  if (demoStep < 5) {
-    return [];
-  }
-
-  // Calculate daily yield
-  const dailyYield = (demoSavingsBalance * 0.08) / 365;
-  const yieldAmount = demoStep >= 6 ? dailyYield * 1e6 : 0; // Convert to USDC decimals
+  // Always show savings data in demo mode
+  // Calculate daily yield on $2.5M
+  const dailyYield = (2500000 * 0.08) / 365;
+  const yieldAmount = dailyYield * 1e6; // Convert to USDC decimals
 
   return [
     {
@@ -113,8 +98,8 @@ export function useDemoUserPositions() {
     {
       vaultAddress: '0x616a4E1db48e22028f6bbf20444Cd3b8e3273738',
       vaultName: 'Seamless USDC',
-      assetsUsd: demoStep >= 5 ? demoSavingsBalance : 0,
-      earned: demoStep >= 5 ? calculateEarned(demoSavingsBalance) : 0,
+      assetsUsd: 2500000, // Always show $2.5M in demo
+      earned: calculateEarned(2500000),
     },
     {
       vaultAddress: '0xTreasuryBills',

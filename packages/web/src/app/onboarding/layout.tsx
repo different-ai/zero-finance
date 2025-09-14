@@ -65,20 +65,18 @@ export default function OnboardingLayout({
     staleTime: 5 * 60 * 1000,
   });
 
-
-
   return (
-    <div className="min-h-screen flex flex-col bg-[#f7f9fb] bg-gradient-to-br from-slate-50 to-sky-100 ">
-      {/* Header - simplified for mobile */}
-      <div className="flex-col bg-gradient-to-b from-background to-muted/40 border-b border-border/40">
+    <div className="min-h-screen flex flex-col bg-[#F7F7F2]">
+      {/* Header - following design system */}
+      <div className="bg-white border-b border-[#101010]/10">
         <div className="max-w-4xl mx-auto px-4 sm:px-0 py-3 sm:py-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 sm:gap-0">
           <div>
-            <h1 className="text-foreground text-xl sm:text-2xl font-semibold">
+            <p className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60">
+              ONBOARDING
+            </p>
+            <h1 className="mt-1 font-serif text-[24px] sm:text-[28px] leading-[1.1] tracking-[-0.01em] text-[#101010]">
               Account Setup
             </h1>
-            <p className="text-muted-foreground text-sm mt-0.5 sm:mt-1">
-              Just a few steps to get your secure account ready.
-            </p>
           </div>
           {ready && (
             <Button
@@ -119,7 +117,7 @@ export default function OnboardingLayout({
       </div>
 
       {/* Mobile Progress Indicator - visible only on small screens */}
-      <div className="md:hidden bg-white border-b border-border/40 px-4 py-2">
+      <div className="md:hidden bg-white border-b border-[#101010]/10 px-4 py-2">
         <div className="flex items-center justify-between">
           <div className="flex items-center">
             <span className="bg-primary text-primary-foreground w-6 h-6 flex items-center justify-center rounded-full text-xs font-medium">
@@ -200,7 +198,7 @@ export default function OnboardingLayout({
         {/* Sidebar Stepper & Help - hidden on mobile, shown on desktop */}
         <aside className="hidden lg:flex w-full lg:w-72 flex-col gap-4 sticky top-24 self-start order-1 lg:order-2">
           {/* Stepper */}
-          <div className="bg-white dark:bg-card rounded-xl border border-border/40 shadow-sm p-4 flex flex-col gap-1">
+          <div className="bg-white border border-[#101010]/10 rounded-[12px] shadow-[0_2px_8px_rgba(16,16,16,0.04)] p-4 flex flex-col gap-1">
             <ol className="flex flex-col gap-3">
               {steps.map((step, index) => {
                 const isCompleted = currentStepIndex > index;
@@ -241,16 +239,17 @@ export default function OnboardingLayout({
           </div>
 
           {/* Help/Support Section */}
-          <div className="bg-white dark:bg-card rounded-xl border border-border/40 shadow-sm p-4 flex flex-col items-center text-center mt-auto">
+          <div className="bg-white border border-[#101010]/10 rounded-[12px] shadow-[0_2px_8px_rgba(16,16,16,0.04)] p-4 flex flex-col items-center text-center mt-auto">
             <span className="text-sm font-semibold mb-1">Need help?</span>
             <span className="text-xs text-muted-foreground mb-2">
-              Book a personalized demo with our team and we&apos;ll walk you through everything.
+              Book a personalized demo with our team and we&apos;ll walk you
+              through everything.
             </span>
             <Link
               href="https://cal.com/potato/0-finance-onboarding"
               target="_blank"
               rel="noopener noreferrer"
-              className="bg-primary text-primary-foreground rounded-lg px-3 py-1.5 text-xs font-medium hover:bg-primary/90 transition-colors inline-flex items-center gap-1"
+              className="bg-[#1B29FF] text-white rounded-lg px-3 py-1.5 text-xs font-medium hover:bg-[#1420CC] transition-colors inline-flex items-center gap-1"
             >
               <Calendar className="h-3 w-3" />
               Book Demo
@@ -268,7 +267,7 @@ export default function OnboardingLayout({
       </div>
 
       {/* Mobile Bottom Help - Only visible on mobile */}
-      <div className="lg:hidden bg-white border-t border-border/40 p-3 mt-2">
+      <div className="lg:hidden bg-white border-t border-[#101010]/10 p-3 mt-2">
         <div className="text-center">
           <span className="text-sm font-semibold block">Need help?</span>
           <Link
@@ -284,7 +283,7 @@ export default function OnboardingLayout({
       </div>
 
       {/* Footer */}
-      <footer className="py-2 sm:py-3 px-4 sm:px-6 text-center text-muted-foreground text-xs border-t border-border/40 mt-auto">
+      <footer className="py-2 sm:py-3 px-4 sm:px-6 text-center text-[#101010]/60 text-xs border-t border-[#101010]/10 mt-auto">
         <div className="max-w-4xl mx-auto">
           &copy; {new Date().getFullYear()} zero finance. All rights reserved.
         </div>

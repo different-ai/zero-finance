@@ -16,6 +16,7 @@ import {
   X,
   Sparkles,
   Banknote,
+  Users,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { usePrivy } from '@privy-io/react-auth';
@@ -28,19 +29,6 @@ type NavigationItem = {
   disabled?: boolean;
 };
 
-const navigationItems: NavigationItem[] = [
-  {
-    name: 'Banking',
-    href: '/dashboard',
-    icon: Banknote,
-  },
-  {
-    name: 'Invoices',
-    href: '/dashboard/invoices',
-    icon: FileText,
-  },
-];
-
 export function Sidebar() {
   const pathname = usePathname();
   const { logout, authenticated, user } = usePrivy();
@@ -49,6 +37,38 @@ export function Sidebar() {
   // wait for lowding
   const [showPromo, setShowPromo] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // For now, check if URL has contractor parameter (we'll implement proper role checking later)
+  const isContractor =
+    typeof window !== 'undefined' &&
+    window.location.search.includes('contractor=true');
+
+  // Determine navigation items based on user type
+  const navigationItems: NavigationItem[] = isContractor
+    ? [
+        {
+          name: 'Invoices',
+          href: '/dashboard/invoices',
+          icon: FileText,
+        },
+      ]
+    : [
+        {
+          name: 'Banking',
+          href: '/dashboard',
+          icon: Banknote,
+        },
+        {
+          name: 'Contractors',
+          href: '/dashboard/contractors',
+          icon: Users,
+        },
+        {
+          name: 'Invoices',
+          href: '/dashboard/invoices',
+          icon: FileText,
+        },
+      ];
 
   // Close dropdown when clicking outside
   useEffect(() => {
