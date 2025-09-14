@@ -8,62 +8,58 @@ import { BrowserFrame } from '@/components/BrowserFrame';
 export function HeroSection() {
   return (
     <>
-      {/* Hero */}
-      <section className="relative border-b border-[#101010]/10 bg-[#F6F5EF] overflow-hidden min-h-[80vh] sm:min-h-[85vh] lg:min-h-[90vh] flex items-center ">
-        {/* <GradientBackground variant="hero" className="z-10 bg-transparent top-[-100px]" /> */}
-        {/* <GradientBackground variant="hero" className="z-0 bg-[#F6F5EF] rotate-180 bottom-[-100px]" /> */}
-        <GradientBackground variant="hero" className="z-0 bg-[#F6F5EF] " />
-        <div className="relative z-10 mx-auto max-w-[1200px] px-4 sm:px-6 lg:px-8 py-16 sm:py-20 lg:py-24 w-full">
-          <p className="uppercase tracking-[0.14em] sm:tracking-[0.18em] text-[11px] sm:text-[12px] lg:text-[13px] font-medium text-[#101010]/70">
-            Turn idle cash into headcount
-          </p>
-          <h1 className="mt-3 font-serif text-[36px] sm:text-[52px] md:text-[72px] lg:text-[88px] leading-[0.96] tracking-[-0.015em] text-[#101010]">
-            <span className="block text-[#1B29FF] text-[44px] sm:text-[64px] md:text-[88px] lg:text-[108px] leading-[0.9]">
-              Your idle cash
-            </span>{' '}
-            could hire your <span className="italic">next engineer</span>
-          </h1>
-          <p className="mt-4 sm:mt-6 max-w-[62ch] text-[15px] sm:text-[16px] lg:text-[18px] leading-[1.5] text-[#222]">
-            Get 8% APY on treasury funds without leaving your current bank .
-            Open US or EU account numbers, wire USD EUR or USDC, we place funds
-            into vetted yield with defined insurance coverage, you withdraw any
-            time.
-          </p>
-          <div className="mt-8 sm:mt-10 flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6">
-            <Link
-              className="inline-flex items-center px-6 py-3 text-[15px] sm:text-[16px] font-medium text-white bg-[#1B29FF] hover:bg-[#1420CC] rounded-md transition-colors"
-              href="/signin?source=crypto"
-            >
-              Sign up →
-            </Link>
-            <Link
-              className="inline-flex items-center px-6 py-3 text-[15px] sm:text-[16px] font-medium text-[#101010] bg-white border border-[#101010]/10 hover:border-[#101010]/20 rounded-md transition-all"
-              href="/dashboard/demo"
-            >
-              Try Live Demo
-            </Link>
-            <Link
-              className="inline-flex items-center text-[14px] sm:text-[15px] lg:text-[16px] text-[#101010] hover:text-[#1B29FF] underline decoration-[#101010]/30 underline-offset-[4px] hover:decoration-[#1B29FF] transition-colors"
-              href="https://cal.com/team/0finance/30"
-            >
-              Book call
-            </Link>
-          </div>
-        </div>
-      </section>
-
       {/* Demo Panel - Bank Statement Style */}
       <section className="relative border-y border-[#101010]/10 bg-white/90 overflow-hidden">
         <GradientBackground variant="demo" className="z-0 bg-[#F6F5EF]" />
+        <>
+          {/* <GradientBackground variant="hero" className="z-10 bg-transparent top-[-100px]" /> */}
+          {/* <GradientBackground variant="hero" className="z-0 bg-[#F6F5EF] rotate-180 bottom-[-100px]" /> */}
+          {/* <GradientBackground variant="hero" className="z-0 bg-[#F6F5EF] " /> */}
+          <div className="relative z-10 mx-auto max-w-[1200px] px-4 sm:px-6 lg:px-8 pt-16 sm:pt-20 lg:pt-24 w-full">
+            <p className="uppercase tracking-[0.14em] sm:tracking-[0.18em] text-[11px] sm:text-[12px] lg:text-[13px] font-medium text-[#101010]/70">
+              Turn idle cash into headcount
+            </p>
+            <h1 className="mt-3 font-serif text-[36px] sm:text-[52px] md:text-[72px] lg:text-[88px] leading-[0.96] tracking-[-0.015em] text-[#101010]">
+              <span className="block text-[#1B29FF] text-[44px] sm:text-[64px] md:text-[88px] lg:text-[108px] leading-[0.9]">
+                Your idle cash
+              </span>{' '}
+              could hire your <span className="italic">next engineer</span>
+            </h1>
+            <p className="mt-4 sm:mt-6 max-w-[62ch] text-[15px] sm:text-[16px] lg:text-[18px] leading-[1.5] text-[#222]">
+              Get 8% APY on treasury funds without leaving your current bank .
+              Open US or EU account numbers, wire USD EUR or USDC, we place
+              funds into vetted yield with defined insurance coverage, you
+              withdraw any time.
+            </p>
+            <div className="mt-8 sm:mt-10 flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6">
+              <Link
+                className="inline-flex items-center px-6 py-3 text-[15px] sm:text-[16px] font-medium text-white bg-[#1B29FF] hover:bg-[#1420CC] rounded-md transition-colors"
+                href="/signin?source=crypto"
+              >
+                Sign up →
+              </Link>
+          
+              <Link
+                className="inline-flex items-center text-[14px] sm:text-[15px] lg:text-[16px] text-[#101010] hover:text-[#1B29FF] underline decoration-[#101010]/30 underline-offset-[4px] hover:decoration-[#1B29FF] transition-colors"
+                href="https://cal.com/team/0finance/30"
+              >
+                Book call
+              </Link>
+            </div>
+          </div>
+        </>
         <div className="relative z-10 mx-auto max-w-[1200px] px-4 sm:px-6 lg:px-8 py-8 sm:py-12 lg:py-16">
           {/* Demo indicator - subtle and premium */}
           <div className="flex justify-center mb-4">
             <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-white/80 backdrop-blur-sm border border-[#101010]/10 rounded-full">
-              <div className="w-1.5 h-1.5 bg-[#1B29FF] rounded-full animate-pulse"></div>
-              <span className="text-[11px] uppercase tracking-[0.14em] text-[#101010]/60 font-medium">
-                Live Demo
-              </span>
-            </div>
+              <div className="w-1.5 h-1.5 bg-[#1B29FF] animate-pulse"></div>
+              <Link
+                className="inline-flex items-center text-[14px] sm:text-[15px] lg:text-[16px] text-[#101010] hover:text-[#1B29FF] underline decoration-[#101010]/30 underline-offset-[4px] hover:decoration-[#1B29FF] transition-colors"
+                href="/dashboard"
+              >
+                Try Live Demo
+              </Link>
+           </div>
           </div>
 
           <BrowserFrame url="0.finance/dashboard" className="shadow-lg">

@@ -31,8 +31,8 @@ export function GradientBackground({
     intensity: 0.1, // Slightly more intense
     noise: 0.2, // Less noise for cleaner look
     shape: (variant === 'hero' ? 'blob' : 'wave') as 'blob' | 'wave',
-    scale: variant === 'hero' ? 1.8 : 1.5, // Larger scale to cover more area
-    speed: variant === 'hero' ? 0.2 : 0.8, // Increased speed for more visible animation
+    scale: 1, // Larger scale to cover more area
+    speed: 0.2,
     style: {
       position: 'absolute' as const,
       inset: 0,
