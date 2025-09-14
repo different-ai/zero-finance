@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Wallet,
@@ -10,6 +10,8 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { formatUsd } from '@/lib/utils';
+
+// Component removed - keeping only one animation for simplicity
 
 export function DemoSavingsWrapper() {
   const [isInitialized, setIsInitialized] = useState(false);
@@ -46,8 +48,25 @@ export function DemoSavingsWrapper() {
 
   // Demo data
   const totalSaved = 2500000;
-  const totalEarned = 16849;
+  const baseEarned = 16849;
   const averageApy = 8.0;
+
+  // Animated earnings
+  const [animatedEarnings, setAnimatedEarnings] = useState(baseEarned);
+
+  useEffect(() => {
+    if (!isInitialized) return;
+
+    // Calculate earnings per second (8% APY on $2.5M)
+    const yearlyEarnings = totalSaved * 0.08;
+    const earningsPerSecond = yearlyEarnings / 365 / 24 / 60 / 60;
+
+    const interval = setInterval(() => {
+      setAnimatedEarnings((prev) => prev + earningsPerSecond);
+    }, 100); // Update every 100ms for smooth animation
+
+    return () => clearInterval(interval);
+  }, [isInitialized, totalSaved]);
 
   const vaults = [
     {
@@ -57,7 +76,7 @@ export function DemoSavingsWrapper() {
       risk: 'Low Risk',
       apy: 8.0,
       balance: isInitialized ? 2500000 : 0,
-      earned: isInitialized ? 16849 : 0,
+      earned: isInitialized ? animatedEarnings : 0,
       isAuto: true,
     },
   ];
@@ -169,7 +188,7 @@ export function DemoSavingsWrapper() {
                 Earnings (Live)
               </p>
               <p className="font-serif text-[28px] sm:text-[32px] leading-[1.1] tabular-nums text-[#1B29FF]">
-                +{formatUsd(totalEarned)}
+                +{formatUsd(animatedEarnings)}
               </p>
             </div>
 
@@ -186,7 +205,7 @@ export function DemoSavingsWrapper() {
           {/* Live Yield Counter - Premium Card */}
           <div className="bg-white border border-[#101010]/10 p-8">
             <p className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60 mb-6">
-              Real-Time Yield Accumulation
+              Yield Breakdown
             </p>
             <div className="space-y-4">
               <div>
