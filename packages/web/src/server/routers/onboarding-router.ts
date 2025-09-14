@@ -254,4 +254,99 @@ export const onboardingRouter = router({
       isCompleted,
     };
   }),
+
+  /**
+   * Gets onboarding tasks formatted for the dashboard empty state
+   */
+  getOnboardingTasks: protectedProcedure.query(async ({ ctx }) => {
+    const privyDid = ctx.userId;
+    if (!privyDid) {
+      throw new TRPCError({ code: 'UNAUTHORIZED' });
+    }
+
+    // Reuse the logic from getOnboardingSteps
+    const userPromise = db.query.users.findFirst({
+      where: eq(users.privyDid, privyDid),
+      columns: { kycMarkedDone: true, kycSubStatus: true },
+    });
+
+    const primarySafePromise = db.query.userSafes.findFirst({
+      where: and(
+        eq(userSafes.userDid, privyDid),
+        eq(userSafes.safeType, 'primary'),
+      ),
+      columns: { safeAddress: true },
+    });
+
+    const alignCaller = alignRouter.createCaller(ctx);
+    const alignCustomerPromise = alignCaller.getCustomerStatus();
+
+    const [user, primarySafe, alignCustomer] = await Promise.all([
+      userPromise,
+      primarySafePromise,
+      alignCustomerPromise,
+    ]);
+
+    const alignKycStatus =
+      alignCustomer && alignCustomer.kycStatus
+        ? alignCustomer.kycStatus
+        : 'not_started';
+    const kycSubStatus = alignCustomer?.kycSubStatus;
+    const kycMarkedDone = user?.kycMarkedDone ?? false;
+
+    const tasks = [];
+    const isSafeComplete = !!primarySafe;
+    const isKycApproved = alignKycStatus === 'approved';
+
+    // Task 1: Activate Primary Account
+    tasks.push({
+      id: 'activate-account',
+      title: 'Activate Primary Account',
+      description: 'Set up your secure smart account to get started',
+      status: isSafeComplete ? 'completed' : 'pending',
+      action: '/onboarding/create-safe',
+    });
+
+    // Task 2: Verify Identity
+    let kycTaskStatus = 'pending';
+    if (isKycApproved) {
+      kycTaskStatus = 'completed';
+    } else if (alignKycStatus === 'pending' || kycMarkedDone) {
+      kycTaskStatus = 'in_progress';
+    } else if (alignKycStatus === 'rejected') {
+      kycTaskStatus = 'failed';
+    }
+
+    tasks.push({
+      id: 'verify-identity',
+      title: 'Verify Identity',
+      description: isKycApproved
+        ? 'Your identity has been verified'
+        : alignKycStatus === 'pending' || kycMarkedDone
+          ? 'Verification in progress'
+          : alignKycStatus === 'rejected'
+            ? 'Verification failed - please retry'
+            : 'Complete KYC to unlock all features',
+      status: kycTaskStatus,
+      action: '/onboarding/kyc',
+    });
+
+    // Task 3: Make First Deposit (optional, only show after KYC)
+    if (isKycApproved) {
+      tasks.push({
+        id: 'first-deposit',
+        title: 'Make Your First Deposit',
+        description: 'Fund your account to start earning 8% APY',
+        status: 'pending',
+        action: '/dashboard/earn',
+      });
+    }
+
+    return {
+      tasks,
+      isCompleted: isSafeComplete && isKycApproved,
+      completedCount: tasks.filter((t) => t.status === 'completed').length,
+      totalCount: tasks.length,
+    };
+  }),
 });

@@ -11,11 +11,42 @@ import {
   DollarSign,
   Shield,
   ChevronRight,
+  Loader2,
 } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
+import { api } from '@/trpc/react';
 
 export function EmptyCheckingAccount() {
+  // Get onboarding status to determine what action to show
+  const { data: onboardingData } = api.onboarding.getOnboardingSteps.useQuery(
+    undefined,
+    {
+      staleTime: 30 * 1000,
+    },
+  );
+
+  const safeComplete = onboardingData?.steps?.createSafe?.isCompleted;
+  const kycComplete = onboardingData?.steps?.verifyIdentity?.isCompleted;
+
+  // Determine primary action based on onboarding status
+  let primaryAction = {
+    href: '/onboarding/create-safe',
+    text: 'Complete Setup',
+  };
+
+  if (safeComplete && !kycComplete) {
+    primaryAction = {
+      href: '/onboarding/kyc',
+      text: 'Verify Identity',
+    };
+  } else if (safeComplete && kycComplete) {
+    primaryAction = {
+      href: '/dashboard/earn',
+      text: 'Make Deposit',
+    };
+  }
+
   return (
     <Card className="border border-[#101010]/10">
       <CardContent className="p-6">
@@ -33,8 +64,11 @@ export function EmptyCheckingAccount() {
 
             <div className="space-y-3">
               <p className="text-sm text-[#101010]/70">
-                Your checking account is ready. Complete setup to start
-                receiving funds.
+                {!safeComplete
+                  ? 'Complete your account setup to start receiving funds.'
+                  : !kycComplete
+                    ? 'Verify your identity to unlock all features.'
+                    : 'Your account is ready. Make a deposit to get started.'}
               </p>
 
               <div className="flex gap-2">
@@ -43,8 +77,8 @@ export function EmptyCheckingAccount() {
                   size="sm"
                   className="bg-[#1B29FF] hover:bg-[#1B29FF]/90"
                 >
-                  <Link href="/onboarding/kyc">
-                    Complete KYC
+                  <Link href={primaryAction.href}>
+                    {primaryAction.text}
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Link>
                 </Button>
@@ -58,7 +92,11 @@ export function EmptyCheckingAccount() {
           <div className="ml-6 text-right">
             <p className="text-xs text-[#101010]/60 mb-1">Account Status</p>
             <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-              Pending Setup
+              {safeComplete && kycComplete
+                ? 'Ready'
+                : safeComplete
+                  ? 'Pending KYC'
+                  : 'Pending Setup'}
             </span>
           </div>
         </div>
@@ -136,7 +174,7 @@ export function EmptyTransactions() {
               <p className="text-sm font-medium">ACH & Wire</p>
             </div>
             <p className="text-xs text-[#101010]/60">
-              Connect any US bank account
+              Transfer funds via ACH or wire
             </p>
           </Card>
 
@@ -153,43 +191,37 @@ export function EmptyTransactions() {
   );
 }
 
-export function OnboardingTasks({ tasks }: { tasks?: any }) {
-  const defaultTasks = [
+export function OnboardingTasks() {
+  // Use the API to get dynamic onboarding tasks
+  const { data, isLoading } = api.onboarding.getOnboardingTasks.useQuery(
+    undefined,
     {
-      id: 'kyc',
-      title: 'Complete KYC Verification',
-      description: 'Verify your identity to unlock all features',
-      status: 'pending',
-      action: '/onboarding/kyc',
+      staleTime: 30 * 1000, // 30 seconds
+      refetchInterval: 10 * 1000, // 10 seconds
     },
-    {
-      id: 'bank',
-      title: 'Connect Bank Account',
-      description: 'Link your existing bank for easy transfers',
-      status: 'pending',
-      action: '/dashboard/settings',
-    },
-    {
-      id: 'deposit',
-      title: 'Make Your First Deposit',
-      description: 'Fund your account to start earning 8% APY',
-      status: 'pending',
-      action: '/dashboard/deposit',
-    },
-    {
-      id: 'savings',
-      title: 'Activate Savings',
-      description: 'Turn on auto-save to maximize your earnings',
-      status: 'pending',
-      action: '/dashboard/savings',
-    },
-  ];
+  );
 
-  const taskList = tasks || defaultTasks;
-  const completedCount = taskList.filter(
-    (t: any) => t.status === 'completed',
-  ).length;
-  const progress = (completedCount / taskList.length) * 100;
+  if (isLoading) {
+    return (
+      <Card className="border border-[#101010]/10">
+        <CardContent className="p-6">
+          <div className="flex justify-center items-center py-8">
+            <Loader2 className="h-8 w-8 animate-spin text-[#101010]/40" />
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // If onboarding is complete, don't show the card
+  if (data?.isCompleted) {
+    return null;
+  }
+
+  const taskList = data?.tasks || [];
+  const completedCount = data?.completedCount || 0;
+  const totalCount = data?.totalCount || taskList.length;
+  const progress = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
 
   return (
     <Card className="border border-[#101010]/10">
@@ -205,7 +237,7 @@ export function OnboardingTasks({ tasks }: { tasks?: any }) {
           </div>
           <div className="text-right">
             <p className="text-2xl font-bold text-[#1B29FF]">
-              {completedCount}/{taskList.length}
+              {completedCount}/{totalCount}
             </p>
             <p className="text-xs text-[#101010]/60">completed</p>
           </div>
@@ -240,7 +272,11 @@ export function OnboardingTasks({ tasks }: { tasks?: any }) {
                     'mt-0.5 h-5 w-5 rounded-full border-2 flex items-center justify-center',
                     task.status === 'completed'
                       ? 'border-green-600 bg-green-600'
-                      : 'border-[#101010]/20',
+                      : task.status === 'in_progress'
+                        ? 'border-[#1B29FF] bg-[#1B29FF]'
+                        : task.status === 'failed'
+                          ? 'border-red-600 bg-red-600'
+                          : 'border-[#101010]/20',
                   )}
                 >
                   {task.status === 'completed' && (
@@ -255,6 +291,12 @@ export function OnboardingTasks({ tasks }: { tasks?: any }) {
                         clipRule="evenodd"
                       />
                     </svg>
+                  )}
+                  {task.status === 'in_progress' && (
+                    <Loader2 className="h-3 w-3 text-white animate-spin" />
+                  )}
+                  {task.status === 'failed' && (
+                    <span className="text-white text-xs font-bold">!</span>
                   )}
                 </div>
                 <div>
@@ -272,10 +314,10 @@ export function OnboardingTasks({ tasks }: { tasks?: any }) {
           ))}
         </div>
 
-        {completedCount === taskList.length && (
+        {completedCount === totalCount && totalCount > 0 && (
           <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
             <p className="text-sm text-green-800 font-medium">
-              🎉 All setup complete! You're ready to start earning 8% APY
+              🎉 All setup complete! You're ready to start using all features
             </p>
           </div>
         )}
