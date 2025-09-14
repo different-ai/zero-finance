@@ -14,7 +14,6 @@ import { trpc } from '@/utils/trpc';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, useMemo } from 'react';
 import LoadingSpinner from '@/components/ui/loading-spinner';
-import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
   Wallet,
@@ -40,6 +39,7 @@ import {
 } from '@/components/ui/dialog';
 import { formatUsd, formatUsdWithPrecision, cn } from '@/lib/utils';
 import Link from 'next/link';
+import { Button } from '@/components/ui/button';
 import { OpenSavingsAccountButton } from '@/components/savings/components/open-savings-account-button';
 import { Address } from 'viem';
 import Image from 'next/image';
@@ -275,17 +275,37 @@ export default function SavingsPageWrapper() {
     );
   }
 
-  // Error state
-  if (safesError || !safeAddress) {
+  // Show activation prompt for users without a safe (new users)
+  if (!safeAddress && !isDemoMode) {
     return (
-      <div className="min-h-screen bg-[#F7F7F2]">
-        <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-16">
-          <Alert className="border-[#101010]/10">
-            <AlertDescription className="text-[#101010]/70">
-              Unable to load savings account. Please try again later.
-            </AlertDescription>
-          </Alert>
-        </div>
+      <div className="bg-white border border-[#101010]/10 p-12 text-center">
+        <Wallet className="h-12 w-12 text-[#101010]/40 mx-auto mb-6" />
+        <h2 className="font-serif text-[36px] leading-[1.1] text-[#101010] mb-3">
+          Activate Your Savings Account
+        </h2>
+        <p className="text-[16px] text-[#101010]/70 mb-8 max-w-[400px] mx-auto">
+          Start earning 8% APY on your business funds. Complete your account
+          setup to get started.
+        </p>
+        <Link href="/onboarding/kyc">
+          <Button className="bg-[#1B29FF] hover:bg-[#1B29FF]/90">
+            Complete Setup to Activate
+          </Button>
+        </Link>
+      </div>
+    );
+  }
+
+  // Error state only for actual errors
+  if (safesError) {
+    return (
+      <div className="bg-white border border-[#101010]/10 p-8">
+        <Alert className="border-[#101010]/10">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription className="text-[#101010]/70">
+            Unable to load savings data. Please try again later.
+          </AlertDescription>
+        </Alert>
       </div>
     );
   }

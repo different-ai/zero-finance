@@ -10,6 +10,12 @@ import { VirtualAccountOnboardingLayer } from './components/dashboard/virtual-ac
 import { USDC_ADDRESS } from '@/lib/constants';
 import { Skeleton } from '@/components/ui/skeleton';
 import { SavingsWrapper } from './components/savings-wrapper';
+import {
+  EmptyCheckingAccount,
+  EmptySavingsAccount,
+  EmptyTransactions,
+  OnboardingTasks,
+} from './components/dashboard/empty-states';
 
 // Loading components for Suspense boundaries
 function LoadingCard() {
@@ -56,13 +62,14 @@ async function FundsData() {
     );
   }
 
-  if (!userId) return null;
+  if (!userId) return <EmptyCheckingAccount />;
 
   const caller = appRouter.createCaller({ userId, db, log });
   const primarySafe = await caller.user.getPrimarySafeAddress();
 
+  // Show empty state for new users without a safe
   if (!primarySafe?.primarySafeAddress) {
-    return null;
+    return <EmptyCheckingAccount />;
   }
 
   // Get balance
@@ -94,12 +101,28 @@ async function OnboardingData() {
     return null; // No onboarding in demo mode
   }
 
-  if (!userId) return null;
+  if (!userId) return <OnboardingTasks />;
 
   const caller = appRouter.createCaller({ userId, db, log });
-  const onboardingData = await caller.onboarding.getOnboardingSteps();
 
-  return <VirtualAccountOnboardingLayer initialData={onboardingData} />;
+  try {
+    const onboardingData = await caller.onboarding.getOnboardingSteps();
+
+    // If we have onboarding data, check if it's complete
+    if (onboardingData && onboardingData.steps) {
+      const allComplete = onboardingData.steps.every(
+        (step: any) => step.completed,
+      );
+      if (!allComplete) {
+        return <OnboardingTasks tasks={onboardingData.steps} />;
+      }
+    }
+
+    return <VirtualAccountOnboardingLayer initialData={onboardingData} />;
+  } catch (error) {
+    // If there's an error fetching onboarding data, show default tasks
+    return <OnboardingTasks />;
+  }
 }
 
 export default async function DashboardPage() {
@@ -168,8 +191,8 @@ export default async function DashboardPage() {
             </Suspense>
           </div>
 
-          {/* Onboarding Section - only for real users */}
-          {!isDemoMode && (
+          {/* Onboarding Section - show for all real users */}
+          {userId && (
             <Suspense fallback={<LoadingCard />}>
               <OnboardingData />
             </Suspense>
