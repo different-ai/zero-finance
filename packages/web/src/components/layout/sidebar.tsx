@@ -198,7 +198,7 @@ export function Sidebar() {
       </nav>
 
       {/* Promotional CTA Section */}
-      {showPromo && (
+      {false && (
         <div className="mx-4 mb-4 p-4 bg-[#F7F7F2] border border-[#101010]/10 relative overflow-hidden mt-auto">
           {/* Close button */}
           <button

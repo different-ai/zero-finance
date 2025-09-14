@@ -2,14 +2,46 @@
 
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Wallet, ExternalLink, AlertCircle } from 'lucide-react';
+import {
+  Wallet,
+  ExternalLink,
+  AlertCircle,
+  CheckCircle2,
+  Sparkles,
+} from 'lucide-react';
 import { formatUsd } from '@/lib/utils';
 
 export function DemoSavingsWrapper() {
   const [isInitialized, setIsInitialized] = useState(false);
+  const [isActivating, setIsActivating] = useState(false);
+  const [activationStep, setActivationStep] = useState(0);
+
+  const activationSteps = [
+    'Verifying account...',
+    'Setting up savings vault...',
+    'Configuring auto-save...',
+    'Activating yield generation...',
+    'Finalizing setup...',
+  ];
 
   const handleActivate = () => {
-    setIsInitialized(true);
+    setIsActivating(true);
+    setActivationStep(0);
+
+    // Animate through steps
+    const interval = setInterval(() => {
+      setActivationStep((prev) => {
+        if (prev >= activationSteps.length - 1) {
+          clearInterval(interval);
+          setTimeout(() => {
+            setIsInitialized(true);
+            setIsActivating(false);
+          }, 500);
+          return prev;
+        }
+        return prev + 1;
+      });
+    }, 600);
   };
 
   // Demo data
@@ -31,9 +63,78 @@ export function DemoSavingsWrapper() {
   ];
 
   return (
-    <div className="bg-white border border-[#101010]/10 rounded-[12px] shadow-[0_2px_8px_rgba(16,16,16,0.04)]">
-      {/* Not Initialized State */}
-      {!isInitialized ? (
+    <div className="bg-white border border-[#101010]/10 rounded-[12px] shadow-[0_2px_8px_rgba(16,16,16,0.04)] p-6">
+      {/* Activation Animation State */}
+      {isActivating ? (
+        <div className="bg-white border border-[#101010]/10 p-12">
+          <div className="max-w-md mx-auto space-y-8">
+            {/* Animated Icon */}
+            <div className="flex justify-center">
+              <div className="relative">
+                <div className="absolute inset-0 bg-[#1B29FF]/20 rounded-full animate-ping" />
+                <div className="relative bg-[#1B29FF]/10 rounded-full p-4">
+                  <Sparkles className="h-8 w-8 text-[#1B29FF] animate-pulse" />
+                </div>
+              </div>
+            </div>
+
+            {/* Progress Steps */}
+            <div className="space-y-4">
+              <h3 className="font-serif text-[24px] text-center text-[#101010]">
+                Activating Your Savings
+              </h3>
+
+              {/* Step Indicators */}
+              <div className="space-y-3">
+                {activationSteps.map((step, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center gap-3 transition-all duration-300"
+                    style={{
+                      opacity: index <= activationStep ? 1 : 0.3,
+                      transform:
+                        index <= activationStep
+                          ? 'translateX(0)'
+                          : 'translateX(-10px)',
+                    }}
+                  >
+                    <div className="flex-shrink-0">
+                      {index < activationStep ? (
+                        <CheckCircle2 className="h-5 w-5 text-green-500" />
+                      ) : index === activationStep ? (
+                        <div className="h-5 w-5 border-2 border-[#1B29FF] rounded-full border-t-transparent animate-spin" />
+                      ) : (
+                        <div className="h-5 w-5 border-2 border-[#101010]/20 rounded-full" />
+                      )}
+                    </div>
+                    <span
+                      className={`text-[14px] ${index <= activationStep ? 'text-[#101010]' : 'text-[#101010]/40'}`}
+                    >
+                      {step}
+                    </span>
+                  </div>
+                ))}
+              </div>
+
+              {/* Progress Bar */}
+              <div className="relative h-2 bg-[#101010]/5 rounded-full overflow-hidden">
+                <div
+                  className="absolute inset-y-0 left-0 bg-gradient-to-r from-[#1B29FF] to-[#1B29FF]/80 rounded-full transition-all duration-500 ease-out"
+                  style={{
+                    width: `${((activationStep + 1) / activationSteps.length) * 100}%`,
+                  }}
+                >
+                  <div className="absolute inset-0 bg-white/30 animate-shimmer" />
+                </div>
+              </div>
+
+              <p className="text-center text-[12px] text-[#101010]/50">
+                Setting up your high-yield savings account...
+              </p>
+            </div>
+          </div>
+        </div>
+      ) : !isInitialized ? (
         <div className="bg-white border border-[#101010]/10 p-12 text-center">
           <Wallet className="h-12 w-12 text-[#101010]/40 mx-auto mb-6" />
           <h2 className="font-serif text-[36px] leading-[1.1] text-[#101010] mb-3">
@@ -45,7 +146,7 @@ export function DemoSavingsWrapper() {
           </p>
           <Button
             onClick={handleActivate}
-            className="bg-[#1B29FF] hover:bg-[#1B29FF]/90"
+            className="bg-[#1B29FF] hover:bg-[#1B29FF]/90 transition-all hover:scale-[1.02]"
           >
             Activate Savings
           </Button>
@@ -116,7 +217,7 @@ export function DemoSavingsWrapper() {
           {/* Vaults Section - Editorial Table Style */}
           <div>
             <div className="mb-8">
-              <p className="uppercase tracking-[0.18em] text-[11px] text-[#101010]/60">
+              <p className="ml-6 uppercase tracking-[0.18em] text-[11px] text-[#101010]/60">
                 Available Strategies
               </p>
             </div>

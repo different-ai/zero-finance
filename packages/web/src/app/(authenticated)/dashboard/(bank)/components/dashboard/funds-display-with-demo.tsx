@@ -35,73 +35,9 @@ import { cn, formatUsd } from '@/lib/utils';
 import Link from 'next/link';
 import { HelpMenu } from '@/components/dashboard/help-menu';
 import { api } from '@/trpc/react';
-import { useDemoMode } from '@/context/demo-mode-context';
-import { getDemoVirtualAccounts } from '@/utils/demo-trpc';
+// Demo mode removed - demo only available at /dashboard/demo
 
-// Demo transfer data for different scenarios
-const getDemoTransferData = (demoStep: number) => {
-  // Different demo data based on the demo step
-  const demoScenarios = [
-    // Step 0-2: Empty/initial state
-    undefined,
-    undefined,
-    undefined,
-    // Step 3: US Bank Transfer
-    {
-      destinationType: 'ach' as const,
-      amount: '500',
-      accountHolderType: 'individual' as const,
-      accountHolderFirstName: 'Demo',
-      accountHolderLastName: 'User',
-      bankName: 'Chase Bank',
-      country: 'US',
-      city: 'San Francisco',
-      streetLine1: '123 Demo Street',
-      streetLine2: 'Suite 100',
-      postalCode: '94102',
-      accountNumber: '123456789',
-      routingNumber: '021000021',
-    },
-    // Step 4: EUR Bank Transfer
-    {
-      destinationType: 'iban' as const,
-      amount: '1000',
-      accountHolderType: 'individual' as const,
-      accountHolderFirstName: 'European',
-      accountHolderLastName: 'Demo',
-      bankName: 'Deutsche Bank',
-      country: 'DE',
-      city: 'Berlin',
-      streetLine1: 'Friedrichstraße 50',
-      postalCode: '10117',
-      iban: 'DE89370400440532013000',
-      bic: 'COBADEFFXXX',
-    },
-    // Step 5: Business Transfer
-    {
-      destinationType: 'ach' as const,
-      amount: '10000',
-      accountHolderType: 'business' as const,
-      accountHolderBusinessName: 'Demo Corporation Inc.',
-      bankName: 'Bank of America',
-      country: 'US',
-      city: 'New York',
-      streetLine1: '456 Business Ave',
-      streetLine2: 'Floor 20',
-      postalCode: '10001',
-      accountNumber: '987654321',
-      routingNumber: '026009593',
-    },
-    // Step 6+: Crypto Transfer
-    {
-      destinationType: 'crypto' as const,
-      amount: '250',
-      cryptoAddress: '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb4',
-    },
-  ];
-
-  return demoScenarios[Math.min(demoStep, demoScenarios.length - 1)];
-};
+// Removed demo transfer data - demo only at /dashboard/demo
 
 const formatCurrency = (amount: number): string => {
   return new Intl.NumberFormat('en-US', {
@@ -144,38 +80,22 @@ export function FundsDisplayWithDemo({
   const [isMoveModalOpen, setIsMoveModalOpen] = useState(false);
   const { ready, authenticated, user } = usePrivy();
   const isMobile = useIsMobile();
-  const { isDemoMode, demoStep, demoBalance } = useDemoMode();
+  // No demo mode here - use real data only
+  const displayBalance = totalBalance;
+  const displayAddress = walletAddress;
 
-  // Use demo data if in demo mode
-  const displayBalance = isDemoMode
-    ? demoStep >= 3
-      ? demoBalance
-      : 0
-    : totalBalance;
-  const displayAddress = isDemoMode
-    ? '0xDemo1234567890abcdef1234567890abcdef1234'
-    : walletAddress;
-
-  // Use tRPC to fetch funding sources (real mode)
+  // Use tRPC to fetch funding sources
   const {
     data: realAccountData,
-    isLoading: isLoadingRealFundingSources,
+    isLoading: isLoadingFundingSources,
     refetch: refetchFundingSources,
   } = api.align.getVirtualAccountDetails.useQuery(undefined, {
-    enabled: ready && authenticated && !!user?.id && !isDemoMode,
+    enabled: ready && authenticated && !!user?.id,
   });
 
-  // Get demo funding sources
-  const demoFundingSources = isDemoMode ? getDemoVirtualAccounts(demoStep) : [];
-
-  // Use demo or real funding sources
-  const fundingSources = isDemoMode
-    ? demoFundingSources
-    : realAccountData?.fundingSources || [];
-  const userData = isDemoMode ? null : realAccountData?.userData;
-  const isLoadingFundingSources = isDemoMode
-    ? false
-    : isLoadingRealFundingSources;
+  // Use real funding sources only
+  const fundingSources = realAccountData?.fundingSources || [];
+  const userData = realAccountData?.userData;
 
   // Handle copying to clipboard
   const copyToClipboard = (text: string, field: string) => {
@@ -219,7 +139,7 @@ export function FundsDisplayWithDemo({
         <div className="flex items-start justify-between">
           <div>
             <p className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60 mb-2">
-              {isDemoMode ? 'Demo Active Balance' : 'Active Balance'} · Checking
+              Active Balance · Checking
             </p>
             <div className="font-serif tabular-nums text-[#101010]">
               {balanceDisplay.isNegative && (
@@ -231,14 +151,6 @@ export function FundsDisplayWithDemo({
               </span>
             </div>
           </div>
-          {isDemoMode && (
-            <Badge
-              variant="outline"
-              className="text-[11px] tracking-wider uppercase border-[#101010]/10"
-            >
-              Demo
-            </Badge>
-          )}
         </div>
       </div>
       <div className="p-6">
@@ -248,7 +160,7 @@ export function FundsDisplayWithDemo({
               <Button
                 className="px-4 py-2 text-[14px] font-medium text-white bg-[#1B29FF] hover:bg-[#1420CC] transition-colors"
                 title={
-                  !hasVirtualAccounts && !isDemoMode
+                  !hasVirtualAccounts
                     ? 'Connect a bank account to enable transfers'
                     : undefined
                 }
@@ -261,28 +173,13 @@ export function FundsDisplayWithDemo({
             >
               <SimplifiedOffRamp
                 fundingSources={fundingSources}
-                defaultValues={
-                  isDemoMode ? getDemoTransferData(demoStep) : undefined
-                }
-                prefillFromInvoice={
-                  isDemoMode && demoStep >= 3
-                    ? {
-                        amount: getDemoTransferData(demoStep)?.amount,
-                        currency: 'USD',
-                        vendorName: 'Demo Vendor',
-                        description: 'Demo transfer for testing',
-                      }
-                    : undefined
-                }
+                defaultValues={undefined}
+                prefillFromInvoice={undefined}
               />
             </DialogContent>
           </Dialog>
 
-          <Dialog
-            onOpenChange={(open) =>
-              !isDemoMode && open && refetchFundingSources()
-            }
-          >
+          <Dialog onOpenChange={(open) => open && refetchFundingSources()}>
             <DialogTrigger asChild>
               <Button
                 variant="outline"
@@ -297,9 +194,7 @@ export function FundsDisplayWithDemo({
               <DialogHeader>
                 <DialogTitle className="text-xl font-semibold flex items-center gap-2">
                   <Building2 className="h-5 w-5" />
-                  {isDemoMode
-                    ? 'Demo Virtual Bank Accounts'
-                    : 'Virtual Bank Accounts'}
+                  Virtual Bank Accounts
                 </DialogTitle>
               </DialogHeader>
 

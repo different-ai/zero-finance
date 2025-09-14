@@ -212,11 +212,7 @@ function DemoTransactionHistory() {
 }
 
 export function TransactionTabsDemo() {
-  const { isDemoMode } = useDemoMode();
-
-  if (isDemoMode) {
-    return <DemoTransactionHistory />;
-  }
-
+  // Demo mode removed - always show real transactions
+  // Demo only available at /dashboard/demo
   return <TransactionTabs />;
 }

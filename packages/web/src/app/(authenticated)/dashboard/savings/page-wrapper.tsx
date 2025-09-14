@@ -2,7 +2,7 @@
 
 import { useUserSafes } from '@/hooks/use-user-safes-demo';
 import { useRealSavingsState } from '@/components/savings/hooks/use-real-savings-state';
-import { useDemoMode } from '@/context/demo-mode-context';
+// Removed demo mode context - demo only works on /dashboard/demo
 import {
   useDemoSavingsState,
   useDemoVaultStats,
@@ -53,7 +53,7 @@ import { AnimatedTotalEarned } from '@/components/animated-total-earned';
 
 export default function SavingsPageWrapper() {
   const router = useRouter();
-  const { isDemoMode, demoStep } = useDemoMode();
+  const isDemoMode = false; // Demo only works on /dashboard/demo route
   const [hasInitialLoad, setHasInitialLoad] = useState(false);
 
   // Get safe data
@@ -334,7 +334,7 @@ export default function SavingsPageWrapper() {
               Start earning up to {averageApy.toFixed(1)}% APY on your business
               funds.
             </p>
-            <OpenSavingsAccountButton safeAddress={safeAddress || undefined}/>
+            <OpenSavingsAccountButton safeAddress={safeAddress || undefined} />
           </div>
         ) : (
           <div className="space-y-12">
