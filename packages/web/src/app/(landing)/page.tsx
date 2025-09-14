@@ -1,13 +1,13 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Header } from './Header';
-import { HeroSection } from './HeroSection';
-import { WhatYouGetSection } from './WhatYouGetSection';
-import { TestimonialSection } from './TestimonialSection';
-import { FinalCTASection } from './FinalCTASection';
-import { DepositModal } from './DepositModal';
-import { TransferModal } from './TransferModal';
+import { Header } from './header';
+import { HeroSection } from './hero-section';
+import { WhatYouGetSection } from './what-you-get-section';
+import { TestimonialSection } from './testimonial-section';
+import { FinalCTASection } from './final-cta-section';
+import { DepositModal } from './deposit-modal';
+import { TransferModal } from './transfer-modal';
 
 export default function CryptoLandingPage() {
   const [showDepositModal, setShowDepositModal] = useState(false);

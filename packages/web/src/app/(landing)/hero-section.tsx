@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { GradientBackground } from './GradientBackground';
+import { GradientBackground } from './gradient-background';
 import { BrowserFrame } from '@/components/BrowserFrame';
 
 export function HeroSection() {
