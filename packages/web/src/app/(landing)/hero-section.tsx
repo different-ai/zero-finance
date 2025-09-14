@@ -55,7 +55,7 @@ export function HeroSection() {
               <div className="w-1.5 h-1.5 bg-[#1B29FF] animate-pulse"></div>
               <Link
                 className="inline-flex items-center text-[14px] sm:text-[15px] lg:text-[16px] text-[#101010] hover:text-[#1B29FF] underline decoration-[#101010]/30 underline-offset-[4px] hover:decoration-[#1B29FF] transition-colors"
-                href="/dashboard"
+                href="/dashboard/demo"
               >
                 Try Live Demo
               </Link>
