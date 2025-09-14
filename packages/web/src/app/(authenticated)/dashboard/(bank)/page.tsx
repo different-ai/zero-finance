@@ -109,13 +109,9 @@ async function OnboardingData() {
     const onboardingData = await caller.onboarding.getOnboardingSteps();
 
     // If we have onboarding data, check if it's complete
-    if (onboardingData && onboardingData.steps) {
-      const allComplete = onboardingData.steps.every(
-        (step: any) => step.completed,
-      );
-      if (!allComplete) {
-        return <OnboardingTasks tasks={onboardingData.steps} />;
-      }
+    if (onboardingData && onboardingData.isCompleted) {
+      // If completed, don't show onboarding tasks
+      return null;
     }
 
     return <VirtualAccountOnboardingLayer initialData={onboardingData} />;

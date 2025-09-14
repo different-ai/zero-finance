@@ -4,7 +4,7 @@ import React from 'react';
 import { useRouter } from 'next/navigation';
 import { CreateSafeCard } from '@/components/onboarding/create-safe-card';
 import { useSkipOnboarding } from '@/hooks/use-skip-onboarding';
-import { steps } from '../layout';
+import { steps } from '../constants';
 import { FileText, Percent, ShieldCheck } from 'lucide-react';
 
 export default function CreateSafePage() {
@@ -65,10 +65,9 @@ export default function CreateSafePage() {
             <ShieldCheck className="h-5 w-5 text-purple-500" />
           </div>
           <p className="text-gray-700">
-            <span className="font-semibold text-gray-800">
-              Self-Custody:
-            </span>{' '}
-            Your funds are protected with a secure, self-custodial smart account.
+            <span className="font-semibold text-gray-800">Self-Custody:</span>{' '}
+            Your funds are protected with a secure, self-custodial smart
+            account.
           </p>
         </div>
       </div>

@@ -29,6 +29,7 @@ export function useSafeRelay(safeAddress: Address | string | undefined) {
 
   // ---------- derived state ----------
   const ready = useMemo(() => {
+   
     return (
       !!smartClient?.account &&
       !!safeAddress &&

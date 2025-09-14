@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/card';
 import { ArrowLeft } from 'lucide-react';
 import { AlignKycStatus } from '@/components/settings/align-integration';
-import { steps as onboardingSteps } from '../layout';
+import { steps as onboardingSteps } from '../constants';
 import { useSkipOnboarding } from '@/hooks/use-skip-onboarding';
 
 // Helper to manage onboarding step completion

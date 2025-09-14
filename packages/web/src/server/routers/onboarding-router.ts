@@ -4,9 +4,10 @@ import { TRPCError } from '@trpc/server';
 import { db } from '@/db/index';
 import { userProfilesTable, userSafes, users } from '@/db/schema';
 import { alignRouter } from './align-router';
+import { earnRouter } from './earn-router';
 import { eq, and } from 'drizzle-orm';
 import { type Address } from 'viem';
-// import { AlignService } from '../services/align-service';
+import { AUTO_EARN_MODULE_ADDRESS } from '@/lib/earn-module-constants';
 
 export const onboardingRouter = router({
   /**
@@ -220,6 +221,28 @@ export const onboardingRouter = router({
     const hasBankAccount = !!alignCustomer?.alignVirtualAccountId;
     const kycMarkedDone = user?.kycMarkedDone ?? false;
 
+    // Check if savings account is enabled
+    let hasSavingsAccount = false;
+    if (primarySafe?.safeAddress) {
+      try {
+        const earnCaller = earnRouter.createCaller(ctx);
+        const [moduleStatus, initStatus] = await Promise.all([
+          earnCaller.isSafeModuleActivelyEnabled({
+            safeAddress: primarySafe.safeAddress as Address,
+            moduleAddress: AUTO_EARN_MODULE_ADDRESS,
+          }),
+          earnCaller.getEarnModuleOnChainInitializationStatus({
+            safeAddress: primarySafe.safeAddress as Address,
+          }),
+        ]);
+        hasSavingsAccount =
+          (moduleStatus?.isEnabled || false) &&
+          (initStatus?.isInitializedOnChain || false);
+      } catch (error) {
+        console.error('Error checking savings account status:', error);
+      }
+    }
+
     const steps = {
       createSafe: {
         isCompleted: !!primarySafe,
@@ -236,6 +259,12 @@ export const onboardingRouter = router({
         kycMarkedDone,
         kycSubStatus,
       },
+      openSavings: {
+        isCompleted: hasSavingsAccount,
+        status: hasSavingsAccount
+          ? ('completed' as const)
+          : ('not_started' as const),
+      },
       // Keep setupBankAccount for backward compatibility but it's not shown in UI
       setupBankAccount: {
         isCompleted: hasBankAccount,
@@ -245,9 +274,11 @@ export const onboardingRouter = router({
       },
     };
 
-    // Onboarding is complete when safe is created and KYC is approved
+    // Onboarding is complete when safe is created, KYC is approved, and savings is opened
     const isCompleted =
-      steps.createSafe.isCompleted && steps.verifyIdentity.isCompleted;
+      steps.createSafe.isCompleted &&
+      steps.verifyIdentity.isCompleted &&
+      steps.openSavings.isCompleted;
 
     return {
       steps,
@@ -294,6 +325,28 @@ export const onboardingRouter = router({
     const kycSubStatus = alignCustomer?.kycSubStatus;
     const kycMarkedDone = user?.kycMarkedDone ?? false;
 
+    // Check if savings account is enabled
+    let hasSavingsAccount = false;
+    if (primarySafe?.safeAddress) {
+      try {
+        const earnCaller = earnRouter.createCaller(ctx);
+        const [moduleStatus, initStatus] = await Promise.all([
+          earnCaller.isSafeModuleActivelyEnabled({
+            safeAddress: primarySafe.safeAddress as Address,
+            moduleAddress: AUTO_EARN_MODULE_ADDRESS,
+          }),
+          earnCaller.getEarnModuleOnChainInitializationStatus({
+            safeAddress: primarySafe.safeAddress as Address,
+          }),
+        ]);
+        hasSavingsAccount =
+          (moduleStatus?.isEnabled || false) &&
+          (initStatus?.isInitializedOnChain || false);
+      } catch (error) {
+        console.error('Error checking savings account status:', error);
+      }
+    }
+
     const tasks = [];
     const isSafeComplete = !!primarySafe;
     const isKycApproved = alignKycStatus === 'approved';
@@ -331,22 +384,26 @@ export const onboardingRouter = router({
       action: '/onboarding/kyc',
     });
 
-    // Task 3: Make First Deposit (optional, only show after KYC)
+    // Task 3: Open Savings Account (show after KYC)
     if (isKycApproved) {
       tasks.push({
-        id: 'first-deposit',
-        title: 'Make Your First Deposit',
-        description: 'Fund your account to start earning 8% APY',
-        status: 'pending',
+        id: 'open-savings',
+        title: 'Open Savings Account',
+        description: hasSavingsAccount
+          ? 'Your savings account is active - earning 8% APY'
+          : 'Activate savings to earn 8% APY on idle funds',
+        status: hasSavingsAccount ? 'completed' : 'pending',
         action: '/dashboard/earn',
+        actionType: hasSavingsAccount ? undefined : 'open-savings', // Special flag for custom action
       });
     }
 
     return {
       tasks,
-      isCompleted: isSafeComplete && isKycApproved,
+      isCompleted: isSafeComplete && isKycApproved && hasSavingsAccount,
       completedCount: tasks.filter((t) => t.status === 'completed').length,
       totalCount: tasks.length,
+      primarySafeAddress: primarySafe?.safeAddress, // Include safe address for actions
     };
   }),
 });

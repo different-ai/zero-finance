@@ -12,7 +12,7 @@ import {
   CardFooter,
 } from '@/components/ui/card';
 import { CheckCircle, Clock } from 'lucide-react';
-import { steps as onboardingSteps } from '../layout';
+import { steps as onboardingSteps } from '../constants';
 import { useSkipOnboarding } from '@/hooks/use-skip-onboarding';
 
 export default function KycPendingReviewPage() {
@@ -72,11 +72,7 @@ export default function KycPendingReviewPage() {
         </CardFooter>
       </Card>
       <div className="text-center mt-4">
-        <Button 
-          variant="ghost" 
-          onClick={skipOnboarding}
-          disabled={isSkipping}
-        >
+        <Button variant="ghost" onClick={skipOnboarding} disabled={isSkipping}>
           {isSkipping ? 'Skipping...' : 'Skip for now'}
         </Button>
       </div>

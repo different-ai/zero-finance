@@ -334,7 +334,7 @@ export default function SavingsPageWrapper() {
               Start earning up to {averageApy.toFixed(1)}% APY on your business
               funds.
             </p>
-            <OpenSavingsAccountButton />
+            <OpenSavingsAccountButton safeAddress={safeAddress || undefined}/>
           </div>
         ) : (
           <div className="space-y-12">

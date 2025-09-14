@@ -25,7 +25,7 @@ interface InvoiceFormData {
   invoiceNumber: string;
   issueDate: string;
   dueDate: string;
-  
+
   // Seller info (from profile)
   sellerBusinessName: string;
   sellerEmail: string;
@@ -34,7 +34,7 @@ interface InvoiceFormData {
   sellerPostalCode: string;
   sellerCountry: string;
   sellerTaxId: string;
-  
+
   // Buyer info (from profile)
   buyerBusinessName: string;
   buyerEmail: string;
@@ -43,7 +43,7 @@ interface InvoiceFormData {
   buyerPostalCode: string;
   buyerCountry: string;
   buyerTaxId: string;
-  
+
   // Payment details
   paymentMethod: string;
   paymentAddress: string;
@@ -58,7 +58,7 @@ interface InvoiceFormData {
   bankBic?: string;
   bankName?: string;
   bankAddress?: string;
-  
+
   // Notes
   note: string;
 }
@@ -74,8 +74,10 @@ interface InvoiceItem {
 const defaultFormData: InvoiceFormData = {
   invoiceNumber: `INV-${Date.now().toString().slice(-6)}`,
   issueDate: new Date().toISOString().slice(0, 10),
-  dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
-  
+  dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+    .toISOString()
+    .slice(0, 10),
+
   sellerBusinessName: '',
   sellerEmail: '',
   sellerAddress: '',
@@ -83,7 +85,7 @@ const defaultFormData: InvoiceFormData = {
   sellerPostalCode: '',
   sellerCountry: '',
   sellerTaxId: '',
-  
+
   buyerBusinessName: '',
   buyerEmail: '',
   buyerAddress: '',
@@ -91,7 +93,7 @@ const defaultFormData: InvoiceFormData = {
   buyerPostalCode: '',
   buyerCountry: '',
   buyerTaxId: '',
-  
+
   paymentMethod: 'ach', // Default to ACH bank transfer
   currency: 'USD', // Default currency
   network: 'mainnet', // Default network
@@ -104,14 +106,29 @@ const defaultFormData: InvoiceFormData = {
   bankBic: '',
   bankName: '',
   bankAddress: '',
-  
+
   note: '',
 };
 
 const PAYMENT_OPTIONS = [
-  { value: 'usdc-solana', label: 'USDC on Solana', network: 'solana', currency: 'USDC' },
-  { value: 'usdc-base', label: 'USDC on Base', network: 'base', currency: 'USDC' },
-  { value: 'usdc-ethereum', label: 'USDC on Ethereum', network: 'ethereum', currency: 'USDC' },
+  {
+    value: 'usdc-solana',
+    label: 'USDC on Solana',
+    network: 'solana',
+    currency: 'USDC',
+  },
+  {
+    value: 'usdc-base',
+    label: 'USDC on Base',
+    network: 'base',
+    currency: 'USDC',
+  },
+  {
+    value: 'usdc-ethereum',
+    label: 'USDC on Ethereum',
+    network: 'ethereum',
+    currency: 'USDC',
+  },
   { value: 'eth', label: 'ETH', network: 'ethereum', currency: 'ETH' },
   { value: 'fiat', label: 'Bank Transfer', network: 'fiat', currency: 'USD' },
 ];
@@ -121,36 +138,53 @@ export function SimpleInvoiceForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState<InvoiceFormData>(defaultFormData);
   const [items, setItems] = useState<InvoiceItem[]>([
-    { id: Date.now(), name: '', quantity: 1, unitPrice: '0', tax: 0 }
+    { id: Date.now(), name: '', quantity: 1, unitPrice: '0', tax: 0 },
   ]);
-  
+
   // Track original company data to detect modifications
   const [originalSenderData, setOriginalSenderData] = useState<any>(null);
   const [originalRecipientData, setOriginalRecipientData] = useState<any>(null);
   const [senderModified, setSenderModified] = useState(false);
   const [recipientModified, setRecipientModified] = useState(false);
-  
-  // Load last selected profiles from localStorage
-  const [selectedSenderProfileId, setSelectedSenderProfileId] = useState<string>(() => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('lastSelectedSenderProfileId') || '';
-    }
-    return '';
-  });
-  
-  const [selectedRecipientProfileId, setSelectedRecipientProfileId] = useState<string>(() => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('lastSelectedRecipientProfileId') || '';
-    }
-    return '';
-  });
-  
+
+  // Fetch user's companies to check if they're a contractor
+  const { data: myCompanies = [] } = api.company.getMyCompanies.useQuery();
+
+  // Check if user is a contractor (member, not owner) of any company
+  const contractorCompany = myCompanies.find((c: any) => c.role === 'member');
+
+  // Load last selected profiles from localStorage, or use contractor's company
+  const [selectedSenderProfileId, setSelectedSenderProfileId] =
+    useState<string>(() => {
+      if (typeof window !== 'undefined') {
+        return localStorage.getItem('lastSelectedSenderProfileId') || '';
+      }
+      return '';
+    });
+
+  const [selectedRecipientProfileId, setSelectedRecipientProfileId] =
+    useState<string>(() => {
+      if (typeof window !== 'undefined') {
+        // If user is a contractor, prefill with their company
+        if (contractorCompany) {
+          return contractorCompany.id;
+        }
+        return localStorage.getItem('lastSelectedRecipientProfileId') || '';
+      }
+      return '';
+    });
+
   // Fetch all companies (unified list for both sender and recipient)
-  const { data: allCompanies = [], refetch: refetchCompanies } = api.company.getAllCompanies.useQuery();
-  
-  const selectedSenderCompany = allCompanies.find((c: any) => c.id === selectedSenderProfileId);
-  const selectedRecipientCompany = allCompanies.find((c: any) => c.id === selectedRecipientProfileId);
-  
+  const { data: allCompanies = [], refetch: refetchCompanies } =
+    api.company.getAllCompanies.useQuery();
+
+  const selectedSenderCompany = allCompanies.find(
+    (c: any) => c.id === selectedSenderProfileId,
+  );
+  const selectedRecipientCompany = allCompanies.find(
+    (c: any) => c.id === selectedRecipientProfileId,
+  );
+
   // Save client company mutation
   const saveClientCompany = api.company.saveClientCompany.useMutation({
     onSuccess: (company) => {
@@ -164,7 +198,7 @@ export function SimpleInvoiceForm() {
       }
     },
   });
-  
+
   // Update company mutation
   const updateCompany = api.company.updateCompany.useMutation({
     onSuccess: () => {
@@ -177,7 +211,7 @@ export function SimpleInvoiceForm() {
       toast.error(`Failed to update company: ${error.message}`);
     },
   });
-  
+
   // Create invoice mutation
   const createInvoiceMutation = api.invoice.create.useMutation({
     onSuccess: (result) => {
@@ -190,20 +224,34 @@ export function SimpleInvoiceForm() {
       setIsSubmitting(false);
     },
   });
-  
+
+  // Auto-prefill recipient if user is a contractor
+  useEffect(() => {
+    if (contractorCompany && !selectedRecipientProfileId) {
+      setSelectedRecipientProfileId(contractorCompany.id);
+      toast.info(`Bill-to prefilled with ${contractorCompany.name}`);
+    }
+  }, [contractorCompany]);
+
   // Save selected profiles to localStorage
   useEffect(() => {
     if (selectedSenderProfileId && typeof window !== 'undefined') {
-      localStorage.setItem('lastSelectedSenderProfileId', selectedSenderProfileId);
+      localStorage.setItem(
+        'lastSelectedSenderProfileId',
+        selectedSenderProfileId,
+      );
     }
   }, [selectedSenderProfileId]);
-  
+
   useEffect(() => {
     if (selectedRecipientProfileId && typeof window !== 'undefined') {
-      localStorage.setItem('lastSelectedRecipientProfileId', selectedRecipientProfileId);
+      localStorage.setItem(
+        'lastSelectedRecipientProfileId',
+        selectedRecipientProfileId,
+      );
     }
   }, [selectedRecipientProfileId]);
-  
+
   // Apply sender company data
   useEffect(() => {
     if (selectedSenderCompany) {
@@ -217,8 +265,8 @@ export function SimpleInvoiceForm() {
         sellerTaxId: selectedSenderCompany.taxId || '',
         paymentAddress: selectedSenderCompany.paymentAddress || '',
       };
-      
-      setFormData(prev => ({ ...prev, ...companyData }));
+
+      setFormData((prev) => ({ ...prev, ...companyData }));
       setOriginalSenderData(companyData);
       setSenderModified(false);
     } else {
@@ -226,7 +274,7 @@ export function SimpleInvoiceForm() {
       setSenderModified(false);
     }
   }, [selectedSenderCompany]);
-  
+
   // Apply recipient company data
   useEffect(() => {
     if (selectedRecipientCompany) {
@@ -239,8 +287,8 @@ export function SimpleInvoiceForm() {
         buyerCountry: selectedRecipientCompany.country || '',
         buyerTaxId: selectedRecipientCompany.taxId || '',
       };
-      
-      setFormData(prev => ({ ...prev, ...companyData }));
+
+      setFormData((prev) => ({ ...prev, ...companyData }));
       setOriginalRecipientData(companyData);
       setRecipientModified(false);
     } else {
@@ -248,11 +296,15 @@ export function SimpleInvoiceForm() {
       setRecipientModified(false);
     }
   }, [selectedRecipientCompany]);
-  
+
   // Detect sender modifications
   useEffect(() => {
-    if (originalSenderData && selectedSenderProfileId && selectedSenderProfileId !== 'pending') {
-      const hasChanges = 
+    if (
+      originalSenderData &&
+      selectedSenderProfileId &&
+      selectedSenderProfileId !== 'pending'
+    ) {
+      const hasChanges =
         formData.sellerBusinessName !== originalSenderData.sellerBusinessName ||
         formData.sellerEmail !== originalSenderData.sellerEmail ||
         formData.sellerAddress !== originalSenderData.sellerAddress ||
@@ -264,12 +316,13 @@ export function SimpleInvoiceForm() {
       setSenderModified(hasChanges);
     }
   }, [formData, originalSenderData, selectedSenderProfileId]);
-  
+
   // Detect recipient modifications
   useEffect(() => {
     if (originalRecipientData && selectedRecipientProfileId) {
-      const hasChanges = 
-        formData.buyerBusinessName !== originalRecipientData.buyerBusinessName ||
+      const hasChanges =
+        formData.buyerBusinessName !==
+          originalRecipientData.buyerBusinessName ||
         formData.buyerEmail !== originalRecipientData.buyerEmail ||
         formData.buyerAddress !== originalRecipientData.buyerAddress ||
         formData.buyerCity !== originalRecipientData.buyerCity ||
@@ -281,72 +334,99 @@ export function SimpleInvoiceForm() {
   }, [formData, originalRecipientData, selectedRecipientProfileId]);
 
   const updateFormData = (field: any, value: any) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData((prev) => ({ ...prev, [field]: value }));
   };
-  
+
   const addItem = () => {
-    setItems([...items, { id: Date.now(), name: '', quantity: 1, unitPrice: '0', tax: 0 }]);
+    setItems([
+      ...items,
+      { id: Date.now(), name: '', quantity: 1, unitPrice: '0', tax: 0 },
+    ]);
   };
-  
+
   const removeItem = (id: number) => {
     if (items.length <= 1) {
       toast.info('You must have at least one item.');
       return;
     }
-    setItems(items.filter(item => item.id !== id));
+    setItems(items.filter((item) => item.id !== id));
   };
-  
+
   const updateItem = (id: number, field: keyof InvoiceItem, value: any) => {
-    setItems(items.map(item => 
-      item.id === id 
-        ? { ...item, [field]: field === 'quantity' ? Math.max(1, Number(value)) : value }
-        : item
-    ));
+    setItems(
+      items.map((item) =>
+        item.id === id
+          ? {
+              ...item,
+              [field]:
+                field === 'quantity' ? Math.max(1, Number(value)) : value,
+            }
+          : item,
+      ),
+    );
   };
-  
+
   const calculateTotal = () => {
     return items.reduce((sum, item) => {
       const quantity = Number(item.quantity) || 0;
       const unitPrice = parseFloat(item.unitPrice) || 0;
       const tax = Number(item.tax) || 0;
-      return sum + (quantity * unitPrice * (1 + tax / 100));
+      return sum + quantity * unitPrice * (1 + tax / 100);
     }, 0);
   };
-  
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (isSubmitting || createInvoiceMutation.isPending) return;
-    
+
     // Validate required fields
     if (!formData.sellerEmail || !formData.buyerEmail) {
       toast.error('Seller and buyer email addresses are required.');
       return;
     }
-    
+
     if (!formData.paymentAddress && formData.paymentMethod !== 'fiat') {
       toast.error('Payment address is required for crypto payments.');
       return;
     }
-    
+
     setIsSubmitting(true);
-    
+
     // Get payment details from selected method
-    const selectedPayment = formData.paymentMethod === 'ach' || formData.paymentMethod === 'sepa' 
-      ? { value: 'fiat', label: 'Bank Transfer', network: 'mainnet', currency: formData.currency || 'USD' }
-      : formData.paymentMethod === 'crypto'
-      ? { value: 'crypto', label: 'Cryptocurrency', network: formData.network || 'base', currency: formData.currency || 'USDC' }
-      : PAYMENT_OPTIONS.find(p => p.value === formData.paymentMethod);
-    
+    const selectedPayment =
+      formData.paymentMethod === 'ach' || formData.paymentMethod === 'sepa'
+        ? {
+            value: 'fiat',
+            label: 'Bank Transfer',
+            network: 'mainnet',
+            currency: formData.currency || 'USD',
+          }
+        : formData.paymentMethod === 'crypto'
+          ? {
+              value: 'crypto',
+              label: 'Cryptocurrency',
+              network: formData.network || 'base',
+              currency: formData.currency || 'USDC',
+            }
+          : PAYMENT_OPTIONS.find((p) => p.value === formData.paymentMethod);
+
     // Prepare invoice data
-    console.log("DEBUG: Form submission data:", {
-      paymentMethod: formData.paymentMethod as 'crypto' | 'ach' | 'sepa' | undefined,
+    console.log('DEBUG: Form submission data:', {
+      paymentMethod: formData.paymentMethod as
+        | 'crypto'
+        | 'ach'
+        | 'sepa'
+        | undefined,
       paymentAddress: formData.paymentAddress,
-      paymentType: formData.paymentMethod === "ach" || formData.paymentMethod === "sepa" ? "fiat" : "crypto",
+      paymentType:
+        formData.paymentMethod === 'ach' || formData.paymentMethod === 'sepa'
+          ? 'fiat'
+          : 'crypto',
       currency: formData.currency,
       network: formData.network,
       cryptoOption: formData.cryptoOption,
-      bankDetails: formData.bankAccountHolder || formData.bankIban
+      bankDetails: formData.bankAccountHolder || formData.bankIban,
     });
     const invoiceData = {
       meta: { format: 'rnf_invoice', version: '0.0.3' },
@@ -356,7 +436,7 @@ export function SimpleInvoiceForm() {
       network: formData.network || selectedPayment?.network || 'mainnet',
       companyId: selectedSenderProfileId || undefined,
       recipientCompanyId: selectedRecipientProfileId || undefined,
-      
+
       sellerInfo: {
         businessName: formData.sellerBusinessName,
         email: formData.sellerEmail,
@@ -367,7 +447,7 @@ export function SimpleInvoiceForm() {
           'country-name': formData.sellerCountry,
         },
       },
-      
+
       buyerInfo: {
         businessName: formData.buyerBusinessName,
         email: formData.buyerEmail,
@@ -378,8 +458,8 @@ export function SimpleInvoiceForm() {
           'country-name': formData.buyerCountry,
         },
       },
-      
-      invoiceItems: items.map(item => ({
+
+      invoiceItems: items.map((item) => ({
         name: item.name || 'Service',
         currency: selectedPayment?.currency || 'USDC',
         quantity: Number(item.quantity),
@@ -389,21 +469,29 @@ export function SimpleInvoiceForm() {
           type: 'percentage' as const,
         },
       })),
-      
+
       payment: {
         type: selectedPayment?.network === 'fiat' ? 'fiat' : 'crypto',
         currency: formData.currency || selectedPayment?.currency || 'USD',
         network: formData.network || selectedPayment?.network || 'mainnet',
         address: formData.paymentAddress,
       },
-      
+
       // Add payment details at top level for display
-      paymentType: (formData.paymentMethod === 'ach' || formData.paymentMethod === 'sepa' ? 'fiat' : 'crypto') as 'fiat' | 'crypto',
-      paymentMethod: formData.paymentMethod as 'crypto' | 'ach' | 'sepa' | undefined,
+      paymentType: (formData.paymentMethod === 'ach' ||
+      formData.paymentMethod === 'sepa'
+        ? 'fiat'
+        : 'crypto') as 'fiat' | 'crypto',
+      paymentMethod: formData.paymentMethod as
+        | 'crypto'
+        | 'ach'
+        | 'sepa'
+        | undefined,
       paymentAddress: formData.paymentAddress,
-      
+
       // Add bank details if payment method is ACH or SEPA
-      ...((formData.paymentMethod === 'ach' || formData.paymentMethod === 'sepa') && {
+      ...((formData.paymentMethod === 'ach' ||
+        formData.paymentMethod === 'sepa') && {
         bankDetails: {
           accountHolder: formData.bankAccountHolder,
           accountNumber: formData.bankAccountNumber,
@@ -413,19 +501,19 @@ export function SimpleInvoiceForm() {
           swiftCode: formData.bankBic,
           bankName: formData.bankName,
           bankAddress: formData.bankAddress,
-        }
+        },
       }),
-      
+
       paymentTerms: {
         dueDate: new Date(formData.dueDate).toISOString(),
       },
       note: formData.note,
       total: calculateTotal(),
     };
-    
+
     createInvoiceMutation.mutate(invoiceData);
   };
-  
+
   return (
     <div className="relative">
       {isSubmitting && (
@@ -433,13 +521,15 @@ export function SimpleInvoiceForm() {
           <div className="flex flex-col items-center space-y-4">
             <Loader2 className="h-12 w-12 animate-spin text-blue-600" />
             <div className="text-center">
-              <p className="text-lg font-medium text-gray-900">Creating Invoice...</p>
+              <p className="text-lg font-medium text-gray-900">
+                Creating Invoice...
+              </p>
               <p className="text-sm text-gray-600">This may take a moment</p>
             </div>
           </div>
         </div>
       )}
-      
+
       <form onSubmit={handleSubmit} className="space-y-8">
         {/* Invoice Details */}
         <Card>
@@ -452,7 +542,9 @@ export function SimpleInvoiceForm() {
               <Input
                 id="invoiceNumber"
                 value={formData.invoiceNumber}
-                onChange={(e) => updateFormData('invoiceNumber', e.target.value)}
+                onChange={(e) =>
+                  updateFormData('invoiceNumber', e.target.value)
+                }
                 required
               />
             </div>
@@ -478,31 +570,36 @@ export function SimpleInvoiceForm() {
             </div>
           </CardContent>
         </Card>
-        
+
         {/* Bill From */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               Bill From
               {senderModified && (
-                <span className="text-xs text-orange-600 font-normal">(modified)</span>
+                <span className="text-xs text-orange-600 font-normal">
+                  (modified)
+                </span>
               )}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="border rounded-lg p-4 bg-gray-50">
-              <Label htmlFor="sender-profile" className="text-sm font-medium mb-2 block">
+              <Label
+                htmlFor="sender-profile"
+                className="text-sm font-medium mb-2 block"
+              >
                 Select Sender Company
               </Label>
               <div className="flex items-start gap-4">
                 <div className="flex-1">
-                  <Select 
-                    value={selectedSenderProfileId || "personal"} 
+                  <Select
+                    value={selectedSenderProfileId || 'personal'}
                     onValueChange={(value) => {
-                      if (value === "personal") {
-                        setSelectedSenderProfileId("");
+                      if (value === 'personal') {
+                        setSelectedSenderProfileId('');
                         // Clear form for manual entry
-                        setFormData(prev => ({
+                        setFormData((prev) => ({
                           ...prev,
                           sellerBusinessName: '',
                           sellerEmail: '',
@@ -517,9 +614,13 @@ export function SimpleInvoiceForm() {
                       }
                     }}
                   >
-                    <SelectTrigger id="sender-profile" className="w-full bg-white">
+                    <SelectTrigger
+                      id="sender-profile"
+                      className="w-full bg-white"
+                    >
                       <SelectValue placeholder="Select or enter manually">
-                        {selectedSenderProfileId === "personal" || !selectedSenderProfileId ? (
+                        {selectedSenderProfileId === 'personal' ||
+                        !selectedSenderProfileId ? (
                           <div className="flex items-center gap-2">
                             <User className="h-4 w-4" />
                             <span>Manual Entry</span>
@@ -527,10 +628,12 @@ export function SimpleInvoiceForm() {
                         ) : selectedSenderCompany ? (
                           <div className="flex items-center gap-2 truncate">
                             <User className="h-4 w-4 flex-shrink-0" />
-                            <span className="truncate">{selectedSenderCompany.name}</span>
+                            <span className="truncate">
+                              {selectedSenderCompany.name}
+                            </span>
                           </div>
                         ) : (
-                          "Select or enter manually"
+                          'Select or enter manually'
                         )}
                       </SelectValue>
                     </SelectTrigger>
@@ -547,13 +650,19 @@ export function SimpleInvoiceForm() {
                             <div className="flex items-center gap-2">
                               <User className="h-4 w-4" />
                               <div>
-                                <div className="font-medium">{company.name}</div>
-                                <div className="text-xs text-muted-foreground">{company.email}</div>
+                                <div className="font-medium">
+                                  {company.name}
+                                </div>
+                                <div className="text-xs text-muted-foreground">
+                                  {company.email}
+                                </div>
                                 {company.relationship && (
                                   <span className="text-xs bg-gray-100 text-gray-700 px-1 py-0.5 rounded ml-1">
-                                    {company.relationship === 'owner' ? 'My Company' : 
-                                     company.relationship === 'member' ? 'Member' : 
-                                     'Client'}
+                                    {company.relationship === 'owner'
+                                      ? 'My Company'
+                                      : company.relationship === 'member'
+                                        ? 'Member'
+                                        : 'Client'}
                                   </span>
                                 )}
                               </div>
@@ -666,14 +775,16 @@ export function SimpleInvoiceForm() {
                 </div>
               </div>
             </div>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="sellerBusinessName">Business Name</Label>
                 <Input
                   id="sellerBusinessName"
                   value={formData.sellerBusinessName}
-                  onChange={(e) => updateFormData('sellerBusinessName', e.target.value)}
+                  onChange={(e) =>
+                    updateFormData('sellerBusinessName', e.target.value)
+                  }
                   required
                 />
               </div>
@@ -683,7 +794,9 @@ export function SimpleInvoiceForm() {
                   id="sellerEmail"
                   type="email"
                   value={formData.sellerEmail}
-                  onChange={(e) => updateFormData('sellerEmail', e.target.value)}
+                  onChange={(e) =>
+                    updateFormData('sellerEmail', e.target.value)
+                  }
                   required
                 />
               </div>
@@ -692,7 +805,9 @@ export function SimpleInvoiceForm() {
                 <Input
                   id="sellerAddress"
                   value={formData.sellerAddress}
-                  onChange={(e) => updateFormData('sellerAddress', e.target.value)}
+                  onChange={(e) =>
+                    updateFormData('sellerAddress', e.target.value)
+                  }
                 />
               </div>
               <div>
@@ -708,7 +823,9 @@ export function SimpleInvoiceForm() {
                 <Input
                   id="sellerPostalCode"
                   value={formData.sellerPostalCode}
-                  onChange={(e) => updateFormData('sellerPostalCode', e.target.value)}
+                  onChange={(e) =>
+                    updateFormData('sellerPostalCode', e.target.value)
+                  }
                 />
               </div>
               <div>
@@ -716,7 +833,9 @@ export function SimpleInvoiceForm() {
                 <Input
                   id="sellerCountry"
                   value={formData.sellerCountry}
-                  onChange={(e) => updateFormData('sellerCountry', e.target.value)}
+                  onChange={(e) =>
+                    updateFormData('sellerCountry', e.target.value)
+                  }
                 />
               </div>
               <div>
@@ -724,39 +843,45 @@ export function SimpleInvoiceForm() {
                 <Input
                   id="sellerTaxId"
                   value={formData.sellerTaxId}
-                  onChange={(e) => updateFormData('sellerTaxId', e.target.value)}
+                  onChange={(e) =>
+                    updateFormData('sellerTaxId', e.target.value)
+                  }
                   placeholder="Optional"
                 />
               </div>
             </div>
           </CardContent>
         </Card>
-        
+
         {/* Bill To */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               Bill To
               {recipientModified && (
-                <span className="text-xs text-orange-600 font-normal">(modified)</span>
+                <span className="text-xs text-orange-600 font-normal">
+                  (modified)
+                </span>
               )}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="border rounded-lg p-4 bg-gray-50">
-              <Label htmlFor="recipient-profile" className="text-sm font-medium mb-2 block">
+              <Label
+                htmlFor="recipient-profile"
+                className="text-sm font-medium mb-2 block"
+              >
                 Select Recipient Company
               </Label>
               <div className="flex items-start gap-4">
                 <div className="flex-1">
-                  <Select 
-                  
-                    value={selectedRecipientProfileId || "new-client"} 
+                  <Select
+                    value={selectedRecipientProfileId || 'new-client'}
                     onValueChange={(value) => {
-                      if (value === "new-client") {
-                        setSelectedRecipientProfileId("");
+                      if (value === 'new-client') {
+                        setSelectedRecipientProfileId('');
                         // Clear form for manual entry
-                        setFormData(prev => ({
+                        setFormData((prev) => ({
                           ...prev,
                           buyerBusinessName: '',
                           buyerEmail: '',
@@ -770,9 +895,13 @@ export function SimpleInvoiceForm() {
                       }
                     }}
                   >
-                    <SelectTrigger id="recipient-profile" className="w-full bg-white">
+                    <SelectTrigger
+                      id="recipient-profile"
+                      className="w-full bg-white"
+                    >
                       <SelectValue placeholder="Select or enter manually">
-                        {selectedRecipientProfileId === "new-client" || !selectedRecipientProfileId ? (
+                        {selectedRecipientProfileId === 'new-client' ||
+                        !selectedRecipientProfileId ? (
                           <div className="flex items-center gap-2">
                             <Plus className="h-4 w-4" />
                             <span>Manual Entry</span>
@@ -780,10 +909,12 @@ export function SimpleInvoiceForm() {
                         ) : selectedRecipientCompany ? (
                           <div className="flex items-center gap-2 truncate">
                             <User className="h-4 w-4 flex-shrink-0" />
-                            <span className="truncate">{selectedRecipientCompany.name}</span>
+                            <span className="truncate">
+                              {selectedRecipientCompany.name}
+                            </span>
                           </div>
                         ) : (
-                          "Select or enter manually"
+                          'Select or enter manually'
                         )}
                       </SelectValue>
                     </SelectTrigger>
@@ -801,19 +932,28 @@ export function SimpleInvoiceForm() {
                             <div className="flex items-center gap-2 hover:text-white ">
                               <User className="h-4 w-4" />
                               <div>
-                                <div className="font-medium">{company.name}</div>
-                                <div className="text-xs text-muted-foreground">{company.email}</div>
+                                <div className="font-medium">
+                                  {company.name}
+                                </div>
+                                <div className="text-xs text-muted-foreground">
+                                  {company.email}
+                                </div>
                                 <div className="flex items-center gap-2">
                                   {company.relationship && (
                                     <span className="text-xs bg-gray-100 text-gray-700 px-1 py-0.5 rounded">
-                                      {company.relationship === 'owner' ? 'My Company' : 
-                                       company.relationship === 'member' ? 'Member' : 
-                                       'Client'}
+                                      {company.relationship === 'owner'
+                                        ? 'My Company'
+                                        : company.relationship === 'member'
+                                          ? 'Member'
+                                          : 'Client'}
                                     </span>
                                   )}
                                   {company.lastUsedAt && (
                                     <span className="text-xs text-gray-500">
-                                      Last: {new Date(company.lastUsedAt).toLocaleDateString()}
+                                      Last:{' '}
+                                      {new Date(
+                                        company.lastUsedAt,
+                                      ).toLocaleDateString()}
                                     </span>
                                   )}
                                 </div>
@@ -911,14 +1051,16 @@ export function SimpleInvoiceForm() {
                 </div>
               </div>
             </div>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="buyerBusinessName">Business Name</Label>
                 <Input
                   id="buyerBusinessName"
                   value={formData.buyerBusinessName}
-                  onChange={(e) => updateFormData('buyerBusinessName', e.target.value)}
+                  onChange={(e) =>
+                    updateFormData('buyerBusinessName', e.target.value)
+                  }
                   required
                 />
               </div>
@@ -937,7 +1079,9 @@ export function SimpleInvoiceForm() {
                 <Input
                   id="buyerAddress"
                   value={formData.buyerAddress}
-                  onChange={(e) => updateFormData('buyerAddress', e.target.value)}
+                  onChange={(e) =>
+                    updateFormData('buyerAddress', e.target.value)
+                  }
                 />
               </div>
               <div>
@@ -953,7 +1097,9 @@ export function SimpleInvoiceForm() {
                 <Input
                   id="buyerPostalCode"
                   value={formData.buyerPostalCode}
-                  onChange={(e) => updateFormData('buyerPostalCode', e.target.value)}
+                  onChange={(e) =>
+                    updateFormData('buyerPostalCode', e.target.value)
+                  }
                 />
               </div>
               <div>
@@ -961,7 +1107,9 @@ export function SimpleInvoiceForm() {
                 <Input
                   id="buyerCountry"
                   value={formData.buyerCountry}
-                  onChange={(e) => updateFormData('buyerCountry', e.target.value)}
+                  onChange={(e) =>
+                    updateFormData('buyerCountry', e.target.value)
+                  }
                 />
               </div>
               <div>
@@ -976,13 +1124,18 @@ export function SimpleInvoiceForm() {
             </div>
           </CardContent>
         </Card>
-        
+
         {/* Invoice Items */}
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle>Invoice Items</CardTitle>
-              <Button type="button" onClick={addItem} size="sm" variant="outline">
+              <Button
+                type="button"
+                onClick={addItem}
+                size="sm"
+                variant="outline"
+              >
                 <Plus className="h-4 w-4 mr-1" />
                 Add Item
               </Button>
@@ -991,12 +1144,17 @@ export function SimpleInvoiceForm() {
           <CardContent>
             <div className="space-y-4">
               {items.map((item, index) => (
-                <div key={item.id} className="grid grid-cols-12 gap-4 items-end">
+                <div
+                  key={item.id}
+                  className="grid grid-cols-12 gap-4 items-end"
+                >
                   <div className="col-span-4">
                     <Label>Description</Label>
                     <Input
                       value={item.name}
-                      onChange={(e) => updateItem(item.id, 'name', e.target.value)}
+                      onChange={(e) =>
+                        updateItem(item.id, 'name', e.target.value)
+                      }
                       placeholder="Service or product"
                       required
                     />
@@ -1006,7 +1164,9 @@ export function SimpleInvoiceForm() {
                     <Input
                       type="number"
                       value={item.quantity}
-                      onChange={(e) => updateItem(item.id, 'quantity', e.target.value)}
+                      onChange={(e) =>
+                        updateItem(item.id, 'quantity', e.target.value)
+                      }
                       min="1"
                       required
                     />
@@ -1016,7 +1176,9 @@ export function SimpleInvoiceForm() {
                     <Input
                       type="number"
                       value={item.unitPrice}
-                      onChange={(e) => updateItem(item.id, 'unitPrice', e.target.value)}
+                      onChange={(e) =>
+                        updateItem(item.id, 'unitPrice', e.target.value)
+                      }
                       min="0"
                       step="0.01"
                       required
@@ -1027,7 +1189,9 @@ export function SimpleInvoiceForm() {
                     <Input
                       type="number"
                       value={item.tax}
-                      onChange={(e) => updateItem(item.id, 'tax', e.target.value)}
+                      onChange={(e) =>
+                        updateItem(item.id, 'tax', e.target.value)
+                      }
                       min="0"
                       max="100"
                     />
@@ -1057,13 +1221,13 @@ export function SimpleInvoiceForm() {
             </div>
           </CardContent>
         </Card>
-        
+
         {/* Payment Details */}
-        <PaymentDetailsForm 
+        <PaymentDetailsForm
           formData={formData}
           updateFormData={updateFormData}
         />
-        
+
         {/* Notes */}
         <Card>
           <CardHeader>
@@ -1078,7 +1242,7 @@ export function SimpleInvoiceForm() {
             />
           </CardContent>
         </Card>
-        
+
         {/* Submit Button */}
         <div className="flex justify-end gap-4">
           <Button

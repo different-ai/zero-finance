@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useEffect } from 'react';
-import { usePathname, useRouter } from 'next/navigation';
+import React from 'react';
+import { usePathname } from 'next/navigation';
 import {
   Check,
   LogIn,
@@ -18,12 +18,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Progress } from '@/components/ui/progress';
 import { api } from '@/trpc/react';
 import { cn } from '@/lib/utils';
-// Define our steps and their corresponding routes
-export const steps = [
-  { name: 'Activate Primary Account', path: '/onboarding/create-safe' },
-  { name: 'Verify Identity', path: '/onboarding/kyc' },
-  { name: 'Complete', path: '/onboarding/complete' },
-];
+import { steps } from './constants';
 
 export default function OnboardingLayout({
   children,
@@ -31,15 +26,13 @@ export default function OnboardingLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const router = useRouter();
-  const { logout, login, ready, authenticated, user } = usePrivy();
+  const { logout, login, ready, authenticated } = usePrivy();
 
   // Fetch customer status to check if onboarding is complete
-  const { data: customerStatus, isLoading } =
-    api.align.getCustomerStatus.useQuery(
-      undefined, // no input
-      { enabled: ready && authenticated }, // Only run if user is logged in
-    );
+  const { data: customerStatus } = api.align.getCustomerStatus.useQuery(
+    undefined, // no input
+    { enabled: ready && authenticated }, // Only run if user is logged in
+  );
 
   const isOnboardingComplete = customerStatus?.kycStatus === 'approved';
 
@@ -60,10 +53,10 @@ export default function OnboardingLayout({
     currentStepIndex < steps.length - 1 ? steps[currentStepIndex + 1] : null;
 
   // Fetch user profile to access persisted email (may differ from Privy user obj)
-  const { data: userProfile } = api.user.getProfile.useQuery(undefined, {
-    enabled: ready && authenticated, // only fetch when auth ready
-    staleTime: 5 * 60 * 1000,
-  });
+  // const { data: userProfile } = api.user.getProfile.useQuery(undefined, {
+  //   enabled: ready && authenticated, // only fetch when auth ready
+  //   staleTime: 5 * 60 * 1000,
+  // });
 
   return (
     <div className="min-h-screen flex flex-col bg-[#F7F7F2]">

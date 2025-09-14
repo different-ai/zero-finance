@@ -27,6 +27,7 @@ interface OnboardingTasksProps {
     steps: {
       createSafe: OnboardingStep;
       verifyIdentity: OnboardingStep;
+      openSavings?: OnboardingStep;
       setupBankAccount: OnboardingStep;
     };
     isCompleted: boolean;
@@ -57,6 +58,7 @@ export function OnboardingTasksCard({ initialData }: OnboardingTasksProps) {
 
   const kycStep = onboardingStatus?.steps?.verifyIdentity;
   const safeStep = onboardingStatus?.steps?.createSafe;
+  const savingsStep = onboardingStatus?.steps?.openSavings;
 
   if (!onboardingStatus) {
     return null;
@@ -64,11 +66,12 @@ export function OnboardingTasksCard({ initialData }: OnboardingTasksProps) {
 
   const isSafeComplete = safeStep?.isCompleted ?? false;
   const isKycComplete = kycStep?.isCompleted ?? false;
+  const isSavingsComplete = savingsStep?.isCompleted ?? false;
   const kycStatus = kycStep?.status;
   const kycMarkedDone = kycStep?.kycMarkedDone ?? false;
 
   // Check if all steps are complete
-  const isAllComplete = isSafeComplete && isKycComplete;
+  const isAllComplete = isSafeComplete && isKycComplete && isSavingsComplete;
 
   // If onboarding is complete, don't show the card
   if (isAllComplete) return null;
@@ -145,6 +148,30 @@ export function OnboardingTasksCard({ initialData }: OnboardingTasksProps) {
     };
   }
 
+  // Step 3: Open Savings Account (always visible but disabled until KYC)
+  const savingsContent = {
+    disabled: !isKycComplete,
+    icon: isSavingsComplete ? (
+      <CheckCircle className="h-6 w-6 text-green-500" />
+    ) : !isKycComplete ? (
+      <Circle className="h-6 w-6 text-gray-400" />
+    ) : (
+      <Circle className="h-6 w-6 text-gray-400" />
+    ),
+    title: 'Activate High-Yield Savings',
+    description: !isKycComplete
+      ? 'Complete identity verification to unlock this step'
+      : isSavingsComplete
+        ? 'Your savings account is active - earning 8% APY'
+        : 'Activate automatic savings to earn 8% APY on idle funds',
+    button:
+      isKycComplete && !isSavingsComplete ? (
+        <Button asChild size="sm" className="w-full sm:w-auto">
+          <Link href="/dashboard/earn">Open Savings</Link>
+        </Button>
+      ) : null,
+  };
+
   return (
     <Card className="w-full">
       <CardHeader className="pb-4 sm:pb-6">
@@ -160,6 +187,7 @@ export function OnboardingTasksCard({ initialData }: OnboardingTasksProps) {
               <div className="flex-shrink-0 mt-0.5">{safeContent.icon}</div>
               <div className="flex-1 min-w-0">
                 <p className="font-semibold text-gray-800 text-sm sm:text-base">
+                  <span className="text-[#101010]/40 mr-2">1.</span>
                   {safeContent.title}
                 </p>
                 <p className="text-xs sm:text-sm text-gray-600 mt-1">
@@ -182,6 +210,7 @@ export function OnboardingTasksCard({ initialData }: OnboardingTasksProps) {
               <div className="flex-shrink-0 mt-0.5">{kycContent.icon}</div>
               <div className="flex-1 min-w-0">
                 <p className="font-semibold text-gray-800 text-sm sm:text-base">
+                  <span className="text-[#101010]/40 mr-2">2.</span>
                   {kycContent.title}
                 </p>
                 <p className="text-xs sm:text-sm text-gray-600 mt-1">
@@ -192,6 +221,29 @@ export function OnboardingTasksCard({ initialData }: OnboardingTasksProps) {
             {kycContent.button && (
               <div className="flex-shrink-0 w-full sm:w-auto sm:ml-9">
                 {kycContent.button}
+              </div>
+            )}
+          </div>
+
+          {/* Step 3: Open Savings Account (always shown) */}
+          <div
+            className={`flex flex-col sm:flex-row items-start gap-3 sm:gap-4 ${savingsContent.disabled ? 'opacity-50' : ''}`}
+          >
+            <div className="flex items-start gap-3 flex-1 w-full">
+              <div className="flex-shrink-0 mt-0.5">{savingsContent.icon}</div>
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold text-gray-800 text-sm sm:text-base">
+                  <span className="text-[#101010]/40 mr-2">3.</span>
+                  {savingsContent.title}
+                </p>
+                <p className="text-xs sm:text-sm text-gray-600 mt-1">
+                  {savingsContent.description}
+                </p>
+              </div>
+            </div>
+            {savingsContent.button && (
+              <div className="flex-shrink-0 w-full sm:w-auto sm:ml-9">
+                {savingsContent.button}
               </div>
             )}
           </div>
