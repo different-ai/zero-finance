@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { usePrivy } from '@privy-io/react-auth';
+import { featureConfigClient } from '@/lib/feature-config-client';
 
 // Navigation items types
 type NavigationItem = {
@@ -43,7 +44,7 @@ export function Sidebar() {
     typeof window !== 'undefined' &&
     window.location.search.includes('contractor=true');
 
-  // Determine navigation items based on user type
+  // Determine navigation items based on user type and feature availability
   const navigationItems: NavigationItem[] = isContractor
     ? [
         {
@@ -53,8 +54,9 @@ export function Sidebar() {
         },
       ]
     : [
+        // Show Dashboard instead of Banking in Lite mode
         {
-          name: 'Banking',
+          name: featureConfigClient.banking.enabled ? 'Banking' : 'Dashboard',
           href: '/dashboard',
           icon: Banknote,
         },

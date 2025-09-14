@@ -334,12 +334,16 @@ export type AlignOnrampTransferList = z.infer<
 class AlignApiClient {
   private readonly baseUrl: string;
   private readonly apiKey: string;
+  private readonly liteMode: boolean;
 
   constructor(apiKey = ALIGN_API_KEY, baseUrl = ALIGN_API_BASE_URL) {
     if (!apiKey) {
-      throw new Error('ALIGN_API_KEY environment variable is required');
+      console.warn('[Align] Running in Lite mode - banking features disabled');
+      this.liteMode = true;
+    } else {
+      this.liteMode = false;
     }
-    this.apiKey = apiKey;
+    this.apiKey = apiKey || '';
     this.baseUrl = baseUrl;
   }
 
@@ -347,6 +351,13 @@ class AlignApiClient {
     endpoint: string,
     options: RequestInit = {},
   ): Promise<any> {
+    // Check if running in lite mode
+    if (this.liteMode) {
+      throw new Error(
+        'Align services not available in Lite mode. Please configure Align credentials to enable banking features.',
+      );
+    }
+
     const url = `${this.baseUrl}${endpoint}`;
     const method = options.method || 'GET';
     const body = options.body ? String(options.body) : ''; // Ensure body is string for hashing

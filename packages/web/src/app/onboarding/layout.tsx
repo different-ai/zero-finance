@@ -34,7 +34,10 @@ export default function OnboardingLayout({
     { enabled: ready && authenticated }, // Only run if user is logged in
   );
 
-  const isOnboardingComplete = customerStatus?.kycStatus === 'approved';
+  // In Lite mode, KYC is not required, so check if status is 'not_required' or 'approved'
+  const isOnboardingComplete =
+    customerStatus?.kycStatus === 'approved' ||
+    customerStatus?.kycStatus === 'not_required';
 
   // Get the current step index
   const currentStepIndex = steps.findIndex((step) =>

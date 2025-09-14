@@ -76,6 +76,12 @@ async function FundsData() {
 
 // Server components for data fetching
 async function OnboardingData() {
+  // Hide onboarding in lite mode (no Align API)
+  const isLiteMode = !process.env.ALIGN_API_KEY || process.env.LITE_MODE === 'true';
+  if (isLiteMode) {
+    return null;
+  }
+
   const userId = await getUserId();
 
   if (!userId) return <OnboardingTasks />;

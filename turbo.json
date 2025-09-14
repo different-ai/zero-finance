@@ -42,6 +42,14 @@
       "cache": false,
       "persistent": true
     },
+    "dev:lite": {
+      "cache": false,
+      "persistent": true
+    },
+    "build:lite": {
+      "dependsOn": ["^build"],
+      "outputs": [".next/**", "!.next/cache/**", "out/**", "artifacts/**"]
+    },
     "clean": {
       "cache": false
     },

@@ -1,6 +1,6 @@
 import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
-import { router, protectedProcedure } from '../create-router';
+import { router, protectedProcedure, publicProcedure } from '../create-router';
 import { db } from '../../db';
 import {
   users,
@@ -22,6 +22,7 @@ import {
   TOKEN_ADDRESSES,
 } from '../services/safe-token-service';
 import type { Address } from 'viem';
+import { featureConfig } from '@/lib/feature-config';
 
 /**
  * Helper function to fetch fresh KYC status from Align API and update DB
@@ -152,10 +153,39 @@ const alignDestinationBankAccountSchema = z
  */
 export const alignRouter = router({
   /**
+   * Check if Align services are available
+   */
+  isAvailable: publicProcedure.query(() => {
+    return {
+      available: featureConfig.align.enabled,
+      message: featureConfig.align.enabled
+        ? 'Align services are available'
+        : 'Banking features not available in Lite mode',
+    };
+  }),
+
+  /**
    * Get customer status from DB and refresh from Align API
    * Always fetches the latest status from Align and updates DB
    */
   getCustomerStatus: protectedProcedure.query(async ({ ctx }) => {
+    // Return Lite mode response if Align not configured
+    if (!featureConfig.align.enabled) {
+      return {
+        alignCustomerId: null,
+        kycStatus: 'not_required' as const,
+        kycSubStatus: null,
+        hasVirtualAccount: false,
+        virtualAccountStatus: 'not_available' as const,
+        alignVirtualAccountId: null,
+        accountNumber: null,
+        routingNumber: null,
+        kycFlowLink: null,
+        kycMarkedDone: false,
+        message: 'KYC not required in Lite mode',
+      };
+    }
+
     const userFromPrivy = await getUser();
     if (!userFromPrivy?.id) {
       throw new TRPCError({
@@ -234,6 +264,15 @@ export const alignRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
+      // Check if Align is available
+      if (!featureConfig.align.enabled) {
+        throw new TRPCError({
+          code: 'PRECONDITION_FAILED',
+          message:
+            'Banking features not available in Lite mode. Upgrade to enable KYC.',
+        });
+      }
+
       const userFromPrivy = await getUser();
       const userId = userFromPrivy?.id;
       if (!userId) {

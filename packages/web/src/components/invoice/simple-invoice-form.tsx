@@ -94,7 +94,7 @@ const defaultFormData: InvoiceFormData = {
   buyerCountry: '',
   buyerTaxId: '',
 
-  paymentMethod: 'ach', // Default to ACH bank transfer
+  paymentMethod: 'usdc', // Default to crypto payment
   currency: 'USD', // Default currency
   network: 'mainnet', // Default network
   paymentAddress: '',
