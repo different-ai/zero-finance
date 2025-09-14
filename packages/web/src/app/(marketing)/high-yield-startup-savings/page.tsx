@@ -293,7 +293,7 @@ export default function HighYieldStartupSavingsPage() {
             Stop leaving money on the table. Your investors expect you to
             maximize every dollar.
           </p>
-          <Link href="/signup">
+          <Link href="/signin">
             <Button size="lg">
               Get Started with 0 Finance
               <ArrowRight className="ml-2 h-4 w-4" />

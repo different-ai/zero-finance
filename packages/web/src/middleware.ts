@@ -1,6 +1,6 @@
-import { NextResponse } from 'next/server'
-import type { NextRequest } from 'next/server'
-import { PrivyClient } from '@privy-io/server-auth'
+import { NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
+import { PrivyClient } from '@privy-io/server-auth';
 
 // Check for required environment variables
 const privyAppId = process.env.NEXT_PUBLIC_PRIVY_APP_ID;
@@ -12,7 +12,9 @@ try {
   if (privyAppId && privyAppSecret) {
     privyClient = new PrivyClient(privyAppId, privyAppSecret);
   } else {
-    console.warn('Middleware: Privy environment variables are missing. Authentication middleware will be disabled.');
+    console.warn(
+      'Middleware: Privy environment variables are missing. Authentication middleware will be disabled.',
+    );
   }
 } catch (error) {
   console.error('Middleware: Failed to initialize Privy client:', error);
@@ -20,25 +22,47 @@ try {
 
 // This function can be marked `async` if using `await` inside
 export async function middleware(request: NextRequest) {
+  const { pathname, searchParams } = request.nextUrl;
+
+  // Check if demo mode is requested
+  if (
+    searchParams.get('demo') === 'true' &&
+    pathname.startsWith('/dashboard')
+  ) {
+    // Set a cookie to persist demo mode
+    const response = NextResponse.next();
+    response.cookies.set('zero-finance-demo-mode', 'true', {
+      httpOnly: false,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 60 * 60, // 1 hour
+      path: '/',
+    });
+    return response;
+  }
+
   // If Privy client is not initialized, just continue
   if (!privyClient) {
     return NextResponse.next();
   }
 
   // Only apply logic to the root path
-  if (request.nextUrl.pathname === '/') {
-    const authToken = request.cookies.get('privy-token')?.value
+  if (pathname === '/') {
+    const authToken = request.cookies.get('privy-token')?.value;
 
     if (authToken) {
       try {
         // Verify the token
-        await privyClient.verifyAuthToken(authToken)
+        await privyClient.verifyAuthToken(authToken);
         // Token is valid, redirect to dashboard
-        const dashboardUrl = new URL('/dashboard', request.url)
-        return NextResponse.redirect(dashboardUrl)
+        const dashboardUrl = new URL('/dashboard', request.url);
+        return NextResponse.redirect(dashboardUrl);
       } catch (error) {
         // Token is invalid or expired, let the request proceed to the root page
-        console.warn('Middleware: Privy auth token verification failed:', error)
+        console.warn(
+          'Middleware: Privy auth token verification failed:',
+          error,
+        );
         // Optionally delete the invalid cookie
         // const response = NextResponse.next();
         // response.cookies.delete('privy-token');
@@ -49,7 +73,7 @@ export async function middleware(request: NextRequest) {
   }
 
   // For all other paths, or if checks fail, continue as normal
-  return NextResponse.next()
+  return NextResponse.next();
 }
 
 // See "Matching Paths" below to learn more
@@ -65,5 +89,4 @@ export const config = {
      */
     '/((?!api|_next/static|_next/image|favicon.ico|login).*)', // Apply middleware to most paths, but logic inside only targets '/' explicitly
   ],
-}
-
+};

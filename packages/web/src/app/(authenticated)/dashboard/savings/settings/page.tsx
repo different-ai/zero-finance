@@ -69,7 +69,7 @@ export default function SavingsSettingsPage() {
   // Redirect if earn module not initialized
   useEffect(() => {
     if (!isLoadingEarnStatus && !isEarnModuleInitialized && safeAddress) {
-      router.push('/dashboard/savings');
+      router.push('/dashboard');
     }
   }, [isLoadingEarnStatus, isEarnModuleInitialized, safeAddress, router]);
 
@@ -89,7 +89,7 @@ export default function SavingsSettingsPage() {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => router.push('/dashboard/savings')}
+            onClick={() => router.push('/dashboard')}
             className="gap-2 mb-4 text-[#101010]/70 hover:text-[#101010] hover:bg-[#F7F7F2]"
           >
             <ChevronLeft className="h-4 w-4" />

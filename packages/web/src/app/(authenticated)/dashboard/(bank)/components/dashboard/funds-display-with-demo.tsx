@@ -219,7 +219,7 @@ export function FundsDisplayWithDemo({
         <div className="flex items-start justify-between">
           <div>
             <p className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60 mb-2">
-              {isDemoMode ? 'Demo Balance' : 'Total Balance'} · USD
+              {isDemoMode ? 'Demo Active Balance' : 'Active Balance'} · Checking
             </p>
             <div className="font-serif tabular-nums text-[#101010]">
               {balanceDisplay.isNegative && (
@@ -241,12 +241,12 @@ export function FundsDisplayWithDemo({
           )}
         </div>
       </div>
-      <div className="p-6 space-y-6">
-        <div className="flex flex-col sm:flex-row gap-3">
+      <div className="p-6">
+        <div className="flex gap-2">
           <Dialog open={isMoveModalOpen} onOpenChange={setIsMoveModalOpen}>
             <DialogTrigger asChild>
               <Button
-                className="inline-flex items-center justify-center px-6 py-3 text-[16px] font-medium text-white bg-[#1B29FF] hover:bg-[#1420CC] transition-colors"
+                className="px-4 py-2 text-[14px] font-medium text-white bg-[#1B29FF] hover:bg-[#1420CC] transition-colors"
                 title={
                   !hasVirtualAccounts && !isDemoMode
                     ? 'Connect a bank account to enable transfers'
@@ -284,9 +284,13 @@ export function FundsDisplayWithDemo({
             }
           >
             <DialogTrigger asChild>
-              <Button className="flex-1 inline-flex items-center justify-center px-6 py-3 text-[16px] font-medium text-[#101010] bg-white hover:bg-[#F7F7F2] hover:text-[#1B29FF] border border-[#101010]/10 hover:border-[#1B29FF]/20 transition-all duration-150 gap-2 group">
-                <Info className="h-5 w-5 text-[#101010]/60 group-hover:text-[#1B29FF] transition-colors" />
-                Account Details
+              <Button
+                variant="outline"
+                size="sm"
+                className="px-3 py-2 text-[13px] text-[#101010]/60 hover:text-[#101010] border-[#101010]/10 hover:bg-[#F7F7F2] transition-all"
+              >
+                <Info className="h-3.5 w-3.5 mr-1.5" />
+                Details
               </Button>
             </DialogTrigger>
             <DialogContent className="bg-white border-gray-200 text-gray-800 max-w-3xl max-h-[90vh] overflow-y-auto">

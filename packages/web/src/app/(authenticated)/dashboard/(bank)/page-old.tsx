@@ -3,13 +3,13 @@ import { getUserId } from '@/lib/auth';
 import { db } from '@/db';
 import { Suspense } from 'react';
 import { cookies } from 'next/headers';
+import { ActiveAgents } from './components/agents/active-agents';
 import { TransactionTabsDemo } from './components/dashboard/transaction-tabs-demo';
 import { redirect } from 'next/navigation';
 import { FundsDisplayWithDemo } from './components/dashboard/funds-display-with-demo';
 import { VirtualAccountOnboardingLayer } from './components/dashboard/virtual-account-onboarding-layer';
 import { USDC_ADDRESS } from '@/lib/constants';
 import { Skeleton } from '@/components/ui/skeleton';
-import { SavingsWrapper } from './components/savings-wrapper';
 
 // Loading components for Suspense boundaries
 function LoadingCard() {
@@ -50,7 +50,7 @@ async function FundsData() {
   if (isDemoMode && !userId) {
     return (
       <FundsDisplayWithDemo
-        totalBalance={2500000} // $2.5M demo balance in checking
+        totalBalance={5000000} // $5M demo balance
         walletAddress="0xDemo...1234"
       />
     );
@@ -117,6 +117,9 @@ export default async function DashboardPage() {
   return (
     <div className="min-h-screen bg-[#F7F7F2]">
       {/* Demo Mode Banner */}
+      {/*     position: absolute;
+    top: 0;
+    width: 100%; */}
       {isDemoMode && !userId && (
         <div className="absolute top-0 w-full bg-[#1B29FF] text-white py-3 px-4 text-center">
           <p className="text-sm font-medium">
@@ -141,8 +144,8 @@ export default async function DashboardPage() {
                 Welcome to Zero Finance
               </h1>
               <p className="mt-3 text-[16px] text-[#101010]/70">
-                Your startup's idle cash earning 8% APY. $2.5M demo portfolio
-                below.
+                Your startup's idle cash could be earning 8% APY. Explore our
+                dashboard to see how it works.
               </p>
               <div className="mt-4 flex gap-4">
                 <div className="flex items-center gap-2">
@@ -151,28 +154,20 @@ export default async function DashboardPage() {
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-[#101010]/60">
-                    $2.5M in Savings · $2.5M in Checking
+                    $5M Sample Portfolio
                   </span>
                 </div>
               </div>
             </div>
           )}
 
-          {/* Balance Section - Checking Account */}
-          <div>
-            <h2 className="font-serif text-[24px] sm:text-[28px] leading-[1.1] tracking-[-0.01em] text-[#101010] mb-4">
-              Checking Account
-            </h2>
-            <Suspense fallback={<LoadingCard />}>
-              <FundsData />
-            </Suspense>
-          </div>
+          {/* Balance Section */}
+          <Suspense fallback={<LoadingCard />}>
+            <FundsData />
+          </Suspense>
 
           {/* Onboarding Section - only for real users */}
           {!isDemoMode && <OnboardingData />}
-
-          {/* Savings/Yield Section - Just call the actual savings page */}
-          <SavingsWrapper />
 
           {/* Transactions Section */}
           <div className="bg-white border border-[#101010]/10 rounded-[12px] shadow-[0_2px_8px_rgba(16,16,16,0.04)]">
@@ -194,6 +189,42 @@ export default async function DashboardPage() {
           {/* Additional Demo Content */}
           {isDemoMode && !userId && (
             <>
+              {/* Yield Performance Card */}
+              <div className="bg-white border border-[#101010]/10 rounded-[12px] shadow-[0_2px_8px_rgba(16,16,16,0.04)] p-6">
+                <div className="flex justify-between items-start mb-4">
+                  <div>
+                    <p className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60">
+                      YIELD PERFORMANCE
+                    </p>
+                    <h2 className="mt-2 font-serif text-[24px] sm:text-[28px] leading-[1.1] tracking-[-0.01em] text-[#101010]">
+                      Earning 8% APY
+                    </h2>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-[32px] font-bold text-green-600">
+                      +$1,095
+                    </p>
+                    <p className="text-sm text-[#101010]/60">Daily earnings</p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-3 gap-4 mt-6">
+                  <div>
+                    <p className="text-sm text-[#101010]/60">Monthly</p>
+                    <p className="text-xl font-semibold">+$33,333</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-[#101010]/60">Yearly</p>
+                    <p className="text-xl font-semibold">+$400,000</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-[#101010]/60">vs Bank (4%)</p>
+                    <p className="text-xl font-semibold text-green-600">
+                      +$200,000
+                    </p>
+                  </div>
+                </div>
+              </div>
+
               {/* CTA Card */}
               <div className="bg-white border border-[#101010]/10 rounded-[12px] shadow-[0_2px_8px_rgba(16,16,16,0.04)] p-6">
                 <h3 className="font-serif text-[24px] text-[#101010] mb-2">

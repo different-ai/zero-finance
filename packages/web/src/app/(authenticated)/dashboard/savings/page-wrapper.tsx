@@ -312,10 +312,10 @@ export default function SavingsPageWrapper() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F7F7F2]">
+    <div className="bg-[#F7F7F2]">
       {/* Header Section */}
       {/* Main Content */}
-      <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <div className="bg-white max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {/* Not Initialized State */}
         {!isEarnModuleInitialized ? (
           <div className="bg-white border border-[#101010]/10 p-12 text-center">
@@ -335,7 +335,7 @@ export default function SavingsPageWrapper() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-px bg-[#101010]/10">
               <div className="bg-white p-6">
                 <p className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60 mb-2">
-                  Total Balance
+                  Savings Balance
                 </p>
                 <p className="font-serif text-[28px] sm:text-[32px] leading-[1.1] tabular-nums text-[#101010]">
                   {formatUsd(totalSaved)}
@@ -391,12 +391,9 @@ export default function SavingsPageWrapper() {
             <div>
               <div className="mb-8">
                 <p className="uppercase tracking-[0.18em] text-[11px] text-[#101010]/60">
-                  Available Vaults
+                  Available Strategies
                 </p>
-                <h2 className="mt-2 font-serif text-[36px] leading-[1.1] tracking-[-0.01em] text-[#101010]">
-                  USDC Yield Opportunities
-                </h2>
-              </div>
+                              </div>
 
               {/* Vault Table - Responsive */}
               <div className="bg-white border border-[#101010]/10 overflow-x-auto">

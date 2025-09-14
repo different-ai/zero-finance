@@ -37,10 +37,16 @@ export function HeroSection() {
               Sign up →
             </Link>
             <Link
+              className="inline-flex items-center px-6 py-3 text-[15px] sm:text-[16px] font-medium text-[#101010] bg-white border border-[#101010]/10 hover:border-[#101010]/20 rounded-md transition-all"
+              href="/dashboard?demo=true"
+            >
+              Try Live Demo
+            </Link>
+            <Link
               className="inline-flex items-center text-[14px] sm:text-[15px] lg:text-[16px] text-[#101010] hover:text-[#1B29FF] underline decoration-[#101010]/30 underline-offset-[4px] hover:decoration-[#1B29FF] transition-colors"
               href="https://cal.com/team/0finance/30"
             >
-              Book demo
+              Book call
             </Link>
           </div>
         </div>
