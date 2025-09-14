@@ -34,6 +34,21 @@ export const metadata: Metadata = {
     address: false,
     telephone: false,
   },
+  manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'Zero Finance',
+  },
+  icons: {
+    icon: '/new-logo-bluer.png',
+    apple: [
+      { url: '/new-logo-bluer.png', sizes: '180x180' },
+      { url: '/new-logo-bluer.png', sizes: '152x152' },
+      { url: '/new-logo-bluer.png', sizes: '120x120' },
+      { url: '/new-logo-bluer.png', sizes: '167x167' },
+    ],
+  },
   openGraph: {
     title: '0 Finance - Your idle cash could hire your next engineer',
     description:
