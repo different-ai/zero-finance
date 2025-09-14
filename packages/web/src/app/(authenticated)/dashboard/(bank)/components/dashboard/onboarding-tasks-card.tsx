@@ -149,20 +149,19 @@ export function OnboardingTasksCard({ initialData }: OnboardingTasksProps) {
     <Card className="w-full">
       <CardHeader className="pb-4 sm:pb-6">
         <CardTitle className="text-base sm:text-lg">
-          Set up your high-yield bank account
+          Complete Your Account Setup
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6 px-4 sm:px-6">
-        {/* Setup checklist */}
         <div className="space-y-4 sm:space-y-6">
-          {/* Step 1: Create Smart Account */}
-          <div
-            className={`flex flex-col sm:flex-row items-start gap-3 sm:gap-4 ${safeContent.disabled ? 'opacity-50' : ''}`}
-          >
+          {/* Step 1: Activate Primary Account */}
+          <div className="flex flex-col sm:flex-row items-start gap-3 sm:gap-4">
             <div className="flex items-start gap-3 flex-1 w-full">
               <div className="flex-shrink-0 mt-0.5">{safeContent.icon}</div>
               <div className="flex-1 min-w-0">
-                <p className="font-semibold text-gray-800 text-sm sm:text-base">{`1. ${safeContent.title}`}</p>
+                <p className="font-semibold text-gray-800 text-sm sm:text-base">
+                  {safeContent.title}
+                </p>
                 <p className="text-xs sm:text-sm text-gray-600 mt-1">
                   {safeContent.description}
                 </p>
@@ -182,7 +181,9 @@ export function OnboardingTasksCard({ initialData }: OnboardingTasksProps) {
             <div className="flex items-start gap-3 flex-1 w-full">
               <div className="flex-shrink-0 mt-0.5">{kycContent.icon}</div>
               <div className="flex-1 min-w-0">
-                <p className="font-semibold text-gray-800 text-sm sm:text-base">{`2. ${kycContent.title}`}</p>
+                <p className="font-semibold text-gray-800 text-sm sm:text-base">
+                  {kycContent.title}
+                </p>
                 <p className="text-xs sm:text-sm text-gray-600 mt-1">
                   {kycContent.description}
                 </p>
@@ -194,29 +195,16 @@ export function OnboardingTasksCard({ initialData }: OnboardingTasksProps) {
               </div>
             )}
           </div>
-
-          {/* Step 3: Create Virtual Bank Account */}
-          <div
-            className={`flex flex-col sm:flex-row items-start gap-3 sm:gap-4 ${bankAccountContent.disabled ? 'opacity-50' : ''}`}
-          >
-            <div className="flex items-start gap-3 flex-1 w-full">
-              <div className="flex-shrink-0 mt-0.5">
-                {bankAccountContent.icon}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="font-semibold text-gray-800 text-sm sm:text-base">{`3. ${bankAccountContent.title}`}</p>
-                <p className="text-xs sm:text-sm text-gray-600 mt-1">
-                  {bankAccountContent.description}
-                </p>
-              </div>
-            </div>
-            {bankAccountContent.button && (
-              <div className="flex-shrink-0 w-full sm:w-auto sm:ml-9">
-                {bankAccountContent.button}
-              </div>
-            )}
-          </div>
         </div>
+
+        {/* Continue Button */}
+        {!isSafeComplete && (
+          <div className="pt-2">
+            <Button asChild className="w-full">
+              <Link href="/onboarding/create-safe">Continue Setup →</Link>
+            </Button>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

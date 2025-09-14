@@ -182,6 +182,7 @@ export const onboardingRouter = router({
 
   /**
    * Gets the status of each step in the onboarding flow.
+   * Simplified to match the new onboarding UI with just 2 main steps.
    */
   getOnboardingSteps: protectedProcedure.query(async ({ ctx }) => {
     const privyDid = ctx.userId;
@@ -202,9 +203,6 @@ export const onboardingRouter = router({
       columns: { safeAddress: true },
     });
 
-    // We get user from context, so we know email exists if they are authenticated
-    const userEmail = ctx.user?.email;
-
     const alignCaller = alignRouter.createCaller(ctx);
     const alignCustomerPromise = alignCaller.getCustomerStatus();
 
@@ -220,7 +218,6 @@ export const onboardingRouter = router({
         : 'not_started';
     const kycSubStatus = alignCustomer?.kycSubStatus;
     const hasBankAccount = !!alignCustomer?.alignVirtualAccountId;
-    const hasEmail = !!userEmail;
     const kycMarkedDone = user?.kycMarkedDone ?? false;
 
     const steps = {
@@ -230,16 +227,16 @@ export const onboardingRouter = router({
       },
       verifyIdentity: {
         isCompleted: kycStatus === 'approved',
-        status:
-          (kycStatus as
-            | 'pending'
-            | 'approved'
-            | 'rejected'
-            | 'not_started'
-            | 'none'),
+        status: kycStatus as
+          | 'pending'
+          | 'approved'
+          | 'rejected'
+          | 'not_started'
+          | 'none',
         kycMarkedDone,
         kycSubStatus,
       },
+      // Keep setupBankAccount for backward compatibility but it's not shown in UI
       setupBankAccount: {
         isCompleted: hasBankAccount,
         status: hasBankAccount
@@ -248,11 +245,13 @@ export const onboardingRouter = router({
       },
     };
 
-    const isCompleted = Object.values(steps).every((step) => step.isCompleted);
+    // Onboarding is complete when safe is created and KYC is approved
+    const isCompleted =
+      steps.createSafe.isCompleted && steps.verifyIdentity.isCompleted;
 
     return {
       steps,
       isCompleted,
     };
   }),
-});  
+});
