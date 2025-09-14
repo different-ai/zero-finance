@@ -1,15 +1,71 @@
-import { useDemoMode } from '@/context/demo-mode-context';
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
+
+// Check if we're in demo mode by looking at the URL
+function useIsDemoMode() {
+  const [isDemoMode, setIsDemoMode] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setIsDemoMode(window.location.pathname.startsWith('/dashboard/demo'));
+    }
+  }, []);
+
+  return isDemoMode;
+}
+
+// Store demo savings state in localStorage for persistence
+const DEMO_SAVINGS_KEY = 'zero-finance-demo-savings-state';
+
+export function useDemoSavingsActivation() {
+  const [isActivated, setIsActivated] = useState(false);
+  const isDemoMode = useIsDemoMode();
+
+  useEffect(() => {
+    if (isDemoMode && typeof window !== 'undefined') {
+      const stored = localStorage.getItem(DEMO_SAVINGS_KEY);
+      setIsActivated(stored === 'true');
+    }
+  }, [isDemoMode]);
+
+  const activateSavings = () => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(DEMO_SAVINGS_KEY, 'true');
+      setIsActivated(true);
+    }
+  };
+
+  const resetDemo = () => {
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem(DEMO_SAVINGS_KEY);
+      setIsActivated(false);
+    }
+  };
+
+  return { isActivated, activateSavings, resetDemo };
+}
 
 // Override for useRealSavingsState hook
 export function useDemoSavingsState(realState: any, isLoading: boolean) {
-  const { isDemoMode, demoStep, demoSavingsBalance } = useDemoMode();
+  const isDemoMode = useIsDemoMode();
+  const { isActivated } = useDemoSavingsActivation();
 
   const demoState = useMemo(() => {
     if (!isDemoMode) return null;
 
-    // Always show savings enabled in demo mode
-    // Calculate some earnings to show
+    // If savings not activated, show disabled state
+    if (!isActivated) {
+      return {
+        enabled: false,
+        allocation: 0,
+        apy: 8.0,
+        totalSaved: 0,
+        totalEarned: 0,
+        currentBalance: 0,
+        vaultAddress: '0x616a4E1db48e22028f6bbf20444Cd3b8e3273738',
+      };
+    }
+
+    // Show active savings with earnings
     const dailyYield = (2500000 * 0.08) / 365;
     const accumulatedYield = dailyYield * 30; // Show 30 days of earnings
 
@@ -22,7 +78,7 @@ export function useDemoSavingsState(realState: any, isLoading: boolean) {
       currentBalance: 2500000 + accumulatedYield,
       vaultAddress: '0x616a4E1db48e22028f6bbf20444Cd3b8e3273738',
     };
-  }, [isDemoMode, demoStep, demoSavingsBalance]);
+  }, [isDemoMode, isActivated]);
 
   if (isDemoMode && demoState) {
     return {
@@ -39,12 +95,13 @@ export function useDemoSavingsState(realState: any, isLoading: boolean) {
 
 // Override for earn module initialization status
 export function useDemoEarnModuleStatus(realStatus: any, isLoading: boolean) {
-  const { isDemoMode, demoStep } = useDemoMode();
+  const isDemoMode = useIsDemoMode();
+  const { isActivated } = useDemoSavingsActivation();
 
   if (isDemoMode) {
     return {
       data: {
-        isInitializedOnChain: true, // Always initialized in demo
+        isInitializedOnChain: isActivated, // Only initialized after activation
       },
       isLoading: false,
       refetch: () => {},
@@ -60,11 +117,25 @@ export function useDemoEarnModuleStatus(realStatus: any, isLoading: boolean) {
 
 // Override for vault stats
 export function useDemoVaultStats() {
-  const { isDemoMode, demoStep, demoSavingsBalance } = useDemoMode();
+  const isDemoMode = useIsDemoMode();
+  const { isActivated } = useDemoSavingsActivation();
 
   if (!isDemoMode) return null;
 
-  // Always show savings data in demo mode
+  // Only show vault data if savings is activated
+  if (!isActivated) {
+    return [
+      {
+        vaultAddress: '0x616a4E1db48e22028f6bbf20444Cd3b8e3273738',
+        vaultName: 'Seamless USDC',
+        apy: 8.0,
+        netApy: 8.0,
+        tvl: 25000000n,
+        yield: 0n,
+      },
+    ];
+  }
+
   // Calculate daily yield on $2.5M
   const dailyYield = (2500000 * 0.08) / 365;
   const yieldAmount = dailyYield * 1e6; // Convert to USDC decimals
@@ -83,13 +154,14 @@ export function useDemoVaultStats() {
 
 // Override for user positions
 export function useDemoUserPositions() {
-  const { isDemoMode, demoStep, demoSavingsBalance } = useDemoMode();
+  const isDemoMode = useIsDemoMode();
+  const { isActivated } = useDemoSavingsActivation();
 
   if (!isDemoMode) return null;
 
   // Calculate earned amount based on demo balance and time
   const calculateEarned = (balance: number) => {
-    if (balance === 0) return 0;
+    if (balance === 0 || !isActivated) return 0;
     // Assume 30 days of earnings at 8% APY
     return (balance * 0.08 * 30) / 365;
   };
@@ -98,7 +170,7 @@ export function useDemoUserPositions() {
     {
       vaultAddress: '0x616a4E1db48e22028f6bbf20444Cd3b8e3273738',
       vaultName: 'Seamless USDC',
-      assetsUsd: 2500000, // Always show $2.5M in demo
+      assetsUsd: isActivated ? 2500000 : 0, // Show balance only if activated
       earned: calculateEarned(2500000),
     },
     {
@@ -120,9 +192,10 @@ export function useDemoUserPositions() {
 
 // Override for recent deposits
 export function useDemoRecentDeposits() {
-  const { isDemoMode, demoStep } = useDemoMode();
+  const isDemoMode = useIsDemoMode();
+  const { isActivated } = useDemoSavingsActivation();
 
-  if (!isDemoMode || demoStep < 5) return [];
+  if (!isDemoMode || !isActivated) return [];
 
   return [
     {
@@ -138,10 +211,11 @@ export function useDemoRecentDeposits() {
 
 // Override for recent withdrawals
 export function useDemoRecentWithdrawals() {
-  const { isDemoMode, demoStep } = useDemoMode();
+  const isDemoMode = useIsDemoMode();
 
-  if (!isDemoMode || demoStep < 7) return [];
+  if (!isDemoMode) return [];
 
+  // Always show a sample withdrawal in demo
   return [
     {
       id: 'demo-withdrawal-1',

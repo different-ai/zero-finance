@@ -22,23 +22,11 @@ try {
 
 // This function can be marked `async` if using `await` inside
 export async function middleware(request: NextRequest) {
-  const { pathname, searchParams } = request.nextUrl;
+  const { pathname } = request.nextUrl;
 
-  // Check if demo mode is requested
-  if (
-    searchParams.get('demo') === 'true' &&
-    pathname.startsWith('/dashboard')
-  ) {
-    // Set a cookie to persist demo mode
-    const response = NextResponse.next();
-    response.cookies.set('zero-finance-demo-mode', 'true', {
-      httpOnly: false,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 60 * 60, // 1 hour
-      path: '/',
-    });
-    return response;
+  // Skip auth checks for demo route
+  if (pathname.startsWith('/dashboard/demo')) {
+    return NextResponse.next();
   }
 
   // If Privy client is not initialized, just continue
@@ -63,16 +51,12 @@ export async function middleware(request: NextRequest) {
           'Middleware: Privy auth token verification failed:',
           error,
         );
-        // Optionally delete the invalid cookie
-        // const response = NextResponse.next();
-        // response.cookies.delete('privy-token');
-        // return response;
       }
     }
     // No token found, let the request proceed to the root page
   }
 
-  // For all other paths, or if checks fail, continue as normal
+  // For all other paths, continue as normal
   return NextResponse.next();
 }
 

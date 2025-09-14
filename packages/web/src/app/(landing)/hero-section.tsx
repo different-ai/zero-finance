@@ -38,7 +38,7 @@ export function HeroSection() {
             </Link>
             <Link
               className="inline-flex items-center px-6 py-3 text-[15px] sm:text-[16px] font-medium text-[#101010] bg-white border border-[#101010]/10 hover:border-[#101010]/20 rounded-md transition-all"
-              href="/dashboard?demo=true"
+              href="/dashboard/demo"
             >
               Try Live Demo
             </Link>
