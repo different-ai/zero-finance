@@ -160,7 +160,7 @@ export function DemoSavingsWrapper() {
             Activate Savings Account
           </h2>
           <p className="text-[16px] text-[#101010]/70 mb-8 max-w-[400px] mx-auto">
-            Start earning up to {averageApy.toFixed(1)}% APY on your business
+            Start earning up to 8% APY on your business
             funds.
           </p>
           <Button

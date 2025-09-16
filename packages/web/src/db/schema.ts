@@ -62,6 +62,8 @@ export const userProfilesTable = pgTable('user_profiles', {
   skippedOrCompletedOnboardingStepper: boolean(
     'skipped_or_completed_onboarding_stepper',
   ).default(false),
+  isInsured: boolean('is_insured').default(false),
+  insuranceActivatedAt: timestamp('insurance_activated_at'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });

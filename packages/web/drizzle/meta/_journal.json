@@ -694,6 +694,20 @@
       "when": 1757817684755,
       "tag": "0098_charming_stark_industries",
       "breakpoints": true
+    },
+    {
+      "idx": 99,
+      "version": "7",
+      "when": 1758039736749,
+      "tag": "0099_flippant_bloodscream",
+      "breakpoints": true
+    },
+    {
+      "idx": 100,
+      "version": "7",
+      "when": 1758049820726,
+      "tag": "0100_heavy_grim_reaper",
+      "breakpoints": true
     }
   ]
 }
