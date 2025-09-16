@@ -18,17 +18,31 @@ export function InsuranceWarning({
   const [dismissed, setDismissed] = useState(false);
   const { data: profile } = api.user.getProfile.useQuery();
 
-  // Store dismissal in localStorage for 30 days
+  // Check if already shown once during this session
   useEffect(() => {
+    const storageKey = `insurance-warning-shown-${variant}`;
+
+    // First check sessionStorage for this session
+    const shownThisSession = sessionStorage.getItem(storageKey);
+    if (shownThisSession === 'true') {
+      setDismissed(true);
+      return;
+    }
+
+    // Also check localStorage for persistent dismissal (keeps existing behavior as fallback)
     const dismissedUntil = localStorage.getItem('insurance-warning-dismissed');
     if (dismissedUntil && new Date(dismissedUntil) > new Date()) {
       setDismissed(true);
+    } else {
+      // Mark as shown for this session
+      sessionStorage.setItem(storageKey, 'true');
     }
-  }, []);
+  }, [variant]);
 
   const handleDismiss = () => {
+    // Store dismissal persistently for 7 days
     const dismissedUntil = new Date();
-    dismissedUntil.setDate(dismissedUntil.getDate() + 30);
+    dismissedUntil.setDate(dismissedUntil.getDate() + 7);
     localStorage.setItem(
       'insurance-warning-dismissed',
       dismissedUntil.toISOString(),
@@ -41,23 +55,23 @@ export function InsuranceWarning({
 
   const warningContent = {
     dashboard: {
-      title: 'Your funds are not FDIC insured',
-      message: 'DeFi yields carry smart contract risk.',
-      severity: 'warning' as const,
+      title: 'Your funds are not insured at the moment',
+      message: 'Schedule a call to activate insurance coverage.',
+      severity: 'info' as const,
     },
     savings: {
-      title: '8% APY target • Not FDIC insured',
-      message: 'Returns not guaranteed. Smart contract risks apply.',
-      severity: 'warning' as const,
+      title: '8% APY target • Not currently insured',
+      message: 'Insurance coverage available through consultation.',
+      severity: 'info' as const,
     },
     deposit: {
-      title: 'Important: DeFi yields carry risk',
-      message: 'Not FDIC insured. You may lose funds.',
-      severity: 'error' as const,
+      title: 'Funds not yet insured',
+      message: 'Contact us to discuss insurance options.',
+      severity: 'warning' as const,
     },
     onboarding: {
-      title: 'Understanding DeFi Risks',
-      message: 'Zero Finance offers DeFi yields, not traditional banking.',
+      title: 'Insurance Coverage Available',
+      message: 'Zero Finance offers optional insurance for your funds.',
       severity: 'info' as const,
     },
   };
@@ -95,15 +109,16 @@ export function InsuranceWarning({
           <div className={`mt-2 text-sm ${textColor}`}>
             <p>{content.message}</p>
             <div className="mt-3">
-              <p className="font-medium mb-2">Want insurance coverage?</p>
+              <p className="font-medium mb-2">Get insurance coverage:</p>
               <div className="flex flex-wrap gap-3">
                 <a
                   href="mailto:raghav@0.finance"
                   className={`inline-flex items-center gap-1 underline hover:no-underline ${textColor}`}
                 >
                   <Mail className="h-4 w-4" />
-                  raghav@0.finance
+                  Email raghav@0.finance
                 </a>
+                <span className="text-[12px] opacity-60">or</span>
                 <a
                   href="https://cal.com/team/0finance/15?overlayCalendar=true"
                   target="_blank"
@@ -111,7 +126,7 @@ export function InsuranceWarning({
                   className={`inline-flex items-center gap-1 underline hover:no-underline ${textColor}`}
                 >
                   <Calendar className="h-4 w-4" />
-                  Book 15 min call
+                  Schedule a meeting
                 </a>
               </div>
             </div>
