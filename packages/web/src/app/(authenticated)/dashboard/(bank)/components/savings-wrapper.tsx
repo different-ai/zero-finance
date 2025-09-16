@@ -1,6 +1,7 @@
 'use client';
 
 import dynamic from 'next/dynamic';
+import { InsuranceWarning } from '@/components/insurance-warning';
 
 // Import the actual savings page component
 const SavingsPageWrapper = dynamic(() => import('../../savings/page-wrapper'), {
@@ -26,6 +27,9 @@ export function SavingsWrapper() {
           Earn 8% APY on your idle cash reserves
         </p>
       </div>
+
+      {/* Insurance Warning for Savings */}
+      <InsuranceWarning variant="savings" dismissible={true} />
 
       {/* Savings Content */}
       <div className="bg-white border border-[#101010]/10 rounded-[12px] shadow-[0_2px_8px_rgba(16,16,16,0.04)]">

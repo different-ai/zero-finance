@@ -2,7 +2,6 @@ import { appRouter } from '@/server/routers/_app';
 import { getUserId } from '@/lib/auth';
 import { db } from '@/db';
 import { Suspense } from 'react';
-import { cookies } from 'next/headers';
 import { TransactionTabsDemo } from './components/dashboard/transaction-tabs-demo';
 import { redirect } from 'next/navigation';
 import { FundsDisplayWithDemo } from './components/dashboard/funds-display-with-demo';
@@ -10,10 +9,9 @@ import { VirtualAccountOnboardingLayer } from './components/dashboard/virtual-ac
 import { USDC_ADDRESS } from '@/lib/constants';
 import { Skeleton } from '@/components/ui/skeleton';
 import { SavingsWrapper } from './components/savings-wrapper';
+import { InsuranceActivationHandler } from './components/insurance-activation-handler';
 import {
   EmptyCheckingAccount,
-  EmptySavingsAccount,
-  EmptyTransactions,
   OnboardingTasks,
 } from './components/dashboard/empty-states';
 
@@ -77,7 +75,8 @@ async function FundsData() {
 // Server components for data fetching
 async function OnboardingData() {
   // Hide onboarding in lite mode (no Align API)
-  const isLiteMode = !process.env.ALIGN_API_KEY || process.env.LITE_MODE === 'true';
+  const isLiteMode =
+    !process.env.ALIGN_API_KEY || process.env.LITE_MODE === 'true';
   if (isLiteMode) {
     return null;
   }
@@ -116,6 +115,9 @@ export default async function DashboardPage() {
     <div className="min-h-screen bg-[#F7F7F2]">
       {/* Main Content */}
       <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
+        {/* Insurance Warning and Activation Handler */}
+        <InsuranceActivationHandler />
+
         <div className="space-y-6">
           {/* Balance Section - Checking Account */}
           <div>

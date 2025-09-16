@@ -147,7 +147,12 @@ export const userRouter = router({
     // For now, this example assumes email might not be directly in ctx.user
     // const email = ctx.user?.email; // Hypothetical: if Privy user object had email
     const userProfile = await getOrCreateUserProfile(privyDid /*, email */);
-    return userProfile;
+    // Ensure insurance fields are included
+    return {
+      ...userProfile,
+      isInsured: userProfile.isInsured || false,
+      insuranceActivatedAt: userProfile.insuranceActivatedAt || null,
+    };
   }),
 
   // Update user profile (e.g., primary safe address, business name)
@@ -229,4 +234,24 @@ export const userRouter = router({
       });
       return { exists: !!user };
     }),
+
+  // Activate insurance for user (removes all warnings)
+  activateInsurance: protectedProcedure.mutation(async ({ ctx }) => {
+    const privyDid = ctx.userId;
+    if (!privyDid) {
+      throw new TRPCError({ code: 'UNAUTHORIZED' });
+    }
+
+    // Update the user profile to set isInsured = true
+    await db
+      .update(userProfilesTable)
+      .set({
+        isInsured: true,
+        insuranceActivatedAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(userProfilesTable.privyDid, privyDid));
+
+    return { success: true, message: 'Insurance activated successfully' };
+  }),
 });
