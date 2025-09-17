@@ -27,6 +27,7 @@ import {
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { SimplifiedOffRamp } from '@/components/transfers/simplified-off-ramp';
+import { DemoTransferDialog } from '@/components/transfers/demo-transfer-dialog';
 import { usePrivy } from '@privy-io/react-auth';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
@@ -69,11 +70,13 @@ const getRecipientName = (source: any, userData: any) => {
 interface FundsDisplayWithDemoProps {
   totalBalance?: number;
   walletAddress?: string;
+  isDemo?: boolean;
 }
 
 export function FundsDisplayWithDemo({
   totalBalance = 0,
   walletAddress,
+  isDemo = false,
 }: FundsDisplayWithDemoProps) {
   const [isCopied, setIsCopied] = useState(false);
   const [copiedField, setCopiedField] = useState<string | null>(null);
@@ -84,18 +87,53 @@ export function FundsDisplayWithDemo({
   const displayBalance = totalBalance;
   const displayAddress = walletAddress;
 
+  // Demo funding sources data
+  const demoFundingSources = [
+    {
+      id: 'demo-ach-1',
+      sourceAccountType: 'us_ach' as const,
+      sourceBankName: 'JPMorgan Chase',
+      sourceCurrency: 'USD',
+      sourceAccountNumber: '****5678',
+      sourceRoutingNumber: '021000021',
+      sourceBankBeneficiaryName: 'Demo Company Inc.',
+      destinationCurrency: 'USDC',
+      destinationPaymentRail: 'Base',
+    },
+    {
+      id: 'demo-iban-1',
+      sourceAccountType: 'iban' as const,
+      sourceBankName: 'Deutsche Bank',
+      sourceCurrency: 'EUR',
+      sourceIban: 'DE89 3704 0044 0532 0130 00',
+      sourceBicSwift: 'DEUTDEFF',
+      sourceBankBeneficiaryName: 'Bridge Building Sp.z.o.o.',
+      sourceBankAddress: 'Taunusanlage 12, 60325 Frankfurt am Main, Germany',
+      destinationCurrency: 'USDC',
+      destinationPaymentRail: 'Base',
+    },
+  ];
+
+  const demoUserData = {
+    firstName: 'John',
+    lastName: 'Doe',
+    companyName: 'Demo Company Inc.',
+  };
+
   // Use tRPC to fetch funding sources
   const {
     data: realAccountData,
     isLoading: isLoadingFundingSources,
     refetch: refetchFundingSources,
   } = api.align.getVirtualAccountDetails.useQuery(undefined, {
-    enabled: ready && authenticated && !!user?.id,
+    enabled: !isDemo && ready && authenticated && !!user?.id,
   });
 
-  // Use real funding sources only
-  const fundingSources = realAccountData?.fundingSources || [];
-  const userData = realAccountData?.userData;
+  // Use demo or real funding sources based on mode
+  const fundingSources = isDemo
+    ? demoFundingSources
+    : realAccountData?.fundingSources || [];
+  const userData = isDemo ? demoUserData : realAccountData?.userData;
 
   // Handle copying to clipboard
   const copyToClipboard = (text: string, field: string) => {
@@ -171,15 +209,21 @@ export function FundsDisplayWithDemo({
             <DialogContent
               className={`p-0 ${isMobile ? 'h-screen max-h-screen w-screen max-w-none m-0 rounded-none' : 'max-w-2xl'}`}
             >
-              <SimplifiedOffRamp
-                fundingSources={fundingSources}
-                defaultValues={undefined}
-                prefillFromInvoice={undefined}
-              />
+              {isDemo ? (
+                <DemoTransferDialog fundingSources={fundingSources} />
+              ) : (
+                <SimplifiedOffRamp
+                  fundingSources={fundingSources}
+                  defaultValues={undefined}
+                  prefillFromInvoice={undefined}
+                />
+              )}
             </DialogContent>
           </Dialog>
 
-          <Dialog onOpenChange={(open) => open && refetchFundingSources()}>
+          <Dialog
+            onOpenChange={(open) => open && !isDemo && refetchFundingSources()}
+          >
             <DialogTrigger asChild>
               <Button
                 variant="outline"
@@ -198,7 +242,7 @@ export function FundsDisplayWithDemo({
                 </DialogTitle>
               </DialogHeader>
 
-              {isLoadingFundingSources ? (
+              {!isDemo && isLoadingFundingSources ? (
                 <div className="space-y-4 mt-4">
                   <Skeleton variant="card" className="h-16 w-full" />
                   <Skeleton variant="card" className="h-16 w-full" />

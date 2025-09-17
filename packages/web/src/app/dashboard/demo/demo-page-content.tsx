@@ -11,6 +11,7 @@ function DemoFunds() {
     <FundsDisplayWithDemo
       totalBalance={2500000} // $2.5M demo balance in checking
       walletAddress="0xDemo...1234"
+      isDemo={true}
     />
   );
 }

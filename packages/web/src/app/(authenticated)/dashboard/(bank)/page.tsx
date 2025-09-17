@@ -116,7 +116,6 @@ export default async function DashboardPage() {
       {/* Main Content */}
       <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
         {/* Insurance Warning and Activation Handler */}
-        <InsuranceActivationHandler />
 
         <div className="space-y-6">
           {/* Balance Section - Checking Account */}
