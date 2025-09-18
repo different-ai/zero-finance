@@ -2,33 +2,18 @@
 
 import { useUserSafes } from '@/hooks/use-user-safes-demo';
 import { useRealSavingsState } from '@/components/savings/hooks/use-real-savings-state';
-// Removed demo mode context - demo only works on /dashboard/demo
 import {
   useDemoSavingsState,
   useDemoVaultStats,
   useDemoUserPositions,
-  useDemoRecentDeposits,
-  useDemoRecentWithdrawals,
+  useDemoSavingsActivation,
+  useIsDemoMode,
+  type SavingsExperienceMode,
 } from '@/hooks/use-demo-savings';
 import { trpc } from '@/utils/trpc';
-import { useRouter } from 'next/navigation';
-import { useEffect, useState, useMemo } from 'react';
-import LoadingSpinner from '@/components/ui/loading-spinner';
+import { useMemo, useEffect, useState, useRef } from 'react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import {
-  Wallet,
-  Settings,
-  ArrowRight,
-  Info,
-  ArrowDownLeft,
-  ArrowUpRight,
-  TrendingUp,
-  DollarSign,
-  ExternalLink,
-  Shield,
-  ChevronRight,
-  AlertCircle,
-} from 'lucide-react';
+import { Wallet, ExternalLink, AlertCircle, Sparkles, CheckCircle2 } from 'lucide-react';
 import { WithdrawEarnCard } from '@/app/(authenticated)/dashboard/tools/earn-module/components/withdraw-earn-card';
 import { DepositEarnCard } from '@/app/(authenticated)/dashboard/tools/earn-module/components/deposit-earn-card';
 import {
@@ -42,19 +27,80 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { OpenSavingsAccountButton } from '@/components/savings/components/open-savings-account-button';
 import { Address } from 'viem';
-import Image from 'next/image';
-import BaseLogo from 'public/logos/_base-logo.svg';
 import { BASE_USDC_VAULTS } from '@/server/earn/base-vaults';
-import {
-  AnimatedYieldCounter,
-  AnimatedYieldBadge,
-} from '@/components/animated-yield-counter';
+import { AnimatedYieldCounter } from '@/components/animated-yield-counter';
 import { AnimatedTotalEarned } from '@/components/animated-total-earned';
+import { toast } from 'sonner';
 
-export default function SavingsPageWrapper() {
-  const router = useRouter();
-  const isDemoMode = false; // Demo only works on /dashboard/demo route
-  const [hasInitialLoad, setHasInitialLoad] = useState(false);
+export type SavingsPageWrapperProps = {
+  mode?: SavingsExperienceMode;
+};
+
+export default function SavingsPageWrapper({
+  mode = 'real',
+}: SavingsPageWrapperProps) {
+  const isDemoMode = useIsDemoMode(mode);
+  const { isActivated: isDemoActivated, activateSavings: persistDemoActivation } =
+    useDemoSavingsActivation(mode);
+  const [isActivatingDemo, setIsActivatingDemo] = useState(false);
+  const [activationStep, setActivationStep] = useState(0);
+  const activationIntervalRef = useRef<ReturnType<typeof setInterval> | null>(
+    null,
+  );
+
+  const activationSteps = [
+    'Verifying account...',
+    'Setting up savings vault...',
+    'Configuring auto-save...',
+    'Activating yield generation...',
+    'Finalizing setup...',
+  ];
+
+  const handleDemoActivate = () => {
+    if (!isDemoMode || isDemoActivated || isActivatingDemo) return;
+
+    setIsActivatingDemo(true);
+    setActivationStep(0);
+
+    if (activationIntervalRef.current) {
+      clearInterval(activationIntervalRef.current);
+    }
+
+    activationIntervalRef.current = setInterval(() => {
+      setActivationStep((prev) => {
+        if (prev >= activationSteps.length - 1) {
+          if (activationIntervalRef.current) {
+            clearInterval(activationIntervalRef.current);
+            activationIntervalRef.current = null;
+          }
+
+          setTimeout(() => {
+            persistDemoActivation();
+            setIsActivatingDemo(false);
+          }, 500);
+
+          return prev;
+        }
+
+        return prev + 1;
+      });
+    }, 600);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (activationIntervalRef.current) {
+        clearInterval(activationIntervalRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isDemoActivated) {
+      setActivationStep(0);
+      setIsActivatingDemo(false);
+    }
+  }, [isDemoActivated]);
 
   // Get safe data
   const {
@@ -74,13 +120,12 @@ export default function SavingsPageWrapper() {
   const { savingsState, isLoading: isLoadingState } = useDemoSavingsState(
     realSavingsState,
     isLoadingRealState,
+    mode,
   );
 
   // Get demo data if in demo mode
-  const demoVaultStats = useDemoVaultStats();
-  const demoUserPositions = useDemoUserPositions();
-  const demoRecentDeposits = useDemoRecentDeposits();
-  const demoRecentWithdrawals = useDemoRecentWithdrawals();
+  const demoVaultStats = useDemoVaultStats(mode);
+  const demoUserPositions = useDemoUserPositions(mode);
 
   // Check earn module initialization status
   const realEarnStatus =
@@ -90,7 +135,7 @@ export default function SavingsPageWrapper() {
     );
 
   const isEarnModuleInitialized = isDemoMode
-    ? true // Always show savings in demo mode
+    ? isDemoActivated
     : realEarnStatus.data?.isInitializedOnChain || false;
 
   // Fetch vault stats
@@ -142,14 +187,6 @@ export default function SavingsPageWrapper() {
 
   // Compute vault view models
   const vaultsVM = useMemo(() => {
-    // Debug log to see what data we're getting
-    if (vaultStatsMany && vaultStatsMany.length > 0) {
-      console.log('Vault Stats:', vaultStatsMany);
-    }
-    if (userPositions && userPositions.length > 0) {
-      console.log('User Positions:', userPositions);
-    }
-
     return BASE_VAULTS.map((v) => {
       const stat = vaultStatsMany?.find(
         (s) => s.vaultAddress.toLowerCase() === v.address.toLowerCase(),
@@ -218,13 +255,6 @@ export default function SavingsPageWrapper() {
       (realVaultStats.isLoading ||
         realVaultStatsMany.isLoading ||
         realUserPositions.isLoading));
-
-  // Track initial load completion
-  useEffect(() => {
-    if (!isLoading && !hasInitialLoad) {
-      setHasInitialLoad(true);
-    }
-  }, [isLoading, hasInitialLoad]);
 
   // Loading state with skeleton
   if (isLoading) {
@@ -325,17 +355,102 @@ export default function SavingsPageWrapper() {
       <div className="bg-white max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {/* Not Initialized State */}
         {!isEarnModuleInitialized ? (
-          <div className="bg-white border border-[#101010]/10 p-12 text-center">
-            <Wallet className="h-12 w-12 text-[#101010]/40 mx-auto mb-6" />
-            <h2 className="font-serif text-[36px] leading-[1.1] text-[#101010] mb-3">
-              Activate Savings Account
-            </h2>
-            <p className="text-[16px] text-[#101010]/70 mb-8 max-w-[400px] mx-auto">
-              Start earning up to {averageApy.toFixed(1)}% APY on your business
-              funds.
-            </p>
-            <OpenSavingsAccountButton safeAddress={safeAddress || undefined} />
-          </div>
+          isDemoMode ? (
+            isActivatingDemo ? (
+              <div className="bg-white border border-[#101010]/10 p-12">
+                <div className="max-w-md mx-auto space-y-8">
+                  <div className="flex justify-center">
+                    <div className="relative">
+                      <div className="absolute inset-0 bg-[#1B29FF]/20 rounded-full animate-ping" />
+                      <div className="relative bg-[#1B29FF]/10 rounded-full p-4">
+                        <Sparkles className="h-8 w-8 text-[#1B29FF] animate-pulse" />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <h3 className="font-serif text-[24px] text-center text-[#101010]">
+                      Activating Your Savings
+                    </h3>
+
+                    <div className="space-y-3">
+                      {activationSteps.map((step, index) => (
+                        <div
+                          key={step}
+                          className="flex items-center gap-3 transition-all duration-300"
+                          style={{
+                            opacity: index <= activationStep ? 1 : 0.3,
+                            transform:
+                              index <= activationStep
+                                ? 'translateX(0)'
+                                : 'translateX(-10px)',
+                          }}
+                        >
+                          <div className="flex-shrink-0">
+                            {index < activationStep ? (
+                              <CheckCircle2 className="h-5 w-5 text-green-500" />
+                            ) : index === activationStep ? (
+                              <div className="h-5 w-5 border-2 border-[#1B29FF] rounded-full border-t-transparent animate-spin" />
+                            ) : (
+                              <div className="h-5 w-5 border-2 border-[#101010]/20 rounded-full" />
+                            )}
+                          </div>
+                          <span
+                            className={`text-[14px] ${index <= activationStep ? 'text-[#101010]' : 'text-[#101010]/40'}`}
+                          >
+                            {step}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="relative h-2 bg-[#101010]/5 rounded-full overflow-hidden">
+                      <div
+                        className="absolute inset-y-0 left-0 bg-gradient-to-r from-[#1B29FF] to-[#1B29FF]/80 rounded-full transition-all duration-500 ease-out"
+                        style={{
+                          width: `${((activationStep + 1) / activationSteps.length) * 100}%`,
+                        }}
+                      >
+                        <div className="absolute inset-0 bg-white/30 animate-shimmer" />
+                      </div>
+                    </div>
+
+                    <p className="text-center text-[12px] text-[#101010]/50">
+                      Setting up your high-yield savings account...
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="bg-white border border-[#101010]/10 p-12 text-center">
+                <Wallet className="h-12 w-12 text-[#101010]/40 mx-auto mb-6" />
+                <h2 className="font-serif text-[36px] leading-[1.1] text-[#101010] mb-3">
+                  Activate Savings Account
+                </h2>
+                <p className="text-[16px] text-[#101010]/70 mb-8 max-w-[400px] mx-auto">
+                  Start earning up to {averageApy.toFixed(1)}% APY on your business funds.
+                </p>
+                <Button
+                  onClick={handleDemoActivate}
+                  className="bg-[#1B29FF] hover:bg-[#1B29FF]/90 transition-all hover:scale-[1.02]"
+                >
+                  Activate Savings
+                </Button>
+              </div>
+            )
+          ) : (
+            <div className="bg-white border border-[#101010]/10 p-12 text-center">
+              <Wallet className="h-12 w-12 text-[#101010]/40 mx-auto mb-6" />
+              <h2 className="font-serif text-[36px] leading-[1.1] text-[#101010] mb-3">
+                Activate Savings Account
+              </h2>
+              <p className="text-[16px] text-[#101010]/70 mb-8 max-w-[400px] mx-auto">
+                Start earning up to {averageApy.toFixed(1)}% APY on your business
+                funds.
+              </p>
+              <OpenSavingsAccountButton safeAddress={safeAddress || undefined} />
+            </div>
+          )
         ) : (
           <div className="space-y-12">
             {/* Portfolio Overview - Grid Layout */}
@@ -476,39 +591,72 @@ export default function SavingsPageWrapper() {
                       </div>
 
                       <div className="col-span-3 flex justify-end gap-1">
-                        <button
-                          onClick={() =>
-                            setSelectedVault({
-                              action: 'deposit',
-                              vaultAddress: vault.address,
-                              vaultName: vault.name,
-                            })
-                          }
-                          className="px-2.5 py-1 text-[12px] text-white bg-[#1B29FF] hover:bg-[#1420CC] transition-colors"
-                        >
-                          Deposit
-                        </button>
-                        <button
-                          onClick={() =>
-                            setSelectedVault({
-                              action: 'withdraw',
-                              vaultAddress: vault.address,
-                              vaultName: vault.name,
-                            })
-                          }
-                          className="px-2.5 py-1 text-[12px] text-[#101010] border border-[#101010]/10 hover:bg-[#F7F7F2] transition-colors"
-                        >
-                          Withdraw
-                        </button>
-                        {vault.appUrl && (
-                          <a
-                            href={vault.appUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="px-2 py-1 text-[#101010]/60 hover:text-[#101010] transition-colors flex items-center"
-                          >
-                            <ExternalLink className="h-3 w-3" />
-                          </a>
+                        {isDemoMode ? (
+                          <>
+                            <button
+                              onClick={() =>
+                                toast('Sign in to deposit funds from your real account.')
+                              }
+                              className="px-2.5 py-1 text-[12px] text-white bg-[#1B29FF] hover:bg-[#1420CC] transition-colors"
+                            >
+                              Deposit
+                            </button>
+                            <button
+                              onClick={() =>
+                                toast('Sign in to withdraw from live vault positions.')
+                              }
+                              className="px-2.5 py-1 text-[12px] text-[#101010] border border-[#101010]/10 hover:bg-[#F7F7F2] transition-colors"
+                            >
+                              Withdraw
+                            </button>
+                            {vault.appUrl && (
+                              <a
+                                href={vault.appUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="px-2 py-1 text-[#101010]/60 hover:text-[#101010] transition-colors flex items-center"
+                              >
+                                <ExternalLink className="h-3 w-3" />
+                              </a>
+                            )}
+                          </>
+                        ) : (
+                          <>
+                            <button
+                              onClick={() =>
+                                setSelectedVault({
+                                  action: 'deposit',
+                                  vaultAddress: vault.address,
+                                  vaultName: vault.name,
+                                })
+                              }
+                              className="px-2.5 py-1 text-[12px] text-white bg-[#1B29FF] hover:bg-[#1420CC] transition-colors"
+                            >
+                              Deposit
+                            </button>
+                            <button
+                              onClick={() =>
+                                setSelectedVault({
+                                  action: 'withdraw',
+                                  vaultAddress: vault.address,
+                                  vaultName: vault.name,
+                                })
+                              }
+                              className="px-2.5 py-1 text-[12px] text-[#101010] border border-[#101010]/10 hover:bg-[#F7F7F2] transition-colors"
+                            >
+                              Withdraw
+                            </button>
+                            {vault.appUrl && (
+                              <a
+                                href={vault.appUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="px-2 py-1 text-[#101010]/60 hover:text-[#101010] transition-colors flex items-center"
+                              >
+                                <ExternalLink className="h-3 w-3" />
+                              </a>
+                            )}
+                          </>
                         )}
                       </div>
                     </div>
@@ -566,39 +714,72 @@ export default function SavingsPageWrapper() {
 
                       {/* Actions */}
                       <div className="flex gap-2 pt-2">
-                        <button
-                          onClick={() =>
-                            setSelectedVault({
-                              action: 'deposit',
-                              vaultAddress: vault.address,
-                              vaultName: vault.name,
-                            })
-                          }
-                          className="flex-1 px-3 py-2 text-[13px] text-white bg-[#1B29FF] hover:bg-[#1420CC] transition-colors"
-                        >
-                          Deposit
-                        </button>
-                        <button
-                          onClick={() =>
-                            setSelectedVault({
-                              action: 'withdraw',
-                              vaultAddress: vault.address,
-                              vaultName: vault.name,
-                            })
-                          }
-                          className="flex-1 px-3 py-2 text-[13px] text-[#101010] border border-[#101010]/10 hover:bg-[#F7F7F2] transition-colors"
-                        >
-                          Withdraw
-                        </button>
-                        {vault.appUrl && (
-                          <a
-                            href={vault.appUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="px-3 py-2 text-[13px] text-[#101010]/60 hover:text-[#101010] border border-[#101010]/10 hover:bg-[#F7F7F2] transition-colors flex items-center justify-center"
-                          >
-                            <ExternalLink className="h-3 w-3" />
-                          </a>
+                        {isDemoMode ? (
+                          <>
+                            <button
+                              onClick={() =>
+                                toast('Sign in to deposit funds from your real account.')
+                              }
+                              className="flex-1 px-3 py-2 text-[13px] text-white bg-[#1B29FF] hover:bg-[#1420CC] transition-colors"
+                            >
+                              Deposit
+                            </button>
+                            <button
+                              onClick={() =>
+                                toast('Sign in to withdraw from live vault positions.')
+                              }
+                              className="flex-1 px-3 py-2 text-[13px] text-[#101010] border border-[#101010]/10 hover:bg-[#F7F7F2] transition-colors"
+                            >
+                              Withdraw
+                            </button>
+                            {vault.appUrl && (
+                              <a
+                                href={vault.appUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="px-3 py-2 text-[13px] text-[#101010]/60 hover:text-[#101010] border border-[#101010]/10 hover:bg-[#F7F7F2] transition-colors flex items-center justify-center"
+                              >
+                                <ExternalLink className="h-3 w-3" />
+                              </a>
+                            )}
+                          </>
+                        ) : (
+                          <>
+                            <button
+                              onClick={() =>
+                                setSelectedVault({
+                                  action: 'deposit',
+                                  vaultAddress: vault.address,
+                                  vaultName: vault.name,
+                                })
+                              }
+                              className="flex-1 px-3 py-2 text-[13px] text-white bg-[#1B29FF] hover:bg-[#1420CC] transition-colors"
+                            >
+                              Deposit
+                            </button>
+                            <button
+                              onClick={() =>
+                                setSelectedVault({
+                                  action: 'withdraw',
+                                  vaultAddress: vault.address,
+                                  vaultName: vault.name,
+                                })
+                              }
+                              className="flex-1 px-3 py-2 text-[13px] text-[#101010] border border-[#101010]/10 hover:bg-[#F7F7F2] transition-colors"
+                            >
+                              Withdraw
+                            </button>
+                            {vault.appUrl && (
+                              <a
+                                href={vault.appUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="px-3 py-2 text-[13px] text-[#101010]/60 hover:text-[#101010] border border-[#101010]/10 hover:bg-[#F7F7F2] transition-colors flex items-center justify-center"
+                              >
+                                <ExternalLink className="h-3 w-3" />
+                              </a>
+                            )}
+                          </>
                         )}
                       </div>
                     </div>
@@ -620,12 +801,23 @@ export default function SavingsPageWrapper() {
                       incoming deposits
                     </p>
                   </div>
-                  <Link
-                    href="/dashboard/savings/settings"
-                    className="text-[14px] text-[#1B29FF] hover:text-[#1420CC] underline decoration-[#1B29FF]/30 underline-offset-[4px] transition-colors"
-                  >
-                    Configure →
-                  </Link>
+                  {isDemoMode ? (
+                    <button
+                      onClick={() =>
+                        toast('Configure auto-savings once your live account is activated.')
+                      }
+                      className="text-[14px] text-[#1B29FF] hover:text-[#1420CC] underline decoration-[#1B29FF]/30 underline-offset-[4px] transition-colors"
+                    >
+                      Configure →
+                    </button>
+                  ) : (
+                    <Link
+                      href="/dashboard/savings/settings"
+                      className="text-[14px] text-[#1B29FF] hover:text-[#1420CC] underline decoration-[#1B29FF]/30 underline-offset-[4px] transition-colors"
+                    >
+                      Configure →
+                    </Link>
+                  )}
                 </div>
               </div>
             )}
@@ -651,50 +843,53 @@ export default function SavingsPageWrapper() {
         )}
       </div>
 
-      {/* Modals - Wrap existing components in Dialog */}
-      <Dialog
-        open={
-          selectedVault.action === 'deposit' && !!selectedVault.vaultAddress
-        }
-        onOpenChange={(open) => !open && closeModal()}
-      >
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="font-serif text-[24px] text-[#101010]">
-              Deposit to {selectedVault.vaultName}
-            </DialogTitle>
-          </DialogHeader>
-          {selectedVault.vaultAddress && (
-            <DepositEarnCard
-              safeAddress={safeAddress as Address}
-              vaultAddress={selectedVault.vaultAddress as Address}
-              onDepositSuccess={closeModal}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
+      {!isDemoMode && (
+        <>
+          <Dialog
+            open={
+              selectedVault.action === 'deposit' && !!selectedVault.vaultAddress
+            }
+            onOpenChange={(open) => !open && closeModal()}
+          >
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle className="font-serif text-[24px] text-[#101010]">
+                  Deposit to {selectedVault.vaultName}
+                </DialogTitle>
+              </DialogHeader>
+              {selectedVault.vaultAddress && (
+                <DepositEarnCard
+                  safeAddress={safeAddress as Address}
+                  vaultAddress={selectedVault.vaultAddress as Address}
+                  onDepositSuccess={closeModal}
+                />
+              )}
+            </DialogContent>
+          </Dialog>
 
-      <Dialog
-        open={
-          selectedVault.action === 'withdraw' && !!selectedVault.vaultAddress
-        }
-        onOpenChange={(open) => !open && closeModal()}
-      >
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="font-serif text-[24px] text-[#101010]">
-              Withdraw from {selectedVault.vaultName}
-            </DialogTitle>
-          </DialogHeader>
-          {selectedVault.vaultAddress && (
-            <WithdrawEarnCard
-              safeAddress={safeAddress as Address}
-              vaultAddress={selectedVault.vaultAddress as Address}
-              onWithdrawSuccess={closeModal}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
+          <Dialog
+            open={
+              selectedVault.action === 'withdraw' && !!selectedVault.vaultAddress
+            }
+            onOpenChange={(open) => !open && closeModal()}
+          >
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle className="font-serif text-[24px] text-[#101010]">
+                  Withdraw from {selectedVault.vaultName}
+                </DialogTitle>
+              </DialogHeader>
+              {selectedVault.vaultAddress && (
+                <WithdrawEarnCard
+                  safeAddress={safeAddress as Address}
+                  vaultAddress={selectedVault.vaultAddress as Address}
+                  onWithdrawSuccess={closeModal}
+                />
+              )}
+            </DialogContent>
+          </Dialog>
+        </>
+      )}
     </div>
   );
 }

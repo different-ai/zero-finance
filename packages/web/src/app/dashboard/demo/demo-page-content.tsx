@@ -2,8 +2,7 @@
 
 import { FundsDisplayWithDemo } from '@/app/(authenticated)/dashboard/(bank)/components/dashboard/funds-display-with-demo';
 import { TransactionTabsDemo } from '@/app/(authenticated)/dashboard/(bank)/components/dashboard/transaction-tabs-demo';
-import { DemoSavingsWrapper } from './components/demo-savings-wrapper';
-import { useDemoSavingsActivation } from '@/hooks/use-demo-savings';
+import { SavingsWrapper } from '@/app/(authenticated)/dashboard/(bank)/components/savings-wrapper';
 
 // Demo funds component that always shows demo data
 function DemoFunds() {
@@ -17,14 +16,6 @@ function DemoFunds() {
 }
 
 export default function DemoPageContent() {
-  const { resetDemo } = useDemoSavingsActivation();
-
-  const handleReset = () => {
-    resetDemo();
-    // Force page refresh to reset all components
-    window.location.reload();
-  };
-
   return (
     <div className="min-h-screen bg-[#F7F7F2] relative">
       {/* Demo Mode Banner - Absolute positioned at top */}
@@ -83,7 +74,7 @@ export default function DemoPageContent() {
           </div>
 
           {/* Savings/Yield Section */}
-          <DemoSavingsWrapper />
+          <SavingsWrapper mode="demo" />
 
           {/* Transactions Section */}
           <div className="bg-white border border-[#101010]/10 rounded-[12px] shadow-[0_2px_8px_rgba(16,16,16,0.04)]">

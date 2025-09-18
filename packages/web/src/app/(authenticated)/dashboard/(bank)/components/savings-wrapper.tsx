@@ -2,20 +2,29 @@
 
 import dynamic from 'next/dynamic';
 import { InsuranceWarning } from '@/components/insurance-warning';
+import type { SavingsExperienceMode } from '@/hooks/use-demo-savings';
+import type { SavingsPageWrapperProps } from '../../savings/page-wrapper';
 
 // Import the actual savings page component
-const SavingsPageWrapper = dynamic(() => import('../../savings/page-wrapper'), {
-  ssr: false,
-  loading: () => (
-    <div className="border border-[#101010]/10 bg-white rounded-md">
-      <div className="p-6 space-y-4">
-        <div className="h-12 w-48 bg-[#101010]/5 rounded animate-pulse" />
+const SavingsPageWrapper = dynamic<SavingsPageWrapperProps>(
+  () => import('../../savings/page-wrapper'),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="border border-[#101010]/10 bg-white rounded-md">
+        <div className="p-6 space-y-4">
+          <div className="h-12 w-48 bg-[#101010]/5 rounded animate-pulse" />
+        </div>
       </div>
-    </div>
-  ),
-});
+    ),
+  },
+);
 
-export function SavingsWrapper() {
+type SavingsWrapperProps = {
+  mode?: SavingsExperienceMode;
+};
+
+export function SavingsWrapper({ mode = 'real' }: SavingsWrapperProps) {
   return (
     <div>
       {/* Section Header */}
@@ -33,7 +42,7 @@ export function SavingsWrapper() {
 
       {/* Savings Content */}
       <div className="bg-white border border-[#101010]/10 rounded-[12px] shadow-[0_2px_8px_rgba(16,16,16,0.04)]">
-        <SavingsPageWrapper />
+        <SavingsPageWrapper mode={mode} />
       </div>
     </div>
   );
