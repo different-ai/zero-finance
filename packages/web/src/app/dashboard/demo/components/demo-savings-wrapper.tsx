@@ -29,6 +29,8 @@ export function DemoSavingsWrapper() {
   const handleActivate = () => {
     setIsActivating(true);
     setActivationStep(0);
+    // Reset earnings to 0 when activating
+    setAnimatedEarnings(0);
 
     // Animate through steps
     const interval = setInterval(() => {
@@ -48,14 +50,17 @@ export function DemoSavingsWrapper() {
 
   // Demo data
   const totalSaved = 2500000;
-  const baseEarned = 16849;
   const averageApy = 8.0;
 
-  // Animated earnings
-  const [animatedEarnings, setAnimatedEarnings] = useState(baseEarned);
+  // Animated earnings - starts at 0 when activated
+  const [animatedEarnings, setAnimatedEarnings] = useState(0);
 
   useEffect(() => {
-    if (!isInitialized) return;
+    if (!isInitialized) {
+      // Reset to 0 when not initialized
+      setAnimatedEarnings(0);
+      return;
+    }
 
     // Calculate earnings per second (8% APY on $2.5M)
     const yearlyEarnings = totalSaved * 0.08;
@@ -160,8 +165,7 @@ export function DemoSavingsWrapper() {
             Activate Savings Account
           </h2>
           <p className="text-[16px] text-[#101010]/70 mb-8 max-w-[400px] mx-auto">
-            Start earning up to 8% APY on your business
-            funds.
+            Start earning up to 8% APY on your business funds.
           </p>
           <Button
             onClick={handleActivate}
