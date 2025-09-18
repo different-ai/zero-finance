@@ -198,12 +198,23 @@ export default function SavingsPageWrapper({
       const balanceUsd = pos?.assetsUsd ? Number(pos.assetsUsd) : 0;
 
       // APY is often returned as a decimal (0.0737 for 7.37%), convert to percentage
-      const apyRaw =
-        stat?.netApy != null
-          ? Number(stat.netApy)
-          : stat?.apy != null
-            ? Number(stat.apy)
-            : 0.08; // Default 8% as decimal
+      const statWithApyFields = stat as
+        | {
+            monthlyNetApy?: number | string | null;
+            monthlyApy?: number | string | null;
+            netApy?: number | string | null;
+            apy?: number | string | null;
+          }
+        | undefined;
+
+      const apySource =
+        statWithApyFields?.monthlyNetApy ??
+        statWithApyFields?.monthlyApy ??
+        statWithApyFields?.netApy ??
+        statWithApyFields?.apy ??
+        0.08; // Default 8% as decimal
+
+      const apyRaw = Number(apySource);
 
       // If APY is less than 1, it's likely a decimal representation, multiply by 100
       const apy = apyRaw < 1 ? apyRaw * 100 : apyRaw;

@@ -705,6 +705,9 @@ export const earnRouter = router({
               currentAssets: 0n,
               yield: -data.principal,
               supplyApy: supplyApyPct,
+              monthlyApy: 0,
+              monthlyNetApy: 0,
+              weeklyNetApy: 0,
             };
           }
           try {
@@ -723,6 +726,9 @@ export const earnRouter = router({
               currentAssets: currentAssets,
               yield: currentAssets - data.principal,
               supplyApy: supplyApyPct,
+              monthlyApy: 0,
+              monthlyNetApy: 0,
+              weeklyNetApy: 0,
             };
           } catch (error: any) {
             console.error(
@@ -737,6 +743,9 @@ export const earnRouter = router({
               currentAssets: 0n,
               yield: -data.principal,
               supplyApy: supplyApyPct,
+              monthlyApy: 0,
+              monthlyNetApy: 0,
+              weeklyNetApy: 0,
             };
           }
         },
@@ -1628,6 +1637,9 @@ export const earnRouter = router({
           // Try to get APY from Morpho GraphQL
           let apy = 0;
           let netApy = 0;
+          let monthlyApy = 0;
+          let monthlyNetApy = 0;
+          let weeklyNetApy = 0;
 
           try {
             const response = await fetch(
@@ -1643,9 +1655,12 @@ export const earnRouter = router({
                       state {
                         apy
                         netApy
+                        monthlyApy
+                        monthlyNetApy
+                        weeklyNetApy
                       }
-                  }
-                }`,
+                    }
+                  }`,
                 variables: {
                   address: vaultAddress.toLowerCase(),
                   chainId,
@@ -1659,6 +1674,11 @@ export const earnRouter = router({
               if (result.data?.vaultByAddress?.state) {
                 apy = result.data.vaultByAddress.state.apy || 0;
                 netApy = result.data.vaultByAddress.state.netApy || 0;
+                monthlyApy = result.data.vaultByAddress.state.monthlyApy || 0;
+                monthlyNetApy =
+                  result.data.vaultByAddress.state.monthlyNetApy || 0;
+                weeklyNetApy =
+                  result.data.vaultByAddress.state.weeklyNetApy || 0;
               }
             }
           } catch (e) {
@@ -1726,6 +1746,9 @@ export const earnRouter = router({
             vaultAddress,
             apy,
             netApy,
+            monthlyApy,
+            monthlyNetApy,
+            weeklyNetApy,
             principal: totalDeposited - totalWithdrawn, // Net principal for display
             currentAssets,
             yield: yieldAmount,
