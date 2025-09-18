@@ -179,8 +179,9 @@ export default function SavingsSettingsPage() {
                     <span className="font-medium text-[#1B29FF]">
                       {liveApy.toFixed(2)}% APY
                     </span>{' '}
-                    (live rate) in the Seamless USDC vault managed by Gauntlet
-                    on the Morpho protocol.
+                    (live rate) in the Gauntlet USDC Frontier vault, a
+                    collaboration between Morpho and Gauntlet optimizing for
+                    maximum yield.
                   </p>
                 </div>
               </div>
@@ -204,7 +205,7 @@ export default function SavingsSettingsPage() {
               {/* Vault Link */}
               <div className="pt-4 border-t border-[#101010]/10">
                 <Link
-                  href="https://app.morpho.org/base/vault/0x616a4E1db48e22028f6bbf20444Cd3b8e3273738/seamless-usdc-vault"
+                  href="https://app.morpho.org/ethereum/vault/0xc582F04d8a82795aa2Ff9c8bb4c1c889fe7b754e/gauntlet-usdc-frontier"
                   target="_blank"
                   className="inline-flex items-center gap-2 text-[14px] text-[#1B29FF] hover:text-[#1420CC] transition-colors"
                 >
