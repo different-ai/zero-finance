@@ -27,7 +27,6 @@ import {
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { SimplifiedOffRamp } from '@/components/transfers/simplified-off-ramp';
-import { DemoTransferDialog } from '@/components/transfers/demo-transfer-dialog';
 import { usePrivy } from '@privy-io/react-auth';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
@@ -209,15 +208,10 @@ export function FundsDisplayWithDemo({
             <DialogContent
               className={`p-0 ${isMobile ? 'h-screen max-h-screen w-screen max-w-none m-0 rounded-none' : 'max-w-2xl'}`}
             >
-              {isDemo ? (
-                <DemoTransferDialog fundingSources={fundingSources} />
-              ) : (
-                <SimplifiedOffRamp
-                  fundingSources={fundingSources}
-                  defaultValues={undefined}
-                  prefillFromInvoice={undefined}
-                />
-              )}
+              <SimplifiedOffRamp
+                mode={isDemo ? 'demo' : 'real'}
+                fundingSources={fundingSources}
+              />
             </DialogContent>
           </Dialog>
 

@@ -22,7 +22,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { formatUsd, formatUsdWithPrecision, cn } from '@/lib/utils';
+import { formatUsd, cn } from '@/lib/utils';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { OpenSavingsAccountButton } from '@/components/savings/components/open-savings-account-button';
@@ -248,6 +248,11 @@ export default function SavingsPageWrapper({
       ? vaultsVM.reduce((sum, v) => sum + v.apy, 0) / vaultsVM.length
       : 8.0;
 
+  const animatedInitialEarned = isDemoMode ? 0 : totalEarned;
+  const animatedBalance = isDemoMode
+    ? totalSaved || 2500000
+    : totalSaved;
+
   const isLoading =
     isLoadingSafes ||
     isLoadingState ||
@@ -471,9 +476,9 @@ export default function SavingsPageWrapper({
                 <p className="font-serif text-[28px] sm:text-[32px] leading-[1.1] tabular-nums text-[#1B29FF]">
                   +
                   <AnimatedTotalEarned
-                    initialEarned={totalEarned}
+                    initialEarned={animatedInitialEarned}
                     apy={averageApy / 100}
-                    balance={totalSaved}
+                    balance={animatedBalance}
                   />
                 </p>
               </div>
