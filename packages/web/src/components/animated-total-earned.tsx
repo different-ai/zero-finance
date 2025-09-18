@@ -18,13 +18,14 @@ export function AnimatedTotalEarned({
   const [earned, setEarned] = useState(initialEarned);
 
   useEffect(() => {
+    setEarned(initialEarned);
+  }, [initialEarned]);
+
+  useEffect(() => {
     const earningsPerSecond = (balance * apy) / (365 * 24 * 60 * 60);
-    const animationSpeedMultiplier = 10;
 
     const interval = setInterval(() => {
-      setEarned(
-        (prev) => prev + (earningsPerSecond * animationSpeedMultiplier) / 10,
-      );
+      setEarned((prev) => prev + earningsPerSecond * 0.1);
     }, 100);
 
     return () => clearInterval(interval);

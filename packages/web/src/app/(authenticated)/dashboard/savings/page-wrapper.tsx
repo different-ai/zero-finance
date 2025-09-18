@@ -187,6 +187,14 @@ export default function SavingsPageWrapper({
 
   // Compute vault view models
   const vaultsVM = useMemo(() => {
+    const toNumberOrFallback = (
+      value: number | string | null | undefined,
+      fallback: number,
+    ) => {
+      const parsed = Number(value);
+      return Number.isFinite(parsed) ? parsed : fallback;
+    };
+
     return BASE_VAULTS.map((v) => {
       const stat = vaultStatsMany?.find(
         (s) => s.vaultAddress.toLowerCase() === v.address.toLowerCase(),
@@ -207,17 +215,27 @@ export default function SavingsPageWrapper({
           }
         | undefined;
 
-      const apySource =
-        statWithApyFields?.monthlyNetApy ??
-        statWithApyFields?.monthlyApy ??
-        statWithApyFields?.netApy ??
-        statWithApyFields?.apy ??
-        0.08; // Default 8% as decimal
+      const displayApySource = toNumberOrFallback(
+        statWithApyFields?.monthlyNetApy,
+        toNumberOrFallback(
+          statWithApyFields?.monthlyApy,
+          toNumberOrFallback(
+            statWithApyFields?.netApy,
+            toNumberOrFallback(statWithApyFields?.apy, 0.08),
+          ),
+        ),
+      );
 
-      const apyRaw = Number(apySource);
+      const netApySource = toNumberOrFallback(
+        statWithApyFields?.netApy,
+        toNumberOrFallback(statWithApyFields?.apy, displayApySource),
+      );
 
-      // If APY is less than 1, it's likely a decimal representation, multiply by 100
-      const apy = apyRaw < 1 ? apyRaw * 100 : apyRaw;
+      const apyDecimal =
+        displayApySource > 1 ? displayApySource / 100 : displayApySource;
+      const apy = apyDecimal * 100;
+      const instantApy =
+        netApySource > 1 ? netApySource / 100 : netApySource;
 
       // Try multiple fields for earned amount
       // Handle BigInt conversion for yield field
@@ -247,6 +265,7 @@ export default function SavingsPageWrapper({
         balanceUsd,
         earnedUsd,
         isAuto: v.id === 'seamless',
+        instantApy,
       };
     });
   }, [BASE_VAULTS, vaultStatsMany, userPositions]);
@@ -258,6 +277,24 @@ export default function SavingsPageWrapper({
     vaultsVM.length > 0
       ? vaultsVM.reduce((sum, v) => sum + v.apy, 0) / vaultsVM.length
       : 8.0;
+
+  const averageInstantApy = (() => {
+    if (totalSaved > 0) {
+      const weightedSum = vaultsVM.reduce(
+        (sum, v) => sum + v.instantApy * v.balanceUsd,
+        0,
+      );
+      return weightedSum / totalSaved;
+    }
+
+    if (vaultsVM.length > 0) {
+      return (
+        vaultsVM.reduce((sum, v) => sum + v.instantApy, 0) / vaultsVM.length
+      );
+    }
+
+    return 0.08;
+  })();
 
   const animatedInitialEarned = isDemoMode ? 0 : totalEarned;
   const animatedBalance = isDemoMode
@@ -488,7 +525,7 @@ export default function SavingsPageWrapper({
                   +
                   <AnimatedTotalEarned
                     initialEarned={animatedInitialEarned}
-                    apy={averageApy / 100}
+                    apy={averageInstantApy}
                     balance={animatedBalance}
                   />
                 </p>
