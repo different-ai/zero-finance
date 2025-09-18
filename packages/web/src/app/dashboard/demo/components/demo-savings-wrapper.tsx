@@ -75,14 +75,16 @@ export function DemoSavingsWrapper() {
 
   const vaults = [
     {
-      id: 'seamless',
-      name: 'Seamless USDC',
-      curator: 'Seamless Protocol',
-      risk: 'Low Risk',
+      id: 'morpho-gauntlet',
+      name: 'Gauntlet USDC Frontier',
+      curator: 'Morpho × Gauntlet',
+      risk: 'Optimized Yield',
       apy: 8.0,
       balance: isInitialized ? 2500000 : 0,
       earned: isInitialized ? animatedEarnings : 0,
       isAuto: true,
+      contractAddress: '0xc582F04d8a82795aa2Ff9c8bb4c1c889fe7b754e',
+      chain: 'Ethereum',
     },
   ];
 
