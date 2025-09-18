@@ -11,7 +11,11 @@ import { eq, and } from 'drizzle-orm';
 import { TRPCError } from '@trpc/server';
 import { USDC_ADDRESS } from '@/lib/constants';
 import { getBaseRpcUrl } from '@/lib/base-rpc-url';
-import { BASE_USDC_VAULTS, BASE_CHAIN_ID } from '../earn/base-vaults';
+import {
+  BASE_USDC_VAULTS,
+  BASE_CHAIN_ID,
+  ETHEREUM_CHAIN_ID,
+} from '../earn/base-vaults';
 import {
   createWalletClient,
   http,
@@ -24,7 +28,7 @@ import {
   type Address,
 } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
-import { base } from 'viem/chains';
+import { base, mainnet } from 'viem/chains';
 import crypto from 'crypto';
 
 const AUTO_EARN_MODULE_ADDRESS = process.env.AUTO_EARN_MODULE_ADDRESS as
@@ -48,6 +52,53 @@ const publicClient = createPublicClient({
   chain: base,
   transport: http(BASE_RPC_URL),
 });
+
+let ethereumPublicClient: ReturnType<typeof createPublicClient> | null = null;
+
+const toLowerAddress = (value: string) => value.toLowerCase();
+
+function getVaultConfig(vaultAddress: string) {
+  return BASE_USDC_VAULTS.find(
+    (vault) => toLowerAddress(vault.address) === toLowerAddress(vaultAddress),
+  );
+}
+
+function getChainIdForVault(vaultAddress: string) {
+  return getVaultConfig(vaultAddress)?.chainId ?? BASE_CHAIN_ID;
+}
+
+function getPublicClientForChain(chainId: number) {
+  if (chainId === BASE_CHAIN_ID) {
+    return publicClient;
+  }
+
+  if (chainId === ETHEREUM_CHAIN_ID) {
+    if (!ethereumPublicClient) {
+      const rpcUrl =
+        process.env.ETHEREUM_RPC_URL ?? process.env.NEXT_PUBLIC_ETHEREUM_RPC_URL;
+
+      if (!rpcUrl) {
+        throw new Error(
+          'Missing RPC URL for Ethereum vaults. Set ETHEREUM_RPC_URL or NEXT_PUBLIC_ETHEREUM_RPC_URL.',
+        );
+      }
+
+      ethereumPublicClient = createPublicClient({
+        chain: mainnet,
+        transport: http(rpcUrl),
+      });
+    }
+
+    return ethereumPublicClient;
+  }
+
+  throw new Error(`Unsupported chain id ${chainId} for public client`);
+}
+
+function getPublicClientForVault(vaultAddress: string) {
+  const chainId = getChainIdForVault(vaultAddress);
+  return getPublicClientForChain(chainId);
+}
 
 //   /**
 //    * @dev Initiates the auto-earn process for the specified token and amount.
@@ -587,13 +638,14 @@ export const earnRouter = router({
         if (!byVault[key]) {
           let underlyingAssetAddress = dep.tokenAddress as Address;
           let tokenDecimals = 6;
+          const client = getPublicClientForVault(dep.vaultAddress);
           try {
-            underlyingAssetAddress = await publicClient.readContract({
+            underlyingAssetAddress = await client.readContract({
               address: dep.vaultAddress as Address,
               abi: ERC4626_VAULT_ABI,
               functionName: 'asset',
             });
-            tokenDecimals = await publicClient.readContract({
+            tokenDecimals = await client.readContract({
               address: underlyingAssetAddress,
               abi: ERC4626_VAULT_ABI,
               functionName: 'decimals',
@@ -629,7 +681,8 @@ export const earnRouter = router({
           let actualShares = data.shares;
           if (actualShares === 0n && data.principal > 0n) {
             try {
-              actualShares = await publicClient.readContract({
+              const client = getPublicClientForVault(vaultAddress);
+              actualShares = await client.readContract({
                 address: vaultAddress,
                 abi: ERC4626_VAULT_ABI_FOR_INFO,
                 functionName: 'balanceOf',
@@ -655,7 +708,8 @@ export const earnRouter = router({
             };
           }
           try {
-            const currentAssets = await publicClient.readContract({
+            const client = getPublicClientForVault(vaultAddress);
+            const currentAssets = await client.readContract({
               address: vaultAddress,
               abi: ERC4626_VAULT_ABI,
               functionName: 'convertToAssets',
@@ -1568,6 +1622,9 @@ export const earnRouter = router({
       // Fetch stats for each vault
       const statsPromises = vaultAddresses.map(async (vaultAddress) => {
         try {
+          const chainId = getChainIdForVault(vaultAddress);
+          const client = getPublicClientForChain(chainId);
+
           // Try to get APY from Morpho GraphQL
           let apy = 0;
           let netApy = 0;
@@ -1587,15 +1644,15 @@ export const earnRouter = router({
                         apy
                         netApy
                       }
-                    }
-                  }`,
-                  variables: {
-                    address: vaultAddress.toLowerCase(),
-                    chainId: BASE_CHAIN_ID,
-                  },
-                }),
-              },
-            );
+                  }
+                }`,
+                variables: {
+                  address: vaultAddress.toLowerCase(),
+                  chainId,
+                },
+              }),
+            },
+          );
 
             if (response.ok) {
               const result = await response.json();
@@ -1646,7 +1703,7 @@ export const earnRouter = router({
 
           if (shares > 0n) {
             try {
-              currentAssets = await publicClient.readContract({
+              currentAssets = await client.readContract({
                 address: vaultAddress as Address,
                 abi: ERC4626_VAULT_ABI,
                 functionName: 'convertToAssets',
@@ -1740,9 +1797,11 @@ export const earnRouter = router({
       // This is more reliable than GraphQL and gives us real-time data
       const positions = await Promise.all(
         vaultAddresses.map(async (vaultAddress) => {
+          const chainId = getChainIdForVault(vaultAddress);
+          const client = getPublicClientForChain(chainId);
           try {
             // Get shares balance
-            const shares = await publicClient.readContract({
+            const shares = await client.readContract({
               address: vaultAddress as Address,
               abi: parseAbi([
                 'function balanceOf(address) view returns (uint256)',
@@ -1753,7 +1812,7 @@ export const earnRouter = router({
 
             if (shares > 0n) {
               // Convert shares to assets
-              const assets = await publicClient.readContract({
+              const assets = await client.readContract({
                 address: vaultAddress as Address,
                 abi: parseAbi([
                   'function convertToAssets(uint256) view returns (uint256)',

@@ -15,12 +15,12 @@ export type BaseVault = {
 export const PRIMARY_VAULT: BaseVault = {
   id: 'morphoGauntlet',
   name: 'Gauntlet USDC Frontier',
-  address: '0xc582F04d8a82795aa2Ff9c8bb4c1c889fe7b754e',
+  address: '0x236919F11ff9eA9550A4287696C2FC9e18E6e890',
   risk: 'Optimized',
   curator: 'Morpho × Gauntlet',
   appUrl:
-    'https://app.morpho.org/ethereum/vault/0xc582F04d8a82795aa2Ff9c8bb4c1c889fe7b754e/gauntlet-usdc-frontier',
-  chainId: ETHEREUM_CHAIN_ID,
+    'https://app.morpho.org/base/vault/0x236919F11ff9eA9550A4287696C2FC9e18E6e890/gauntlet-usdc-frontier',
+  chainId: BASE_CHAIN_ID,
 };
 
 export const BASE_USDC_VAULTS: BaseVault[] = [
