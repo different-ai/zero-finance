@@ -17,6 +17,10 @@ import {
   ArrowLeft,
   Wallet,
   Receipt,
+  DollarSign,
+  Euro,
+  Building2,
+  AlertCircle,
 } from 'lucide-react';
 import {
   formatUnits,
@@ -30,29 +34,19 @@ import {
 import { erc20Abi } from 'viem';
 import { base } from 'viem/chains';
 import { toast } from 'sonner';
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from '@/components/ui/card';
 import { useSmartWallets } from '@privy-io/react-auth/smart-wallets';
 import Safe from '@safe-global/protocol-kit';
 import { type Hex } from 'viem';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { cn } from '@/lib/utils';
+import { cn, formatUsd } from '@/lib/utils';
 import { SAFE_ABI } from '@/lib/sponsor-tx/core';
-import { Progress } from '@/components/ui/progress';
 import { useSafeRelay } from '@/hooks/use-safe-relay';
 import { MetaTransactionData } from '@safe-global/safe-core-sdk-types';
 import { type UserFundingSourceDisplayData } from '@/actions/get-user-funding-sources';
 import { USDC_ADDRESS } from '@/lib/constants';
 import { Combobox, type ComboboxOption } from '@/components/ui/combo-box';
 
-// --- Types and Schemas ---
-
-// Define types locally instead of importing from tRPC
+// Types remain the same...
 interface CreateOfframpTransferInput {
   type: 'manual';
   amount: string;
@@ -100,7 +94,6 @@ interface AlignTransferCreatedResponse {
   status: string;
 }
 
-// Simplified type definition for the form
 interface OffRampFormValues {
   amount: string;
   destinationType: 'ach' | 'iban' | 'crypto';
@@ -133,97 +126,32 @@ const erc20AbiBalanceOf = [
 
 const USDC_BASE_ADDRESS = USDC_ADDRESS as Address;
 
-// Country list for dropdown
+// Country list
 const COUNTRIES: ComboboxOption[] = [
   { value: 'US', label: 'United States' },
   { value: 'GB', label: 'United Kingdom' },
   { value: 'CA', label: 'Canada' },
   { value: 'AU', label: 'Australia' },
-  { value: 'NZ', label: 'New Zealand' },
-  { value: 'IE', label: 'Ireland' },
-  // European countries
-  { value: 'AT', label: 'Austria' },
-  { value: 'BE', label: 'Belgium' },
-  { value: 'BG', label: 'Bulgaria' },
-  { value: 'HR', label: 'Croatia' },
-  { value: 'CY', label: 'Cyprus' },
-  { value: 'CZ', label: 'Czech Republic' },
-  { value: 'DK', label: 'Denmark' },
-  { value: 'EE', label: 'Estonia' },
-  { value: 'FI', label: 'Finland' },
-  { value: 'FR', label: 'France' },
   { value: 'DE', label: 'Germany' },
-  { value: 'GR', label: 'Greece' },
-  { value: 'HU', label: 'Hungary' },
-  { value: 'IS', label: 'Iceland' },
-  { value: 'IT', label: 'Italy' },
-  { value: 'LV', label: 'Latvia' },
-  { value: 'LI', label: 'Liechtenstein' },
-  { value: 'LT', label: 'Lithuania' },
-  { value: 'LU', label: 'Luxembourg' },
-  { value: 'MT', label: 'Malta' },
-  { value: 'NL', label: 'Netherlands' },
-  { value: 'NO', label: 'Norway' },
-  { value: 'PL', label: 'Poland' },
-  { value: 'PT', label: 'Portugal' },
-  { value: 'RO', label: 'Romania' },
-  { value: 'SK', label: 'Slovakia' },
-  { value: 'SI', label: 'Slovenia' },
+  { value: 'FR', label: 'France' },
   { value: 'ES', label: 'Spain' },
+  { value: 'IT', label: 'Italy' },
+  { value: 'NL', label: 'Netherlands' },
   { value: 'SE', label: 'Sweden' },
   { value: 'CH', label: 'Switzerland' },
-  // Asian countries
-  { value: 'CN', label: 'China' },
-  { value: 'HK', label: 'Hong Kong' },
-  { value: 'IN', label: 'India' },
-  { value: 'ID', label: 'Indonesia' },
-  { value: 'IL', label: 'Israel' },
   { value: 'JP', label: 'Japan' },
-  { value: 'MY', label: 'Malaysia' },
-  { value: 'PH', label: 'Philippines' },
   { value: 'SG', label: 'Singapore' },
-  { value: 'KR', label: 'South Korea' },
-  { value: 'TW', label: 'Taiwan' },
-  { value: 'TH', label: 'Thailand' },
-  { value: 'AE', label: 'United Arab Emirates' },
-  { value: 'VN', label: 'Vietnam' },
-  // Latin American countries
-  { value: 'AR', label: 'Argentina' },
+  { value: 'HK', label: 'Hong Kong' },
   { value: 'BR', label: 'Brazil' },
-  { value: 'CL', label: 'Chile' },
-  { value: 'CO', label: 'Colombia' },
-  { value: 'CR', label: 'Costa Rica' },
-  { value: 'DO', label: 'Dominican Republic' },
-  { value: 'EC', label: 'Ecuador' },
-  { value: 'GT', label: 'Guatemala' },
-  { value: 'HN', label: 'Honduras' },
   { value: 'MX', label: 'Mexico' },
-  { value: 'PA', label: 'Panama' },
-  { value: 'PY', label: 'Paraguay' },
-  { value: 'PE', label: 'Peru' },
-  { value: 'UY', label: 'Uruguay' },
-  { value: 'VE', label: 'Venezuela' },
-  // African countries
-  { value: 'EG', label: 'Egypt' },
-  { value: 'KE', label: 'Kenya' },
-  { value: 'MA', label: 'Morocco' },
-  { value: 'NG', label: 'Nigeria' },
-  { value: 'ZA', label: 'South Africa' },
-  // Other countries
-  { value: 'RU', label: 'Russia' },
-  { value: 'SA', label: 'Saudi Arabia' },
-  { value: 'TR', label: 'Turkey' },
-  { value: 'UA', label: 'Ukraine' },
 ].sort((a, b) => a.label.localeCompare(b.label));
 
-// Helper function to build pre-validated signature for Safe
 function buildPrevalidatedSig(owner: Address): Hex {
   return `0x000000000000000000000000${owner.slice(
     2,
   )}000000000000000000000000000000000000000000000000000000000000000001` as Hex;
 }
 
-// Type for funding sources from tRPC
 type FundingSource = {
   id: string;
   accountType: 'us_ach' | 'iban' | 'uk_details' | 'other';
@@ -254,7 +182,7 @@ export function SimplifiedOffRamp({
   defaultValues,
 }: SimplifiedOffRampProps) {
   const [currentStep, setCurrentStep] = useState(0);
-  const [formStep, setFormStep] = useState(1); // 1: Transfer Type, 2: Amount & Details, 3: Confirm
+  const [formStep, setFormStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState('Processing...');
   const [error, setError] = useState<string | null>(null);
@@ -276,7 +204,7 @@ export function SimplifiedOffRamp({
   const { ready: isRelayReady, send: sendWithRelay } = useSafeRelay(
     primarySafeAddress || undefined,
   );
-  // Find bank account details from funding sources - handle both types
+
   const getAccountType = (source: any) =>
     source.sourceAccountType || source.accountType;
 
@@ -293,11 +221,10 @@ export function SimplifiedOffRamp({
     }
   }, [fetchedPrimarySafeAddress]);
 
-  // Create merged default values
   const mergedDefaultValues: Partial<OffRampFormValues> = {
     destinationType: !ibanAccount || !achAccount ? 'crypto' : 'ach',
     accountHolderType: 'individual',
-    country: 'US', // Default to US with ISO code
+    country: 'US',
     city: '',
     streetLine1: '',
     streetLine2: '',
@@ -472,7 +399,6 @@ export function SimplifiedOffRamp({
       return;
     }
 
-    // Construct payload to match backend's expected schema
     const submissionPayload: CreateOfframpTransferInput = {
       type: 'manual',
       amount: values.amount,
@@ -481,7 +407,7 @@ export function SimplifiedOffRamp({
       destinationCurrency: values.destinationType === 'ach' ? 'usd' : 'eur',
       destinationPaymentRails:
         values.destinationType === 'ach' ? 'ach' : 'sepa',
-      destinationSelection: '--manual--', // Backend expects this field
+      destinationSelection: '--manual--',
       bankName: values.bankName,
       accountHolderType: values.accountHolderType,
       accountHolderFirstName: values.accountHolderFirstName,
@@ -493,10 +419,8 @@ export function SimplifiedOffRamp({
       streetLine2: values.streetLine2,
       postalCode: values.postalCode,
       accountType: values.destinationType === 'ach' ? 'us' : 'iban',
-      // ACH fields
       accountNumber: values.accountNumber,
       routingNumber: values.routingNumber,
-      // IBAN fields
       ibanNumber: values.iban,
       bicSwift: values.bic,
     };
@@ -581,100 +505,124 @@ export function SimplifiedOffRamp({
 
   if (isLoadingSafeAddress) {
     return (
-      <div className="flex justify-center items-center h-40">
-        <Loader2 className="h-8 w-8 animate-spin" />
+      <div className="bg-white flex justify-center items-center h-40">
+        <Loader2 className="h-8 w-8 animate-spin text-[#1B29FF]" />
       </div>
     );
   }
 
   if (!primarySafeAddress) {
     return (
-      <Alert variant="destructive">
-        <AlertTitle>Primary Account Not Found</AlertTitle>
-        <AlertDescription>
-          We could not find your primary account. Please set it up in settings
-          to proceed.
-        </AlertDescription>
-      </Alert>
+      <div className="bg-white border border-[#101010]/10 rounded-[12px] p-5 sm:p-6">
+        <Alert className="border-red-200 bg-red-50">
+          <AlertCircle className="h-4 w-4 text-red-600" />
+          <AlertTitle className="text-red-900">
+            Primary Account Not Found
+          </AlertTitle>
+          <AlertDescription className="text-red-700">
+            We could not find your primary account. Please set it up in settings
+            to proceed.
+          </AlertDescription>
+        </Alert>
+      </div>
     );
   }
 
+  // Success State
   if (currentStep === 2) {
     return (
-      <Card className="w-full max-w-lg mx-auto">
-        <CardContent className="flex flex-col items-center gap-6 py-12 text-center">
-          <CheckCircle2 className="h-16 w-16 text-green-500" />
-          <div>
-            <h2 className="text-2xl font-semibold">Transfer Processing</h2>
-            <p className="text-muted-foreground mt-2">
-              {cryptoTxHash
-                ? 'Your crypto transfer has been completed successfully.'
-                : 'Your funds are on their way to your bank account.'}
-            </p>
-          </div>
-          {(userOpHash || cryptoTxHash) && (
-            <a
-              href={`https://basescan.org/tx/${userOpHash || cryptoTxHash}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-xs text-muted-foreground hover:text-primary underline"
+      <div className="bg-white">
+        <div className="border-b border-[#101010]/10 px-5 sm:px-6 py-4">
+          <p className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60">
+            TRANSFER COMPLETE
+          </p>
+        </div>
+        <div className="p-5 sm:p-6">
+          <div className="flex flex-col items-center justify-center py-8 space-y-6">
+            <div className="relative">
+              <div className="absolute inset-0 bg-green-500/20 rounded-full animate-ping" />
+              <CheckCircle2 className="relative h-12 w-12 text-green-500" />
+            </div>
+            <div className="text-center space-y-2">
+              <h3 className="font-serif text-[28px] sm:text-[32px] leading-[1.1] text-[#101010]">
+                Transfer Processing
+              </h3>
+              <p className="text-[14px] text-[#101010]/60 max-w-md">
+                {cryptoTxHash
+                  ? 'Your crypto transfer has been completed successfully.'
+                  : 'Your funds are on their way to your bank account.'}
+              </p>
+            </div>
+            {(userOpHash || cryptoTxHash) && (
+              <a
+                href={`https://basescan.org/tx/${userOpHash || cryptoTxHash}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[12px] text-[#1B29FF] hover:text-[#1420CC] underline underline-offset-2"
+              >
+                Transaction Ref: {(userOpHash || cryptoTxHash)?.slice(0, 10)}...
+              </a>
+            )}
+            <Button
+              onClick={() => {
+                setCurrentStep(0);
+                setCryptoTxHash(null);
+                setUserOpHash(null);
+                setFormStep(1);
+              }}
+              className="bg-[#1B29FF] hover:bg-[#1420CC] text-white px-6 py-2.5 text-[14px] font-medium"
             >
-              Transaction Ref: {(userOpHash || cryptoTxHash)?.slice(0, 10)}...
-            </a>
-          )}
-          <Button
-            onClick={() => {
-              setCurrentStep(0);
-              setCryptoTxHash(null);
-              setUserOpHash(null);
-            }}
-            variant="outline"
-          >
-            Start another transfer
-          </Button>
-        </CardContent>
-      </Card>
+              Start Another Transfer
+            </Button>
+          </div>
+        </div>
+      </div>
     );
   }
 
+  // Confirmation State
   if (currentStep === 1) {
     return (
-      <Card className="w-full max-w-lg mx-auto">
-        <CardHeader>
-          <CardTitle>Confirm Transfer</CardTitle>
-          <CardDescription>
-            Review the details below and confirm to send the funds from your
-            account.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="bg-blue-50 p-6 rounded-xl border border-blue-100 space-y-4">
-            <div className="flex justify-between items-center">
-              <span className="text-sm font-medium text-blue-700">
-                Amount to Send
-              </span>
-              <span className="text-lg font-bold text-blue-900">
-                {transferDetails?.depositAmount} USDC
-              </span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-sm font-medium text-blue-700">Fee</span>
-              <span className="text-lg font-bold text-blue-900">
-                {transferDetails?.fee} USDC
-              </span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-sm font-medium text-blue-700">Network</span>
-              <span className="text-lg font-bold text-blue-900">
-                {transferDetails?.depositNetwork.toUpperCase()}
-              </span>
+      <div className="bg-white">
+        <div className="border-b border-[#101010]/10 px-5 sm:px-6 py-4">
+          <p className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60 mb-2">
+            CONFIRM TRANSFER
+          </p>
+          <h2 className="font-serif text-[24px] sm:text-[28px] leading-[1.1] text-[#101010]">
+            Review Transfer Details
+          </h2>
+        </div>
+        <div className="p-5 sm:p-6 space-y-5">
+          <div className="bg-[#F7F7F2] border border-[#101010]/10 rounded-[12px] p-5">
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <span className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60">
+                  AMOUNT TO SEND
+                </span>
+                <span className="font-serif text-[24px] tabular-nums text-[#101010]">
+                  {transferDetails?.depositAmount} USDC
+                </span>
+              </div>
+              <div className="border-t border-[#101010]/10 pt-3 space-y-2">
+                <div className="flex justify-between text-[13px]">
+                  <span className="text-[#101010]/60">Processing Fee</span>
+                  <span className="tabular-nums text-[#101010]">
+                    {transferDetails?.fee} USDC
+                  </span>
+                </div>
+                <div className="flex justify-between text-[13px]">
+                  <span className="text-[#101010]/60">Network</span>
+                  <span className="text-[#101010]">
+                    {transferDetails?.depositNetwork.toUpperCase()}
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
           <Button
             onClick={handleSendFunds}
             disabled={isLoading}
-            className="w-full bg-blue-600 hover:bg-blue-700"
-            size="lg"
+            className="w-full bg-[#1B29FF] hover:bg-[#1420CC] text-white h-12 text-[14px] font-medium transition-all"
           >
             {isLoading ? (
               <>
@@ -682,38 +630,37 @@ export function SimplifiedOffRamp({
                 {loadingMessage}
               </>
             ) : (
-              'Confirm & Send'
+              <>
+                Confirm & Send
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </>
             )}
           </Button>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     );
   }
 
+  // Main Form
   return (
-    <Card className="w-full max-w-lg mx-auto shadow-lg">
-      <CardHeader className="bg-gray-50 rounded-t-lg">
+    <div className="bg-white">
+      {/* Header */}
+      <div className="border-b border-[#101010]/10 px-5 sm:px-6 py-4">
         {prefillFromInvoice && (
-          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-            <div className="flex items-start">
-              <div className="flex-shrink-0">
-                <Receipt className="h-5 w-5 text-blue-600" />
-              </div>
-              <div className="ml-3">
-                <h3 className="text-sm font-medium text-blue-800">
+          <div className="mb-4 bg-[#FFF8E6] border border-[#FFA500]/20 rounded-[12px] p-3">
+            <div className="flex items-start gap-3">
+              <Receipt className="h-5 w-5 text-[#FFA500] flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="text-[13px] font-medium text-[#101010] mb-1">
                   Payment for Invoice
-                </h3>
-                <div className="mt-1 text-sm text-blue-700">
+                </p>
+                <div className="text-[12px] text-[#101010]/70 space-y-0.5">
                   {prefillFromInvoice.vendorName && (
                     <p>Vendor: {prefillFromInvoice.vendorName}</p>
                   )}
-                  {prefillFromInvoice.description && (
-                    <p>Description: {prefillFromInvoice.description}</p>
-                  )}
                   {prefillFromInvoice.amount && (
                     <p>
-                      Amount: {prefillFromInvoice.amount}{' '}
-                      {prefillFromInvoice.currency || 'USDC'}
+                      Amount: {formatUsd(Number(prefillFromInvoice.amount))}
                     </p>
                   )}
                 </div>
@@ -721,28 +668,36 @@ export function SimplifiedOffRamp({
             </div>
           </div>
         )}
-        <CardDescription className="text-blue-700 text-lg font-medium">
-          Step {formStep} of 3 -{' '}
+        <p className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60 mb-2">
+          STEP {formStep} OF 3
+        </p>
+        <h2 className="font-serif text-[24px] sm:text-[28px] leading-[1.1] text-[#101010]">
           {formStep === 1
             ? 'Select Transfer Method'
             : formStep === 2
-              ? 'Enter Amount and Details'
+              ? 'Enter Transfer Details'
               : 'Review and Confirm'}
-        </CardDescription>
-        <Progress value={(formStep / 3) * 100} className="mt-2" />
-      </CardHeader>
-      <CardContent className="p-6 max-h-[70vh] overflow-y-auto">
+        </h2>
+        <div className="mt-3 h-1 bg-[#101010]/10 rounded-full overflow-hidden">
+          <div
+            className="h-full bg-[#1B29FF] transition-all duration-500"
+            style={{ width: `${(formStep / 3) * 100}%` }}
+          />
+        </div>
+      </div>
+
+      {/* Form Content */}
+      <div className="p-5 sm:p-6">
         <form
           onSubmit={handleSubmit(handleInitiateSubmit)}
-          className="space-y-6"
+          className="space-y-5"
         >
-          {/* Step 1: Transfer Method Selection */}
+          {/* Step 1: Transfer Method */}
           {formStep === 1 && (
-            <div className="space-y-6">
-              {/* Destination Type Selection */}
-              <div className="space-y-3">
-                <Label className="text-sm font-semibold text-gray-700">
-                  Transfer Method
+            <div className="space-y-5">
+              <div>
+                <Label className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60 mb-3 block">
+                  SELECT DESTINATION
                 </Label>
                 <Controller
                   control={control}
@@ -750,167 +705,124 @@ export function SimplifiedOffRamp({
                   render={({ field }) => (
                     <RadioGroup
                       onValueChange={field.onChange}
-                      // if no iban or no ach, set crypto as default
-                      //  the below doesn't seem to work why
                       value={
                         !ibanAccount || !achAccount ? 'crypto' : field.value
                       }
-                      className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3"
+                      className="grid grid-cols-1 sm:grid-cols-3 gap-3"
                     >
-                      <div className="relative">
+                      <label
+                        htmlFor="ach"
+                        className={cn(
+                          'relative flex flex-col items-center justify-center bg-white border-2 rounded-[12px] p-4 sm:p-6 cursor-pointer transition-all',
+                          destinationType === 'ach'
+                            ? 'border-[#1B29FF] bg-[#1B29FF]/5'
+                            : 'border-[#101010]/10 hover:bg-[#F7F7F2]/50',
+                          !achAccount && 'opacity-50 cursor-not-allowed',
+                        )}
+                      >
                         <RadioGroupItem
                           value="ach"
                           id="ach"
-                          className="peer sr-only"
+                          className="sr-only"
                           disabled={!achAccount}
                         />
-                        <Label
-                          htmlFor="ach"
-                          className={cn(
-                            'flex flex-col items-center justify-center rounded-xl border-2 p-4 sm:p-6 cursor-pointer transition-all duration-200',
-                            'hover:bg-blue-50 hover:border-blue-300',
-                            destinationType === 'ach'
-                              ? 'bg-blue-100 border-blue-500 shadow-md'
-                              : 'bg-white border-gray-200',
-                          )}
-                        >
-                          <Banknote
+                        <div className="flex-shrink-0 w-12 h-12 bg-green-50 rounded-full flex items-center justify-center mb-3">
+                          <DollarSign
                             className={cn(
-                              'mb-3 h-8 w-8 transition-colors',
+                              'h-6 w-6',
                               destinationType === 'ach'
-                                ? 'text-blue-600'
-                                : 'text-gray-400',
+                                ? 'text-green-600'
+                                : 'text-green-400',
                             )}
                           />
-                          <span
-                            className={cn(
-                              'font-medium transition-colors',
-                              destinationType === 'ach'
-                                ? 'text-blue-900'
-                                : 'text-gray-600',
-                            )}
-                          >
-                            US Bank
-                          </span>
-                          <span
-                            className={cn(
-                              'text-xs mt-1 transition-colors',
-                              destinationType === 'ach'
-                                ? 'text-blue-700'
-                                : 'text-gray-400',
-                            )}
-                          >
-                            ACH Transfer
-                          </span>
-                          {destinationType === 'ach' && (
-                            <Check className="absolute top-2 right-2 h-5 w-5 text-blue-600" />
-                          )}
-                        </Label>
-                      </div>
-                      <div className="relative">
+                        </div>
+                        <span className="font-medium text-[14px] text-[#101010]">
+                          US Bank
+                        </span>
+                        <span className="text-[11px] uppercase tracking-[0.14em] text-[#101010]/60 mt-1">
+                          ACH Transfer
+                        </span>
+                        {destinationType === 'ach' && (
+                          <Check className="absolute top-3 right-3 h-5 w-5 text-[#1B29FF]" />
+                        )}
+                      </label>
+
+                      <label
+                        htmlFor="iban"
+                        className={cn(
+                          'relative flex flex-col items-center justify-center bg-white border-2 rounded-[12px] p-4 sm:p-6 cursor-pointer transition-all',
+                          destinationType === 'iban'
+                            ? 'border-[#1B29FF] bg-[#1B29FF]/5'
+                            : 'border-[#101010]/10 hover:bg-[#F7F7F2]/50',
+                          !ibanAccount && 'opacity-50 cursor-not-allowed',
+                        )}
+                      >
                         <RadioGroupItem
                           value="iban"
                           id="iban"
-                          className="peer sr-only"
+                          className="sr-only"
                           disabled={!ibanAccount}
                         />
-                        <Label
-                          htmlFor="iban"
-                          className={cn(
-                            'flex flex-col items-center justify-center rounded-xl border-2 p-4 sm:p-6 cursor-pointer transition-all duration-200',
-                            'hover:bg-blue-50 hover:border-blue-300',
-                            destinationType === 'iban'
-                              ? 'bg-blue-100 border-blue-500 shadow-md'
-                              : 'bg-white border-gray-200',
-                          )}
-                        >
-                          <Globe
+                        <div className="flex-shrink-0 w-12 h-12 bg-blue-50 rounded-full flex items-center justify-center mb-3">
+                          <Euro
                             className={cn(
-                              'mb-3 h-8 w-8 transition-colors',
+                              'h-6 w-6',
                               destinationType === 'iban'
                                 ? 'text-blue-600'
-                                : 'text-gray-400',
+                                : 'text-blue-400',
                             )}
                           />
-                          <span
-                            className={cn(
-                              'font-medium transition-colors',
-                              destinationType === 'iban'
-                                ? 'text-blue-900'
-                                : 'text-gray-600',
-                            )}
-                          >
-                            EU
-                          </span>
-                          <span
-                            className={cn(
-                              'text-xs mt-1 transition-colors',
-                              destinationType === 'iban'
-                                ? 'text-blue-700'
-                                : 'text-gray-400',
-                            )}
-                          >
-                            IBAN/SEPA
-                          </span>
-                          {destinationType === 'iban' && (
-                            <Check className="absolute top-2 right-2 h-5 w-5 text-blue-600" />
-                          )}
-                        </Label>
-                      </div>
-                      <div className="relative">
+                        </div>
+                        <span className="font-medium text-[14px] text-[#101010]">
+                          EU Bank
+                        </span>
+                        <span className="text-[11px] uppercase tracking-[0.14em] text-[#101010]/60 mt-1">
+                          SEPA Transfer
+                        </span>
+                        {destinationType === 'iban' && (
+                          <Check className="absolute top-3 right-3 h-5 w-5 text-[#1B29FF]" />
+                        )}
+                      </label>
+
+                      <label
+                        htmlFor="crypto"
+                        className={cn(
+                          'relative flex flex-col items-center justify-center bg-white border-2 rounded-[12px] p-4 sm:p-6 cursor-pointer transition-all',
+                          destinationType === 'crypto'
+                            ? 'border-[#1B29FF] bg-[#1B29FF]/5'
+                            : 'border-[#101010]/10 hover:bg-[#F7F7F2]/50',
+                        )}
+                      >
                         <RadioGroupItem
                           value="crypto"
                           id="crypto"
-                          className="peer sr-only"
+                          className="sr-only"
                         />
-                        <Label
-                          htmlFor="crypto"
-                          className={cn(
-                            'flex flex-col items-center justify-center rounded-xl border-2 p-4 sm:p-6 cursor-pointer transition-all duration-200',
-                            'hover:bg-blue-50 hover:border-blue-300',
-                            destinationType === 'crypto'
-                              ? 'bg-blue-100 border-blue-500 shadow-md'
-                              : 'bg-white border-gray-200',
-                          )}
-                        >
+                        <div className="flex-shrink-0 w-12 h-12 bg-purple-50 rounded-full flex items-center justify-center mb-3">
                           <Wallet
                             className={cn(
-                              'mb-3 h-8 w-8 transition-colors',
+                              'h-6 w-6',
                               destinationType === 'crypto'
-                                ? 'text-blue-600'
-                                : 'text-gray-400',
+                                ? 'text-purple-600'
+                                : 'text-purple-400',
                             )}
                           />
-                          <span
-                            className={cn(
-                              'font-medium transition-colors',
-                              destinationType === 'crypto'
-                                ? 'text-blue-900'
-                                : 'text-gray-600',
-                            )}
-                          >
-                            Crypto
-                          </span>
-                          <span
-                            className={cn(
-                              'text-xs mt-1 transition-colors',
-                              destinationType === 'crypto'
-                                ? 'text-blue-700'
-                                : 'text-gray-400',
-                            )}
-                          >
-                            USDC Transfer
-                          </span>
-                          {destinationType === 'crypto' && (
-                            <Check className="absolute top-2 right-2 h-5 w-5 text-blue-600" />
-                          )}
-                        </Label>
-                      </div>
+                        </div>
+                        <span className="font-medium text-[14px] text-[#101010]">
+                          Crypto
+                        </span>
+                        <span className="text-[11px] uppercase tracking-[0.14em] text-[#101010]/60 mt-1">
+                          USDC Transfer
+                        </span>
+                        {destinationType === 'crypto' && (
+                          <Check className="absolute top-3 right-3 h-5 w-5 text-[#1B29FF]" />
+                        )}
+                      </label>
                     </RadioGroup>
                   )}
                 />
                 {errors.destinationType && (
-                  <p className="text-xs text-red-500 mt-1">
+                  <p className="text-[12px] text-red-500 mt-2">
                     {errors.destinationType.message}
                   </p>
                 )}
@@ -920,8 +832,7 @@ export function SimplifiedOffRamp({
                 type="button"
                 onClick={handleNextStep}
                 disabled={!destinationType}
-                className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white font-medium"
-                size="lg"
+                className="w-full bg-[#1B29FF] hover:bg-[#1420CC] text-white h-12 text-[14px] font-medium transition-all"
               >
                 Continue
                 <ArrowRight className="ml-2 h-4 w-4" />
@@ -929,18 +840,19 @@ export function SimplifiedOffRamp({
             </div>
           )}
 
-          {/* Step 2: Account Details */}
+          {/* Step 2: Bank Transfer Details */}
           {formStep === 2 && destinationType !== 'crypto' && (
-            <div className="space-y-6">
-              {/* Amount */}
-              <div className="space-y-2">
+            <div className="space-y-5">
+              {/* Amount Input */}
+              <div className="bg-[#F7F7F2] border border-[#101010]/10 rounded-[12px] p-4 sm:p-5">
                 <Label
                   htmlFor="amount"
-                  className="text-sm font-medium text-gray-700"
+                  className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60 mb-3 block"
                 >
-                  Amount (USDC)
+                  TRANSFER AMOUNT
                 </Label>
                 <div className="relative">
+                  <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#101010]/40" />
                   <Input
                     id="amount"
                     {...register('amount', {
@@ -955,11 +867,11 @@ export function SimplifiedOffRamp({
                       },
                     })}
                     placeholder="0.00"
-                    className="border-2 focus:border-blue-500 focus:ring-blue-500/20 pr-32"
+                    className="pl-10 text-[20px] font-serif tabular-nums h-12 border-[#101010]/10 bg-white"
                   />
                   {isLoadingBalance ? (
                     <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
-                      <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
+                      <Loader2 className="h-4 w-4 animate-spin text-[#101010]/40" />
                     </div>
                   ) : (
                     usdcBalance !== null && (
@@ -970,337 +882,333 @@ export function SimplifiedOffRamp({
                             shouldValidate: true,
                           })
                         }
-                        className="absolute inset-y-0 right-0 pr-2 flex items-center text-xs text-blue-600 hover:text-blue-800"
+                        className="absolute inset-y-0 right-0 pr-3 flex items-center text-[12px] text-[#1B29FF] hover:text-[#1420CC]"
                       >
                         Max: {parseFloat(usdcBalance).toFixed(4)}
                       </button>
                     )
                   )}
                 </div>
+                <div className="mt-3 flex justify-between text-[12px]">
+                  <span className="text-[#101010]/60">Available balance</span>
+                  <span className="font-medium tabular-nums text-[#101010]">
+                    {usdcBalance
+                      ? `${parseFloat(usdcBalance).toFixed(2)} USDC`
+                      : '—'}
+                  </span>
+                </div>
                 {errors.amount && (
-                  <p className="text-xs text-red-500 mt-1">
+                  <p className="text-[12px] text-red-500 mt-2">
                     {errors.amount.message}
                   </p>
                 )}
               </div>
-              {/* Account Holder Type */}
-              <div className="space-y-2">
-                <Label className="text-sm font-medium text-gray-700">
-                  Account Holder Type
-                </Label>
-                <Controller
-                  control={control}
-                  name="accountHolderType"
-                  render={({ field }) => (
-                    <RadioGroup
-                      onValueChange={field.onChange}
-                      value={field.value}
-                      className="flex flex-col sm:flex-row gap-3 sm:gap-6"
-                    >
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="individual" id="individual" />
-                        <Label htmlFor="individual">Individual</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="business" id="business" />
-                        <Label htmlFor="business">Business</Label>
-                      </div>
-                    </RadioGroup>
-                  )}
-                />
-              </div>
 
-              {/* Account Holder Name */}
-              {accountHolderType === 'individual' && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label
-                      htmlFor="accountHolderFirstName"
-                      className="text-sm font-medium text-gray-700"
-                    >
-                      First Name
-                    </Label>
-                    <Input
-                      id="accountHolderFirstName"
-                      {...register('accountHolderFirstName', {
-                        required: 'First name is required',
-                      })}
-                      placeholder="John"
-                      className="border-2 focus:border-blue-500 focus:ring-blue-500/20"
-                    />
-                    {errors.accountHolderFirstName && (
-                      <p className="text-xs text-red-500 mt-1">
-                        {errors.accountHolderFirstName.message}
-                      </p>
+              {/* Account Details Card */}
+              <div className="bg-white border border-[#101010]/10 rounded-[12px] p-4 sm:p-5 space-y-4">
+                <p className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60">
+                  ACCOUNT DETAILS
+                </p>
+
+                {/* Account Holder Type */}
+                <div>
+                  <Label className="text-[13px] font-medium text-[#101010] mb-2 block">
+                    Account Holder Type
+                  </Label>
+                  <Controller
+                    control={control}
+                    name="accountHolderType"
+                    render={({ field }) => (
+                      <RadioGroup
+                        onValueChange={field.onChange}
+                        value={field.value}
+                        className="flex gap-3"
+                      >
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <RadioGroupItem value="individual" id="individual" />
+                          <span className="text-[13px] text-[#101010]">
+                            Individual
+                          </span>
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <RadioGroupItem value="business" id="business" />
+                          <span className="text-[13px] text-[#101010]">
+                            Business
+                          </span>
+                        </label>
+                      </RadioGroup>
                     )}
-                  </div>
-                  <div className="space-y-2">
-                    <Label
-                      htmlFor="accountHolderLastName"
-                      className="text-sm font-medium text-gray-700"
-                    >
-                      Last Name
-                    </Label>
-                    <Input
-                      id="accountHolderLastName"
-                      {...register('accountHolderLastName', {
-                        required: 'Last name is required',
-                      })}
-                      placeholder="Doe"
-                      className="border-2 focus:border-blue-500 focus:ring-blue-500/20"
-                    />
-                    {errors.accountHolderLastName && (
-                      <p className="text-xs text-red-500 mt-1">
-                        {errors.accountHolderLastName.message}
-                      </p>
-                    )}
-                  </div>
+                  />
                 </div>
-              )}
 
-              {accountHolderType === 'business' && (
-                <div className="space-y-2">
+                {/* Name Fields */}
+                {accountHolderType === 'individual' && (
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label
+                        htmlFor="accountHolderFirstName"
+                        className="text-[13px] font-medium text-[#101010] mb-1 block"
+                      >
+                        First Name
+                      </Label>
+                      <Input
+                        id="accountHolderFirstName"
+                        {...register('accountHolderFirstName', {
+                          required: 'First name is required',
+                        })}
+                        placeholder="John"
+                        className="h-10 border-[#101010]/10"
+                      />
+                      {errors.accountHolderFirstName && (
+                        <p className="text-[11px] text-red-500 mt-1">
+                          {errors.accountHolderFirstName.message}
+                        </p>
+                      )}
+                    </div>
+                    <div>
+                      <Label
+                        htmlFor="accountHolderLastName"
+                        className="text-[13px] font-medium text-[#101010] mb-1 block"
+                      >
+                        Last Name
+                      </Label>
+                      <Input
+                        id="accountHolderLastName"
+                        {...register('accountHolderLastName', {
+                          required: 'Last name is required',
+                        })}
+                        placeholder="Doe"
+                        className="h-10 border-[#101010]/10"
+                      />
+                      {errors.accountHolderLastName && (
+                        <p className="text-[11px] text-red-500 mt-1">
+                          {errors.accountHolderLastName.message}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {accountHolderType === 'business' && (
+                  <div>
+                    <Label
+                      htmlFor="accountHolderBusinessName"
+                      className="text-[13px] font-medium text-[#101010] mb-1 block"
+                    >
+                      Business Name
+                    </Label>
+                    <Input
+                      id="accountHolderBusinessName"
+                      {...register('accountHolderBusinessName', {
+                        required: 'Business name is required',
+                      })}
+                      placeholder="Acme Corp"
+                      className="h-10 border-[#101010]/10"
+                    />
+                    {errors.accountHolderBusinessName && (
+                      <p className="text-[11px] text-red-500 mt-1">
+                        {errors.accountHolderBusinessName.message}
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {/* Bank Name */}
+                <div>
                   <Label
-                    htmlFor="accountHolderBusinessName"
-                    className="text-sm font-medium text-gray-700"
+                    htmlFor="bankName"
+                    className="text-[13px] font-medium text-[#101010] mb-1 block"
                   >
-                    Business Name
+                    Bank Name
                   </Label>
                   <Input
-                    id="accountHolderBusinessName"
-                    {...register('accountHolderBusinessName', {
-                      required: 'Business name is required',
+                    id="bankName"
+                    {...register('bankName', {
+                      required: 'Bank name is required',
                     })}
-                    placeholder="Acme Corp"
-                    className="border-2 focus:border-blue-500 focus:ring-blue-500/20"
+                    placeholder="Chase Bank"
+                    className="h-10 border-[#101010]/10"
                   />
-                  {errors.accountHolderBusinessName && (
-                    <p className="text-xs text-red-500 mt-1">
-                      {errors.accountHolderBusinessName.message}
+                  {errors.bankName && (
+                    <p className="text-[11px] text-red-500 mt-1">
+                      {errors.bankName.message}
                     </p>
                   )}
                 </div>
-              )}
 
-              {/* Bank Name */}
-              <div className="space-y-2">
-                <Label
-                  htmlFor="bankName"
-                  className="text-sm font-medium text-gray-700"
-                >
-                  Bank Name
-                </Label>
-                <Input
-                  id="bankName"
-                  {...register('bankName', {
-                    required: 'Bank name is required',
-                  })}
-                  placeholder="Capital One"
-                  required
-                  className="border-2 focus:border-blue-500 focus:ring-blue-500/20"
-                />
-                {errors.bankName && (
-                  <p className="text-xs text-red-500 mt-1">
-                    {errors.bankName.message}
-                  </p>
+                {/* Account Numbers */}
+                {destinationType === 'ach' && (
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label
+                        htmlFor="accountNumber"
+                        className="text-[13px] font-medium text-[#101010] mb-1 block"
+                      >
+                        Account Number
+                      </Label>
+                      <Input
+                        id="accountNumber"
+                        {...register('accountNumber', {
+                          required: 'Account number is required',
+                        })}
+                        placeholder="123456789"
+                        className="h-10 border-[#101010]/10"
+                      />
+                      {errors.accountNumber && (
+                        <p className="text-[11px] text-red-500 mt-1">
+                          {errors.accountNumber.message}
+                        </p>
+                      )}
+                    </div>
+                    <div>
+                      <Label
+                        htmlFor="routingNumber"
+                        className="text-[13px] font-medium text-[#101010] mb-1 block"
+                      >
+                        Routing Number
+                      </Label>
+                      <Input
+                        id="routingNumber"
+                        {...register('routingNumber', {
+                          required: 'Routing number is required',
+                        })}
+                        placeholder="021000021"
+                        className="h-10 border-[#101010]/10"
+                      />
+                      {errors.routingNumber && (
+                        <p className="text-[11px] text-red-500 mt-1">
+                          {errors.routingNumber.message}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {destinationType === 'iban' && (
+                  <div className="space-y-3">
+                    <div>
+                      <Label
+                        htmlFor="iban"
+                        className="text-[13px] font-medium text-[#101010] mb-1 block"
+                      >
+                        IBAN
+                      </Label>
+                      <Input
+                        id="iban"
+                        {...register('iban', { required: 'IBAN is required' })}
+                        placeholder="DE89370400440532013000"
+                        className="h-10 border-[#101010]/10 font-mono text-[12px]"
+                      />
+                      {errors.iban && (
+                        <p className="text-[11px] text-red-500 mt-1">
+                          {errors.iban.message}
+                        </p>
+                      )}
+                    </div>
+                    <div>
+                      <Label
+                        htmlFor="bic"
+                        className="text-[13px] font-medium text-[#101010] mb-1 block"
+                      >
+                        BIC/SWIFT
+                      </Label>
+                      <Input
+                        id="bic"
+                        {...register('bic', {
+                          required: 'BIC/SWIFT is required',
+                        })}
+                        placeholder="COBADEFFXXX"
+                        className="h-10 border-[#101010]/10 font-mono text-[12px]"
+                      />
+                      {errors.bic && (
+                        <p className="text-[11px] text-red-500 mt-1">
+                          {errors.bic.message}
+                        </p>
+                      )}
+                    </div>
+                  </div>
                 )}
               </div>
 
-              {/* Account Details */}
-              {destinationType === 'ach' && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label
-                      htmlFor="accountNumber"
-                      className="text-sm font-medium text-gray-700"
-                    >
-                      Account Number
-                    </Label>
-                    <Input
-                      id="accountNumber"
-                      {...register('accountNumber', {
-                        required: 'Account number is required',
-                      })}
-                      placeholder="123456789"
-                      className="border-2 focus:border-blue-500 focus:ring-blue-500/20"
-                    />
-                    {errors.accountNumber && (
-                      <p className="text-xs text-red-500 mt-1">
-                        {errors.accountNumber.message}
-                      </p>
-                    )}
-                  </div>
-                  <div className="space-y-2">
-                    <Label
-                      htmlFor="routingNumber"
-                      className="text-sm font-medium text-gray-700"
-                    >
-                      Routing Number
-                    </Label>
-                    <Input
-                      id="routingNumber"
-                      {...register('routingNumber', {
-                        required: 'Routing number is required',
-                      })}
-                      placeholder="021000021"
-                      className="border-2 focus:border-blue-500 focus:ring-blue-500/20"
-                    />
-                    {errors.routingNumber && (
-                      <p className="text-xs text-red-500 mt-1">
-                        {errors.routingNumber.message}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {destinationType === 'iban' && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label
-                      htmlFor="iban"
-                      className="text-sm font-medium text-gray-700"
-                    >
-                      IBAN
-                    </Label>
-                    <Input
-                      id="iban"
-                      {...register('iban', { required: 'IBAN is required' })}
-                      placeholder="DE89370400440532013000"
-                      className="border-2 focus:border-blue-500 focus:ring-blue-500/20"
-                    />
-                    {errors.iban && (
-                      <p className="text-xs text-red-500 mt-1">
-                        {errors.iban.message}
-                      </p>
-                    )}
-                  </div>
-                  <div className="space-y-2">
-                    <Label
-                      htmlFor="bic"
-                      className="text-sm font-medium text-gray-700"
-                    >
-                      BIC/SWIFT
-                    </Label>
-                    <Input
-                      id="bic"
-                      {...register('bic', {
-                        required: 'BIC/SWIFT is required',
-                      })}
-                      placeholder="COBADEFFXXX"
-                      className="border-2 focus:border-blue-500 focus:ring-blue-500/20"
-                    />
-                    {errors.bic && (
-                      <p className="text-xs text-red-500 mt-1">
-                        {errors.bic.message}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              )}
-
               {/* Address Details */}
-              <div className="space-y-2 pt-4 border-t">
-                <Label className="text-sm font-medium text-gray-700">
-                  Beneficiary Address
-                </Label>
-                {/* Street line 1 */}
+              <div className="bg-white border border-[#101010]/10 rounded-[12px] p-4 sm:p-5 space-y-4">
+                <p className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60">
+                  BENEFICIARY ADDRESS
+                </p>
+
                 <Input
                   id="streetLine1"
-                  placeholder="123 Main St"
+                  placeholder="Street address"
                   {...register('streetLine1', {
                     required: 'Street address is required',
                   })}
-                  className="border-2 focus:border-blue-500 focus:ring-blue-500/20"
+                  className="h-10 border-[#101010]/10"
                 />
                 {errors.streetLine1 && (
-                  <p className="text-xs text-red-500 mt-1">
+                  <p className="text-[11px] text-red-500 -mt-2">
                     {errors.streetLine1.message}
                   </p>
                 )}
 
-                {/* Street line 2 (optional) */}
                 <Input
                   id="streetLine2"
                   placeholder="Apartment, suite, etc. (optional)"
                   {...register('streetLine2')}
-                  className="border-2 focus:border-blue-500 focus:ring-blue-500/20 mt-2"
+                  className="h-10 border-[#101010]/10"
                 />
 
-                {/* City & Postal in grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                  <div className="space-y-1">
-                    <Label
-                      htmlFor="city"
-                      className="text-sm font-medium text-gray-700"
-                    >
-                      City
-                    </Label>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
                     <Input
                       id="city"
-                      placeholder="New York"
+                      placeholder="City"
                       {...register('city', { required: 'City is required' })}
-                      className="border-2 focus:border-blue-500 focus:ring-blue-500/20"
+                      className="h-10 border-[#101010]/10"
                     />
                     {errors.city && (
-                      <p className="text-xs text-red-500 mt-1">
+                      <p className="text-[11px] text-red-500 mt-1">
                         {errors.city.message}
                       </p>
                     )}
                   </div>
-                  <div className="space-y-1">
-                    <Label
-                      htmlFor="postalCode"
-                      className="text-sm font-medium text-gray-700"
-                    >
-                      Postal / ZIP
-                    </Label>
+                  <div>
                     <Input
                       id="postalCode"
-                      placeholder="10001"
+                      placeholder="ZIP / Postal Code"
                       {...register('postalCode', {
                         required: 'Postal code is required',
                       })}
-                      className="border-2 focus:border-blue-500 focus:ring-blue-500/20"
+                      className="h-10 border-[#101010]/10"
                     />
                     {errors.postalCode && (
-                      <p className="text-xs text-red-500 mt-1">
+                      <p className="text-[11px] text-red-500 mt-1">
                         {errors.postalCode.message}
                       </p>
                     )}
                   </div>
                 </div>
 
-                {/* Country */}
-                <div className="space-y-1 mt-4">
-                  <Label
-                    htmlFor="country"
-                    className="text-sm font-medium text-gray-700"
-                  >
-                    Country
-                  </Label>
-                  <Controller
-                    control={control}
-                    name="country"
-                    rules={{ required: 'Country is required' }}
-                    render={({ field }) => (
-                      <Combobox
-                        options={COUNTRIES}
-                        value={field.value}
-                        onChange={field.onChange}
-                        placeholder="Select country..."
-                        searchPlaceholder="Search countries..."
-                        emptyPlaceholder="No country found."
-                        triggerClassName="border-2 focus:border-blue-500 focus:ring-blue-500/20"
-                      />
-                    )}
-                  />
-                  {errors.country && (
-                    <p className="text-xs text-red-500 mt-1">
-                      {errors.country.message}
-                    </p>
+                <Controller
+                  control={control}
+                  name="country"
+                  rules={{ required: 'Country is required' }}
+                  render={({ field }) => (
+                    <Combobox
+                      options={COUNTRIES}
+                      value={field.value}
+                      onChange={field.onChange}
+                      placeholder="Select country..."
+                      searchPlaceholder="Search countries..."
+                      emptyPlaceholder="No country found."
+                      triggerClassName="h-10 border-[#101010]/10"
+                    />
                   )}
-                </div>
+                />
+                {errors.country && (
+                  <p className="text-[11px] text-red-500 -mt-2">
+                    {errors.country.message}
+                  </p>
+                )}
               </div>
 
               <div className="flex gap-3">
@@ -1308,7 +1216,7 @@ export function SimplifiedOffRamp({
                   type="button"
                   onClick={handlePreviousStep}
                   variant="outline"
-                  className="flex-1"
+                  className="flex-1 h-11 border-[#101010]/10 hover:bg-[#F7F7F2]/50"
                 >
                   <ArrowLeft className="mr-2 h-4 w-4" />
                   Back
@@ -1316,7 +1224,7 @@ export function SimplifiedOffRamp({
                 <Button
                   type="button"
                   onClick={handleNextStep}
-                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+                  className="flex-1 bg-[#1B29FF] hover:bg-[#1420CC] text-white h-11 text-[14px] font-medium"
                 >
                   Continue
                   <ArrowRight className="ml-2 h-4 w-4" />
@@ -1325,17 +1233,18 @@ export function SimplifiedOffRamp({
             </div>
           )}
 
-          {/* Step 2: Crypto Transfer Details */}
+          {/* Step 2: Crypto Transfer */}
           {formStep === 2 && destinationType === 'crypto' && (
-            <div className="space-y-6">
-              <div className="space-y-2">
+            <div className="space-y-5">
+              <div className="bg-[#F7F7F2] border border-[#101010]/10 rounded-[12px] p-4 sm:p-5">
                 <Label
                   htmlFor="amount"
-                  className="text-sm font-medium text-gray-700"
+                  className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60 mb-3 block"
                 >
-                  Amount (USDC)
+                  TRANSFER AMOUNT
                 </Label>
                 <div className="relative">
+                  <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#101010]/40" />
                   <Input
                     id="amount"
                     {...register('amount', {
@@ -1350,41 +1259,35 @@ export function SimplifiedOffRamp({
                       },
                     })}
                     placeholder="0.00"
-                    className="border-2 focus:border-blue-500 focus:ring-blue-500/20 pr-32"
+                    className="pl-10 text-[20px] font-serif tabular-nums h-12 border-[#101010]/10 bg-white"
                   />
-                  {isLoadingBalance ? (
-                    <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
-                      <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
-                    </div>
-                  ) : (
-                    usdcBalance !== null && (
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setValue('amount', usdcBalance, {
-                            shouldValidate: true,
-                          })
-                        }
-                        className="absolute inset-y-0 right-0 pr-2 flex items-center text-xs text-blue-600 hover:text-blue-800"
-                      >
-                        Max: {parseFloat(usdcBalance).toFixed(4)}
-                      </button>
-                    )
+                  {usdcBalance !== null && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setValue('amount', usdcBalance, {
+                          shouldValidate: true,
+                        })
+                      }
+                      className="absolute inset-y-0 right-0 pr-3 flex items-center text-[12px] text-[#1B29FF] hover:text-[#1420CC]"
+                    >
+                      Max: {parseFloat(usdcBalance).toFixed(4)}
+                    </button>
                   )}
                 </div>
                 {errors.amount && (
-                  <p className="text-xs text-red-500 mt-1">
+                  <p className="text-[12px] text-red-500 mt-2">
                     {errors.amount.message}
                   </p>
                 )}
               </div>
 
-              <div className="space-y-2">
+              <div className="bg-white border border-[#101010]/10 rounded-[12px] p-4 sm:p-5">
                 <Label
                   htmlFor="cryptoAddress"
-                  className="text-sm font-medium text-gray-700"
+                  className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60 mb-3 block"
                 >
-                  Recipient Address (Base Network)
+                  RECIPIENT ADDRESS (BASE NETWORK)
                 </Label>
                 <Input
                   id="cryptoAddress"
@@ -1395,10 +1298,10 @@ export function SimplifiedOffRamp({
                       'Invalid wallet address format.',
                   })}
                   placeholder="0x..."
-                  className="border-2 focus:border-blue-500 focus:ring-blue-500/20"
+                  className="h-12 border-[#101010]/10 font-mono text-[13px]"
                 />
                 {errors.cryptoAddress && (
-                  <p className="text-xs text-red-500 mt-1">
+                  <p className="text-[12px] text-red-500 mt-2">
                     {errors.cryptoAddress.message}
                   </p>
                 )}
@@ -1409,7 +1312,7 @@ export function SimplifiedOffRamp({
                   type="button"
                   onClick={handlePreviousStep}
                   variant="outline"
-                  className="flex-1"
+                  className="flex-1 h-11 border-[#101010]/10 hover:bg-[#F7F7F2]/50"
                 >
                   <ArrowLeft className="mr-2 h-4 w-4" />
                   Back
@@ -1417,7 +1320,7 @@ export function SimplifiedOffRamp({
                 <Button
                   type="button"
                   onClick={handleNextStep}
-                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+                  className="flex-1 bg-[#1B29FF] hover:bg-[#1420CC] text-white h-11 text-[14px] font-medium"
                 >
                   Continue
                   <ArrowRight className="ml-2 h-4 w-4" />
@@ -1426,165 +1329,85 @@ export function SimplifiedOffRamp({
             </div>
           )}
 
-          {/* Step 3: Confirmation */}
+          {/* Step 3: Review */}
           {formStep === 3 && (
-            <div className="space-y-6">
-              <div className="space-y-4">
-                <h3 className="text-lg font-medium text-gray-900">
-                  Review Transfer Details
-                </h3>
-
-                <div className="bg-gray-50 rounded-lg p-4 space-y-3">
-                  <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">
-                      Transfer Type:
-                    </span>
-                    <span className="text-sm font-medium">
+            <div className="space-y-5">
+              <div className="bg-[#F7F7F2] border border-[#101010]/10 rounded-[12px] p-5">
+                <p className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60 mb-4">
+                  TRANSFER SUMMARY
+                </p>
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-[13px] text-[#101010]/60">Type</span>
+                    <span className="text-[13px] font-medium text-[#101010]">
                       {destinationType === 'ach'
                         ? 'ACH Transfer'
                         : destinationType === 'iban'
-                          ? 'IBAN Transfer'
+                          ? 'SEPA Transfer'
                           : 'Crypto Transfer'}
                     </span>
                   </div>
-
-                  <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">Amount:</span>
-                    <span className="text-sm font-medium">
+                  <div className="flex justify-between items-center">
+                    <span className="text-[13px] text-[#101010]/60">
+                      Amount
+                    </span>
+                    <span className="font-serif text-[18px] tabular-nums text-[#101010]">
                       {watch('amount')} USDC
                     </span>
                   </div>
 
-                  {destinationType === 'ach' && (
+                  {destinationType !== 'crypto' && (
                     <>
-                      <div className="flex justify-between">
-                        <span className="text-sm text-gray-600">
-                          Account Holder:
+                      <div className="border-t border-[#101010]/10 pt-3 flex justify-between">
+                        <span className="text-[13px] text-[#101010]/60">
+                          Recipient
                         </span>
-                        <span className="text-sm font-medium">
+                        <span className="text-[13px] text-[#101010]">
                           {accountHolderType === 'individual'
                             ? `${watch('accountHolderFirstName')} ${watch('accountHolderLastName')}`
                             : watch('accountHolderBusinessName')}
                         </span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-sm text-gray-600">
-                          Account Number:
+                        <span className="text-[13px] text-[#101010]/60">
+                          Bank
                         </span>
-                        <span className="text-sm font-medium font-mono">
-                          ****{watch('accountNumber')?.slice(-4)}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-sm text-gray-600">
-                          Routing Number:
-                        </span>
-                        <span className="text-sm font-medium font-mono">
-                          {watch('routingNumber')}
+                        <span className="text-[13px] text-[#101010]">
+                          {watch('bankName')}
                         </span>
                       </div>
-                    </>
-                  )}
-
-                  {destinationType === 'iban' && (
-                    <>
-                      <div className="flex justify-between">
-                        <span className="text-sm text-gray-600">
-                          Account Holder:
-                        </span>
-                        <span className="text-sm font-medium">
-                          {accountHolderType === 'individual'
-                            ? `${watch('accountHolderFirstName')} ${watch('accountHolderLastName')}`
-                            : watch('accountHolderBusinessName')}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-sm text-gray-600">IBAN:</span>
-                        <span className="text-sm font-medium font-mono">
-                          {watch('iban')}
-                        </span>
-                      </div>
-                      {watch('bic') && (
-                        <div className="flex justify-between">
-                          <span className="text-sm text-gray-600">
-                            BIC/SWIFT:
-                          </span>
-                          <span className="text-sm font-medium font-mono">
-                            {watch('bic')}
-                          </span>
-                        </div>
-                      )}
                     </>
                   )}
 
                   {destinationType === 'crypto' && (
-                    <>
-                      <div className="flex justify-between">
-                        <span className="text-sm text-gray-600">
-                          Wallet Address:
-                        </span>
-                        <span className="text-sm font-medium font-mono">
-                          {watch('cryptoAddress')?.slice(0, 6)}...
-                          {watch('cryptoAddress')?.slice(-4)}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-sm text-gray-600">Network:</span>
-                        <span className="text-sm font-medium">Base</span>
-                      </div>
-                    </>
-                  )}
-
-                  {destinationType !== 'crypto' && (
-                    <div className="flex justify-between">
-                      <span className="text-sm text-gray-600">Address:</span>
-                      <span className="text-sm font-medium">
-                        {watch('streetLine1')}, {watch('city')},{' '}
-                        {watch('postalCode')},{' '}
-                        {COUNTRIES.find((c) => c.value === watch('country'))
-                          ?.label || watch('country')}
+                    <div className="border-t border-[#101010]/10 pt-3 flex justify-between">
+                      <span className="text-[13px] text-[#101010]/60">
+                        Wallet
+                      </span>
+                      <span className="text-[12px] font-mono text-[#101010]">
+                        {watch('cryptoAddress')?.slice(0, 6)}...
+                        {watch('cryptoAddress')?.slice(-4)}
                       </span>
                     </div>
                   )}
                 </div>
-
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <div className="flex items-start">
-                    <div className="flex-shrink-0">
-                      <svg
-                        className="h-5 w-5 text-blue-400"
-                        viewBox="0 0 20 20"
-                        fill="currentColor"
-                      >
-                        <path
-                          fillRule="evenodd"
-                          d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
-                          clipRule="evenodd"
-                        />
-                      </svg>
-                    </div>
-                    <div className="ml-3">
-                      <h3 className="text-sm font-medium text-blue-800">
-                        Transfer Information
-                      </h3>
-                      <div className="mt-2 text-sm text-blue-700">
-                        <p>
-                          {destinationType === 'crypto'
-                            ? 'Your USDC will be sent directly to the specified wallet address. This transaction is irreversible.'
-                            : `Your funds will be transferred to the specified ${destinationType.toUpperCase()} account. Processing time is typically 1-3 business days.`}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
               </div>
+
+              <Alert className="bg-[#FFF8E6] border-[#FFA500]/20">
+                <AlertCircle className="h-4 w-4 text-[#FFA500]" />
+                <AlertDescription className="text-[12px] text-[#101010]/70">
+                  {destinationType === 'crypto'
+                    ? 'Crypto transfers are irreversible. Please verify the address carefully.'
+                    : 'Bank transfers typically process within 1-3 business days.'}
+                </AlertDescription>
+              </Alert>
 
               <div className="flex gap-3">
                 <Button
                   type="button"
                   onClick={handlePreviousStep}
                   variant="outline"
-                  className="flex-1"
+                  className="flex-1 h-11 border-[#101010]/10 hover:bg-[#F7F7F2]/50"
                 >
                   <ArrowLeft className="mr-2 h-4 w-4" />
                   Back
@@ -1592,32 +1415,36 @@ export function SimplifiedOffRamp({
                 <Button
                   type="submit"
                   disabled={createTransferMutation.isPending}
-                  className="flex-1 h-12 bg-blue-600 hover:bg-blue-700 text-white font-medium"
-                  size="lg"
+                  className="flex-1 bg-[#1B29FF] hover:bg-[#1420CC] text-white h-12 text-[14px] font-medium"
                 >
                   {createTransferMutation.isPending ? (
                     <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />{' '}
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       Processing...
                     </>
                   ) : (
-                    'Complete Transfer'
+                    <>
+                      Complete Transfer
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </>
                   )}
-                  <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </div>
             </div>
           )}
 
-          {/* Error display for all steps */}
+          {/* Error Display */}
           {error && (
-            <Alert variant="destructive" className="mt-4">
-              <AlertTitle>Error</AlertTitle>
-              <AlertDescription>{error}</AlertDescription>
+            <Alert className="bg-red-50 border-red-200">
+              <AlertCircle className="h-4 w-4 text-red-600" />
+              <AlertTitle className="text-red-900">Error</AlertTitle>
+              <AlertDescription className="text-red-700">
+                {error}
+              </AlertDescription>
             </Alert>
           )}
         </form>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
