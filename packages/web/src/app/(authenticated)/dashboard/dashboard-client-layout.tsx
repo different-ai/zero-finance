@@ -11,6 +11,7 @@ import {
 import { usePhoneCollection } from '@/hooks/use-phone-collection';
 import { useAutoSafeCreation } from '@/hooks/use-auto-safe-creation';
 import { InviteHandler } from '@/components/auth/invite-handler';
+import { EnsureEmbeddedWallet } from '@/components/auth/ensure-embedded-wallet';
 
 const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
@@ -69,6 +70,7 @@ export default function DashboardClientLayout({
 
   return (
     <>
+      <EnsureEmbeddedWallet />
       <InviteHandler />
       <div className="flex h-screen bg-[#F7F7F2]">
         {/* Mobile sidebar - shown only when mobileMenuOpen is true */}
