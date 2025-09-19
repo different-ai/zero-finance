@@ -150,11 +150,13 @@ export type NewUserRequest = typeof userRequestsTable.$inferInsert;
 // --- IMPORTED FROM BANK ---
 
 // Users table - Storing basic user info, identified by Privy DID
-export const users = pgTable('users', {
-  privyDid: text('privy_did').primaryKey(), // Privy Decentralized ID
-  createdAt: timestamp('created_at', { withTimezone: true })
-    .defaultNow()
-    .notNull(),
+export const users = pgTable(
+  'users',
+  {
+    privyDid: text('privy_did').primaryKey(), // Privy Decentralized ID
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .defaultNow()
+      .notNull(),
   // User identity fields
   firstName: text('first_name'),
   lastName: text('last_name'),
@@ -190,7 +192,14 @@ export const users = pgTable('users', {
     .notNull(),
   // Invite code used for contractor onboarding
   contractorInviteCode: text('contractor_invite_code'),
-});
+    primaryWorkspaceId: uuid('primary_workspace_id'),
+  },
+  (table) => ({
+    primaryWorkspaceIdx: index('users_primary_workspace_idx').on(
+      table.primaryWorkspaceId,
+    ),
+  }),
+);
 
 // UserSafes table - Linking users to their various Safe addresses
 export const userSafes = pgTable(
@@ -499,21 +508,6 @@ export const onrampTransfers = pgTable(
 );
 
 // --- RELATIONS ---
-
-// Define relations for bank tables
-export const usersRelations = relations(users, ({ many }) => ({
-  safes: many(userSafes),
-  fundingSources: many(userFundingSources),
-  destinationBankAccounts: many(userDestinationBankAccounts), // Added relation
-  offrampTransfers: many(offrampTransfers), // Added relation
-  onrampTransfers: many(onrampTransfers), // Added relation
-  allocationStrategies: many(allocationStrategies), // Added relation for strategies
-  actionLedgerEntries: many(actionLedger), // Added relation for approved actions
-  inboxCards: many(inboxCards), // Added relation for inbox cards
-  cardActions: many(cardActions), // Added relation for card actions
-  chats: many(chats), // Relation from users to their chats
-  classificationSettings: many(userClassificationSettings), // Added relation for classification settings
-}));
 
 export const userSafesRelations = relations(userSafes, ({ one, many }) => ({
   user: one(users, {
@@ -1378,6 +1372,25 @@ export const workspaceMembersRelations = relations(
     }),
   }),
 );
+
+// Define relations for users once workspaces are declared
+export const usersRelations = relations(users, ({ one, many }) => ({
+  primaryWorkspace: one(workspaces, {
+    fields: [users.primaryWorkspaceId],
+    references: [workspaces.id],
+  }),
+  safes: many(userSafes),
+  fundingSources: many(userFundingSources),
+  destinationBankAccounts: many(userDestinationBankAccounts),
+  offrampTransfers: many(offrampTransfers),
+  onrampTransfers: many(onrampTransfers),
+  allocationStrategies: many(allocationStrategies),
+  actionLedgerEntries: many(actionLedger),
+  inboxCards: many(inboxCards),
+  cardActions: many(cardActions),
+  chats: many(chats),
+  classificationSettings: many(userClassificationSettings),
+}));
 
 // Type inference for workspace tables
 export type Workspace = typeof workspaces.$inferSelect;
