@@ -33,7 +33,7 @@ export const DEMO_CONFIG = {
   LEGACY_INVOICE_AMOUNT: 2890, // Assuming this is still used for an initial outstanding amount
 }
 
-export type InboxItemType =
+export type WorkspaceItemType =
   | "payment_received"
   | "invoice_sent"
   | "invoice_sent_reminder_due"
@@ -49,54 +49,54 @@ export type InboxItemType =
   | "tax_transfer_confirmation"
   | "generic_task"
 
-export type InboxItemStatus = "pending" | "approved" | "rejected" | "done" | "history" | "snoozed" | "error"
-export type InboxItemDirection = "inbound" | "outbound"
+export type WorkspaceItemStatus = "pending" | "approved" | "rejected" | "done" | "history" | "snoozed" | "error"
+export type WorkspaceItemDirection = "inbound" | "outbound"
 
-export interface InboxItemAction {
+export interface WorkspaceItemAction {
   label: string
   variant?: "default" | "destructive" | "outline" | "secondary" | "ghost" | "link"
   onClick?: () => void
   icon?: React.ElementType
 }
-export interface InboxItemSource {
+export interface WorkspaceItemSource {
   name: string
   details?: string
   icon?: React.ElementType
 }
-export interface InboxItemChainOfThoughtStep {
+export interface WorkspaceItemChainOfThoughtStep {
   id: string
   text: string
   icon?: React.ElementType
 }
-export interface InboxItemImpact {
+export interface WorkspaceItemImpact {
   currentBalance?: number
   postActionBalance?: number
   details?: string[]
 }
-export interface InboxItemLogInfo {
+export interface WorkspaceItemLogInfo {
   id: string
   timestamp: string
   confidence?: number
 }
 
-export interface InboxItemData {
+export interface WorkspaceItemData {
   id: string
-  type: InboxItemType
-  direction: InboxItemDirection
+  type: WorkspaceItemType
+  direction: WorkspaceItemDirection
   title: string
   description: string
   timestamp?: string
-  status: InboxItemStatus
+  status: WorkspaceItemStatus
   itemSpecificStatus?: string
   icon: React.ElementType
   borderColorClass: string
   confidence?: number
-  source?: InboxItemSource
-  actions: InboxItemAction[]
+  source?: WorkspaceItemSource
+  actions: WorkspaceItemAction[]
   aiSuggestion?: { title: string; description: string; applyActionLabel: string }
-  chainOfThought?: InboxItemChainOfThoughtStep[]
-  impact?: InboxItemImpact
-  logInfo?: InboxItemLogInfo
+  chainOfThought?: WorkspaceItemChainOfThoughtStep[]
+  impact?: WorkspaceItemImpact
+  logInfo?: WorkspaceItemLogInfo
   amount?: number
   currencySymbol?: string
   client?: string
@@ -105,6 +105,8 @@ export interface InboxItemData {
   visible: boolean
   lastAction?: string
 }
+
+export type InboxItemData = WorkspaceItemData;
 
 export interface ActivityItem {
   id: string
@@ -129,9 +131,10 @@ export type DemoScene = {
   totalOutstanding?: number | ((prev: DemoScene) => number)
   totalPayable?: number | ((prev: DemoScene) => number)
   nextTaxDue?: string
-  inboxItems: InboxItemData[] | ((prevItems: InboxItemData[]) => InboxItemData[])
-  highlightedInboxItemId?: string
-  selectedInboxItem?: InboxItemData | null | ((allItems: InboxItemData[]) => InboxItemData | null)
+  workspaceItems: WorkspaceItemData[] | ((prevItems: WorkspaceItemData[]) => WorkspaceItemData[])
+  highlightedWorkspaceItemId?: string
+  selectedWorkspaceItem?: WorkspaceItemData | null | ((allItems: WorkspaceItemData[]) => WorkspaceItemData | null)
+  selectedInboxItem?: WorkspaceItemData | null | ((allItems: WorkspaceItemData[]) => WorkspaceItemData | null)
   showActionDetailsSidebar?: boolean
   showInitialSetupGlimpse?: boolean
   // Removed gmailVisible and gmailView as they are no longer used in the main demo flow
@@ -140,7 +143,7 @@ export type DemoScene = {
   uiFlashMessage?: string | null
   showIntro: boolean // For initial talking head or black screen if needed
   showOutro: boolean
-  currentRoute: "/" | "/dashboard" | "/dashboard/ai-inbox" | "/gmail"
+  currentRoute: "/" | "/dashboard"
   fastForwarding?: boolean
   activityFeed?: ActivityItem[] | ((prevFeed: ActivityItem[]) => ActivityItem[])
   showActivityFeed?: boolean
@@ -150,12 +153,13 @@ export type DemoScene = {
 // separate from DemoScene prevents function unions from leaking into places
 // that expect concrete data (and fixes linter complaints).
 type SceneInternalState = {
-  selectedInboxItem?: InboxItemData | null
+  selectedWorkspaceItem?: WorkspaceItemData | null
+  selectedInboxItem?: WorkspaceItemData | null
   showActionDetailsSidebar?: boolean
   uiFlashMessage?: string | null
 }
 
-const INCOMING_UTILITY_BILL_INITIAL: InboxItemData = {
+const INCOMING_UTILITY_BILL_INITIAL: WorkspaceItemData = {
   id: "bill-pge-dec24",
   type: "invoice_received_due_soon",
   direction: "inbound",
@@ -186,7 +190,7 @@ const INCOMING_UTILITY_BILL_INITIAL: InboxItemData = {
   ],
 }
 
-const EXISTING_UNPAID_INVOICE_NEWCLIENT_INITIAL: InboxItemData = {
+const EXISTING_UNPAID_INVOICE_NEWCLIENT_INITIAL: WorkspaceItemData = {
   id: DEMO_CONFIG.INVOICE_ID_PAID,
   type: "invoice_sent",
   direction: "outbound",
@@ -205,7 +209,7 @@ const EXISTING_UNPAID_INVOICE_NEWCLIENT_INITIAL: InboxItemData = {
 }
 
 // Legacy invoice for outstanding total, might not be actively interacted with in this script
-const EXISTING_UNPAID_INVOICE_LEGACY_INITIAL: InboxItemData = {
+const EXISTING_UNPAID_INVOICE_LEGACY_INITIAL: WorkspaceItemData = {
   id: "INV-2024-0721",
   type: "invoice_sent_reminder_due",
   direction: "outbound",
@@ -223,7 +227,7 @@ const EXISTING_UNPAID_INVOICE_LEGACY_INITIAL: InboxItemData = {
   actions: [{ label: "Send Final Notice" }, { label: "Schedule Call" }],
 }
 
-const calculateTotals = (items: InboxItemData[]): { outstanding: number; payable: number } => {
+const calculateTotals = (items: WorkspaceItemData[]): { outstanding: number; payable: number } => {
   let outstanding = 0
   let payable = 0
   items.forEach((item) => {
@@ -246,10 +250,10 @@ const SCRIPT_SCENES: DemoScene[] = [
     timeEnd: 8, // Was 13
     description: "Transition to dashboard.",
     voiceOver: "and it all starts with this dashboard.",
-    currentRoute: "/dashboard/ai-inbox",
+    currentRoute: "/dashboard",
     balance: DEMO_CONFIG.INITIAL_BALANCE,
     taxVaultBalance: DEMO_CONFIG.INITIAL_TAX_VAULT,
-    inboxItems: [
+    workspaceItems: [
       INCOMING_UTILITY_BILL_INITIAL,
       EXISTING_UNPAID_INVOICE_NEWCLIENT_INITIAL,
       EXISTING_UNPAID_INVOICE_LEGACY_INITIAL,
@@ -267,10 +271,10 @@ const SCRIPT_SCENES: DemoScene[] = [
     description: "Dashboard overview: metrics and financial inbox.",
     voiceOver:
       "here's the financial inbox. every bill you owe, every dollar you're owed, and how much we've set aside for taxes.",
-    currentRoute: "/dashboard/ai-inbox",
+    currentRoute: "/dashboard",
     balance: DEMO_CONFIG.INITIAL_BALANCE,
     taxVaultBalance: DEMO_CONFIG.INITIAL_TAX_VAULT,
-    inboxItems: [
+    workspaceItems: [
       INCOMING_UTILITY_BILL_INITIAL,
       EXISTING_UNPAID_INVOICE_NEWCLIENT_INITIAL,
       EXISTING_UNPAID_INVOICE_LEGACY_INITIAL,
@@ -291,16 +295,16 @@ const SCRIPT_SCENES: DemoScene[] = [
     timeEnd: 24, // Was 29
     description: "Open Utility Co. bill.",
     voiceOver: "let's open this PG&E bill.",
-    currentRoute: "/dashboard/ai-inbox",
+    currentRoute: "/dashboard",
     balance: DEMO_CONFIG.INITIAL_BALANCE,
     taxVaultBalance: DEMO_CONFIG.INITIAL_TAX_VAULT,
-    inboxItems: (prev) => prev,
+    workspaceItems: (prev) => prev,
     // @ts-ignore
     totalOutstanding: (prev) => prev.totalOutstanding,
     // @ts-ignore
     totalPayable: (prev) => prev.totalPayable,
-    highlightedInboxItemId: INCOMING_UTILITY_BILL_INITIAL.id,
-    selectedInboxItem: (items) => items.find((item) => item.id === INCOMING_UTILITY_BILL_INITIAL.id) as InboxItemData,
+    highlightedWorkspaceItemId: INCOMING_UTILITY_BILL_INITIAL.id,
+    selectedWorkspaceItem: (items) => items.find((item) => item.id === INCOMING_UTILITY_BILL_INITIAL.id) as WorkspaceItemData,
     showActionDetailsSidebar: true,
     showIntro: false,
     showOutro: false,
@@ -312,17 +316,17 @@ const SCRIPT_SCENES: DemoScene[] = [
     timeEnd: 30, // Was 35
     description: "Utility bill details and AI parsing in sidebar.",
     voiceOver: "zero finance pulled it straight from that email, parsed the pdf, and knows it's due in six days.",
-    currentRoute: "/dashboard/ai-inbox",
+    currentRoute: "/dashboard",
     balance: DEMO_CONFIG.INITIAL_BALANCE,
     taxVaultBalance: DEMO_CONFIG.INITIAL_TAX_VAULT,
     // @ts-ignore
-    inboxItems: (prev) => prev,
+    workspaceItems: (prev) => prev,
     // @ts-ignore
     totalOutstanding: (prev) => prev.totalOutstanding,
     // @ts-ignore
     totalPayable: (prev) => prev.totalPayable,
-    highlightedInboxItemId: INCOMING_UTILITY_BILL_INITIAL.id,
-    selectedInboxItem: (items) => items.find((item) => item.id === INCOMING_UTILITY_BILL_INITIAL.id) as InboxItemData,
+    highlightedWorkspaceItemId: INCOMING_UTILITY_BILL_INITIAL.id,
+    selectedWorkspaceItem: (items) => items.find((item) => item.id === INCOMING_UTILITY_BILL_INITIAL.id) as WorkspaceItemData,
     showActionDetailsSidebar: true,
     showIntro: false,
     showOutro: false,
@@ -334,17 +338,17 @@ const SCRIPT_SCENES: DemoScene[] = [
     timeEnd: 32, // Was 37
     description: "Scheduling payment for Utility Co. bill.",
     voiceOver: "one click to schedule.",
-    currentRoute: "/dashboard/ai-inbox",
+    currentRoute: "/dashboard",
     balance: DEMO_CONFIG.INITIAL_BALANCE,
     taxVaultBalance: DEMO_CONFIG.INITIAL_TAX_VAULT,
     // @ts-ignore
-    inboxItems: (prevItems) => prevItems, // Action happens, state changes in next scene
+    workspaceItems: (prevItems) => prevItems, // Action happens, state changes in next scene
     // @ts-ignore
     totalOutstanding: (prev) => prev.totalOutstanding,
     // @ts-ignore
     totalPayable: (prev) => prev.totalPayable,
-    highlightedInboxItemId: INCOMING_UTILITY_BILL_INITIAL.id,
-    selectedInboxItem: (items) => items.find((item) => item.id === INCOMING_UTILITY_BILL_INITIAL.id) as InboxItemData,
+    highlightedWorkspaceItemId: INCOMING_UTILITY_BILL_INITIAL.id,
+    selectedWorkspaceItem: (items) => items.find((item) => item.id === INCOMING_UTILITY_BILL_INITIAL.id) as WorkspaceItemData,
     showActionDetailsSidebar: true,
     showIntro: false,
     showOutro: false,
@@ -356,11 +360,11 @@ const SCRIPT_SCENES: DemoScene[] = [
     timeEnd: 37, // Was 42
     description: "Utility bill payment scheduled. UI updates.",
     voiceOver: "done. the agent will push crypto→ACH on the due date.",
-    currentRoute: "/dashboard/ai-inbox",
+    currentRoute: "/dashboard",
     uiFlashMessage: `Payment for PG&E scheduled.`,
     balance: DEMO_CONFIG.INITIAL_BALANCE,
     taxVaultBalance: DEMO_CONFIG.INITIAL_TAX_VAULT,
-    inboxItems: (prevItems) =>
+    workspaceItems: (prevItems) =>
       prevItems.map((item) =>
         item.id === INCOMING_UTILITY_BILL_INITIAL.id
           ? {
@@ -379,9 +383,9 @@ const SCRIPT_SCENES: DemoScene[] = [
     totalOutstanding: (prev) => prev.totalOutstanding,
     // @ts-ignore
     totalPayable: (prev) => prev.totalPayable,
-    selectedInboxItem: null,
+    selectedWorkspaceItem: null,
     showActionDetailsSidebar: false,
-    highlightedInboxItemId: INCOMING_UTILITY_BILL_INITIAL.id,
+    highlightedWorkspaceItemId: INCOMING_UTILITY_BILL_INITIAL.id,
     showIntro: false,
     showOutro: false,
     ledgerExportTriggered: false,
@@ -392,18 +396,18 @@ const SCRIPT_SCENES: DemoScene[] = [
     timeEnd: 48, // Was 53
     description: "Open New Client Inc. invoice.",
     voiceOver: "moving on. this invoice to techflow solutions just got paid.",
-    currentRoute: "/dashboard/ai-inbox",
+    currentRoute: "/dashboard",
     balance: DEMO_CONFIG.INITIAL_BALANCE,
     taxVaultBalance: DEMO_CONFIG.INITIAL_TAX_VAULT,
     // @ts-ignore
-    inboxItems: (prev) => prev,
+    workspaceItems: (prev) => prev,
     // @ts-ignore
     totalOutstanding: (prev) => prev.totalOutstanding,
     // @ts-ignore
     totalPayable: (prev) => prev.totalPayable,
-    highlightedInboxItemId: EXISTING_UNPAID_INVOICE_NEWCLIENT_INITIAL.id,
-    selectedInboxItem: (items) =>
-      items.find((item) => item.id === EXISTING_UNPAID_INVOICE_NEWCLIENT_INITIAL.id) as InboxItemData,
+    highlightedWorkspaceItemId: EXISTING_UNPAID_INVOICE_NEWCLIENT_INITIAL.id,
+    selectedWorkspaceItem: (items) =>
+      items.find((item) => item.id === EXISTING_UNPAID_INVOICE_NEWCLIENT_INITIAL.id) as WorkspaceItemData,
     showActionDetailsSidebar: true,
     showIntro: false,
     showOutro: false,
@@ -415,10 +419,10 @@ const SCRIPT_SCENES: DemoScene[] = [
     timeEnd: 60, // Was 65
     description: "New Client Inc. invoice payment reconciled.",
     voiceOver: "zero finance reconciled the payment and marked it complete in the ledger.",
-    currentRoute: "/dashboard/ai-inbox",
+    currentRoute: "/dashboard",
     balance: DEMO_CONFIG.INITIAL_BALANCE + DEMO_CONFIG.INVOICE_AMOUNT_PAID,
     taxVaultBalance: DEMO_CONFIG.INITIAL_TAX_VAULT,
-    inboxItems: (prevItems) =>
+    workspaceItems: (prevItems) =>
       prevItems.map((item) =>
         item.id === EXISTING_UNPAID_INVOICE_NEWCLIENT_INITIAL.id
           ? {
@@ -449,9 +453,9 @@ const SCRIPT_SCENES: DemoScene[] = [
     totalOutstanding: DEMO_CONFIG.LEGACY_INVOICE_AMOUNT,
     // @ts-ignore
     totalPayable: (prev) => prev.totalPayable,
-    highlightedInboxItemId: EXISTING_UNPAID_INVOICE_NEWCLIENT_INITIAL.id,
-    selectedInboxItem: (items) =>
-      items.find((item) => item.id === EXISTING_UNPAID_INVOICE_NEWCLIENT_INITIAL.id) as InboxItemData,
+    highlightedWorkspaceItemId: EXISTING_UNPAID_INVOICE_NEWCLIENT_INITIAL.id,
+    selectedWorkspaceItem: (items) =>
+      items.find((item) => item.id === EXISTING_UNPAID_INVOICE_NEWCLIENT_INITIAL.id) as WorkspaceItemData,
     showActionDetailsSidebar: true,
     // @ts-ignore
     activityFeed: (prevFeed = []) => [
@@ -475,19 +479,19 @@ const SCRIPT_SCENES: DemoScene[] = [
     timeEnd: 70, // Was 75
     description: "Metrics updated. Explaining impact.",
     voiceOver: "main balance jumps, outstanding drops. no spreadsheets touched.",
-    currentRoute: "/dashboard/ai-inbox",
+    currentRoute: "/dashboard",
     // @ts-ignore
     balance: (prev) => prev.balance,
     // @ts-ignore
     taxVaultBalance: (prev) => prev.taxVaultBalance,
-    inboxItems: (prev) => prev,
+    workspaceItems: (prev) => prev,
     // @ts-ignore
     totalOutstanding: (prev) => prev.totalOutstanding,
     // @ts-ignore
     totalPayable: (prev) => prev.totalPayable,
-    highlightedInboxItemId: EXISTING_UNPAID_INVOICE_NEWCLIENT_INITIAL.id,
-    selectedInboxItem: (items) =>
-      items.find((item) => item.id === EXISTING_UNPAID_INVOICE_NEWCLIENT_INITIAL.id) as InboxItemData,
+    highlightedWorkspaceItemId: EXISTING_UNPAID_INVOICE_NEWCLIENT_INITIAL.id,
+    selectedWorkspaceItem: (items) =>
+      items.find((item) => item.id === EXISTING_UNPAID_INVOICE_NEWCLIENT_INITIAL.id) as WorkspaceItemData,
     showActionDetailsSidebar: true,
     showIntro: false,
     showOutro: false,
@@ -499,12 +503,12 @@ const SCRIPT_SCENES: DemoScene[] = [
     timeEnd: 77, // Was 82
     description: "Tax rule triggered for the received payment.",
     voiceOver: "we also have a plain-language rule: 'reserve twenty percent for tax.'",
-    currentRoute: "/dashboard/ai-inbox",
+    currentRoute: "/dashboard",
     // @ts-ignore
     balance: (prev) => prev.balance,
     // @ts-ignore
     taxVaultBalance: (prev) => prev.taxVaultBalance,
-    inboxItems: (prevItems) =>
+    workspaceItems: (prevItems) =>
       prevItems.map((item) =>
         item.id === EXISTING_UNPAID_INVOICE_NEWCLIENT_INITIAL.id
           ? {
@@ -535,9 +539,9 @@ const SCRIPT_SCENES: DemoScene[] = [
     totalOutstanding: (prev) => prev.totalOutstanding,
     // @ts-ignore
     totalPayable: (prev) => prev.totalPayable,
-    highlightedInboxItemId: EXISTING_UNPAID_INVOICE_NEWCLIENT_INITIAL.id,
-    selectedInboxItem: (items) =>
-      items.find((item) => item.id === EXISTING_UNPAID_INVOICE_NEWCLIENT_INITIAL.id) as InboxItemData,
+    highlightedWorkspaceItemId: EXISTING_UNPAID_INVOICE_NEWCLIENT_INITIAL.id,
+    selectedWorkspaceItem: (items) =>
+      items.find((item) => item.id === EXISTING_UNPAID_INVOICE_NEWCLIENT_INITIAL.id) as WorkspaceItemData,
     showActionDetailsSidebar: true,
     showIntro: false,
     showOutro: false,
@@ -549,13 +553,13 @@ const SCRIPT_SCENES: DemoScene[] = [
     timeEnd: 80, // Was 85
     description: "AI queues tax reservation to Tax Vault.",
     voiceOver: "the agent queued nine-fifty to the tax vault.",
-    currentRoute: "/dashboard/ai-inbox",
+    currentRoute: "/dashboard",
     // @ts-ignore
     balance: (prev) => prev.balance,
     // @ts-ignore
     taxVaultBalance: (prev) => prev.taxVaultBalance,
     // @ts-ignore
-    inboxItems: (prevItems) => {
+    workspaceItems: (prevItems) => {
       const taxAmount = DEMO_CONFIG.INVOICE_AMOUNT_PAID * DEMO_CONFIG.TAX_RATE
       const taxProposalId = `tax-sweep-prop-${DEMO_CONFIG.INVOICE_ID_PAID}`
 
@@ -595,7 +599,7 @@ const SCRIPT_SCENES: DemoScene[] = [
                   icon: Sparkles,
                 },
               ],
-            } as InboxItemData,
+            } as WorkspaceItemData,
           ]
 
       // Update CoT on the original invoice item
@@ -635,9 +639,9 @@ const SCRIPT_SCENES: DemoScene[] = [
     totalOutstanding: (prev) => prev.totalOutstanding,
     // @ts-ignore
     totalPayable: (prev) => prev.totalPayable,
-    highlightedInboxItemId: `tax-sweep-prop-${DEMO_CONFIG.INVOICE_ID_PAID}`,
-    selectedInboxItem: (items) =>
-      items.find((item) => item.id === `tax-sweep-prop-${DEMO_CONFIG.INVOICE_ID_PAID}`) as InboxItemData,
+    highlightedWorkspaceItemId: `tax-sweep-prop-${DEMO_CONFIG.INVOICE_ID_PAID}`,
+    selectedWorkspaceItem: (items) =>
+      items.find((item) => item.id === `tax-sweep-prop-${DEMO_CONFIG.INVOICE_ID_PAID}`) as WorkspaceItemData,
     showActionDetailsSidebar: true,
     showIntro: false,
     showOutro: false,
@@ -649,13 +653,13 @@ const SCRIPT_SCENES: DemoScene[] = [
     timeEnd: 87, // Was 92
     description: "Tax reservation approved. Funds move, books close.",
     voiceOver: "approve, funds move, books close.",
-    currentRoute: "/dashboard/ai-inbox",
+    currentRoute: "/dashboard",
     uiFlashMessage: "Tax reservation approved and funds transferred to Tax Vault.",
     // @ts-ignore
     balance: DEMO_CONFIG.INITIAL_BALANCE + DEMO_CONFIG.INVOICE_AMOUNT_PAID * (1 - DEMO_CONFIG.TAX_RATE),
     taxVaultBalance: DEMO_CONFIG.INITIAL_TAX_VAULT + DEMO_CONFIG.INVOICE_AMOUNT_PAID * DEMO_CONFIG.TAX_RATE,
     // @ts-ignore
-    inboxItems: (prevItems) =>
+    workspaceItems: (prevItems) =>
       prevItems
         .map((item) => {
           if (item.id === `tax-sweep-prop-${DEMO_CONFIG.INVOICE_ID_PAID}`) {
@@ -702,8 +706,8 @@ const SCRIPT_SCENES: DemoScene[] = [
     totalOutstanding: (prev) => prev.totalOutstanding,
     // @ts-ignore
     totalPayable: (prev) => prev.totalPayable,
-    selectedInboxItem: (items) =>
-      items.find((item) => item.id === EXISTING_UNPAID_INVOICE_NEWCLIENT_INITIAL.id) as InboxItemData,
+    selectedWorkspaceItem: (items) =>
+      items.find((item) => item.id === EXISTING_UNPAID_INVOICE_NEWCLIENT_INITIAL.id) as WorkspaceItemData,
     showActionDetailsSidebar: true,
     showTaxVaultDetailCard: true,
     nextTaxDue: `${DEMO_CONFIG.CURRENCY_SYMBOL}${(DEMO_CONFIG.INITIAL_TAX_VAULT + DEMO_CONFIG.INVOICE_AMOUNT_PAID * DEMO_CONFIG.TAX_RATE).toLocaleString()} (Est. Next Quarter)`,
@@ -729,14 +733,14 @@ const SCRIPT_SCENES: DemoScene[] = [
     timeEnd: 95, // Was 100
     description: "Summary: Plain English rules, crypto rails.",
     voiceOver: "rules in plain english, crypto rails under the hood, zero busy work.",
-    currentRoute: "/dashboard/ai-inbox",
+    currentRoute: "/dashboard",
     showOutro: true,
     // @ts-ignore
     balance: (prev) => prev.balance,
     // @ts-ignore
     taxVaultBalance: (prev) => prev.taxVaultBalance,
     // @ts-ignore
-    inboxItems: (prev) => prev,
+    workspaceItems: (prev) => prev,
     // @ts-ignore
     totalOutstanding: (prev) => prev.totalOutstanding,
     // @ts-ignore
@@ -745,7 +749,7 @@ const SCRIPT_SCENES: DemoScene[] = [
     totalOutstanding: (prev) => prev.totalOutstanding,
     // @ts-ignore
     totalPayable: (prev) => prev.totalPayable,
-    selectedInboxItem: null,
+    selectedWorkspaceItem: null,
     showActionDetailsSidebar: false,
     showIntro: false,
     ledgerExportTriggered: false,
@@ -756,14 +760,14 @@ const SCRIPT_SCENES: DemoScene[] = [
     timeEnd: 100, // Was 105
     description: "Call to action: Sandbox.",
     voiceOver: "spin up a read-only sandbox with your own data in ninety seconds. link below.",
-    currentRoute: "/dashboard/ai-inbox",
+    currentRoute: "/dashboard",
     showOutro: true,
     // @ts-ignore
     balance: (prev) => prev.balance,
     // @ts-ignore
     taxVaultBalance: (prev) => prev.taxVaultBalance,
     // @ts-ignore
-    inboxItems: (prev) => prev,
+    workspaceItems: (prev) => prev,
     showIntro: false,
     ledgerExportTriggered: false,
   },
@@ -773,14 +777,14 @@ const SCRIPT_SCENES: DemoScene[] = [
     timeEnd: 101, // Was 106
     description: "End of demo.",
     voiceOver: "",
-    currentRoute: "/dashboard/ai-inbox",
+    currentRoute: "/dashboard",
     showOutro: true,
     // @ts-ignore
     balance: (prev) => prev.balance,
     // @ts-ignore
     taxVaultBalance: (prev) => prev.taxVaultBalance,
     // @ts-ignore
-    inboxItems: (prev) => prev,
+    workspaceItems: (prev) => prev,
     // @ts-ignore
     showIntro: false,
     ledgerExportTriggered: false,
@@ -803,7 +807,8 @@ type DemoContextType = {
   resetDemo: () => void
   jumpToScene: (sceneIndex: number) => void
   triggerLedgerExport: () => void
-  selectInboxItem: (item: InboxItemData | null) => void
+  selectWorkspaceItem: (item: WorkspaceItemData | null) => void
+  selectInboxItem: (item: WorkspaceItemData | null) => void
 }
 
 const DemoContext = createContext<DemoContextType | undefined>(undefined)
@@ -822,7 +827,7 @@ export const DemoProvider = ({ children }: { children: React.ReactNode }) => {
 
   const [resolvedScenes, setResolvedScenes] = useState<DemoScene[]>(() => {
     const scenes = [...SCRIPT_SCENES]
-    let lastResolvedInbox: InboxItemData[] = []
+    let lastResolvedInbox: WorkspaceItemData[] = []
     let lastBalance = DEMO_CONFIG.INITIAL_BALANCE
     let lastTaxVaultBalance = DEMO_CONFIG.INITIAL_TAX_VAULT
     let lastTotalOutstanding = DEMO_CONFIG.INVOICE_AMOUNT_PAID + DEMO_CONFIG.LEGACY_INVOICE_AMOUNT
@@ -830,15 +835,15 @@ export const DemoProvider = ({ children }: { children: React.ReactNode }) => {
     let lastActivityFeed: ActivityItem[] = []
 
     return scenes.map((scene) => {
-      let currentInboxItems = scene.inboxItems
-      if (typeof scene.inboxItems === "function") {
-        currentInboxItems = scene.inboxItems(lastResolvedInbox)
+      let currentWorkspaceItems = scene.workspaceItems
+      if (typeof scene.workspaceItems === "function") {
+        currentWorkspaceItems = scene.workspaceItems(lastResolvedInbox)
       }
-      lastResolvedInbox = currentInboxItems as InboxItemData[]
+      lastResolvedInbox = currentWorkspaceItems as WorkspaceItemData[]
 
-      let currentSelectedInboxItem = scene.selectedInboxItem
-      if (typeof scene.selectedInboxItem === "function") {
-        currentSelectedInboxItem = scene.selectedInboxItem(lastResolvedInbox)
+      let currentSelectedWorkspaceItem = scene.selectedWorkspaceItem
+      if (typeof scene.selectedWorkspaceItem === "function") {
+        currentSelectedWorkspaceItem = scene.selectedWorkspaceItem(lastResolvedInbox)
       }
 
       // @ts-ignore
@@ -886,8 +891,9 @@ export const DemoProvider = ({ children }: { children: React.ReactNode }) => {
 
       return {
         ...scene,
-        inboxItems: lastResolvedInbox,
-        selectedInboxItem: currentSelectedInboxItem as InboxItemData | null,
+        workspaceItems: lastResolvedInbox,
+        selectedWorkspaceItem: currentSelectedWorkspaceItem as WorkspaceItemData | null,
+        selectedInboxItem: currentSelectedWorkspaceItem as WorkspaceItemData | null,
         balance: currentBalance,
         taxVaultBalance: currentTaxVaultBalance,
         totalOutstanding: currentTotalOutstanding,
@@ -913,7 +919,7 @@ export const DemoProvider = ({ children }: { children: React.ReactNode }) => {
     setSceneInternalState({})
     // Re-initialize resolvedScenes (this logic was already in resetDemo)
     const scenes = [...SCRIPT_SCENES]
-    let lastResolvedInbox: InboxItemData[] = []
+    let lastResolvedInbox: WorkspaceItemData[] = []
     let lastBalance = DEMO_CONFIG.INITIAL_BALANCE
     let lastTaxVaultBalance = DEMO_CONFIG.INITIAL_TAX_VAULT
     let lastTotalOutstanding = DEMO_CONFIG.INVOICE_AMOUNT_PAID + DEMO_CONFIG.LEGACY_INVOICE_AMOUNT
@@ -922,15 +928,15 @@ export const DemoProvider = ({ children }: { children: React.ReactNode }) => {
 
     setResolvedScenes(
       scenes.map((scene) => {
-        let currentInboxItems = scene.inboxItems
-        if (typeof scene.inboxItems === "function") {
-          currentInboxItems = scene.inboxItems(lastResolvedInbox)
+        let currentWorkspaceItems = scene.workspaceItems
+        if (typeof scene.workspaceItems === "function") {
+          currentWorkspaceItems = scene.workspaceItems(lastResolvedInbox)
         }
-        lastResolvedInbox = currentInboxItems as InboxItemData[]
+        lastResolvedInbox = currentWorkspaceItems as WorkspaceItemData[]
 
-        let currentSelectedInboxItem = scene.selectedInboxItem
-        if (typeof scene.selectedInboxItem === "function") {
-          currentSelectedInboxItem = scene.selectedInboxItem(lastResolvedInbox)
+        let currentSelectedWorkspaceItem = scene.selectedWorkspaceItem
+        if (typeof scene.selectedWorkspaceItem === "function") {
+          currentSelectedWorkspaceItem = scene.selectedWorkspaceItem(lastResolvedInbox)
         }
 
         // @ts-ignore
@@ -981,8 +987,8 @@ export const DemoProvider = ({ children }: { children: React.ReactNode }) => {
 
         return {
           ...scene,
-          inboxItems: lastResolvedInbox,
-          selectedInboxItem: currentSelectedInboxItem as InboxItemData | null,
+          workspaceItems: lastResolvedInbox,
+          selectedWorkspaceItem: currentSelectedWorkspaceItem as WorkspaceItemData | null,
           balance: currentBalance,
           taxVaultBalance: currentTaxVaultBalance,
           totalOutstanding: currentTotalOutstanding,
@@ -1012,17 +1018,17 @@ export const DemoProvider = ({ children }: { children: React.ReactNode }) => {
         scene.showActionDetailsSidebar === undefined
           ? sceneInternalState.showActionDetailsSidebar
           : scene.showActionDetailsSidebar
-      const newSelectedInboxItem =
-        scene.selectedInboxItem === undefined ? sceneInternalState.selectedInboxItem : scene.selectedInboxItem
+      const newSelectedWorkspaceItem =
+        scene.selectedWorkspaceItem === undefined ? sceneInternalState.selectedWorkspaceItem : scene.selectedWorkspaceItem
 
       if (
         sceneInternalState.showActionDetailsSidebar !== shouldShowSidebar ||
         // @ts-ignore
-        sceneInternalState.selectedInboxItem?.id !== (newSelectedInboxItem as InboxItemData | null)?.id
+        sceneInternalState.selectedWorkspaceItem?.id !== (newSelectedWorkspaceItem as WorkspaceItemData | null)?.id
       ) {
         setSceneInternalState((prev) => ({
           ...prev,
-          selectedInboxItem: newSelectedInboxItem as InboxItemData | null,
+          selectedWorkspaceItem: newSelectedWorkspaceItem as WorkspaceItemData | null,
           showActionDetailsSidebar: shouldShowSidebar,
         }))
       }
@@ -1081,7 +1087,7 @@ export const DemoProvider = ({ children }: { children: React.ReactNode }) => {
           ...prevState,
           uiFlashMessage:
             targetScene.uiFlashMessage === undefined ? prevState.uiFlashMessage : targetScene.uiFlashMessage,
-          selectedInboxItem: targetScene.selectedInboxItem as InboxItemData | null,
+          selectedWorkspaceItem: targetScene.selectedWorkspaceItem as WorkspaceItemData | null,
           showActionDetailsSidebar: targetScene.showActionDetailsSidebar || false,
         }))
         sceneProcessedRef.current = false
@@ -1113,15 +1119,18 @@ export const DemoProvider = ({ children }: { children: React.ReactNode }) => {
     toast.info("Ledger export initiated (mock).")
   }
 
-  const selectInboxItem = useCallback((item: InboxItemData | null) => {
+  const selectWorkspaceItem = useCallback((item: WorkspaceItemData | null) => {
     // pauseDemo() // Already memoized
     setIsPlaying(false) // Explicitly pause when an item is selected
     setSceneInternalState((prev) => ({
       ...prev,
+      selectedWorkspaceItem: item,
       selectedInboxItem: item,
       showActionDetailsSidebar: !!item,
     }))
   }, []) // No explicit dependencies needed here if pauseDemo is stable
+
+  const selectInboxItem = selectWorkspaceItem
 
   useHotkeys(
     "space",
@@ -1172,6 +1181,7 @@ export const DemoProvider = ({ children }: { children: React.ReactNode }) => {
         resetDemo,
         jumpToScene,
         triggerLedgerExport,
+        selectWorkspaceItem,
         selectInboxItem,
       }}
     >

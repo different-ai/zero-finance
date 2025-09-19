@@ -29,16 +29,16 @@ export default function ActivateFeaturePage() {
   const [adminToken, setAdminToken] = useState<string>('');
 
   // Get parameters from URL
-  const feature = searchParams.get('feature') || 'inbox';
+  const feature = searchParams.get('feature') || 'workspace_automation';
   const source = searchParams.get('source') || 'polar';
   const reference = searchParams.get('reference');
 
   const grantFeatureMutation = trpc.admin.grantFeature.useMutation({
     onSuccess: () => {
       setActivationStatus('success');
-      // Redirect to inbox after a short delay
+      // Redirect to dashboard after a short delay
       setTimeout(() => {
-        router.push('/dashboard/inbox');
+        router.push('/dashboard');
       }, 3000);
     },
     onError: (error: any) => {
@@ -63,10 +63,6 @@ export default function ActivateFeaturePage() {
       purchaseSource: source as any,
       purchaseReference: reference || undefined,
     });
-  };
-
-  const handleGoToInbox = () => {
-    router.push('/dashboard/inbox');
   };
 
   const handleGoToDashboard = () => {
@@ -125,7 +121,7 @@ export default function ActivateFeaturePage() {
             <CardDescription>
               {activationStatus === 'auth_required' && 'Please enter your admin token to activate this feature.'}
               {activationStatus === 'loading' && 'Please wait while we set up your new feature access.'}
-              {activationStatus === 'success' && 'Your inbox feature has been successfully activated. You now have full access!'}
+              {activationStatus === 'success' && 'Workspace automations are now active for your account.'}
               {activationStatus === 'error' && 'There was an issue activating your feature. Please try again or contact support.'}
             </CardDescription>
           </CardHeader>
@@ -219,27 +215,17 @@ export default function ActivateFeaturePage() {
 
                 <div className="space-y-3">
                   <Button
-                    onClick={handleGoToInbox}
+                    onClick={handleGoToDashboard}
                     size="lg"
                     className="w-full bg-black hover:bg-gray-900 text-white"
                   >
-                    <Mail className="mr-2 h-4 w-4" />
-                    Go to Inbox
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Button>
-
-                  <Button
-                    onClick={handleGoToDashboard}
-                    variant="outline"
-                    size="lg"
-                    className="w-full"
-                  >
-                    Back to Dashboard
+                    <ArrowRight className="mr-2 h-4 w-4" />
+                    Open Dashboard
                   </Button>
                 </div>
 
                 <div className="text-xs text-muted-foreground">
-                  Redirecting to inbox in 3 seconds...
+                  Redirecting to dashboard in 3 seconds...
                 </div>
               </div>
             )}

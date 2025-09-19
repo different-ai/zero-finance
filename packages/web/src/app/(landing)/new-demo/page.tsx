@@ -1,17 +1,12 @@
 "use client"
 
 import { ConfigurableDemo } from "@/components/configurable-demo"
-import { allPossibleMessages, demoScript, adhdValuePopups } from "@/lib/demo-data/adhd-demo"
 
 export default function DemoPage() {
   return (
     <ConfigurableDemo
-      messages={allPossibleMessages}
-      demoScript={demoScript}
-      showPlayer={true}
-      showValuePopups={true}
-      valuePopups={adhdValuePopups}
-      autoPlay={false}
+      headline="Walk through a real workspace demo"
+      description="Follow the Zero automation walkthrough to see how approvals, reconciliations, and reporting stay in sync."
     />
   )
 }

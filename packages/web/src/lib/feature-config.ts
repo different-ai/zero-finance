@@ -74,7 +74,6 @@ export const featureConfig = {
 
   email: {
     loops: !!process.env.LOOPS_API_KEY,
-    gmail: !!(process.env.GMAIL_CLIENT_ID && process.env.GMAIL_CLIENT_SECRET),
   },
 };
 

@@ -123,11 +123,6 @@ const AICFODemo = dynamic(
 );
 
 // Import the demo data
-import {
-  allPossibleMessages,
-  demoScript,
-  adhdValuePopups,
-} from '@/lib/demo-data/adhd-demo';
 
 // Import the configurable demo component
 const ConfigurableDemo = dynamic(
@@ -150,14 +145,9 @@ const ConfigurableDemo = dynamic(
 // ADHD Demo Embed Component
 const ADHDDemoEmbed = () => (
   <ConfigurableDemo
-    messages={allPossibleMessages}
-    demoScript={demoScript}
-    showPlayer={false}
-    showValuePopups={true}
-    valuePopups={adhdValuePopups}
-    autoPlay={true}
+    headline="AI that keeps founders out of the weeds"
+    description="Zero triages vendor emails, queues approvals, and keeps cash in the right buckets so you can stay in flow."
     className="h-[1000px]"
-    useValueBanners={true}
     backgroundColor="bg-transparent"
   />
 );

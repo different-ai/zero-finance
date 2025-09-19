@@ -10,10 +10,6 @@ import { alignRouter } from './align-router';
 import { adminRouter } from './admin-router';
 import { userRouter } from './user-router';
 import { earnRouter } from './earn-router';
-import { inboxRouter } from './inbox-router';
-import { actionLedgerRouter } from './action-ledger-router';
-import { inboxCardsRouter } from './inbox-cards-router';
-import { cardActionsRouter } from './card-actions-router';
 import { dashboardRouter } from './dashboard-router';
 import { waitlistRouter } from './waitlist-router';
 import { classificationSettingsRouter } from './classification-settings-router';
@@ -45,10 +41,6 @@ export const appRouter = router({
   admin: adminRouter,
   user: userRouter,
   earn: earnRouter,
-  inbox: inboxRouter,
-  inboxCards: inboxCardsRouter,
-  cardActions: cardActionsRouter,
-  actionLedger: actionLedgerRouter,
   dashboard: dashboardRouter,
   waitlist: waitlistRouter,
   feedback: feedbackRouter,

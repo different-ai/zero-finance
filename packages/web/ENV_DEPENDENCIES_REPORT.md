@@ -70,24 +70,13 @@ This report analyzes all environment variable dependencies in the Zero Finance w
 - **Error Handling**: Console warning, skips email sending
 - **Impact**: No email notifications sent
 
-### 10. **GOOGLE_CLIENT_ID & GOOGLE_CLIENT_SECRET** ✅ OPTIONAL
-
-- **Service**: Gmail integration for invoice import
-- **Error Handling**: Feature disabled if missing
-- **Impact**: Cannot connect Gmail accounts
-
-### 11. **GMAIL_CLIENT_EMAIL, GMAIL_PRIVATE_KEY, GMAIL_TARGET_EMAIL** ✅ OPTIONAL
-
-- **Service**: Gmail service account access
-- **Impact**: Alternative Gmail authentication method unavailable
-
-### 12. **NEXT_PUBLIC_POSTHOG_KEY & NEXT_PUBLIC_POSTHOG_HOST** ✅ OPTIONAL
+### 10. **NEXT_PUBLIC_POSTHOG_KEY & NEXT_PUBLIC_POSTHOG_HOST** ✅ OPTIONAL
 
 - **Service**: Analytics tracking via PostHog
 - **Fallback**: Defaults provided, tracking may fail silently
 - **Impact**: No analytics data collected
 
-### 13. **AUTO_EARN_MODULE_ADDRESS & RELAYER_PK** ✅ OPTIONAL
+### 11. **AUTO_EARN_MODULE_ADDRESS & RELAYER_PK** ✅ OPTIONAL
 
 - **Service**: Auto-earn/savings features
 - **Error Handling**: Console warnings, features disabled
