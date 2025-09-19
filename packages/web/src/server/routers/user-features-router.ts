@@ -10,7 +10,7 @@ export const userFeaturesRouter = router({
   hasFeatureAccess: protectedProcedure
     .input(
       z.object({
-        featureName: z.enum(['inbox', 'savings', 'advanced_analytics', 'auto_categorization']),
+        featureName: z.enum(['workspace_automation', 'savings', 'advanced_analytics', 'auto_categorization']),
       })
     )
     .query(async ({ input, ctx }) => {
@@ -82,7 +82,7 @@ export const userFeaturesRouter = router({
   revokeFeature: protectedProcedure
     .input(
       z.object({
-        featureName: z.enum(['inbox', 'savings', 'advanced_analytics', 'auto_categorization']),
+        featureName: z.enum(['workspace_automation', 'savings', 'advanced_analytics', 'auto_categorization']),
       })
     )
     .mutation(async ({ input, ctx }) => {

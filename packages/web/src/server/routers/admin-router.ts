@@ -764,7 +764,7 @@ export const adminRouter = router({
       z.object({
         adminToken: adminTokenSchema,
         userPrivyDid: z.string().min(1, 'User Privy DID is required'),
-        featureName: z.enum(['inbox', 'savings', 'advanced_analytics', 'auto_categorization']),
+        featureName: z.enum(['workspace_automation', 'savings', 'advanced_analytics', 'auto_categorization']),
         purchaseSource: z.enum(['polar', 'manual', 'promo']).default('polar'),
         purchaseReference: z.string().optional(),
         expiresAt: z.date().optional(),

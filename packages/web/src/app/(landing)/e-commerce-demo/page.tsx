@@ -1,18 +1,12 @@
 "use client"
 
 import { ConfigurableDemo } from "@/components/configurable-demo"
-import { allPossibleMessages, demoScript, ecommerceValuePopups } from "@/lib/demo-data/ecommerce-demo"
-
 
 export default function EcommerceDemoPage() {
   return (
     <ConfigurableDemo
-      messages={allPossibleMessages}
-      demoScript={demoScript}
-      showPlayer={true}
-      showValuePopups={true}
-      valuePopups={ecommerceValuePopups}
-      autoPlay={false}
+      headline="Automate e-commerce treasury ops"
+      description="Review payouts, schedule vendor transfers, and reconcile storefront deposits without hopping between inbox and spreadsheets."
     />
   )
 }

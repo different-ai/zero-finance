@@ -22,7 +22,7 @@ import { trpc } from '@/utils/trpc';
 export default function TestActivateFeaturePage() {
   const router = useRouter();
   const { user } = usePrivy();
-  const [selectedFeature, setSelectedFeature] = useState<string>('inbox');
+  const [selectedFeature, setSelectedFeature] = useState<string>('workspace_automation');
   const [purchaseSource, setPurchaseSource] = useState<string>('manual');
   const [purchaseReference, setPurchaseReference] = useState<string>('');
   const [activationStatus, setActivationStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
@@ -30,8 +30,8 @@ export default function TestActivateFeaturePage() {
   const [adminToken, setAdminToken] = useState<string>('');
 
   const { data: userFeatures, refetch: refetchFeatures } = trpc.userFeatures.getUserFeatures.useQuery();
-  const { data: inboxAccess, refetch: refetchAccess } = trpc.userFeatures.hasFeatureAccess.useQuery({
-    featureName: 'inbox',
+  const { data: workspaceAccess, refetch: refetchAccess } = trpc.userFeatures.hasFeatureAccess.useQuery({
+    featureName: 'workspace_automation',
   });
 
   const grantFeatureMutation = trpc.admin.grantFeature.useMutation({
@@ -74,8 +74,8 @@ export default function TestActivateFeaturePage() {
     });
   };
 
-  const handleGoToInbox = () => {
-    router.push('/dashboard/inbox');
+  const handleGoToDashboard = () => {
+    router.push('/dashboard');
   };
 
   return (
@@ -108,9 +108,9 @@ export default function TestActivateFeaturePage() {
             </div>
 
             <div className="space-y-2">
-              <Label className="text-sm font-medium">Inbox Access</Label>
+              <Label className="text-sm font-medium">Workspace Automations</Label>
               <div className="flex items-center gap-2">
-                {inboxAccess?.hasAccess ? (
+                {workspaceAccess?.hasAccess ? (
                   <Badge className="bg-green-100 text-green-800">
                     <CheckCircle className="h-3 w-3 mr-1" />
                     Active
@@ -163,7 +163,7 @@ export default function TestActivateFeaturePage() {
                   <SelectValue placeholder="Select a feature" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="inbox">Inbox</SelectItem>
+                  <SelectItem value="workspace_automation">Workspace Automations</SelectItem>
                   <SelectItem value="savings">Savings</SelectItem>
                   <SelectItem value="advanced_analytics">Advanced Analytics</SelectItem>
                   <SelectItem value="auto_categorization">Auto Categorization</SelectItem>
@@ -254,12 +254,12 @@ export default function TestActivateFeaturePage() {
                   </span>
                 </div>
                 <Button
-                  onClick={handleGoToInbox}
+                  onClick={handleGoToDashboard}
                   size="sm"
                   variant="outline"
                   className="bg-white"
                 >
-                  Go to Inbox
+                  Open Dashboard
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </div>

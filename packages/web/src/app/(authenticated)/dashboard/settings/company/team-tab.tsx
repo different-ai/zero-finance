@@ -56,7 +56,7 @@ export function TeamTab({ companyId }: TeamTabProps) {
     isLoading: isLoadingWorkspace,
     error: workspaceError,
     refetch: refetchWorkspace,
-  } = api.inbox.getOrCreateWorkspace.useQuery();
+  } = api.workspace.getOrCreateWorkspace.useQuery();
 
   // Fetch team members
   const { 

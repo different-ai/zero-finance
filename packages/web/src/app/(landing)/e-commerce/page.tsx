@@ -18,11 +18,6 @@ import {
 } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { OrangeDAOLogo } from '@/components/orange-dao-logo';
-import {
-  allPossibleMessages,
-  demoScript,
-  ecommerceValuePopups,
-} from '@/lib/demo-data/ecommerce-demo';
 
 // Dynamic imports to prevent SSR issues
 
@@ -45,13 +40,8 @@ const ConfigurableDemo = dynamic(
 // E-commerce Demo Embed Component
 const EcommerceDemoEmbed = () => (
   <ConfigurableDemo
-    messages={allPossibleMessages}
-    demoScript={demoScript}
-    showPlayer={false}
-    showValuePopups={true}
-    valuePopups={ecommerceValuePopups}
-    autoPlay={true}
-    useValueBanners={true}
+    headline="Automations for omni-channel merchants"
+    description="Zero reconciles storefront payouts, tags expenses, and schedules vendor payments so your team stays focused on growth."
     backgroundColor="bg-transparent"
   />
 );

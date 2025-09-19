@@ -23,9 +23,9 @@ function OauthDebugContent() {
     setParams(paramsObj);
   }, [searchParams]);
 
-  const handleRedirectToInbox = () => {
+  const handleRedirect = () => {
     setIsRedirecting(true);
-    router.push('/dashboard/inbox');
+    router.push('/dashboard');
   };
 
   const paramEntries = Object.entries(params);
@@ -41,7 +41,7 @@ function OauthDebugContent() {
               <CheckCircle className="h-8 w-8 text-green-600" />
             </div>
           </div>
-          <h1 className="text-3xl font-bold text-slate-900">Gmail Connection Successful</h1>
+          <h1 className="text-3xl font-bold text-slate-900">Integration Complete</h1>
           <p className="text-slate-600 text-lg">
             Your integration has been successfully connected and configured.
           </p>
@@ -57,10 +57,10 @@ function OauthDebugContent() {
               <div className="flex-1">
                 <h3 className="font-semibold text-blue-900 mb-1">Ready to get started?</h3>
                 <p className="text-blue-700 text-sm mb-3">
-                  Your integration is now active. Visit your inbox to see incoming messages and manage your connected services.
+                  Your integration is now active. Head back to the dashboard to manage connected services.
                 </p>
                 <Button 
-                  onClick={handleRedirectToInbox}
+                  onClick={handleRedirect}
                   disabled={isRedirecting}
                   className="bg-blue-600 hover:bg-blue-700 text-white"
                   size="lg"
@@ -72,7 +72,7 @@ function OauthDebugContent() {
                     </>
                   ) : (
                     <>
-                      Go to Inbox
+                      Go to Dashboard
                       <ArrowRight className="h-4 w-4" />
                     </>
                   )}

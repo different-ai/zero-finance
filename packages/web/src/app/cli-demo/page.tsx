@@ -60,9 +60,8 @@ export default function CLIDemo() {
           '║   auto stats               View automation statistics          ║',
           '║                                                                ║',
           '║ INTEGRATIONS                                                   ║',
-          '║   connect gmail            Connect Gmail account              ║',
           '║   connect claude           Connect Claude AI                  ║',
-          '║   inbox                    View financial inbox               ║',
+          '║   integrations status      View connector status              ║',
           '║                                                                ║',
           '║ UTILITIES                                                      ║',
           '║   clear                    Clear terminal                     ║',
@@ -342,25 +341,10 @@ export default function CLIDemo() {
       case 'connect':
         if (args[1] === 'gmail') {
           return [
-            '📧 Connecting Gmail...',
+            '⚠️  Email connectors are currently disabled.',
             '',
-            '✓ Opening OAuth consent screen',
-            '✓ Authorizing read-only access',
-            '✓ Scanning for financial emails',
-            '',
-            '📬 Gmail connected successfully!',
-            '',
-            'Found:',
-            '  • 47 invoices',
-            '  • 23 receipts',
-            '  • 15 payment confirmations',
-            '  • 8 bank statements',
-            '',
-            '🤖 AI will now:',
-            '  • Auto-detect new invoices',
-            '  • Extract payment details',
-            '  • Create payment reminders',
-            '  • Track payment status'
+            'Use secure uploads or bank sync to ingest financial documents.',
+            'Contact the Zero team if you need a specific partner integration.',
           ];
         } else if (args[1] === 'claude') {
           return [
@@ -380,6 +364,21 @@ export default function CLIDemo() {
             '  • Cash flow predictions',
             '',
             'Try: "Hey Claude, analyze my spending"'
+          ];
+        }
+        break;
+
+      case 'integrations':
+        if (args[1] === 'status') {
+          return [
+            '🔌 Integration Status',
+            '',
+            'Email Inbox: Retired',
+            'Bank Sync: Enabled',
+            'Yield Automations: Enabled',
+            'Document Uploads: Enabled',
+            '',
+            'Need something else? Ping the Zero team and we\'ll coordinate access.',
           ];
         }
         break;
