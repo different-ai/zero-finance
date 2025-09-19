@@ -2,6 +2,7 @@ import * as trpc from '@trpc/server';
 import { NextApiRequest, NextApiResponse } from 'next';
 import { getUserId } from '../lib/auth'; // Import getUserId
 import { db } from '@/db'; // <-- IMPORT DB INSTANCE
+import { ensureUserWorkspace } from './utils/workspace';
 // Remove privy imports - no longer needed here
 // import { getPrivyClient } from '../lib/auth';
 
@@ -21,6 +22,8 @@ export interface Context {
   userId?: string | null; 
   log: Logger; // Add logger to context type
   db: typeof db; // <-- ADD DB TYPE TO CONTEXT
+  workspaceId?: string | null;
+  workspaceMembershipId?: string | null;
 }
 
 // Define options type for flexibility
@@ -37,10 +40,22 @@ interface CreateContextOptions {
 export const createContext = async ({ req, res }: CreateContextOptions): Promise<Context> => {
   console.log('0xHypr - createContext called (with userId fetch attempt)');
   let userId: string | null = null;
+  let workspaceId: string | null = null;
+  let workspaceMembershipId: string | null = null;
   try {
     // getUserId uses next/headers cookies() which works server-side
     userId = await getUserId(); 
     console.log(`0xHypr - userId fetched in context: ${userId}`);
+    if (userId) {
+      try {
+        const { workspaceId: ensuredWorkspaceId, membership } =
+          await ensureUserWorkspace(db, userId);
+        workspaceId = ensuredWorkspaceId;
+        workspaceMembershipId = membership.id;
+      } catch (workspaceError) {
+        console.error('0xHypr - Error ensuring workspace in context:', workspaceError);
+      }
+    }
   } catch (error) {
     console.error('0xHypr - Error fetching userId in context:', error);
   }
@@ -58,6 +73,8 @@ export const createContext = async ({ req, res }: CreateContextOptions): Promise
     userId, // Add userId to the context
     log, // Add logger instance to context
     db, // <-- ADD DB INSTANCE TO RETURNED CONTEXT
+    workspaceId,
+    workspaceMembershipId,
   };
 };
 

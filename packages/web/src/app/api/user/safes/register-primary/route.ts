@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db';
-import { userSafes, users } from '@/db/schema';
+import { userSafes } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { PrivyClient } from '@privy-io/server-auth';
 import { isAddress } from 'viem';
+import { ensureUserWorkspace } from '@/server/utils/workspace';
 
 // Initialize Privy client
 const privyClient = new PrivyClient(
@@ -52,13 +53,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
     }
 
-    // 3. Ensure user exists in the users table (Upsert)
-    // This prevents the foreign key constraint error
-    await db.insert(users)
-      .values({ privyDid: privyDid })
-      .onConflictDoNothing(); 
-
-    // Now we know the user exists...
+    const { workspaceId } = await ensureUserWorkspace(db, privyDid);
 
     // 4. Check if a primary safe ALREADY exists for this user
     const existingPrimary = await db.query.userSafes.findFirst({
@@ -87,6 +82,7 @@ export async function POST(request: NextRequest) {
         userDid: privyDid,
         safeAddress: safeAddress, // Use the validated address from input
         safeType: 'primary',
+        workspaceId,
       })
       .returning();
 
