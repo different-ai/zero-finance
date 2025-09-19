@@ -49,16 +49,16 @@ export default function SupportPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
-              <h4 className="font-medium mb-1">how do i connect my email?</h4>
+              <h4 className="font-medium mb-1">can i connect my email inbox?</h4>
               <p className="text-sm text-muted-foreground">
-                go to settings → integrations and click &ldquo;connect gmail&rdquo;. you&apos;ll be redirected to google to authorize access.
+                direct email connectors are currently disabled while we focus on shared workspace automations. upload PDFs or sync bank activity instead, and we&apos;ll extract the details automatically.
               </p>
             </div>
             
             <div>
               <h4 className="font-medium mb-1">how does invoice processing work?</h4>
               <p className="text-sm text-muted-foreground">
-                our ai automatically scans your emails for invoices and receipts, extracts key information, and creates organized cards in your inbox.
+                import invoices via secure upload or bank sync. zero will parse the document, fill in payment details, and queue follow-up actions in your workspace.
               </p>
             </div>
             
@@ -72,7 +72,7 @@ export default function SupportPage() {
             <div>
               <h4 className="font-medium mb-1">can i export my data?</h4>
               <p className="text-sm text-muted-foreground">
-                yes, you can export all your invoices and receipts as csv files from the inbox page using the export button.
+                yes. exports are available from the dashboard and reporting views so you can pull activity into your own models.
               </p>
             </div>
           </CardContent>

@@ -13,6 +13,63 @@ import crypto from 'crypto';
 
 export const workspaceRouter = router({
   /**
+   * Ensure the user has a default workspace, creating one on demand.
+   */
+  getOrCreateWorkspace: protectedProcedure.query(async ({ ctx }) => {
+    const { userId } = ctx;
+
+    if (!userId) {
+      throw new TRPCError({
+        code: 'UNAUTHORIZED',
+        message: 'User not authenticated',
+      });
+    }
+
+    const existingMembership = await ctx.db
+      .select()
+      .from(workspaceMembers)
+      .where(eq(workspaceMembers.userId, userId))
+      .limit(1);
+
+    if (existingMembership.length > 0) {
+      const workspace = await ctx.db
+        .select()
+        .from(workspaces)
+        .where(eq(workspaces.id, existingMembership[0].workspaceId))
+        .limit(1);
+
+      return {
+        workspaceId: existingMembership[0].workspaceId,
+        workspace: workspace[0],
+        membership: existingMembership[0],
+      };
+    }
+
+    const newWorkspace = await ctx.db
+      .insert(workspaces)
+      .values({
+        name: 'Personal Workspace',
+        createdBy: userId,
+      })
+      .returning();
+
+    const membership = await ctx.db
+      .insert(workspaceMembers)
+      .values({
+        workspaceId: newWorkspace[0].id,
+        userId,
+        role: 'owner',
+      })
+      .returning();
+
+    return {
+      workspaceId: newWorkspace[0].id,
+      workspace: newWorkspace[0],
+      membership: membership[0],
+    };
+  }),
+
+  /**
    * Get team members for a workspace
    */
   getTeamMembers: protectedProcedure

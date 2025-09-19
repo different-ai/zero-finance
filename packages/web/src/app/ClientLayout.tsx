@@ -18,11 +18,10 @@ function DemoAppWrapper({ children }: { children: React.ReactNode }) {
   const { currentScene, selectInboxItem } = useDemoTimeline() // Now safely called within DemoProvider's scope
 
   const isDashboard = pathname === "/dashboard"
-  const isGmail = pathname === "/gmail"
   const isLandingPage = pathname === "/"
 
   // Determine if the 20% demo controls column should be shown
-  const showDemoControlsColumn = (isDashboard || isGmail) && !isLandingPage
+  const showDemoControlsColumn = isDashboard && !isLandingPage
   const defaultSidebarOpen = isDashboard
 
   return (
@@ -43,7 +42,7 @@ function DemoAppWrapper({ children }: { children: React.ReactNode }) {
                   <span className="font-semibold text-lg">Zero Finance</span>
                 </header>
               )}
-              <main className={`flex-1 ${isGmail ? "bg-muted/40" : "bg-background"} text-foreground`}>{children}</main>
+              <main className="flex-1 bg-background text-foreground">{children}</main>
             </div>
           </Suspense>
         </div>

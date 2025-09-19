@@ -38,8 +38,8 @@ export function InboxDemo() {
   return (
     <div className="relative pointer-events-none">
       <BrowserWindow
-        url="0.finance/dashboard/inbox"
-        title="Zero Finance - AI Inbox"
+        url="0.finance/dashboard"
+        title="Zero Finance"
       >
         <div className="bg-gray-50 h-[350px] overflow-hidden">
           {/* Inbox Header */}
