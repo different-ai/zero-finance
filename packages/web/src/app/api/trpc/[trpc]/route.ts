@@ -2,7 +2,7 @@ import { fetchRequestHandler } from '@trpc/server/adapters/fetch';
 import { appRouter } from '@/server/routers/_app';
 import { getUser } from '@/lib/auth';
 import type { Context } from '@/server/context';
-import { getUserId } from '@/lib/auth';
+import { ensureUserWorkspace } from '@/server/utils/workspace';
 
 // Define the simple logger interface matching context.ts
 interface Logger {
@@ -28,6 +28,8 @@ const handler = async (req: Request) => {
     createContext: async (): Promise<Context> => {
       // Get the authenticated user (or null if not authenticated)
       let user = null;
+      let workspaceId: string | null = null;
+      let workspaceMembershipId: string | null = null;
       try {
         user = await getUser();
       } catch (error) {
@@ -37,10 +39,22 @@ const handler = async (req: Request) => {
       console.log(`API Route: Context creation for user: ${user?.id}`);
       // Return a context compatible with the Context type
       const { db } = await import('@/db'); // Import db instance
+      if (user?.id) {
+        try {
+          const { workspaceId: ensuredWorkspaceId, membership } =
+            await ensureUserWorkspace(db, user.id);
+          workspaceId = ensuredWorkspaceId;
+          workspaceMembershipId = membership.id;
+        } catch (workspaceError) {
+          console.error('Failed to ensure workspace during context creation:', workspaceError);
+        }
+      }
       return {
         userId: user?.id || null,
         log, // Include the logger instance
         db, // Include the db instance
+        workspaceId,
+        workspaceMembershipId,
         // We don't use NextApiRequest/Response in App Router
         // but we set these as undefined to satisfy the Context type
       };

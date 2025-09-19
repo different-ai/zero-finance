@@ -32,12 +32,22 @@ export const userSafesRouter = router({
    */
   list: protectedProcedure.query(async ({ ctx }) => {
     const privyDid = ctx.user.id; // Use ctx.user.id from isAuthed middleware
+    const workspaceId = ctx.workspaceId;
+    if (!workspaceId) {
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Workspace context is unavailable.',
+      });
+    }
     console.log(`Fetching safes for user DID: ${privyDid}`);
 
     try {
       // Use the imported 'db' directly
       const safes = await db.query.userSafes.findMany({
-        where: eq(userSafes.userDid, privyDid),
+        where: and(
+          eq(userSafes.userDid, privyDid),
+          eq(userSafes.workspaceId, workspaceId),
+        ),
         // Let drizzle-orm infer types for orderBy parameters
         orderBy: (safes, { asc }) => [asc(safes.createdAt)],
       });
@@ -59,11 +69,19 @@ export const userSafesRouter = router({
    */
   getPrimarySafeAddress: protectedProcedure.query(async ({ ctx }) => {
     const privyDid = ctx.user.id; 
+    const workspaceId = ctx.workspaceId;
+    if (!workspaceId) {
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Workspace context is unavailable.',
+      });
+    }
     try {
       const primarySafe = await db.query.userSafes.findFirst({
         where: and(
           eq(userSafes.userDid, privyDid),
-          eq(userSafes.safeType, 'primary')
+          eq(userSafes.safeType, 'primary'),
+          eq(userSafes.workspaceId, workspaceId),
         ),
         columns: { safeAddress: true },
       });
@@ -92,6 +110,13 @@ export const userSafesRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       const privyDid = ctx.user.id; // Use ctx.user.id
+      const workspaceId = ctx.workspaceId;
+      if (!workspaceId) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Workspace context is unavailable.',
+        });
+      }
       const { safeType } = input;
       console.log(`Attempting to create ${safeType} safe for user DID: ${privyDid}`);
 
@@ -101,7 +126,8 @@ export const userSafesRouter = router({
         const primarySafe = await db.query.userSafes.findFirst({
           where: and(
             eq(userSafes.userDid, privyDid),
-            eq(userSafes.safeType, 'primary')
+            eq(userSafes.safeType, 'primary'),
+            eq(userSafes.workspaceId, workspaceId),
           ),
           columns: { safeAddress: true },
         });
@@ -120,7 +146,8 @@ export const userSafesRouter = router({
         const existingSafe = await db.query.userSafes.findFirst({
           where: and(
             eq(userSafes.userDid, privyDid),
-            eq(userSafes.safeType, safeType)
+            eq(userSafes.safeType, safeType),
+            eq(userSafes.workspaceId, workspaceId),
           ),
           columns: { id: true },
         });
@@ -152,6 +179,7 @@ export const userSafesRouter = router({
             userDid: privyDid,
             safeAddress: newSafeAddress,
             safeType: safeType,
+            workspaceId,
           })
           .returning();
 
