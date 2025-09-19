@@ -37,59 +37,86 @@ export const ephemeralKeysTable = pgTable("ephemeral_keys", {
 });
 */
 
-export const userWalletsTable = pgTable('user_wallets', {
-  id: uuid('id').defaultRandom().primaryKey(),
-  userId: varchar('user_id', { length: 255 }).notNull(),
-  address: varchar('address', { length: 255 }).notNull().unique(),
-  privateKey: text('private_key').notNull(),
-  publicKey: text('public_key').notNull(),
-  network: varchar('network', { length: 50 }).notNull().default('gnosis'),
-  isDefault: boolean('is_default').notNull().default(true),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp('updated_at').defaultNow().notNull(),
-});
+export const userWalletsTable = pgTable(
+  'user_wallets',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    userId: varchar('user_id', { length: 255 }).notNull(),
+    workspaceId: uuid('workspace_id'),
+    address: varchar('address', { length: 255 }).notNull().unique(),
+    privateKey: text('private_key').notNull(),
+    publicKey: text('public_key').notNull(),
+    network: varchar('network', { length: 50 }).notNull().default('gnosis'),
+    isDefault: boolean('is_default').notNull().default(true),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  },
+  (table) => {
+    return {
+      workspaceIdx: index('user_wallets_workspace_idx').on(table.workspaceId),
+    };
+  },
+);
 
-export const userProfilesTable = pgTable('user_profiles', {
-  id: uuid('id').defaultRandom().primaryKey(),
-  privyDid: varchar('privy_did', { length: 255 }).notNull().unique(),
-  paymentAddress: varchar('payment_address', { length: 255 }),
-  primarySafeAddress: varchar('primary_safe_address', { length: 42 }),
-  businessName: varchar('business_name', { length: 255 }),
-  email: varchar('email', { length: 255 }),
-  defaultWalletId: uuid('default_wallet_id').references(
-    () => userWalletsTable.id,
-  ),
-  skippedOrCompletedOnboardingStepper: boolean(
-    'skipped_or_completed_onboarding_stepper',
-  ).default(false),
-  isInsured: boolean('is_insured').default(false),
-  insuranceActivatedAt: timestamp('insurance_activated_at'),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp('updated_at').defaultNow().notNull(),
-});
+export const userProfilesTable = pgTable(
+  'user_profiles',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    privyDid: varchar('privy_did', { length: 255 }).notNull().unique(),
+    workspaceId: uuid('workspace_id'),
+    paymentAddress: varchar('payment_address', { length: 255 }),
+    primarySafeAddress: varchar('primary_safe_address', { length: 42 }),
+    businessName: varchar('business_name', { length: 255 }),
+    email: varchar('email', { length: 255 }),
+    defaultWalletId: uuid('default_wallet_id').references(
+      () => userWalletsTable.id,
+    ),
+    skippedOrCompletedOnboardingStepper: boolean(
+      'skipped_or_completed_onboarding_stepper',
+    ).default(false),
+    isInsured: boolean('is_insured').default(false),
+    insuranceActivatedAt: timestamp('insurance_activated_at'),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  },
+  (table) => {
+    return {
+      workspaceIdx: index('user_profiles_workspace_idx').on(table.workspaceId),
+    };
+  },
+);
 
-export const userRequestsTable = pgTable('user_requests', {
-  id: text('id').primaryKey().default(crypto.randomUUID()), // Using text for UUIDs
-  requestId: text('request_id'), // Request Network ID
-  userId: text('user_id').notNull(),
-  companyId: uuid('company_id'), // Link to company (optional)
-  senderCompanyId: uuid('sender_company_id').references(() => companies.id), // Company sending the invoice
-  recipientCompanyId: uuid('recipient_company_id').references(
-    () => companies.id,
-  ), // Company receiving the invoice
-  walletAddress: text('wallet_address'), // Wallet address used for the request
-  role: text('role').$type<InvoiceRole>(),
-  description: text('description'),
-  amount: bigint('amount', { mode: 'bigint' }), // Stored as bigint (smallest unit)
-  currency: text('currency'),
-  currencyDecimals: integer('currency_decimals'), // Store the decimals used for the amount
-  status: text('status').$type<InvoiceStatus>().default('db_pending'), // Default to db_pending
-  client: text('client'),
-  invoiceData: jsonb('invoice_data').notNull(), // Store the full validated Zod object (Use jsonb)
-  // Removed: shareToken: text('share_token'), // Removed field for the ephemeral share token
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp('updated_at').defaultNow().notNull(),
-});
+export const userRequestsTable = pgTable(
+  'user_requests',
+  {
+    id: text('id').primaryKey().default(crypto.randomUUID()), // Using text for UUIDs
+    requestId: text('request_id'), // Request Network ID
+    userId: text('user_id').notNull(),
+    workspaceId: uuid('workspace_id'),
+    companyId: uuid('company_id'), // Link to company (optional)
+    senderCompanyId: uuid('sender_company_id').references(() => companies.id), // Company sending the invoice
+    recipientCompanyId: uuid('recipient_company_id').references(
+      () => companies.id,
+    ), // Company receiving the invoice
+    walletAddress: text('wallet_address'), // Wallet address used for the request
+    role: text('role').$type<InvoiceRole>(),
+    description: text('description'),
+    amount: bigint('amount', { mode: 'bigint' }), // Stored as bigint (smallest unit)
+    currency: text('currency'),
+    currencyDecimals: integer('currency_decimals'), // Store the decimals used for the amount
+    status: text('status').$type<InvoiceStatus>().default('db_pending'), // Default to db_pending
+    client: text('client'),
+    invoiceData: jsonb('invoice_data').notNull(), // Store the full validated Zod object (Use jsonb)
+    // Removed: shareToken: text('share_token'), // Removed field for the ephemeral share token
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  },
+  (table) => {
+    return {
+      workspaceIdx: index('user_requests_workspace_idx').on(table.workspaceId),
+    };
+  },
+);
 
 // Define relations between tables
 export const userProfilesRelations = relations(
@@ -175,6 +202,7 @@ export const userSafes = pgTable(
     userDid: text('user_did')
       .notNull()
       .references(() => users.privyDid), // Foreign key to users table
+    workspaceId: uuid('workspace_id'),
     safeAddress: varchar('safe_address', { length: 42 }).notNull(), // Ethereum address (42 chars)
     safeType: text('safe_type', {
       enum: ['primary', 'tax', 'liquidity', 'yield'],
@@ -193,6 +221,7 @@ export const userSafes = pgTable(
         table.userDid,
         table.safeType,
       ),
+      workspaceIdx: index('user_safes_workspace_idx').on(table.workspaceId),
     };
   },
 );
@@ -205,6 +234,7 @@ export const userFundingSources = pgTable(
     userPrivyDid: text('user_privy_did')
       .notNull()
       .references(() => users.privyDid, { onDelete: 'cascade' }),
+    workspaceId: uuid('workspace_id'),
 
     // Source Provider
     sourceProvider: text('source_provider', {
@@ -253,6 +283,9 @@ export const userFundingSources = pgTable(
       userDidIdx: index('user_funding_sources_user_did_idx').on(
         table.userPrivyDid,
       ), // Added index
+      workspaceIdx: index('user_funding_sources_workspace_idx').on(
+        table.workspaceId,
+      ),
     };
   },
 );
@@ -265,6 +298,7 @@ export const userDestinationBankAccounts = pgTable(
     userId: text('user_id')
       .notNull()
       .references(() => users.privyDid, { onDelete: 'cascade' }), // Link to user's privy DID
+    workspaceId: uuid('workspace_id'),
     accountName: text('account_name').notNull(), // Nickname for the account
     bankName: text('bank_name').notNull(),
     accountHolderType: text('account_holder_type', {
@@ -304,6 +338,9 @@ export const userDestinationBankAccounts = pgTable(
   (table) => {
     return {
       userDidIdx: index('user_dest_bank_accounts_user_id_idx').on(table.userId), // Added index
+      workspaceIdx: index('user_dest_bank_accounts_workspace_idx').on(
+        table.workspaceId,
+      ),
     };
   },
 );
@@ -316,6 +353,7 @@ export const allocationStrategies = pgTable(
     userDid: text('user_did')
       .notNull()
       .references(() => users.privyDid, { onDelete: 'cascade' }),
+    workspaceId: uuid('workspace_id'),
     // Ensure a user can only have one strategy entry per safe type
     destinationSafeType: text('destination_safe_type', {
       enum: ['primary', 'tax', 'liquidity', 'yield'],
@@ -336,6 +374,9 @@ export const allocationStrategies = pgTable(
         table.userDid,
         table.destinationSafeType,
       ),
+      workspaceIdx: index('allocation_strategies_workspace_idx').on(
+        table.workspaceId,
+      ),
     };
   },
 );
@@ -350,6 +391,7 @@ export const offrampTransfers = pgTable(
     userId: text('user_id')
       .notNull()
       .references(() => users.privyDid, { onDelete: 'cascade' }), // Link to user
+    workspaceId: uuid('workspace_id'),
     alignTransferId: text('align_transfer_id').notNull().unique(), // ID from Align API
     status: text('status', {
       enum: ['pending', 'processing', 'completed', 'failed', 'canceled'],
@@ -391,6 +433,9 @@ export const offrampTransfers = pgTable(
   (table) => {
     return {
       userIdx: index('offramp_transfers_user_id_idx').on(table.userId),
+      workspaceIdx: index('offramp_transfers_workspace_idx').on(
+        table.workspaceId,
+      ),
       alignIdIdx: index('offramp_transfers_align_id_idx').on(
         table.alignTransferId,
       ),
@@ -406,6 +451,7 @@ export const onrampTransfers = pgTable(
     userId: text('user_id')
       .notNull()
       .references(() => users.privyDid, { onDelete: 'cascade' }),
+    workspaceId: uuid('workspace_id'),
     alignTransferId: text('align_transfer_id').notNull().unique(),
 
     // Transfer details
@@ -442,6 +488,9 @@ export const onrampTransfers = pgTable(
   (table) => {
     return {
       userIdx: index('onramp_transfers_user_id_idx').on(table.userId),
+      workspaceIdx: index('onramp_transfers_workspace_idx').on(
+        table.workspaceId,
+      ),
       alignIdIdx: index('onramp_transfers_align_id_idx').on(
         table.alignTransferId,
       ),
@@ -574,6 +623,7 @@ export const earnDeposits = pgTable(
     userDid: text('user_did')
       .notNull()
       .references(() => users.privyDid, { onDelete: 'cascade' }),
+    workspaceId: uuid('workspace_id'),
     safeAddress: varchar('safe_address', { length: 42 }).notNull(),
     vaultAddress: varchar('vault_address', { length: 42 }).notNull(),
     tokenAddress: varchar('token_address', { length: 42 }).notNull(),
@@ -590,6 +640,7 @@ export const earnDeposits = pgTable(
       safeAddressIdx: index('earn_safe_address_idx').on(table.safeAddress),
       vaultAddressIdx: index('earn_vault_address_idx').on(table.vaultAddress),
       userDidIdx: index('earn_user_did_idx').on(table.userDid),
+      workspaceIdx: index('earn_workspace_idx').on(table.workspaceId),
     };
   },
 );
@@ -603,6 +654,7 @@ export const earnWithdrawals = pgTable(
     userDid: text('user_did')
       .notNull()
       .references(() => users.privyDid, { onDelete: 'cascade' }),
+    workspaceId: uuid('workspace_id'),
     safeAddress: varchar('safe_address', { length: 42 }).notNull(),
     vaultAddress: varchar('vault_address', { length: 42 }).notNull(),
     tokenAddress: varchar('token_address', { length: 42 }).notNull(),
@@ -628,6 +680,7 @@ export const earnWithdrawals = pgTable(
         table.vaultAddress,
       ),
       userDidIdx: index('earn_withdrawals_user_did_idx').on(table.userDid),
+      workspaceIdx: index('earn_withdrawals_workspace_idx').on(table.workspaceId),
       statusIdx: index('earn_withdrawals_status_idx').on(table.status),
     };
   },
@@ -641,6 +694,7 @@ export const incomingDeposits = pgTable(
     userDid: text('user_did')
       .notNull()
       .references(() => users.privyDid, { onDelete: 'cascade' }),
+    workspaceId: uuid('workspace_id'),
     safeAddress: varchar('safe_address', { length: 42 }).notNull(),
     txHash: varchar('tx_hash', { length: 66 }).notNull().unique(),
     fromAddress: varchar('from_address', { length: 42 }).notNull(),
@@ -674,6 +728,9 @@ export const incomingDeposits = pgTable(
       ),
       txHashIdx: index('incoming_deposits_tx_hash_idx').on(table.txHash),
       userDidIdx: index('incoming_deposits_user_did_idx').on(table.userDid),
+      workspaceIdx: index('incoming_deposits_workspace_idx').on(
+        table.workspaceId,
+      ),
       sweptIdx: index('incoming_deposits_swept_idx').on(table.swept),
       timestampIdx: index('incoming_deposits_timestamp_idx').on(
         table.timestamp,
@@ -704,6 +761,7 @@ export const autoEarnConfigs = pgTable(
     pct: integer('pct').notNull(),
     lastTrigger: timestamp('last_trigger', { withTimezone: true }),
     autoVaultAddress: varchar('auto_vault_address', { length: 42 }),
+    workspaceId: uuid('workspace_id'),
   },
   (table) => {
     return {
@@ -711,6 +769,7 @@ export const autoEarnConfigs = pgTable(
         table.userDid,
         table.safeAddress,
       ),
+      workspaceIdx: index('auto_earn_workspace_idx').on(table.workspaceId),
     };
   },
 );
@@ -724,6 +783,7 @@ export const inboxCards = pgTable(
     userId: text('user_id')
       .notNull()
       .references(() => users.privyDid, { onDelete: 'cascade' }),
+    workspaceId: uuid('workspace_id'),
 
     // Core card information
     cardId: text('card_id').notNull().unique(), // Original UI card ID for linking
@@ -841,6 +901,7 @@ export const inboxCards = pgTable(
   (table) => {
     return {
       userIdIdx: index('inbox_cards_user_id_idx').on(table.userId),
+      workspaceIdx: index('inbox_cards_workspace_idx').on(table.workspaceId),
       statusIdx: index('inbox_cards_status_idx').on(table.status),
       sourceTypeIdx: index('inbox_cards_source_type_idx').on(table.sourceType),
       timestampIdx: index('inbox_cards_timestamp_idx').on(table.timestamp),
@@ -867,6 +928,7 @@ export const actionLedger = pgTable(
     approvedBy: text('approved_by')
       .notNull()
       .references(() => users.privyDid, { onDelete: 'cascade' }),
+    workspaceId: uuid('workspace_id'),
 
     // Original inbox card information
     inboxCardId: text('inbox_card_id').notNull(), // Original card ID from the UI
@@ -924,6 +986,9 @@ export const actionLedger = pgTable(
       approvedByIdx: index('action_ledger_approved_by_idx').on(
         table.approvedBy,
       ),
+      workspaceIdx: index('action_ledger_workspace_idx').on(
+        table.workspaceId,
+      ),
       actionTypeIdx: index('action_ledger_action_type_idx').on(
         table.actionType,
       ),
@@ -975,6 +1040,7 @@ export const chats = pgTable(
     userId: text('user_id')
       .notNull()
       .references(() => users.privyDid, { onDelete: 'cascade' }),
+    workspaceId: uuid('workspace_id'),
     title: text('title').notNull(),
     createdAt: timestamp('created_at', { withTimezone: true })
       .defaultNow()
@@ -991,6 +1057,7 @@ export const chats = pgTable(
   (table) => {
     return {
       userIdIdx: index('chats_user_id_idx').on(table.userId),
+      workspaceIdx: index('chats_workspace_idx').on(table.workspaceId),
       sharePathIdx: index('chats_share_path_idx').on(table.sharePath),
     };
   },
@@ -1075,6 +1142,7 @@ export const gmailOAuthTokens = pgTable(
     userPrivyDid: text('user_privy_did')
       .notNull()
       .references(() => users.privyDid, { onDelete: 'cascade' }),
+    workspaceId: uuid('workspace_id'),
     accessToken: text('access_token').notNull(),
     refreshToken: text('refresh_token').notNull(),
     expiryDate: timestamp('expiry_date'),
@@ -1092,6 +1160,9 @@ export const gmailOAuthTokens = pgTable(
       userDidIdx: index('gmail_oauth_tokens_user_did_idx').on(
         table.userPrivyDid,
       ),
+      workspaceIdx: index('gmail_oauth_tokens_workspace_idx').on(
+        table.workspaceId,
+      ),
     };
   },
 );
@@ -1102,6 +1173,7 @@ export const oauthStates = pgTable(
   {
     state: text('state').primaryKey(), // The unique state string
     userPrivyDid: text('user_privy_did').notNull(), // User associated with this state
+    workspaceId: uuid('workspace_id'),
     provider: text('provider').notNull().default('gmail'), // e.g., 'gmail', 'google_calendar'
     createdAt: timestamp('created_at', { withTimezone: true })
       .defaultNow()
@@ -1113,6 +1185,7 @@ export const oauthStates = pgTable(
     return {
       userDidIdx: index('oauth_states_user_did_idx').on(table.userPrivyDid),
       providerIdx: index('oauth_states_provider_idx').on(table.provider),
+      workspaceIdx: index('oauth_states_workspace_idx').on(table.workspaceId),
     };
   },
 );
@@ -1124,6 +1197,7 @@ export const gmailSyncJobs = pgTable(
     userId: text('user_id')
       .notNull()
       .references(() => users.privyDid, { onDelete: 'cascade' }),
+    workspaceId: uuid('workspace_id'),
     status: text('status', {
       enum: ['PENDING', 'RUNNING', 'COMPLETED', 'FAILED'],
     })
@@ -1145,6 +1219,9 @@ export const gmailSyncJobs = pgTable(
   (table) => {
     return {
       userIdx: index('gmail_sync_jobs_user_id_idx').on(table.userId),
+      workspaceIdx: index('gmail_sync_jobs_workspace_idx').on(
+        table.workspaceId,
+      ),
     };
   },
 );
@@ -1156,6 +1233,7 @@ export const gmailProcessingPrefs = pgTable(
     userId: text('user_id')
       .primaryKey()
       .references(() => users.privyDid, { onDelete: 'cascade' }),
+    workspaceId: uuid('workspace_id'),
     isEnabled: boolean('is_enabled').default(false).notNull(),
     activatedAt: timestamp('activated_at', { withTimezone: true }), // When the user first enabled processing
     keywords: text('keywords')
@@ -1174,6 +1252,9 @@ export const gmailProcessingPrefs = pgTable(
   (table) => {
     return {
       userIdIdx: index('gmail_processing_prefs_user_id_idx').on(table.userId),
+      workspaceIdx: index('gmail_processing_prefs_workspace_idx').on(
+        table.workspaceId,
+      ),
     };
   },
 );
@@ -1186,6 +1267,7 @@ export const userClassificationSettings = pgTable(
     userId: text('user_id')
       .notNull()
       .references(() => users.privyDid, { onDelete: 'cascade' }),
+    workspaceId: uuid('workspace_id'),
     name: text('name').notNull(), // User-friendly name for the prompt
     prompt: text('prompt').notNull(), // The actual classification instruction
     enabled: boolean('enabled').default(true).notNull(),
@@ -1208,6 +1290,9 @@ export const userClassificationSettings = pgTable(
       ),
       enabledIdx: index('user_classification_settings_enabled_idx').on(
         table.enabled,
+      ),
+      workspaceIdx: index('user_classification_settings_workspace_idx').on(
+        table.workspaceId,
       ),
     };
   },
@@ -1254,6 +1339,7 @@ export const workspaceMembers = pgTable(
     joinedAt: timestamp('joined_at', { withTimezone: true })
       .defaultNow()
       .notNull(),
+    isPrimary: boolean('is_primary').default(false).notNull(),
   },
   (table) => {
     return {
@@ -1359,6 +1445,7 @@ export const cardActions = pgTable(
     userId: text('user_id')
       .notNull()
       .references(() => users.privyDid, { onDelete: 'cascade' }),
+    workspaceId: uuid('workspace_id'),
 
     // Action details
     actionType: text('action_type', {
@@ -1446,6 +1533,9 @@ export const cardActions = pgTable(
     return {
       cardIdIdx: index('card_actions_card_id_idx').on(table.cardId),
       userIdIdx: index('card_actions_user_id_idx').on(table.userId),
+      workspaceIdx: index('card_actions_workspace_idx').on(
+        table.workspaceId,
+      ),
       actionTypeIdx: index('card_actions_action_type_idx').on(table.actionType),
       performedAtIdx: index('card_actions_performed_at_idx').on(
         table.performedAt,
@@ -1481,6 +1571,7 @@ export const userFeatures = pgTable(
     userPrivyDid: text('user_privy_did')
       .notNull()
       .references(() => users.privyDid, { onDelete: 'cascade' }),
+    workspaceId: uuid('workspace_id'),
     featureName: text('feature_name', {
       enum: ['inbox', 'savings', 'advanced_analytics', 'auto_categorization'],
     }).notNull(),
@@ -1505,6 +1596,7 @@ export const userFeatures = pgTable(
         table.featureName,
       ),
       userDidIdx: index('user_features_user_did_idx').on(table.userPrivyDid),
+      workspaceIdx: index('user_features_workspace_idx').on(table.workspaceId),
     };
   },
 );
@@ -1520,6 +1612,7 @@ export const invoiceTemplates = pgTable(
     userPrivyDid: text('user_privy_did')
       .notNull()
       .references(() => users.privyDid, { onDelete: 'cascade' }),
+    workspaceId: uuid('workspace_id'),
 
     name: text('name').notNull(),
     description: text('description'),
@@ -1541,6 +1634,9 @@ export const invoiceTemplates = pgTable(
     return {
       userIdIdx: index('invoice_templates_user_id_idx').on(table.userPrivyDid),
       nameIdx: index('invoice_templates_name_idx').on(table.name),
+      workspaceIdx: index('invoice_templates_workspace_idx').on(
+        table.workspaceId,
+      ),
     };
   },
 );
@@ -1556,6 +1652,7 @@ export const companies = pgTable(
     name: text('name').notNull(),
     email: text('email').notNull(),
     ownerPrivyDid: text('owner_privy_did').notNull(),
+    workspaceId: uuid('workspace_id'),
 
     // Address information
     address: text('address'),
@@ -1587,6 +1684,7 @@ export const companies = pgTable(
   (table) => {
     return {
       ownerIdx: index('companies_owner_idx').on(table.ownerPrivyDid),
+      workspaceIdx: index('companies_workspace_idx').on(table.workspaceId),
     };
   },
 );
@@ -1602,6 +1700,7 @@ export const companyMembers = pgTable(
     role: text('role', { enum: ['owner', 'member'] })
       .notNull()
       .default('member'),
+    workspaceId: uuid('workspace_id'),
 
     // Timestamps
     joinedAt: timestamp('joined_at', { withTimezone: true })
@@ -1615,6 +1714,9 @@ export const companyMembers = pgTable(
         table.userPrivyDid,
       ),
       userIdx: index('company_members_user_idx').on(table.userPrivyDid),
+      workspaceIdx: index('company_members_workspace_idx').on(
+        table.workspaceId,
+      ),
     };
   },
 );
@@ -1626,6 +1728,7 @@ export const sharedCompanyData = pgTable(
     companyId: uuid('company_id')
       .notNull()
       .references(() => companies.id, { onDelete: 'cascade' }),
+    workspaceId: uuid('workspace_id'),
     dataKey: text('data_key').notNull(),
     dataValue: text('data_value').notNull(),
 
@@ -1641,6 +1744,9 @@ export const sharedCompanyData = pgTable(
         table.companyId,
         table.dataKey,
       ),
+      workspaceIdx: index('shared_company_data_workspace_idx').on(
+        table.workspaceId,
+      ),
     };
   },
 );
@@ -1654,6 +1760,7 @@ export const companyClients = pgTable(
     clientCompanyId: uuid('client_company_id')
       .notNull()
       .references(() => companies.id, { onDelete: 'cascade' }),
+    workspaceId: uuid('workspace_id'),
 
     // Metadata
     notes: text('notes'),
@@ -1671,6 +1778,9 @@ export const companyClients = pgTable(
         table.clientCompanyId,
       ),
       userIdx: index('company_clients_user_idx').on(table.userPrivyDid),
+      workspaceIdx: index('company_clients_workspace_idx').on(
+        table.workspaceId,
+      ),
     };
   },
 );
@@ -1686,6 +1796,7 @@ export const companyInviteLinks = pgTable(
       .notNull()
       .references(() => companies.id, { onDelete: 'cascade' }),
     token: text('token').unique().notNull(),
+    workspaceId: uuid('workspace_id'),
 
     // Optional metadata
     metadata: jsonb('metadata').default('{}'), // Can store invite purpose, permissions, etc
@@ -1701,6 +1812,9 @@ export const companyInviteLinks = pgTable(
     return {
       tokenIdx: uniqueIndex('company_invite_links_token_idx').on(table.token),
       companyIdx: index('company_invite_links_company_idx').on(table.companyId),
+      workspaceIdx: index('company_invite_links_workspace_idx').on(
+        table.workspaceId,
+      ),
     };
   },
 );
@@ -1756,6 +1870,7 @@ export const userInvoicePreferences = pgTable(
     userPrivyDid: text('user_privy_did')
       .notNull()
       .references(() => users.privyDid, { onDelete: 'cascade' }),
+    workspaceId: uuid('workspace_id'),
 
     // Default seller information
     defaultSellerName: text('default_seller_name'),
@@ -1790,6 +1905,9 @@ export const userInvoicePreferences = pgTable(
     return {
       userIdIdx: index('user_invoice_prefs_user_id_idx').on(table.userPrivyDid),
       activeIdx: index('user_invoice_prefs_active_idx').on(table.isActive),
+      workspaceIdx: index('user_invoice_prefs_workspace_idx').on(
+        table.workspaceId,
+      ),
     };
   },
 );

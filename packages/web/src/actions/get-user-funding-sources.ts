@@ -11,6 +11,8 @@ export type UserFundingSourceDisplayData = {
   sourceBankName?: string | null;
   // Store full identifiers without masking
   sourceIdentifier?: string | null; // Full account number or IBAN
+  sourceAccountNumber?: string | null;
+  sourceIban?: string | null;
   sourceRoutingNumber?: string | null; // US routing number
   sourceBicSwift?: string | null; // IBAN BIC/SWIFT code
   sourcePaymentRail?: string | null;
@@ -61,6 +63,8 @@ export const getUserFundingSources = cache(
           sourceAccountType: source.sourceAccountType,
           sourceBankName: source.sourceBankName,
           sourceIdentifier: fullIdentifier, // Return full identifier without masking
+          sourceAccountNumber: source.sourceAccountNumber,
+          sourceIban: source.sourceIban,
           sourceRoutingNumber: source.sourceRoutingNumber,
           sourceBicSwift: source.sourceBicSwift,
           sourcePaymentRail: source.sourcePaymentRail,

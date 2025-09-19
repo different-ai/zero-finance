@@ -7,6 +7,7 @@ import type { AiProcessedDocument } from '@/server/services/ai-service';
  */
 export function uiCardToDbCard(card: InboxCard): Omit<InboxCardDB, 'id' | 'userId' | 'createdAt' | 'updatedAt'> {
   return {
+    workspaceId: null,
     cardId: card.id,
     icon: card.icon,
     title: card.title,
