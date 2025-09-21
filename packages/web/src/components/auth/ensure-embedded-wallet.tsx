@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import {
   usePrivy,
   useWallets,
@@ -14,19 +14,23 @@ import {
 export function EnsureEmbeddedWallet() {
   const { ready, authenticated } = usePrivy();
   const { wallets } = useWallets();
-  const { createWallet, creatingWallet } = useCreateWallet();
+  const { createWallet } = useCreateWallet();
+  const creatingRef = useRef(false);
 
   useEffect(() => {
-    if (!ready || !authenticated || creatingWallet) return;
+    if (!ready || !authenticated || creatingRef.current) return;
 
     const hasEmbedded = wallets.some(
       (wallet) => wallet.walletClientType === 'privy',
     );
 
     if (!hasEmbedded) {
-      void createWallet();
+      creatingRef.current = true;
+      void createWallet().finally(() => {
+        creatingRef.current = false;
+      });
     }
-  }, [ready, authenticated, wallets, createWallet, creatingWallet]);
+  }, [ready, authenticated, wallets, createWallet]);
 
   return null;
 }
