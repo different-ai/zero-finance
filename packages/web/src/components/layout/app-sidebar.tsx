@@ -1,4 +1,5 @@
 "use client"
+
 import {
   Sidebar,
   SidebarContent,
@@ -9,7 +10,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarTrigger,
-} from "@/components/ui/sidebar" // Assuming this is the shadcn sidebar from docs [^1]
+} from "@/components/ui/sidebar"
 import { Home, FileText, Settings, Landmark, HandCoins, BarChart3, LogOut, Package2 } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
@@ -25,12 +26,11 @@ const sidebarNavItems = [
 
 export function AppSidebar() {
   const pathname = usePathname()
+
   return (
-    <Sidebar collapsible="icon" className="border-r hidden md:flex">
-      {" "}
-      {/* Use collapsible="icon" [^1] */}
-      <SidebarHeader className="p-4 flex justify-between items-center h-14 border-b">
-        <Link href="/" className="flex items-center gap-2 font-semibold text-lg group-data-[state=collapsed]:hidden">
+    <Sidebar collapsible="icon" className="hidden border-r md:flex">
+      <SidebarHeader className="flex h-14 items-center justify-between border-b p-4">
+        <Link href="/" className="group-data-[state=collapsed]:hidden flex items-center gap-2 text-lg font-semibold">
           <Package2 className="h-6 w-6 text-primary" />
           <span>Zero Finance</span>
         </Link>
@@ -57,7 +57,7 @@ export function AppSidebar() {
           </SidebarMenu>
         </SidebarGroup>
       </SidebarContent>
-      <SidebarFooter className="p-2 border-t">
+      <SidebarFooter className="border-t p-2">
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton

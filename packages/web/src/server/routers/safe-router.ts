@@ -3,14 +3,14 @@ import { router, protectedProcedure } from '../create-router';
 import { TRPCError } from '@trpc/server';
 // import axios from 'axios'; // Use fetch instead
 import { type Address } from 'viem';
-import { createPublicClient, http, isAddress, erc20Abi } from 'viem';
+import { createPublicClient, http, isAddress, erc20Abi, getAddress } from 'viem';
 import { base } from 'viem/chains';
 import { db } from '@/db';
-import { incomingDeposits } from '@/db/schema';
-import { eq, and, desc } from 'drizzle-orm';
+import { incomingDeposits, userSafes, earnDeposits } from '@/db/schema';
+import type { UserSafe } from '@/db/schema';
+import { eq, and, desc, or, isNull } from 'drizzle-orm';
 import { formatUnits } from 'viem';
 import { USDC_ADDRESS, USDC_DECIMALS } from '@/lib/constants';
-import { earnDeposits } from '@/db/schema';
 
 // Base Sepolia URL (Use Base Mainnet URL for production)
 // const BASE_TRANSACTION_SERVICE_URL = 'https://safe-transaction-base-sepolia.safe.global/api'; 
@@ -241,9 +241,13 @@ export const safeRouter = router({
     )
     .query(async ({ input, ctx }): Promise<TransactionItem[]> => {
       const { safeAddress, limit = 100, syncFromBlockchain = true } = input;
-      const userId = ctx.user.id;
+      const safeRecord = await getSafeForWorkspace(ctx, safeAddress);
+      const userId = safeRecord.userDid;
+      const workspaceId = safeRecord.workspaceId;
 
-      console.log(`[getEnrichedTransactions] Querying for safe address: ${safeAddress} (user: ${userId})`);
+      console.log(
+        `[getEnrichedTransactions] Querying for safe address: ${safeAddress} (user: ${userId}, workspace: ${workspaceId})`,
+      );
 
       // Step 1: Sync incoming deposits to our database (only if needed)
       if (syncFromBlockchain) {
@@ -262,7 +266,8 @@ export const safeRouter = router({
             const userVaults = await db.query.earnDeposits.findMany({
               where: and(
                 eq(earnDeposits.userDid, userId),
-                eq(earnDeposits.safeAddress, safeAddress)
+                eq(earnDeposits.safeAddress, safeAddress),
+                or(eq(earnDeposits.workspaceId, workspaceId), isNull(earnDeposits.workspaceId)),
               ),
               columns: { vaultAddress: true },
             });
@@ -291,6 +296,7 @@ export const safeRouter = router({
                 if (!existing) {
                   await db.insert(incomingDeposits).values({
                     userDid: userId,
+                    workspaceId,
                     safeAddress: safeAddress as `0x${string}`,
                     txHash: transfer.transactionHash as `0x${string}`,
                     fromAddress: transfer.from as `0x${string}`,
@@ -305,7 +311,17 @@ export const safeRouter = router({
                       isVaultWithdrawal: false, // Explicitly mark as not a vault withdrawal
                     },
                   });
-                  console.log(`[getEnrichedTransactions] Stored new deposit: ${formatUnits(BigInt(transfer.value), USDC_DECIMALS)} USDC from ${transfer.from}`);
+                  console.log(
+                    `[getEnrichedTransactions] Stored new deposit: ${formatUnits(
+                      BigInt(transfer.value),
+                      USDC_DECIMALS,
+                    )} USDC from ${transfer.from} (workspace: ${workspaceId})`,
+                  );
+                } else if (!existing.workspaceId) {
+                  await db
+                    .update(incomingDeposits)
+                    .set({ workspaceId })
+                    .where(eq(incomingDeposits.id, existing.id));
                 }
               }
             }
@@ -353,7 +369,8 @@ export const safeRouter = router({
         const deposits = await db.query.incomingDeposits.findMany({
           where: and(
             eq(incomingDeposits.safeAddress, safeAddress),
-            eq(incomingDeposits.tokenAddress, USDC_ADDRESS)
+            eq(incomingDeposits.tokenAddress, USDC_ADDRESS),
+            or(eq(incomingDeposits.workspaceId, workspaceId), isNull(incomingDeposits.workspaceId)),
           ),
         });
 
@@ -445,3 +462,59 @@ export const safeRouter = router({
 });
 
 // export type SafeRouter = typeof safeRouter; // Removed type export 
+type SafeWithWorkspace = Omit<UserSafe, 'workspaceId'> & { workspaceId: string };
+
+function requireWorkspaceId(workspaceId: string | null | undefined): string {
+  if (!workspaceId) {
+    throw new TRPCError({
+      code: 'INTERNAL_SERVER_ERROR',
+      message: 'Workspace context is required.',
+    });
+  }
+  return workspaceId;
+}
+
+function requirePrivyDid(ctx: { user?: { id?: string | null }; userId?: string | null }): string {
+  const privyDid = ctx.user?.id ?? ctx.userId;
+  if (!privyDid) {
+    throw new TRPCError({
+      code: 'UNAUTHORIZED',
+      message: 'User context missing.',
+    });
+  }
+  return privyDid;
+}
+
+async function getSafeForWorkspace(
+  ctx: { user?: { id?: string | null }; userId?: string | null; workspaceId?: string | null },
+  safeAddress: string,
+): Promise<SafeWithWorkspace> {
+  const privyDid = requirePrivyDid(ctx);
+  const workspaceId = requireWorkspaceId(ctx.workspaceId);
+  const normalizedSafeAddress = getAddress(safeAddress);
+
+  const safeRecord = await db.query.userSafes.findFirst({
+    where: (tbl, helpers) =>
+      helpers.and(
+        helpers.eq(tbl.userDid, privyDid),
+        helpers.eq(tbl.safeAddress, normalizedSafeAddress as `0x${string}`),
+        helpers.or(helpers.eq(tbl.workspaceId, workspaceId), helpers.isNull(tbl.workspaceId)),
+      ),
+  });
+
+  if (!safeRecord) {
+    throw new TRPCError({
+      code: 'NOT_FOUND',
+      message: 'Safe not found for the active workspace.',
+    });
+  }
+
+  if (!safeRecord.workspaceId) {
+    await db
+      .update(userSafes)
+      .set({ workspaceId })
+      .where(eq(userSafes.id, safeRecord.id));
+  }
+
+  return { ...safeRecord, workspaceId } as SafeWithWorkspace;
+}

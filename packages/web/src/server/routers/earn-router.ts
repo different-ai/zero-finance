@@ -7,7 +7,8 @@ import {
   earnWithdrawals,
   autoEarnConfigs,
 } from '@/db/schema';
-import { eq, and } from 'drizzle-orm';
+import type { UserSafe } from '@/db/schema';
+import { eq, and, or, isNull } from 'drizzle-orm';
 import { TRPCError } from '@trpc/server';
 import { USDC_ADDRESS } from '@/lib/constants';
 import { getBaseRpcUrl } from '@/lib/base-rpc-url';
@@ -100,6 +101,63 @@ function getPublicClientForVault(vaultAddress: string) {
   return getPublicClientForChain(chainId);
 }
 
+type SafeWithWorkspace = Omit<UserSafe, 'workspaceId'> & { workspaceId: string };
+
+function requireWorkspaceId(workspaceId: string | null | undefined): string {
+  if (!workspaceId) {
+    throw new TRPCError({
+      code: 'INTERNAL_SERVER_ERROR',
+      message: 'Workspace context is required for earn operations.',
+    });
+  }
+  return workspaceId;
+}
+
+function requirePrivyDid(ctx: { user?: { id?: string | null }; userId?: string | null }): string {
+  const privyDid = ctx.user?.id ?? ctx.userId;
+  if (!privyDid) {
+    throw new TRPCError({
+      code: 'UNAUTHORIZED',
+      message: 'User context missing for earn operations.',
+    });
+  }
+  return privyDid;
+}
+
+async function getSafeForWorkspace(
+  ctx: { user?: { id?: string | null }; userId?: string | null; workspaceId?: string | null },
+  safeAddress: string,
+): Promise<SafeWithWorkspace> {
+  const privyDid = requirePrivyDid(ctx);
+  const workspaceId = requireWorkspaceId(ctx.workspaceId);
+  const normalizedSafeAddress = getAddress(safeAddress);
+
+  const safeRecord = await db.query.userSafes.findFirst({
+    where: (tbl, helpers) =>
+      helpers.and(
+        helpers.eq(tbl.userDid, privyDid),
+        helpers.eq(tbl.safeAddress, normalizedSafeAddress as `0x${string}`),
+        helpers.or(helpers.eq(tbl.workspaceId, workspaceId), helpers.isNull(tbl.workspaceId)),
+      ),
+  });
+
+  if (!safeRecord) {
+    throw new TRPCError({
+      code: 'NOT_FOUND',
+      message: 'Safe not found for the active workspace.',
+    });
+  }
+
+  if (!safeRecord.workspaceId) {
+    await db
+      .update(userSafes)
+      .set({ workspaceId })
+      .where(eq(userSafes.id, safeRecord.id));
+  }
+
+  return { ...safeRecord, workspaceId } as SafeWithWorkspace;
+}
+
 //   /**
 //    * @dev Initiates the auto-earn process for the specified token and amount.
 //    *      This overload assumes the caller is already an authorized relayer.
@@ -174,20 +232,7 @@ export const earnRouter = router({
         });
       }
 
-      const safe = await db.query.userSafes.findFirst({
-        where: (safes, { and, eq }) =>
-          and(
-            eq(safes.userDid, privyDid),
-            eq(safes.safeAddress, safeAddress as `0x${string}`),
-          ),
-      });
-
-      if (!safe) {
-        throw new TRPCError({
-          code: 'NOT_FOUND',
-          message: 'Safe not found for the current user to record install.',
-        });
-      }
+      const safe = await getSafeForWorkspace(ctx, safeAddress);
 
       // Also ensure earn module is initialized on-chain before recording in DB
       if (AUTO_EARN_MODULE_ADDRESS) {
@@ -213,7 +258,7 @@ export const earnRouter = router({
 
       await db
         .update(userSafes)
-        .set({ isEarnModuleEnabled: true })
+        .set({ isEarnModuleEnabled: true, workspaceId: safe.workspaceId })
         .where(eq(userSafes.id, safe.id));
 
       return { success: true };
@@ -263,20 +308,8 @@ export const earnRouter = router({
       const currentChainId = BigInt(base.id);
 
       // Verify the safe belongs to the user and has earn module enabled (recorded in DB)
-      const safeUserLink = await db.query.userSafes.findFirst({
-        where: (safes, { and, eq }) =>
-          and(
-            eq(safes.userDid, privyDid),
-            eq(safes.safeAddress, safeAddress as `0x${string}`),
-          ),
-      });
-
-      if (!safeUserLink) {
-        throw new TRPCError({
-          code: 'NOT_FOUND',
-          message: 'Safe not found for the current user.',
-        });
-      }
+      const safeUserLink = await getSafeForWorkspace(ctx, safeAddress);
+      const workspaceId = safeUserLink.workspaceId;
       // Check DB flag first as a quick check
       if (!safeUserLink.isEarnModuleEnabled) {
         throw new TRPCError({
@@ -456,18 +489,31 @@ export const earnRouter = router({
 
         // 5. Get the current auto-earn percentage for this safe
         const autoEarnConfig = await db.query.autoEarnConfigs.findFirst({
-          where: (tbl, { and, eq }) =>
+          where: (tbl, { and, eq, or, isNull }) =>
             and(
               eq(tbl.userDid, privyDid),
               eq(tbl.safeAddress, safeAddress as `0x${string}`),
+              or(eq(tbl.workspaceId, workspaceId), isNull(tbl.workspaceId)),
             ),
         });
+        if (autoEarnConfig && !autoEarnConfig.workspaceId) {
+          await db
+            .update(autoEarnConfigs)
+            .set({ workspaceId })
+            .where(
+              and(
+                eq(autoEarnConfigs.userDid, privyDid),
+                eq(autoEarnConfigs.safeAddress, safeAddress as `0x${string}`),
+              ),
+            );
+        }
         const depositPercentage = autoEarnConfig?.pct || null;
 
         // 6. Record the deposit in the database with the percentage used
         await db.insert(earnDeposits).values({
           id: crypto.randomUUID(),
           userDid: privyDid,
+          workspaceId,
           safeAddress: safeAddress,
           vaultAddress: vaultAddress,
           tokenAddress: effectiveTokenAddress,
@@ -596,24 +642,18 @@ export const earnRouter = router({
       }
 
       // Verify the safe belongs to the user
-      const safeUserLink = await db.query.userSafes.findFirst({
-        where: (safes, { and, eq }) =>
-          and(
-            eq(safes.userDid, privyDid),
-            eq(safes.safeAddress, safeAddress as `0x${string}`),
-          ),
-      });
-
-      if (!safeUserLink) {
-        throw new TRPCError({
-          code: 'NOT_FOUND',
-          message: 'Safe not found for the current user.',
-        });
-      }
+      const safeUserLink = await getSafeForWorkspace(ctx, safeAddress);
+      const workspaceId = safeUserLink.workspaceId;
 
       const deposits = await db.query.earnDeposits.findMany({
-        where: (earnDepositsTable, { eq }) =>
-          eq(earnDepositsTable.safeAddress, safeAddress),
+        where: (earnDepositsTable, { and, eq, or, isNull }) =>
+          and(
+            eq(earnDepositsTable.safeAddress, safeAddress),
+            or(
+              eq(earnDepositsTable.workspaceId, workspaceId),
+              isNull(earnDepositsTable.workspaceId),
+            ),
+          ),
       });
 
       console.log('deposits', deposits);
@@ -923,24 +963,9 @@ export const earnRouter = router({
       }),
     )
     .query(async ({ ctx, input }) => {
-      const userId = ctx.user.id;
       const { safeAddress, vaultAddress } = input;
 
-      // Verify Safe belongs to user
-      const safeRecord = await db.query.userSafes.findFirst({
-        where: (tbl, { and, eq }) =>
-          and(
-            eq(tbl.userDid, userId),
-            eq(tbl.safeAddress, safeAddress as `0x${string}`),
-          ),
-      });
-
-      if (!safeRecord) {
-        throw new TRPCError({
-          code: 'FORBIDDEN',
-          message: 'Safe not found or not owned by user',
-        });
-      }
+      const safeRecord = await getSafeForWorkspace(ctx, safeAddress);
 
       const publicClient = createPublicClient({
         chain: base,
@@ -1026,24 +1051,9 @@ export const earnRouter = router({
       }),
     )
     .query(async ({ ctx, input }) => {
-      const userId = ctx.user.id;
       const { tokenAddress, ownerAddress, spenderAddress } = input;
 
-      // Verify Safe belongs to user
-      const safeRecord = await db.query.userSafes.findFirst({
-        where: (tbl, { and, eq }) =>
-          and(
-            eq(tbl.userDid, userId),
-            eq(tbl.safeAddress, ownerAddress as `0x${string}`),
-          ),
-      });
-
-      if (!safeRecord) {
-        throw new TRPCError({
-          code: 'FORBIDDEN',
-          message: 'Safe not found or not owned by user',
-        });
-      }
+      await getSafeForWorkspace(ctx, ownerAddress);
 
       const publicClient = createPublicClient({
         chain: base,
@@ -1090,31 +1100,31 @@ export const earnRouter = router({
       }),
     )
     .query(async ({ ctx, input }) => {
-      const userId = ctx.user.id;
       const { safeAddress } = input;
-
-      // Verify Safe belongs to user
-      const safeRecord = await db.query.userSafes.findFirst({
-        where: (tbl, { and, eq }) =>
-          and(
-            eq(tbl.userDid, userId),
-            eq(tbl.safeAddress, safeAddress as `0x${string}`),
-          ),
-      });
-      if (!safeRecord) {
-        throw new TRPCError({
-          code: 'NOT_FOUND',
-          message: 'Safe not found for user',
-        });
-      }
+      const safeRecord = await getSafeForWorkspace(ctx, safeAddress);
+      const userId = requirePrivyDid(ctx);
+      const workspaceId = safeRecord.workspaceId;
 
       const config = await db.query.autoEarnConfigs.findFirst({
-        where: (tbl, { and, eq }) =>
+        where: (tbl, { and, eq, or, isNull }) =>
           and(
             eq(tbl.userDid, userId),
             eq(tbl.safeAddress, safeAddress as `0x${string}`),
+            or(eq(tbl.workspaceId, workspaceId), isNull(tbl.workspaceId)),
           ),
       });
+
+      if (config && !config.workspaceId) {
+        await db
+          .update(autoEarnConfigs)
+          .set({ workspaceId })
+          .where(
+            and(
+              eq(autoEarnConfigs.userDid, userId),
+              eq(autoEarnConfigs.safeAddress, safeAddress as `0x${string}`),
+            ),
+          );
+      }
 
       return {
         pct: config?.pct ?? 0,
@@ -1138,23 +1148,10 @@ export const earnRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const userId = ctx.user.id;
       const { safeAddress, pct } = input;
-
-      // verify safe ownership
-      const safeRecord = await db.query.userSafes.findFirst({
-        where: (tbl, { and, eq }) =>
-          and(
-            eq(tbl.userDid, userId),
-            eq(tbl.safeAddress, safeAddress as `0x${string}`),
-          ),
-      });
-      if (!safeRecord) {
-        throw new TRPCError({
-          code: 'NOT_FOUND',
-          message: 'Safe not found for user',
-        });
-      }
+      const safeRecord = await getSafeForWorkspace(ctx, safeAddress);
+      const userId = requirePrivyDid(ctx);
+      const workspaceId = safeRecord.workspaceId;
 
       // Check if earn module is initialized on-chain before enabling
       if (AUTO_EARN_MODULE_ADDRESS) {
@@ -1178,18 +1175,19 @@ export const earnRouter = router({
         .insert(autoEarnConfigs)
         .values({
           userDid: userId,
+          workspaceId,
           safeAddress: safeAddress as `0x${string}`,
           pct,
         })
         .onConflictDoUpdate({
           target: [autoEarnConfigs.userDid, autoEarnConfigs.safeAddress],
-          set: { pct },
+          set: { pct, workspaceId },
         });
 
       // Enable the earn module flag so the worker will process this Safe
       await db
         .update(userSafes)
-        .set({ isEarnModuleEnabled: true })
+        .set({ isEarnModuleEnabled: true, workspaceId })
         .where(eq(userSafes.id, safeRecord.id));
 
       return { success: true };
@@ -1210,23 +1208,10 @@ export const earnRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const userId = ctx.user.id;
       const { safeAddress } = input;
-
-      // verify safe ownership
-      const safeRecord = await db.query.userSafes.findFirst({
-        where: (tbl, { and, eq }) =>
-          and(
-            eq(tbl.userDid, userId),
-            eq(tbl.safeAddress, safeAddress as `0x${string}`),
-          ),
-      });
-      if (!safeRecord) {
-        throw new TRPCError({
-          code: 'NOT_FOUND',
-          message: 'Safe not found for user',
-        });
-      }
+      const safeRecord = await getSafeForWorkspace(ctx, safeAddress);
+      const userId = requirePrivyDid(ctx);
+      const workspaceId = safeRecord.workspaceId;
 
       // Delete the auto-earn config
       await db
@@ -1235,13 +1220,14 @@ export const earnRouter = router({
           and(
             eq(autoEarnConfigs.userDid, userId),
             eq(autoEarnConfigs.safeAddress, safeAddress as `0x${string}`),
+            or(eq(autoEarnConfigs.workspaceId, workspaceId), isNull(autoEarnConfigs.workspaceId)),
           ),
         );
 
       // Disable the earn module flag so the worker will skip this Safe
       await db
         .update(userSafes)
-        .set({ isEarnModuleEnabled: false })
+        .set({ isEarnModuleEnabled: false, workspaceId })
         .where(eq(userSafes.id, safeRecord.id));
 
       return { success: true };
@@ -1261,26 +1247,30 @@ export const earnRouter = router({
       }),
     )
     .query(async ({ ctx, input }) => {
-      const userDid = ctx.userId;
-      if (!userDid) throw new TRPCError({ code: 'UNAUTHORIZED' });
-
-      const safe = await db.query.userSafes.findFirst({
-        where: (t, { and, eq }) =>
-          and(
-            eq(t.userDid, userDid),
-            eq(t.safeAddress, input.safeAddress as `0x${string}`),
-          ),
-      });
-      if (!safe)
-        throw new TRPCError({ code: 'NOT_FOUND', message: 'Safe not found' });
+      const safe = await getSafeForWorkspace(ctx, input.safeAddress);
+      const userDid = requirePrivyDid(ctx);
+      const workspaceId = safe.workspaceId;
 
       const cfg = await db.query.autoEarnConfigs.findFirst({
-        where: (t, { and, eq }) =>
+        where: (t, { and, eq, or, isNull }) =>
           and(
             eq(t.userDid, userDid),
             eq(t.safeAddress, input.safeAddress as `0x${string}`),
+            or(eq(t.workspaceId, workspaceId), isNull(t.workspaceId)),
           ),
       });
+
+      if (cfg && !cfg.workspaceId) {
+        await db
+          .update(autoEarnConfigs)
+          .set({ workspaceId })
+          .where(
+            and(
+              eq(autoEarnConfigs.userDid, userDid),
+              eq(autoEarnConfigs.safeAddress, input.safeAddress as `0x${string}`),
+            ),
+          );
+      }
       return {
         enabled: safe.isEarnModuleEnabled,
         allocation: cfg?.pct ?? 0,
@@ -1303,28 +1293,17 @@ export const earnRouter = router({
       }),
     )
     .query(async ({ ctx, input }) => {
-      const userId = ctx.user.id;
       const { safeAddress, limit } = input;
-
-      // Verify Safe belongs to user
-      const safeRecord = await db.query.userSafes.findFirst({
-        where: (tbl, { and, eq }) =>
-          and(
-            eq(tbl.userDid, userId),
-            eq(tbl.safeAddress, safeAddress as `0x${string}`),
-          ),
-      });
-      if (!safeRecord) {
-        throw new TRPCError({
-          code: 'NOT_FOUND',
-          message: 'Safe not found for user',
-        });
-      }
+      const safeRecord = await getSafeForWorkspace(ctx, safeAddress);
+      const workspaceId = safeRecord.workspaceId;
 
       // Fetch recent earn deposits
       const deposits = await db.query.earnDeposits.findMany({
-        where: (tbl, { eq }) =>
-          eq(tbl.safeAddress, safeAddress as `0x${string}`),
+        where: (tbl, { and, eq, or, isNull }) =>
+          and(
+            eq(tbl.safeAddress, safeAddress as `0x${string}`),
+            or(eq(tbl.workspaceId, workspaceId), isNull(tbl.workspaceId)),
+          ),
         orderBy: (tbl, { desc }) => [desc(tbl.timestamp)],
         limit,
       });
@@ -1374,28 +1353,17 @@ export const earnRouter = router({
       }),
     )
     .query(async ({ ctx, input }) => {
-      const userId = ctx.user.id;
       const { safeAddress, limit } = input;
-
-      // Verify Safe belongs to user
-      const safeRecord = await db.query.userSafes.findFirst({
-        where: (tbl, { and, eq }) =>
-          and(
-            eq(tbl.userDid, userId),
-            eq(tbl.safeAddress, safeAddress as `0x${string}`),
-          ),
-      });
-      if (!safeRecord) {
-        throw new TRPCError({
-          code: 'NOT_FOUND',
-          message: 'Safe not found for user',
-        });
-      }
+      const safeRecord = await getSafeForWorkspace(ctx, safeAddress);
+      const workspaceId = safeRecord.workspaceId;
 
       // Fetch recent earn withdrawals
       const withdrawals = await db.query.earnWithdrawals.findMany({
-        where: (tbl, { eq }) =>
-          eq(tbl.safeAddress, safeAddress as `0x${string}`),
+        where: (tbl, { and, eq, or, isNull }) =>
+          and(
+            eq(tbl.safeAddress, safeAddress as `0x${string}`),
+            or(eq(tbl.workspaceId, workspaceId), isNull(tbl.workspaceId)),
+          ),
         orderBy: (tbl, { desc }) => [desc(tbl.timestamp)],
         limit,
       });
@@ -1452,7 +1420,6 @@ export const earnRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const userId = ctx.user.id;
       const {
         safeAddress,
         vaultAddress,
@@ -1463,20 +1430,9 @@ export const earnRouter = router({
         txHash,
       } = input;
 
-      // Verify Safe belongs to user
-      const safeRecord = await db.query.userSafes.findFirst({
-        where: (tbl, { and, eq }) =>
-          and(
-            eq(tbl.userDid, userId),
-            eq(tbl.safeAddress, safeAddress as `0x${string}`),
-          ),
-      });
-      if (!safeRecord) {
-        throw new TRPCError({
-          code: 'NOT_FOUND',
-          message: 'Safe not found for user',
-        });
-      }
+      const safeRecord = await getSafeForWorkspace(ctx, safeAddress);
+      const userId = safeRecord.userDid;
+      const workspaceId = safeRecord.workspaceId;
 
       // For now, use userOpHash as txHash if no txHash provided (AA transactions)
       const finalTxHash = txHash || userOpHash || `pending-${Date.now()}`;
@@ -1485,6 +1441,7 @@ export const earnRouter = router({
       await db.insert(earnWithdrawals).values({
         id: crypto.randomUUID(),
         userDid: userId,
+        workspaceId,
         safeAddress: safeAddress,
         vaultAddress: vaultAddress,
         tokenAddress: tokenAddress,
@@ -1513,23 +1470,10 @@ export const earnRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const userId = ctx.user.id;
       const { safeAddress, percentage } = input;
-
-      // verify safe ownership
-      const safeRecord = await db.query.userSafes.findFirst({
-        where: (tbl, { and, eq }) =>
-          and(
-            eq(tbl.userDid, userId),
-            eq(tbl.safeAddress, safeAddress as `0x${string}`),
-          ),
-      });
-      if (!safeRecord) {
-        throw new TRPCError({
-          code: 'NOT_FOUND',
-          message: 'Safe not found for user',
-        });
-      }
+      const safeRecord = await getSafeForWorkspace(ctx, safeAddress);
+      const userId = safeRecord.userDid;
+      const workspaceId = safeRecord.workspaceId;
 
       if (percentage === 0) {
         // Disable auto-earn: delete config and disable module flag
@@ -1539,12 +1483,13 @@ export const earnRouter = router({
             and(
               eq(autoEarnConfigs.userDid, userId),
               eq(autoEarnConfigs.safeAddress, safeAddress as `0x${string}`),
+              or(eq(autoEarnConfigs.workspaceId, workspaceId), isNull(autoEarnConfigs.workspaceId)),
             ),
           );
 
         await db
           .update(userSafes)
-          .set({ isEarnModuleEnabled: false })
+          .set({ isEarnModuleEnabled: false, workspaceId })
           .where(eq(userSafes.id, safeRecord.id));
       } else {
         // Enable auto-earn: check module initialization, set config, and enable module flag
@@ -1568,17 +1513,18 @@ export const earnRouter = router({
           .insert(autoEarnConfigs)
           .values({
             userDid: userId,
+            workspaceId,
             safeAddress: safeAddress as `0x${string}`,
             pct: percentage,
           })
           .onConflictDoUpdate({
             target: [autoEarnConfigs.userDid, autoEarnConfigs.safeAddress],
-            set: { pct: percentage },
+            set: { pct: percentage, workspaceId },
           });
 
         await db
           .update(userSafes)
-          .set({ isEarnModuleEnabled: true })
+          .set({ isEarnModuleEnabled: true, workspaceId })
           .where(eq(userSafes.id, safeRecord.id));
       }
 
@@ -1603,30 +1549,8 @@ export const earnRouter = router({
     )
     .query(async ({ ctx, input }) => {
       const { safeAddress, vaultAddresses } = input;
-      const privyDid = ctx.userId;
-
-      if (!privyDid) {
-        throw new TRPCError({
-          code: 'UNAUTHORIZED',
-          message: 'User not authenticated.',
-        });
-      }
-
-      // Verify the safe belongs to the user
-      const safeUserLink = await db.query.userSafes.findFirst({
-        where: (safes, { and, eq }) =>
-          and(
-            eq(safes.userDid, privyDid),
-            eq(safes.safeAddress, safeAddress as `0x${string}`),
-          ),
-      });
-
-      if (!safeUserLink) {
-        throw new TRPCError({
-          code: 'NOT_FOUND',
-          message: 'Safe not found for the current user.',
-        });
-      }
+      const safeUserLink = await getSafeForWorkspace(ctx, safeAddress);
+      const workspaceId = safeUserLink.workspaceId;
 
       // Fetch stats for each vault
       const statsPromises = vaultAddresses.map(async (vaultAddress) => {
@@ -1687,10 +1611,14 @@ export const earnRouter = router({
 
           // Get deposits for this vault
           const deposits = await db.query.earnDeposits.findMany({
-            where: (earnDepositsTable, { and, eq }) =>
+            where: (earnDepositsTable, { and, eq, or, isNull }) =>
               and(
                 eq(earnDepositsTable.safeAddress, safeAddress),
                 eq(earnDepositsTable.vaultAddress, vaultAddress),
+                or(
+                  eq(earnDepositsTable.workspaceId, workspaceId),
+                  isNull(earnDepositsTable.workspaceId),
+                ),
               ),
           });
 
@@ -1704,10 +1632,14 @@ export const earnRouter = router({
 
           // Get withdrawals for this vault
           const withdrawals = await db.query.earnWithdrawals.findMany({
-            where: (earnWithdrawalsTable, { and, eq }) =>
+            where: (earnWithdrawalsTable, { and, eq, or, isNull }) =>
               and(
                 eq(earnWithdrawalsTable.safeAddress, safeAddress),
                 eq(earnWithdrawalsTable.vaultAddress, vaultAddress),
+                or(
+                  eq(earnWithdrawalsTable.workspaceId, workspaceId),
+                  isNull(earnWithdrawalsTable.workspaceId),
+                ),
               ),
           });
 
@@ -1791,30 +1723,7 @@ export const earnRouter = router({
     )
     .query(async ({ ctx, input }) => {
       const { userSafe, vaultAddresses } = input;
-      const privyDid = ctx.userId;
-
-      if (!privyDid) {
-        throw new TRPCError({
-          code: 'UNAUTHORIZED',
-          message: 'User not authenticated.',
-        });
-      }
-
-      // Verify the safe belongs to the user
-      const safeUserLink = await db.query.userSafes.findFirst({
-        where: (safes, { and, eq }) =>
-          and(
-            eq(safes.userDid, privyDid),
-            eq(safes.safeAddress, userSafe as `0x${string}`),
-          ),
-      });
-
-      if (!safeUserLink) {
-        throw new TRPCError({
-          code: 'NOT_FOUND',
-          message: 'Safe not found for the current user.',
-        });
-      }
+      await getSafeForWorkspace(ctx, userSafe);
 
       // Fetch positions directly from on-chain
       // This is more reliable than GraphQL and gives us real-time data
@@ -1894,24 +1803,10 @@ export const earnRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const userId = ctx.user.id;
       const { safeAddress, autoVaultAddress } = input;
-
-      // Verify safe ownership
-      const safeRecord = await db.query.userSafes.findFirst({
-        where: (tbl, { and, eq }) =>
-          and(
-            eq(tbl.userDid, userId),
-            eq(tbl.safeAddress, safeAddress as `0x${string}`),
-          ),
-      });
-
-      if (!safeRecord) {
-        throw new TRPCError({
-          code: 'NOT_FOUND',
-          message: 'Safe not found for user',
-        });
-      }
+      const safeRecord = await getSafeForWorkspace(ctx, safeAddress);
+      const userId = safeRecord.userDid;
+      const workspaceId = safeRecord.workspaceId;
 
       // Verify the vault address is one of the allowed Base vaults
       const isValidVault = BASE_USDC_VAULTS.some(
@@ -1928,10 +1823,11 @@ export const earnRouter = router({
 
       // Check if config exists
       const existingConfig = await db.query.autoEarnConfigs.findFirst({
-        where: (tbl, { and, eq }) =>
+        where: (tbl, { and, eq, or, isNull }) =>
           and(
             eq(tbl.userDid, userId),
             eq(tbl.safeAddress, safeAddress as `0x${string}`),
+            or(eq(tbl.workspaceId, workspaceId), isNull(tbl.workspaceId)),
           ),
       });
 
@@ -1939,7 +1835,7 @@ export const earnRouter = router({
         // Update existing config
         await db
           .update(autoEarnConfigs)
-          .set({ autoVaultAddress: autoVaultAddress as `0x${string}` })
+          .set({ autoVaultAddress: autoVaultAddress as `0x${string}`, workspaceId })
           .where(
             and(
               eq(autoEarnConfigs.userDid, userId),
@@ -1950,6 +1846,7 @@ export const earnRouter = router({
         // Create new config with default 10% and the selected vault
         await db.insert(autoEarnConfigs).values({
           userDid: userId,
+          workspaceId,
           safeAddress: safeAddress as `0x${string}`,
           pct: 10, // Default to 10%
           autoVaultAddress: autoVaultAddress as `0x${string}`,
@@ -1970,32 +1867,31 @@ export const earnRouter = router({
       }),
     )
     .query(async ({ ctx, input }) => {
-      const userId = ctx.user.id;
       const { safeAddress } = input;
-
-      // Verify Safe belongs to user
-      const safeRecord = await db.query.userSafes.findFirst({
-        where: (tbl, { and, eq }) =>
-          and(
-            eq(tbl.userDid, userId),
-            eq(tbl.safeAddress, safeAddress as `0x${string}`),
-          ),
-      });
-
-      if (!safeRecord) {
-        throw new TRPCError({
-          code: 'NOT_FOUND',
-          message: 'Safe not found for user',
-        });
-      }
+      const safeRecord = await getSafeForWorkspace(ctx, safeAddress);
+      const userId = safeRecord.userDid;
+      const workspaceId = safeRecord.workspaceId;
 
       const config = await db.query.autoEarnConfigs.findFirst({
-        where: (tbl, { and, eq }) =>
+        where: (tbl, { and, eq, or, isNull }) =>
           and(
             eq(tbl.userDid, userId),
             eq(tbl.safeAddress, safeAddress as `0x${string}`),
+            or(eq(tbl.workspaceId, workspaceId), isNull(tbl.workspaceId)),
           ),
       });
+
+      if (config && !config.workspaceId) {
+        await db
+          .update(autoEarnConfigs)
+          .set({ workspaceId })
+          .where(
+            and(
+              eq(autoEarnConfigs.userDid, userId),
+              eq(autoEarnConfigs.safeAddress, safeAddress as `0x${string}`),
+            ),
+          );
+      }
 
       return {
         pct: config?.pct ?? 0,
