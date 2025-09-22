@@ -298,29 +298,38 @@ export default function Home() {
       </section>
 
       {/* Footer */}
-      <footer className="bg-[#101010] text-white py-8">
-        <div className="mx-auto max-w-[1200px] px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-            <div>
-              <p className="text-[14px]">
-                Made with 💙 by{' '}
-                <a
-                  href="https://0.finance"
-                  className="text-primary-blue hover:underline"
-                >
-                  Zero Finance
-                </a>
-              </p>
-              <p className="text-[12px] text-white/60 mt-1">
-                Helping startups make the most of their runway.
-              </p>
+      <footer className="border-t border-[#101010]/10 bg-gradient-to-b from-white via-[#f7f8ff] to-[#eef2ff]">
+        <div className="mx-auto max-w-[1200px] px-4 sm:px-6 lg:px-8 py-10">
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-8">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+              <Image
+                src="/images/new-logo-bluer.png"
+                alt="Zero Finance logo"
+                width={64}
+                height={64}
+                className="h-12 w-auto drop-shadow-sm"
+              />
+              <div>
+                <p className="text-[14px] text-[#101010] flex items-center gap-1">
+                  Built with <span className="text-primary-blue">💙</span> by{' '}
+                  <a
+                    href="https://0.finance"
+                    className="font-semibold text-primary-blue hover:underline decoration-2 underline-offset-[4px]"
+                  >
+                    0 Finance
+                  </a>
+                </p>
+                <p className="text-[13px] text-[#101010]/70 mt-1">
+                  Helping startups make the most of their runway.
+                </p>
+              </div>
             </div>
-            <div className="flex gap-6 text-[14px]">
+            <nav className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-6 text-[14px] text-[#101010]/80">
               <a
                 href="https://0.finance"
                 className="hover:text-primary-blue transition-colors"
               >
-                Zero Finance
+                0 Finance
               </a>
               <a
                 href="https://x.com/0dotfinance"
@@ -332,9 +341,9 @@ export default function Home() {
                 href="https://cal.com/team/0finance/30"
                 className="hover:text-primary-blue transition-colors"
               >
-                Book Demo
+                Book a Demo
               </a>
-            </div>
+            </nav>
           </div>
         </div>
       </footer>

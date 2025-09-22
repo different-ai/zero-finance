@@ -1,0 +1,17 @@
+<svg width="198" height="40" viewBox="0 0 198 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="zfGradient" x1="8" y1="8" x2="40" y2="40" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#1B29FF" />
+      <stop offset="100%" stop-color="#3360FF" />
+    </linearGradient>
+  </defs>
+  <rect x="0.75" y="0.75" width="38.5" height="38.5" rx="12" fill="#0D0D16" stroke="url(#zfGradient)" stroke-width="1.5" />
+  <path d="M11.5 13.5C11.5 11.0147 13.5147 9 16 9H24C26.4853 9 28.5 11.0147 28.5 13.5V22.5C28.5 24.9853 26.4853 27 24 27H16C13.5147 27 11.5 24.9853 11.5 22.5V13.5Z" fill="#1B29FF" fill-opacity="0.18" />
+  <path d="M21 14C22.1046 14 23 14.8954 23 16V24" stroke="#1B29FF" stroke-width="2.5" stroke-linecap="round" />
+  <path d="M15 19H23" stroke="#1B29FF" stroke-width="2.5" stroke-linecap="round" />
+  <path d="M15 24C15 22.8954 15.8954 22 17 22H23" stroke="#1B29FF" stroke-width="2.5" stroke-linecap="round" />
+  <path d="M15 14C16.1046 14 17 14.8954 17 16V24" stroke="#1B29FF" stroke-width="2.5" stroke-linecap="round" />
+  <text x="52" y="26" fill="#101010" font-family="'Inter', 'Segoe UI', sans-serif" font-weight="600" font-size="18">
+    Zero Finance
+  </text>
+</svg>
