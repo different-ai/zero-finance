@@ -62,8 +62,8 @@
       "id": "shield",
       "name": "Shield",
       "tagline": "Neobank for global trade businesses",
-      "description": "Stablecoin-powered banking for exporters with same-day USD settlement.",
-      "longDescription": "Shield is building a neobank for exporters that blends stablecoin speed with the reliability of regulated banking. They let global trade businesses accept USDT from buyers and settle as same-day USD wires while embedding trade-specific compliance and AI-powered monitoring.",
+      "description": "Shield makes accepting stablecoins legal and simple",
+      "longDescription": "Shield makes accepting stablecoins legal and simple.",
       "logo": "https://api.typedream.com/v0/document/public/5cedd7e2-1039-4ac1-871c-a4412e831651_SHIELD_Logo_v1_png.png",
       "website": "https://www.getshield.xyz",
       "twitter": "https://x.com/shield_xyz",
@@ -92,7 +92,7 @@
           "name": "Emmanuel Udotong",
           "role": "Co-founder & CEO",
           "twitter": "https://x.com/UdotongE",
-          "avatar": null,
+          "avatar": "/images/founders/emmanuel-udotong.png",
           "bio": "Former McKinsey risk advisor and exporter building stablecoin rails for trade corridors."
         },
         {
@@ -100,7 +100,7 @@
           "name": "Isaiah Udotong",
           "role": "Co-founder & COO",
           "twitter": "https://x.com/isaiahudotong",
-          "avatar": null,
+          "avatar": "/images/founders/isaiah-udotong.png",
           "bio": "MIT-trained operator scaling compliance-first payments after firsthand export challenges."
         },
         {
@@ -108,7 +108,7 @@
           "name": "Luis Carchi",
           "role": "Co-founder & CTO",
           "twitter": "https://x.com/LuissCarchi",
-          "avatar": null,
+          "avatar": "/images/founders/luis-carchi.png",
           "bio": "Princeton engineer and ex-Facebook product leader architecting Shield's stablecoin infrastructure."
         }
       ],
