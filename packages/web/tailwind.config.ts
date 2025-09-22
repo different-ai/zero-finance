@@ -142,6 +142,43 @@ module.exports = {
           from: { height: 'var(--radix-accordion-content-height)' },
           to: { height: '0' },
         },
+        'vault-expand': {
+          '0%': {
+            opacity: '0',
+            maxHeight: '0',
+            transform: 'translateY(-10px)',
+          },
+          '50%': {
+            opacity: '0.5',
+          },
+          '100%': {
+            opacity: '1',
+            maxHeight: '800px',
+            transform: 'translateY(0)',
+          },
+        },
+        'vault-collapse': {
+          '0%': {
+            opacity: '1',
+            maxHeight: '800px',
+            transform: 'translateY(0)',
+          },
+          '100%': {
+            opacity: '0',
+            maxHeight: '0',
+            transform: 'translateY(-10px)',
+          },
+        },
+        'fade-in-up': {
+          '0%': {
+            opacity: '0',
+            transform: 'translateY(10px)',
+          },
+          '100%': {
+            opacity: '1',
+            transform: 'translateY(0)',
+          },
+        },
         pulse: { '0%, 100%': { opacity: '1' }, '50%': { opacity: '.5' } },
         shimmer: {
           '0%': { transform: 'translateX(-100%)' },
@@ -151,6 +188,9 @@ module.exports = {
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
         'accordion-up': 'accordion-up 0.2s ease-out',
+        'vault-expand': 'vault-expand 0.3s ease-out',
+        'vault-collapse': 'vault-collapse 0.2s ease-in',
+        'fade-in-up': 'fade-in-up 0.3s ease-out',
         pulse: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
         shimmer: 'shimmer 2s infinite',
       },
