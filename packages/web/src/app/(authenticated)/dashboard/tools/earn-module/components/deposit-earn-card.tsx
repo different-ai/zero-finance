@@ -83,12 +83,16 @@ export function DepositEarnCard({
   // Fetch USDC balance
   const [usdcBalance, setUsdcBalance] = useState<bigint>(0n);
   const [isLoadingBalance, setIsLoadingBalance] = useState(true);
+  const [hasInitialLoad, setHasInitialLoad] = useState(false);
 
   const fetchBalance = async () => {
     if (!safeAddress) return;
 
     try {
-      setIsLoadingBalance(true);
+      // Only show loading on first load, not on refetches
+      if (!hasInitialLoad) {
+        setIsLoadingBalance(true);
+      }
       const balance = await publicClient.readContract({
         address: USDC_ADDRESS,
         abi: erc20Abi,
@@ -96,9 +100,11 @@ export function DepositEarnCard({
         args: [safeAddress],
       });
       setUsdcBalance(balance);
+      setHasInitialLoad(true);
     } catch (error) {
       console.error('Error fetching balance:', error);
       setUsdcBalance(0n);
+      setHasInitialLoad(true);
     } finally {
       setIsLoadingBalance(false);
     }
@@ -375,16 +381,8 @@ export function DepositEarnCard({
     setTransactionState({ step: 'idle' });
   };
 
-  // Loading skeleton
-  if (isLoadingBalance || isLoadingAllowance) {
-    return (
-      <div className="space-y-4">
-        <div className="h-20 w-full bg-[#101010]/5 animate-pulse" />
-        <div className="h-12 w-full bg-[#101010]/5 animate-pulse" />
-        <div className="h-12 w-full bg-[#101010]/5 animate-pulse" />
-      </div>
-    );
-  }
+  // Only show loading skeleton on very first load, never on data refetches
+  const showSkeleton = isLoadingBalance && !hasInitialLoad;
 
   const currentAllowance = allowanceData ? BigInt(allowanceData.allowance) : 0n;
   const availableBalance = formatUnits(usdcBalance, USDC_DECIMALS);
@@ -395,6 +393,17 @@ export function DepositEarnCard({
       maximumFractionDigits: 6,
     },
   );
+
+  // Show skeleton only on initial load, not on data updates
+  if (showSkeleton) {
+    return (
+      <div className="space-y-4">
+        <div className="h-20 w-full bg-[#101010]/5 animate-pulse" />
+        <div className="h-12 w-full bg-[#101010]/5 animate-pulse" />
+        <div className="h-12 w-full bg-[#101010]/5 animate-pulse" />
+      </div>
+    );
+  }
 
   // Check if we need approval
   const amountInSmallestUnit = amount ? parseUnits(amount, USDC_DECIMALS) : 0n;
