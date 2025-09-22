@@ -80,11 +80,18 @@ export function WithdrawEarnCard({
     { safeAddress, vaultAddress },
     {
       enabled: !!safeAddress && !!vaultAddress,
+      staleTime: 30000, // Consider data fresh for 30s
+      refetchInterval: false, // Disable automatic refetching
     },
   );
 
   // Add mutation for recording withdrawal
   const recordWithdrawalMutation = trpc.earn.recordWithdrawal.useMutation();
+
+  // Cache share decimals to avoid repeated RPC calls
+  const [cachedShareDecimals, setCachedShareDecimals] = useState<
+    Record<string, number>
+  >({});
 
   // Update vault info when data changes
   useEffect(() => {
@@ -109,37 +116,45 @@ export function WithdrawEarnCard({
           hasAssets: assetsBI > 0n,
         });
 
-        // Fetch actual share decimals from the vault contract
-        try {
-          const shareDecimals = await publicClient.readContract({
-            address: vaultAddress,
-            abi: VAULT_ABI,
-            functionName: 'decimals',
-          });
+        // Check cache first to avoid repeated RPC calls
+        let shareDecimals = cachedShareDecimals[vaultAddress];
 
-          setVaultInfo({
-            shares: sharesBI,
-            assets: assetsBI,
-            assetDecimals: vaultData.decimals,
-            shareDecimals: Number(shareDecimals),
-            assetAddress: vaultData.assetAddress as Address,
-          });
-        } catch (error) {
-          console.error('Failed to fetch share decimals:', error);
-          // Fallback to 18 decimals if we can't fetch
-          setVaultInfo({
-            shares: sharesBI,
-            assets: assetsBI,
-            assetDecimals: vaultData.decimals,
-            shareDecimals: 18,
-            assetAddress: vaultData.assetAddress as Address,
-          });
+        if (shareDecimals === undefined) {
+          // Only fetch if not cached
+          try {
+            const decimals = await publicClient.readContract({
+              address: vaultAddress,
+              abi: VAULT_ABI,
+              functionName: 'decimals',
+            });
+            shareDecimals = Number(decimals);
+            setCachedShareDecimals((prev) => ({
+              ...prev,
+              [vaultAddress]: shareDecimals,
+            }));
+          } catch (error) {
+            console.error('Failed to fetch share decimals:', error);
+            // Fallback to 18 decimals if we can't fetch
+            shareDecimals = 18;
+            setCachedShareDecimals((prev) => ({
+              ...prev,
+              [vaultAddress]: 18,
+            }));
+          }
         }
+
+        setVaultInfo({
+          shares: sharesBI,
+          assets: assetsBI,
+          assetDecimals: vaultData.decimals,
+          shareDecimals,
+          assetAddress: vaultData.assetAddress as Address,
+        });
       }
     };
 
     fetchVaultInfo();
-  }, [vaultData, safeAddress, vaultAddress, publicClient]);
+  }, [vaultData, vaultAddress, cachedShareDecimals, publicClient]); // Include necessary deps
 
   const handleWithdraw = async () => {
     if (!amount || !vaultInfo || !isRelayReady) return;

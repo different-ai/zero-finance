@@ -113,8 +113,10 @@ export function DepositEarnCard({
   // Fetch balance on mount and after transactions
   useEffect(() => {
     fetchBalance();
-    const interval = setInterval(fetchBalance, 10000); // Poll every 10 seconds
-    return () => clearInterval(interval);
+    const interval = setInterval(fetchBalance, 30000); // Poll every 30 seconds instead of 10
+    return () => {
+      clearInterval(interval);
+    };
   }, [safeAddress]);
 
   // Check current allowance
@@ -130,7 +132,8 @@ export function DepositEarnCard({
     },
     {
       enabled: !!safeAddress && !!vaultAddress,
-      refetchInterval: 10000,
+      refetchInterval: 30000, // Reduced from 10s to 30s
+      staleTime: 20000, // Consider data fresh for 20s
     },
   );
 
