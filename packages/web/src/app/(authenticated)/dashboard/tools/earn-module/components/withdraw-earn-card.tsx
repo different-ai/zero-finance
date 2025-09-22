@@ -90,6 +90,8 @@ export function WithdrawEarnCard({
 
   // Cache share decimals to avoid repeated RPC calls - use ref to avoid re-renders
   const cachedShareDecimalsRef = useRef<Record<string, number>>({});
+  // Track if we're currently fetching to prevent duplicate calls
+  const fetchingDecimalsRef = useRef<Set<string>>(new Set());
 
   // Update vault info when data changes
   useEffect(() => {
@@ -99,10 +101,33 @@ export function WithdrawEarnCard({
     const assetsBI = BigInt(vaultData.assets);
 
     // Check cache first to avoid repeated RPC calls
-    let shareDecimals = cachedShareDecimalsRef.current[vaultAddress];
+    const cachedDecimals = cachedShareDecimalsRef.current[vaultAddress];
 
-    if (shareDecimals === undefined) {
-      // Only fetch if not cached
+    if (cachedDecimals !== undefined) {
+      // Use cached value immediately
+      setVaultInfo({
+        shares: sharesBI,
+        assets: assetsBI,
+        assetDecimals: vaultData.decimals,
+        shareDecimals: cachedDecimals,
+        assetAddress: vaultData.assetAddress as Address,
+      });
+      return;
+    }
+
+    // Set default vault info immediately with fallback decimals
+    setVaultInfo({
+      shares: sharesBI,
+      assets: assetsBI,
+      assetDecimals: vaultData.decimals,
+      shareDecimals: 18, // Default to 18 decimals
+      assetAddress: vaultData.assetAddress as Address,
+    });
+
+    // Fetch decimals only if not already fetching
+    if (!fetchingDecimalsRef.current.has(vaultAddress)) {
+      fetchingDecimalsRef.current.add(vaultAddress);
+
       publicClient
         .readContract({
           address: vaultAddress,
@@ -112,37 +137,28 @@ export function WithdrawEarnCard({
         .then((decimals) => {
           const decimalsNumber = Number(decimals);
           cachedShareDecimalsRef.current[vaultAddress] = decimalsNumber;
-          setVaultInfo({
-            shares: sharesBI,
-            assets: assetsBI,
-            assetDecimals: vaultData.decimals,
-            shareDecimals: decimalsNumber,
-            assetAddress: vaultData.assetAddress as Address,
-          });
+          fetchingDecimalsRef.current.delete(vaultAddress);
+
+          // Update only if different from default
+          if (decimalsNumber !== 18) {
+            setVaultInfo((prev) =>
+              prev
+                ? {
+                    ...prev,
+                    shareDecimals: decimalsNumber,
+                  }
+                : null,
+            );
+          }
         })
         .catch((error) => {
           console.error('Failed to fetch share decimals:', error);
-          // Fallback to 18 decimals if we can't fetch
           cachedShareDecimalsRef.current[vaultAddress] = 18;
-          setVaultInfo({
-            shares: sharesBI,
-            assets: assetsBI,
-            assetDecimals: vaultData.decimals,
-            shareDecimals: 18,
-            assetAddress: vaultData.assetAddress as Address,
-          });
+          fetchingDecimalsRef.current.delete(vaultAddress);
         });
-    } else {
-      // Use cached value
-      setVaultInfo({
-        shares: sharesBI,
-        assets: assetsBI,
-        assetDecimals: vaultData.decimals,
-        shareDecimals,
-        assetAddress: vaultData.assetAddress as Address,
-      });
     }
-  }, [vaultData, vaultAddress, publicClient]); // Removed cachedShareDecimals from deps
+    // Only depend on vaultData and vaultAddress, not publicClient
+  }, [vaultData, vaultAddress]);
 
   const handleWithdraw = async () => {
     if (!amount || !vaultInfo || !isRelayReady) return;
