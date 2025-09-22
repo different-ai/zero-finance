@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   Card,
   CardContent,
@@ -88,73 +88,61 @@ export function WithdrawEarnCard({
   // Add mutation for recording withdrawal
   const recordWithdrawalMutation = trpc.earn.recordWithdrawal.useMutation();
 
-  // Cache share decimals to avoid repeated RPC calls
-  const [cachedShareDecimals, setCachedShareDecimals] = useState<
-    Record<string, number>
-  >({});
+  // Cache share decimals to avoid repeated RPC calls - use ref to avoid re-renders
+  const cachedShareDecimalsRef = useRef<Record<string, number>>({});
 
   // Update vault info when data changes
   useEffect(() => {
-    const fetchVaultInfo = async () => {
-      if (vaultData) {
-        console.log('Vault info fetched:', {
-          safeAddress,
-          vaultAddress,
-          shares: vaultData.shares,
-          assets: vaultData.assets,
-          decimals: vaultData.decimals,
-          assetAddress: vaultData.assetAddress,
+    if (!vaultData) return;
+
+    const sharesBI = BigInt(vaultData.shares);
+    const assetsBI = BigInt(vaultData.assets);
+
+    // Check cache first to avoid repeated RPC calls
+    let shareDecimals = cachedShareDecimalsRef.current[vaultAddress];
+
+    if (shareDecimals === undefined) {
+      // Only fetch if not cached
+      publicClient
+        .readContract({
+          address: vaultAddress,
+          abi: VAULT_ABI,
+          functionName: 'decimals',
+        })
+        .then((decimals) => {
+          const decimalsNumber = Number(decimals);
+          cachedShareDecimalsRef.current[vaultAddress] = decimalsNumber;
+          setVaultInfo({
+            shares: sharesBI,
+            assets: assetsBI,
+            assetDecimals: vaultData.decimals,
+            shareDecimals: decimalsNumber,
+            assetAddress: vaultData.assetAddress as Address,
+          });
+        })
+        .catch((error) => {
+          console.error('Failed to fetch share decimals:', error);
+          // Fallback to 18 decimals if we can't fetch
+          cachedShareDecimalsRef.current[vaultAddress] = 18;
+          setVaultInfo({
+            shares: sharesBI,
+            assets: assetsBI,
+            assetDecimals: vaultData.decimals,
+            shareDecimals: 18,
+            assetAddress: vaultData.assetAddress as Address,
+          });
         });
-
-        // Additional debugging
-        const sharesBI = BigInt(vaultData.shares);
-        const assetsBI = BigInt(vaultData.assets);
-        console.log('Parsed values:', {
-          sharesBigInt: sharesBI.toString(),
-          assetsBigInt: assetsBI.toString(),
-          hasShares: sharesBI > 0n,
-          hasAssets: assetsBI > 0n,
-        });
-
-        // Check cache first to avoid repeated RPC calls
-        let shareDecimals = cachedShareDecimals[vaultAddress];
-
-        if (shareDecimals === undefined) {
-          // Only fetch if not cached
-          try {
-            const decimals = await publicClient.readContract({
-              address: vaultAddress,
-              abi: VAULT_ABI,
-              functionName: 'decimals',
-            });
-            shareDecimals = Number(decimals);
-            setCachedShareDecimals((prev) => ({
-              ...prev,
-              [vaultAddress]: shareDecimals,
-            }));
-          } catch (error) {
-            console.error('Failed to fetch share decimals:', error);
-            // Fallback to 18 decimals if we can't fetch
-            shareDecimals = 18;
-            setCachedShareDecimals((prev) => ({
-              ...prev,
-              [vaultAddress]: 18,
-            }));
-          }
-        }
-
-        setVaultInfo({
-          shares: sharesBI,
-          assets: assetsBI,
-          assetDecimals: vaultData.decimals,
-          shareDecimals,
-          assetAddress: vaultData.assetAddress as Address,
-        });
-      }
-    };
-
-    fetchVaultInfo();
-  }, [vaultData, vaultAddress, cachedShareDecimals, publicClient]); // Include necessary deps
+    } else {
+      // Use cached value
+      setVaultInfo({
+        shares: sharesBI,
+        assets: assetsBI,
+        assetDecimals: vaultData.decimals,
+        shareDecimals,
+        assetAddress: vaultData.assetAddress as Address,
+      });
+    }
+  }, [vaultData, vaultAddress, publicClient]); // Removed cachedShareDecimals from deps
 
   const handleWithdraw = async () => {
     if (!amount || !vaultInfo || !isRelayReady) return;

@@ -858,35 +858,23 @@ export default function SavingsPageWrapper({
                           >
                             <div className="px-4 pb-4 bg-[#F7F7F2]/50">
                               <div className="bg-white border border-[#101010]/10 p-5 sm:p-6">
-                                {/* Keep both components mounted but show/hide with CSS */}
-                                <div
-                                  className={cn(
-                                    expandedAction === 'deposit' && isSelected
-                                      ? 'block'
-                                      : 'hidden',
-                                  )}
-                                >
+                                {/* Only render the active component to reduce API calls */}
+                                {expandedAction === 'deposit' && isSelected ? (
                                   <DepositEarnCard
                                     key={`deposit-${vault.address}`}
                                     safeAddress={safeAddress as Address}
                                     vaultAddress={vault.address as Address}
                                     onDepositSuccess={handleDepositSuccess}
                                   />
-                                </div>
-                                <div
-                                  className={cn(
-                                    expandedAction === 'withdraw' && isSelected
-                                      ? 'block'
-                                      : 'hidden',
-                                  )}
-                                >
+                                ) : expandedAction === 'withdraw' &&
+                                  isSelected ? (
                                   <WithdrawEarnCard
                                     key={`withdraw-${vault.address}`}
                                     safeAddress={safeAddress as Address}
                                     vaultAddress={vault.address as Address}
                                     onWithdrawSuccess={handleWithdrawSuccess}
                                   />
-                                </div>
+                                ) : null}
                               </div>
                             </div>
                           </div>
@@ -1055,36 +1043,24 @@ export default function SavingsPageWrapper({
                             >
                               <div className="px-4 pt-3 pb-4">
                                 <div className="bg-white border border-[#101010]/10 p-4">
-                                  {/* Keep both components mounted but show/hide with CSS */}
-                                  <div
-                                    className={cn(
-                                      expandedAction === 'deposit' && isSelected
-                                        ? 'block'
-                                        : 'hidden',
-                                    )}
-                                  >
+                                  {/* Only render the active component to reduce API calls */}
+                                  {expandedAction === 'deposit' &&
+                                  isSelected ? (
                                     <DepositEarnCard
                                       key={`deposit-mobile-${vault.address}`}
                                       safeAddress={safeAddress as Address}
                                       vaultAddress={vault.address as Address}
                                       onDepositSuccess={handleDepositSuccess}
                                     />
-                                  </div>
-                                  <div
-                                    className={cn(
-                                      expandedAction === 'withdraw' &&
-                                        isSelected
-                                        ? 'block'
-                                        : 'hidden',
-                                    )}
-                                  >
+                                  ) : expandedAction === 'withdraw' &&
+                                    isSelected ? (
                                     <WithdrawEarnCard
                                       key={`withdraw-mobile-${vault.address}`}
                                       safeAddress={safeAddress as Address}
                                       vaultAddress={vault.address as Address}
                                       onWithdrawSuccess={handleWithdrawSuccess}
                                     />
-                                  </div>
+                                  ) : null}
                                 </div>
                               </div>
                             </div>
