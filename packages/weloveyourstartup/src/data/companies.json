@@ -57,6 +57,75 @@
         "order": 1
       }
     }
+    ,
+    {
+      "id": "shield",
+      "name": "Shield",
+      "tagline": "Neobank for global trade businesses",
+      "description": "Stablecoin-powered banking for exporters with same-day USD settlement.",
+      "longDescription": "Shield is building a neobank for exporters that blends stablecoin speed with the reliability of regulated banking. They let global trade businesses accept USDT from buyers and settle as same-day USD wires while embedding trade-specific compliance and AI-powered monitoring.",
+      "logo": "https://api.typedream.com/v0/document/public/5cedd7e2-1039-4ac1-871c-a4412e831651_SHIELD_Logo_v1_png.png",
+      "website": "https://www.getshield.xyz",
+      "twitter": "https://x.com/shield_xyz",
+      "category": "Cross-Border Payments",
+      "whyWeLoveThem": "Shield is translating stablecoins into real-world liquidity for underserved exporters. By verticalizing compliance for high-value trade flows and pairing crypto rails with bank-grade settlement, they remove the bottlenecks that routinely freeze legitimate businesses out of the financial system.",
+      "funFact": "Demand for Shield's USDT-friendly accounts is so strong that new businesses are onboarded on a waitlist to keep throughput stable.",
+      "funding": {
+        "amount": 5000000,
+        "round": "Seed",
+        "date": "2025-09-22",
+        "valuation": null,
+        "leadInvestors": [
+          "Giant Ventures",
+          "a16z crypto CSX",
+          "Factor Capital",
+          "Strategic angels from Bank of America",
+          "Strategic angels from Coinbase",
+          "Strategic angels from AMEX",
+          "Strategic angels from Menlo Ventures"
+        ],
+        "announcement": "We raised $5M to build a neobank for global trade businesses."
+      },
+      "founders": [
+        {
+          "id": "emmanuel-udotong",
+          "name": "Emmanuel Udotong",
+          "role": "Co-founder & CEO",
+          "twitter": "https://x.com/UdotongE",
+          "avatar": null,
+          "bio": "Former McKinsey risk advisor and exporter building stablecoin rails for trade corridors."
+        },
+        {
+          "id": "isaiah-udotong",
+          "name": "Isaiah Udotong",
+          "role": "Co-founder & COO",
+          "twitter": "https://x.com/isaiahudotong",
+          "avatar": null,
+          "bio": "MIT-trained operator scaling compliance-first payments after firsthand export challenges."
+        },
+        {
+          "id": "luis-carchi",
+          "name": "Luis Carchi",
+          "role": "Co-founder & CTO",
+          "twitter": "https://x.com/LuissCarchi",
+          "avatar": null,
+          "bio": "Princeton engineer and ex-Facebook product leader architecting Shield's stablecoin infrastructure."
+        }
+      ],
+      "metrics": {
+        "processedVolume": "$150M+ in the first year",
+        "monthlyVolume": "$40M processed last month",
+        "clientSegments": "Exporters across Latin America, Africa, and Asia",
+        "settlement": "Same-day USD wires from stablecoin payments"
+      },
+      "showcase": {
+        "primaryColor": "#0F172A",
+        "gradient": "from-emerald-500 to-cyan-500",
+        "emoji": "🌍",
+        "featured": true,
+        "order": 2
+      }
+    }
   ],
   "calculatorConfig": {
     "bankRate": 4.0,
