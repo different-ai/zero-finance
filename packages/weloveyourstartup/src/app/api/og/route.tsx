@@ -3,6 +3,9 @@ import { getCompanyById } from '@/lib/data';
 
 export const runtime = 'edge';
 
+const HERO_ONE_LINER =
+  "A curated directory of founders we admire. See how much their idle cash could be earning with Zero Finance's 8% APY savings accounts.";
+
 // Helper to load images
 async function loadImage(url: string): Promise<string | null> {
   try {
@@ -69,7 +72,7 @@ export async function GET(request: Request) {
                 We Love Your Startup
               </h1>
               <p style={{ fontSize: 30, color: '#101010', opacity: 0.8 }}>
-                By Zero Finance - 8% APY for Startups
+                {HERO_ONE_LINER}
               </p>
             </div>
           </div>
@@ -429,9 +432,10 @@ export async function GET(request: Request) {
                 fontSize: '16px',
                 color: '#101010',
                 opacity: 0.7,
+                maxWidth: '460px',
               }}
             >
-              Your idle cash could be earning 8% APY
+              {HERO_ONE_LINER}
             </span>
             {/* Zero Finance Logo */}
             <div
