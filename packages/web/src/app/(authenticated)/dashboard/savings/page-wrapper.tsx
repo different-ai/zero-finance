@@ -43,28 +43,15 @@ const INSURANCE_CONTACT = {
 const INSURED_VAULT_IDS = new Set<string>();
 
 const insuredPillAnimation = `
-  @keyframes insuredGlow {
-    0%, 78%, 100% {
-      box-shadow: 0 0 0 0 rgba(27, 41, 255, 0);
-      transform: translateZ(0);
-    }
-    84% {
-      box-shadow: 0 0 0 8px rgba(27, 41, 255, 0.15);
-    }
-    88% {
-      box-shadow: 0 0 0 0 rgba(27, 41, 255, 0);
-    }
-  }
-
   @keyframes insuredShine {
-    0%, 80% {
+    0%, 55% {
       transform: translateX(-160%);
       opacity: 0;
     }
-    86% {
-      opacity: 0.8;
+    60% {
+      opacity: 0.85;
     }
-    94% {
+    64% {
       transform: translateX(160%);
       opacity: 0;
     }
@@ -88,11 +75,7 @@ const insuredPillAnimation = `
     mix-blend-mode: screen;
     opacity: 0;
     pointer-events: none;
-    animation: insuredShine 22s ease-in-out infinite;
-  }
-
-  .insured-pill.animate-glow {
-    animation: insuredGlow 22s ease-in-out infinite;
+    animation: insuredShine 12s ease-in-out infinite;
   }
 `;
 
