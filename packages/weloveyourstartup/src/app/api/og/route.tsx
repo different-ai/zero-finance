@@ -27,7 +27,7 @@ export async function GET(request: Request) {
     const companyId = searchParams.get('company');
 
     // Load Zero logo - using the hosted version for edge runtime
-    const zeroLogoUrl = 'https://weloveyourstartup.com/new-logo-bluer.png';
+    const zeroLogoUrl = 'https://weloveyourstartup.com/images/new-logo-bluer.png';
     const zeroLogo = await loadImage(zeroLogoUrl);
 
     if (!companyId) {
