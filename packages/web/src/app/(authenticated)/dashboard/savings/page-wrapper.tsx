@@ -42,6 +42,23 @@ const INSURANCE_CONTACT = {
 };
 const INSURED_VAULT_IDS = new Set<string>();
 
+const insuredPillAnimation = `
+  @keyframes insuredPulse {
+    0%, 70%, 100% {
+      opacity: 1;
+      box-shadow: 0 0 0 0 rgba(27, 41, 255, 0);
+    }
+    80% {
+      opacity: 1;
+      box-shadow: 0 0 0 6px rgba(27, 41, 255, 0.12);
+    }
+    85% {
+      opacity: 1;
+      box-shadow: 0 0 0 0 rgba(27, 41, 255, 0);
+    }
+  }
+`;
+
 export type SavingsPageWrapperProps = {
   mode?: SavingsExperienceMode;
 };
@@ -416,7 +433,20 @@ export default function SavingsPageWrapper({
   );
 
   const displayVaults = useMemo(() => {
-    const insured = [insuredVaultEntry, ...vaultsVM.filter((vault) => vault.isInsured)];
+    if (typeof document !== 'undefined') {
+      const existingStyle = document.getElementById('insured-pill-animation');
+      if (!existingStyle) {
+        const style = document.createElement('style');
+        style.id = 'insured-pill-animation';
+        style.innerHTML = insuredPillAnimation;
+        document.head.appendChild(style);
+      }
+    }
+
+    const insured = [
+      insuredVaultEntry,
+      ...vaultsVM.filter((vault) => vault.isInsured),
+    ];
     const others = vaultsVM.filter((vault) => !vault.isInsured);
     return [...insured, ...others];
   }, [insuredVaultEntry, vaultsVM]);
@@ -834,7 +864,10 @@ export default function SavingsPageWrapper({
                                     {vault.name}
                                   </p>
                                   {vault.isInsured && (
-                                    <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-[#1B29FF]/15 text-[#1B29FF] text-[10px] font-semibold uppercase tracking-[0.18em]">
+                                    <span
+                                      className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-[#1B29FF]/15 text-[#1B29FF] text-[10px] font-semibold uppercase tracking-[0.18em] insured-pill"
+                                      style={{ animation: 'insuredPulse 18s ease-in-out infinite' }}
+                                    >
                                       <Image
                                         src={ZERO_LOGO_SRC}
                                         alt="0 Finance insured"
@@ -1051,7 +1084,10 @@ export default function SavingsPageWrapper({
                                     {vault.name}
                                   </p>
                                   {vault.isInsured && (
-                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#1B29FF]/15 text-[#1B29FF] text-[10px] font-semibold uppercase tracking-[0.18em]">
+                                    <span
+                                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#1B29FF]/15 text-[#1B29FF] text-[10px] font-semibold uppercase tracking-[0.18em] insured-pill"
+                                      style={{ animation: 'insuredPulse 18s ease-in-out infinite' }}
+                                    >
                                       <Image
                                         src={ZERO_LOGO_SRC}
                                         alt="0 Finance insured"
