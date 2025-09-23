@@ -19,6 +19,8 @@ import {
   AlertCircle,
   Sparkles,
   CheckCircle2,
+  Mail,
+  CalendarDays,
 } from 'lucide-react';
 import { WithdrawEarnCard } from '@/app/(authenticated)/dashboard/tools/earn-module/components/withdraw-earn-card';
 import { DepositEarnCard } from '@/app/(authenticated)/dashboard/tools/earn-module/components/deposit-earn-card';
@@ -31,6 +33,14 @@ import { BASE_USDC_VAULTS } from '@/server/earn/base-vaults';
 import { AnimatedYieldCounter } from '@/components/animated-yield-counter';
 import { AnimatedTotalEarned } from '@/components/animated-total-earned';
 import { toast } from 'sonner';
+import Image from 'next/image';
+
+const ZERO_LOGO_SRC = '/images/new-logo-bluer.png';
+const INSURANCE_CONTACT = {
+  email: 'raghav@0.finance',
+  scheduleUrl: 'https://cal.com/team/0finance/30',
+};
+const INSURED_VAULT_IDS = new Set<string>();
 
 export type SavingsPageWrapperProps = {
   mode?: SavingsExperienceMode;
@@ -190,7 +200,7 @@ export default function SavingsPageWrapper({
 
   // State for vault action modals with transition support
   const [selectedVault, setSelectedVault] = useState<{
-    action: 'deposit' | 'withdraw' | null;
+    action: 'deposit' | 'withdraw' | 'insure' | null;
     vaultAddress: string | null;
     vaultName: string | null;
   }>({
@@ -205,7 +215,7 @@ export default function SavingsPageWrapper({
 
   const toggleVaultAction = useCallback(
     (
-      action: 'deposit' | 'withdraw',
+      action: 'deposit' | 'withdraw' | 'insure',
       vault: { address: string; name: string },
     ) => {
       const normalizedAddress = vault.address.toLowerCase();
@@ -377,11 +387,85 @@ export default function SavingsPageWrapper({
         earnedUsd,
         isAuto: v.id === 'seamless',
         instantApy,
+        isInsured: INSURED_VAULT_IDS.has(v.id),
+        isContactOnly: false,
       };
     });
   }, [BASE_VAULTS, vaultStatsMany, userPositions]);
 
   // Calculate totals
+  const insuredVaultEntry = useMemo(
+    () => ({
+      id: 'insured-vault',
+      name: 'Insured Vault',
+      risk: 'Conservative',
+      curator: '0 Finance Coverage Desk',
+      address: 'insured-contact',
+      appUrl: '',
+      apy: 8,
+      balanceUsd: 0,
+      earnedUsd: 0,
+      isAuto: false,
+      instantApy: 0.08,
+      isInsured: true,
+      isContactOnly: true,
+      insuranceSummary:
+        'Dedicated coverage arranged by the 0 Finance insurance desk.',
+    }),
+    [],
+  );
+
+  const displayVaults = useMemo(() => {
+    const insured = [insuredVaultEntry, ...vaultsVM.filter((vault) => vault.isInsured)];
+    const others = vaultsVM.filter((vault) => !vault.isInsured);
+    return [...insured, ...others];
+  }, [insuredVaultEntry, vaultsVM]);
+
+  const InsuranceContactPanel = () => (
+    <div className="space-y-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <Image
+            src={ZERO_LOGO_SRC}
+            alt="0 Finance logo"
+            width={42}
+            height={42}
+            className="h-10 w-10 rounded-md"
+          />
+          <div>
+            <p className="text-[15px] font-medium text-[#101010]">
+              Speak with our coverage team
+            </p>
+            <p className="text-[13px] text-[#101010]/70 max-w-[420px]">
+              We arrange bespoke insurance policies for treasury deposits. Reach out to secure coverage on this 8% vault.
+            </p>
+          </div>
+        </div>
+        <div className="flex flex-col sm:flex-row gap-3">
+          <a
+            href={`mailto:${INSURANCE_CONTACT.email}`}
+            className="inline-flex items-center justify-center gap-2 px-4 py-2 text-[13px] font-medium text-white bg-[#1B29FF] hover:bg-[#1420CC] transition-colors"
+          >
+            <Mail className="h-4 w-4" /> Email {INSURANCE_CONTACT.email}
+          </a>
+          <a
+            href={INSURANCE_CONTACT.scheduleUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center justify-center gap-2 px-4 py-2 text-[13px] font-medium text-[#101010] border border-[#101010]/15 hover:bg-[#F7F7F2] transition-colors"
+          >
+            <CalendarDays className="h-4 w-4" /> Schedule a call
+          </a>
+        </div>
+      </div>
+      <div className="border border-dashed border-[#1B29FF]/30 rounded-lg p-4 bg-[#1B29FF]/5">
+        <p className="text-[13px] text-[#1B29FF]">
+          Coverage is issued through our underwriting partners after a short call. We’ll validate treasury size, coverage needs, and onboard you end-to-end.
+        </p>
+      </div>
+    </div>
+  );
+
   const totalSaved = vaultsVM.reduce((sum, v) => sum + v.balanceUsd, 0);
   const totalEarned = vaultsVM.reduce((sum, v) => sum + v.earnedUsd, 0);
   const averageApy =
@@ -703,7 +787,7 @@ export default function SavingsPageWrapper({
                   </div>
 
                   {/* Vault Rows */}
-                  {vaultsVM.map((vault, index) => {
+                  {displayVaults.map((vault, index) => {
                     const normalizedAddress = vault.address.toLowerCase();
                     const isSelected =
                       selectedVault.vaultAddress?.toLowerCase() ===
@@ -719,7 +803,7 @@ export default function SavingsPageWrapper({
                         key={vault.id}
                         className={cn(
                           'group relative overflow-hidden',
-                          index !== vaultsVM.length - 1 &&
+                          index !== displayVaults.length - 1 &&
                             !isSelected &&
                             'border-b border-[#101010]/10',
                         )}
@@ -727,24 +811,46 @@ export default function SavingsPageWrapper({
                         <div
                           className={cn(
                             'grid grid-cols-12 gap-3 p-4 items-center transition-all duration-200 relative z-10',
-                            'hover:bg-[#F7F7F2]/30',
-                            isSelected && 'bg-[#F7F7F2]/50',
+                            vault.isInsured
+                              ? 'bg-[#1B29FF]/5 hover:bg-[#1B29FF]/10 border-l-2 border-[#1B29FF]'
+                              : 'hover:bg-[#F7F7F2]/30',
+                            isSelected &&
+                              (vault.isInsured
+                                ? 'ring-1 ring-[#1B29FF]/30 bg-[#1B29FF]/12'
+                                : 'bg-[#F7F7F2]/50'),
                             (isExpanding || isCollapsing) && 'transition-none',
                           )}
                         >
                           <div className="col-span-5">
                             <div className="flex items-start gap-2">
-                              {vault.isAuto && (
-                                <span className="px-1.5 py-0.5 bg-[#1B29FF] text-white text-[9px] uppercase tracking-wider shrink-0">
-                                  Auto
-                                </span>
-                              )}
                               <div className="min-w-0">
-                                <p className="text-[15px] font-medium text-[#101010] truncate">
-                                  {vault.name}
-                                </p>
-                                <p className="text-[12px] text-[#101010]/60 truncate">
-                                  {vault.curator} · {vault.risk}
+                                <div className="flex flex-wrap items-center gap-2">
+                                  {vault.isAuto && (
+                                    <span className="px-1.5 py-0.5 bg-[#1B29FF] text-white text-[9px] uppercase tracking-wider shrink-0">
+                                      Auto
+                                    </span>
+                                  )}
+                                  <p className="text-[15px] font-medium text-[#101010] truncate">
+                                    {vault.name}
+                                  </p>
+                                  {vault.isInsured && (
+                                    <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-[#1B29FF]/15 text-[#1B29FF] text-[10px] font-semibold uppercase tracking-[0.18em]">
+                                      <Image
+                                        src={ZERO_LOGO_SRC}
+                                        alt="0 Finance insured"
+                                        width={14}
+                                        height={14}
+                                        className="h-3.5 w-3.5"
+                                      />
+                                      Insured
+                                    </span>
+                                  )}
+                                </div>
+                                <p className="text-[12px] text-[#101010]/60 truncate mt-1">
+                                  {vault.curator}
+                                  {vault.risk ? ` · ${vault.risk}` : ''}
+                                  {vault.isContactOnly &&
+                                    ' · Coverage arranged via 0 Finance'}
                                 </p>
                               </div>
                             </div>
@@ -758,9 +864,11 @@ export default function SavingsPageWrapper({
 
                           <div className="col-span-2 text-right">
                             <p className="text-[16px] tabular-nums text-[#101010]">
-                              {formatUsd(vault.balanceUsd)}
+                              {vault.isContactOnly
+                                ? '—'
+                                : formatUsd(vault.balanceUsd)}
                             </p>
-                            {vault.earnedUsd > 0 && (
+                            {vault.earnedUsd > 0 && !vault.isContactOnly && (
                               <p className="text-[12px] tabular-nums text-[#1B29FF]">
                                 +{formatUsd(vault.earnedUsd)}
                               </p>
@@ -768,7 +876,18 @@ export default function SavingsPageWrapper({
                           </div>
 
                           <div className="col-span-3 flex justify-end gap-1">
-                            {isDemoMode ? (
+                            {vault.isContactOnly ? (
+                              <button
+                                onClick={() => toggleVaultAction('insure', vault)}
+                                className={cn(
+                                  'px-3 py-2 text-[12px] font-medium text-white bg-[#1B29FF] hover:bg-[#1420CC] transition-colors',
+                                  expandedAction === 'insure' && isSelected &&
+                                    'ring-2 ring-offset-1 ring-[#1B29FF]/40',
+                                )}
+                              >
+                                Connect with coverage
+                              </button>
+                            ) : isDemoMode ? (
                               <>
                                 <button
                                   onClick={() =>
@@ -829,23 +948,23 @@ export default function SavingsPageWrapper({
                                 >
                                   Withdraw
                                 </button>
-                                {vault.appUrl && (
-                                  <a
-                                    href={vault.appUrl}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="px-2 py-1 text-[#101010]/60 hover:text-[#101010] transition-colors flex items-center"
-                                  >
-                                    <ExternalLink className="h-3 w-3" />
-                                  </a>
-                                )}
+                               {vault.appUrl && (
+                                 <a
+                                   href={vault.appUrl}
+                                   target="_blank"
+                                   rel="noopener noreferrer"
+                                   className="px-2 py-1 text-[#101010]/60 hover:text-[#101010] transition-colors flex items-center"
+                                 >
+                                   <ExternalLink className="h-3 w-3" />
+                                 </a>
+                               )}
                               </>
                             )}
                           </div>
                         </div>
 
                         {/* Accordion Content - Clean Integrated Design */}
-                        {!isDemoMode && (
+                        {(expandedAction === 'insure' && isSelected) || (!isDemoMode && expandedAction && isSelected) ? (
                           <div
                             className={cn(
                               'transition-all duration-300 ease-out overflow-hidden',
@@ -858,16 +977,16 @@ export default function SavingsPageWrapper({
                           >
                             <div className="px-4 pb-4 bg-[#F7F7F2]/50">
                               <div className="bg-white border border-[#101010]/10 p-5 sm:p-6">
-                                {/* Only render the active component to reduce API calls */}
-                                {expandedAction === 'deposit' && isSelected ? (
+                                {expandedAction === 'insure' && isSelected ? (
+                                  <InsuranceContactPanel />
+                                ) : expandedAction === 'deposit' && isSelected ? (
                                   <DepositEarnCard
                                     key={`deposit-${vault.address}`}
                                     safeAddress={safeAddress as Address}
                                     vaultAddress={vault.address as Address}
                                     onDepositSuccess={handleDepositSuccess}
                                   />
-                                ) : expandedAction === 'withdraw' &&
-                                  isSelected ? (
+                                ) : expandedAction === 'withdraw' && isSelected ? (
                                   <WithdrawEarnCard
                                     key={`withdraw-${vault.address}`}
                                     safeAddress={safeAddress as Address}
@@ -878,7 +997,7 @@ export default function SavingsPageWrapper({
                               </div>
                             </div>
                           </div>
-                        )}
+                        ) : null}
                       </div>
                     );
                   })}
@@ -886,7 +1005,7 @@ export default function SavingsPageWrapper({
 
                 {/* Mobile Card View */}
                 <div className="lg:hidden">
-                  {vaultsVM.map((vault, index) => {
+                  {displayVaults.map((vault, index) => {
                     const normalizedAddress = vault.address.toLowerCase();
                     const isSelected =
                       selectedVault.vaultAddress?.toLowerCase() ===
@@ -902,7 +1021,7 @@ export default function SavingsPageWrapper({
                         key={vault.id}
                         className={cn(
                           'relative overflow-hidden transition-all duration-200',
-                          index !== vaultsVM.length - 1 &&
+                          index !== displayVaults.length - 1 &&
                             !isSelected &&
                             'border-b border-[#101010]/5',
                         )}
@@ -910,24 +1029,45 @@ export default function SavingsPageWrapper({
                         <div
                           className={cn(
                             'p-4 space-y-3 transition-all duration-200',
-                            isSelected && 'bg-[#F7F7F2]/30',
+                            vault.isInsured ? 'bg-[#1B29FF]/10' : 'bg-white',
+                            isSelected &&
+                              (vault.isInsured
+                                ? 'ring-1 ring-[#1B29FF]/40 bg-[#1B29FF]/14'
+                                : 'bg-[#F7F7F2]/40'),
                             (isExpanding || isCollapsing) && 'transition-none',
                           )}
                         >
                           {/* Vault Header */}
                           <div className="flex items-start justify-between">
                             <div className="flex items-start gap-2">
-                              {vault.isAuto && (
-                                <span className="px-1.5 py-0.5 bg-[#1B29FF] text-white text-[9px] uppercase tracking-wider">
-                                  Auto
-                                </span>
-                              )}
-                              <div>
-                                <p className="text-[15px] font-medium text-[#101010]">
-                                  {vault.name}
-                                </p>
+                              <div className="flex flex-col gap-1">
+                                <div className="flex flex-wrap items-center gap-2">
+                                  {vault.isAuto && (
+                                    <span className="px-1.5 py-0.5 bg-[#1B29FF] text-white text-[9px] uppercase tracking-wider">
+                                      Auto
+                                    </span>
+                                  )}
+                                  <p className="text-[15px] font-medium text-[#101010]">
+                                    {vault.name}
+                                  </p>
+                                  {vault.isInsured && (
+                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#1B29FF]/15 text-[#1B29FF] text-[10px] font-semibold uppercase tracking-[0.18em]">
+                                      <Image
+                                        src={ZERO_LOGO_SRC}
+                                        alt="0 Finance insured"
+                                        width={14}
+                                        height={14}
+                                        className="h-3.5 w-3.5"
+                                      />
+                                      Insured
+                                    </span>
+                                  )}
+                                </div>
                                 <p className="text-[12px] text-[#101010]/60">
-                                  {vault.curator} · {vault.risk}
+                                  {vault.curator}
+                                  {vault.risk ? ` · ${vault.risk}` : ''}
+                                  {vault.isContactOnly &&
+                                    ' · Coverage arranged via 0 Finance'}
                                 </p>
                               </div>
                             </div>
@@ -940,10 +1080,12 @@ export default function SavingsPageWrapper({
                           <div className="flex justify-between text-[14px]">
                             <span className="text-[#101010]/60">Balance</span>
                             <span className="tabular-nums text-[#101010]">
-                              {formatUsd(vault.balanceUsd)}
+                              {vault.isContactOnly
+                                ? '—'
+                                : formatUsd(vault.balanceUsd)}
                             </span>
                           </div>
-                          {vault.earnedUsd > 0 && (
+                          {vault.earnedUsd > 0 && !vault.isContactOnly && (
                             <div className="flex justify-between text-[14px]">
                               <span className="text-[#101010]/60">Earned</span>
                               <span className="tabular-nums text-[#1B29FF]">
@@ -954,7 +1096,18 @@ export default function SavingsPageWrapper({
 
                           {/* Actions */}
                           <div className="flex gap-2 pt-2">
-                            {isDemoMode ? (
+                            {vault.isContactOnly ? (
+                              <button
+                                onClick={() => toggleVaultAction('insure', vault)}
+                                className={cn(
+                                  'flex-1 px-3 py-2 text-[13px] text-white bg-[#1B29FF] hover:bg-[#1420CC] transition-colors',
+                                  expandedAction === 'insure' && isSelected &&
+                                    'ring-2 ring-offset-1 ring-[#1B29FF]/40',
+                                )}
+                              >
+                                Connect with coverage
+                              </button>
+                            ) : isDemoMode ? (
                               <>
                                 <button
                                   onClick={() =>
@@ -990,9 +1143,7 @@ export default function SavingsPageWrapper({
                             ) : (
                               <>
                                 <button
-                                  onClick={() =>
-                                    toggleVaultAction('deposit', vault)
-                                  }
+                                  onClick={() => toggleVaultAction('deposit', vault)}
                                   className={cn(
                                     'flex-1 px-3 py-2 text-[13px] text-white transition-colors',
                                     expandedAction === 'deposit' && isSelected
@@ -1003,9 +1154,7 @@ export default function SavingsPageWrapper({
                                   Deposit
                                 </button>
                                 <button
-                                  onClick={() =>
-                                    toggleVaultAction('withdraw', vault)
-                                  }
+                                  onClick={() => toggleVaultAction('withdraw', vault)}
                                   className={cn(
                                     'flex-1 px-3 py-2 text-[13px] text-[#101010] border border-[#101010]/10 transition-colors',
                                     expandedAction === 'withdraw' && isSelected
@@ -1030,7 +1179,7 @@ export default function SavingsPageWrapper({
                           </div>
 
                           {/* Mobile Accordion Content */}
-                          {!isDemoMode && (
+                          {(expandedAction === 'insure' && isSelected) || (!isDemoMode && expandedAction && isSelected) ? (
                             <div
                               className={cn(
                                 'transition-all duration-300 ease-out overflow-hidden',
@@ -1043,17 +1192,16 @@ export default function SavingsPageWrapper({
                             >
                               <div className="px-4 pt-3 pb-4">
                                 <div className="bg-white border border-[#101010]/10 p-4">
-                                  {/* Only render the active component to reduce API calls */}
-                                  {expandedAction === 'deposit' &&
-                                  isSelected ? (
+                                  {expandedAction === 'insure' && isSelected ? (
+                                    <InsuranceContactPanel />
+                                  ) : expandedAction === 'deposit' && isSelected ? (
                                     <DepositEarnCard
                                       key={`deposit-mobile-${vault.address}`}
                                       safeAddress={safeAddress as Address}
                                       vaultAddress={vault.address as Address}
                                       onDepositSuccess={handleDepositSuccess}
                                     />
-                                  ) : expandedAction === 'withdraw' &&
-                                    isSelected ? (
+                                  ) : expandedAction === 'withdraw' && isSelected ? (
                                     <WithdrawEarnCard
                                       key={`withdraw-mobile-${vault.address}`}
                                       safeAddress={safeAddress as Address}
@@ -1064,7 +1212,7 @@ export default function SavingsPageWrapper({
                                 </div>
                               </div>
                             </div>
-                          )}
+                          ) : null}
                         </div>
                       </div>
                     );
