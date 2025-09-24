@@ -161,25 +161,31 @@ export async function GET(request: Request) {
           {/* Main Content */}
           <div
             style={{
-              display: 'grid',
-              gridTemplateColumns: 'minmax(0, 560px) minmax(0, 360px)',
-              columnGap: '56px',
-              rowGap: '32px',
+              display: 'flex',
               width: '100%',
-              maxWidth: '1040px',
-              alignItems: 'start',
-              margin: '0 auto',
+              justifyContent: 'center',
             }}
           >
-            {/* Left Column */}
             <div
               style={{
                 display: 'flex',
-                flexDirection: 'column',
-                gap: '28px',
-                maxWidth: '560px',
+                flexWrap: 'wrap',
+                gap: '48px',
+                width: '100%',
+                maxWidth: '1040px',
+                alignItems: 'flex-start',
               }}
             >
+              {/* Left Column */}
+              <div
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '28px',
+                  flex: '1 1 560px',
+                  maxWidth: '560px',
+                }}
+              >
               <div
                 style={{
                   display: 'flex',
@@ -317,119 +323,121 @@ export async function GET(request: Request) {
                   {company.funding.round} • {company.funding.date}
                 </span>
               </div>
-            </div>
+              </div>
 
-            {/* Right Column - Founders */}
-            <div
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '16px',
-                width: '100%',
-                maxWidth: '360px',
-              }}
-            >
-              <span
-                style={{
-                  fontSize: '12px',
-                  color: '#101010',
-                  opacity: 0.5,
-                  textTransform: 'uppercase',
-                  letterSpacing: '1px',
-                }}
-              >
-                Founders
-              </span>
+              {/* Right Column - Founders */}
               <div
                 style={{
                   display: 'flex',
                   flexDirection: 'column',
-                  gap: '12px',
+                  gap: '16px',
+                  flex: '1 1 320px',
+                  maxWidth: '360px',
+                  width: '100%',
                 }}
               >
-                {company.founders.slice(0, 3).map((founder) => {
-                  const founderAvatar = founderAvatars.find(
-                    (fa) => fa.id === founder.id,
-                  );
-                  return (
-                    <div
-                      key={founder.id}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '12px',
-                        backgroundColor: 'white',
-                        padding: '12px 16px',
-                        borderRadius: '12px',
-                        border: '2px solid #1B29FF15',
-                        width: '100%',
-                        boxShadow: '0 6px 18px rgba(27, 41, 255, 0.05)',
-                      }}
-                    >
-                      {founderAvatar?.avatar ? (
-                        <img
-                          src={founderAvatar.avatar}
-                          width={56}
-                          height={56}
-                          style={{
-                            borderRadius: '50%',
-                          }}
-                        />
-                      ) : (
+                <span
+                  style={{
+                    fontSize: '12px',
+                    color: '#101010',
+                    opacity: 0.5,
+                    textTransform: 'uppercase',
+                    letterSpacing: '1px',
+                  }}
+                >
+                  Founders
+                </span>
+                <div
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '12px',
+                  }}
+                >
+                  {company.founders.slice(0, 3).map((founder) => {
+                    const founderAvatar = founderAvatars.find(
+                      (fa) => fa.id === founder.id,
+                    );
+                    return (
+                      <div
+                        key={founder.id}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '12px',
+                          backgroundColor: 'white',
+                          padding: '12px 16px',
+                          borderRadius: '12px',
+                          border: '2px solid #1B29FF15',
+                          width: '100%',
+                          boxShadow: '0 6px 18px rgba(27, 41, 255, 0.05)',
+                        }}
+                      >
+                        {founderAvatar?.avatar ? (
+                          <img
+                            src={founderAvatar.avatar}
+                            width={56}
+                            height={56}
+                            style={{
+                              borderRadius: '50%',
+                            }}
+                          />
+                        ) : (
+                          <div
+                            style={{
+                              width: '56px',
+                              height: '56px',
+                              borderRadius: '50%',
+                              backgroundColor: '#1B29FF',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                            }}
+                          >
+                            <span
+                              style={{
+                                color: 'white',
+                                fontSize: '18px',
+                                fontWeight: 'bold',
+                              }}
+                            >
+                              {founder.name
+                                .split(' ')
+                                .map((n) => n[0])
+                                .join('')}
+                            </span>
+                          </div>
+                        )}
                         <div
                           style={{
-                            width: '56px',
-                            height: '56px',
-                            borderRadius: '50%',
-                            backgroundColor: '#1B29FF',
                             display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
+                            flexDirection: 'column',
+                            gap: '2px',
                           }}
                         >
                           <span
                             style={{
-                              color: 'white',
-                              fontSize: '18px',
-                              fontWeight: 'bold',
+                              fontSize: '16px',
+                              color: '#101010',
+                              fontWeight: '600',
                             }}
                           >
-                            {founder.name
-                              .split(' ')
-                              .map((n) => n[0])
-                              .join('')}
+                            {founder.name}
+                          </span>
+                          <span
+                            style={{
+                              fontSize: '13px',
+                              color: '#101010',
+                              opacity: 0.6,
+                            }}
+                          >
+                            {founder.role}
                           </span>
                         </div>
-                      )}
-                      <div
-                        style={{
-                          display: 'flex',
-                          flexDirection: 'column',
-                          gap: '2px',
-                        }}
-                      >
-                        <span
-                          style={{
-                            fontSize: '16px',
-                            color: '#101010',
-                            fontWeight: '600',
-                          }}
-                        >
-                          {founder.name}
-                        </span>
-                        <span
-                          style={{
-                            fontSize: '13px',
-                            color: '#101010',
-                            opacity: 0.6,
-                          }}
-                        >
-                          {founder.role}
-                        </span>
                       </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
               </div>
             </div>
           </div>
