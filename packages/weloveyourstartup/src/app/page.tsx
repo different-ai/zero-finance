@@ -79,15 +79,22 @@ export default function Home() {
       {/* Featured Startup */}
       {companies
         .filter((c) => c.showcase?.featured)
-        .map((company) => (
+        .sort((a, b) => (a.publishedDate && b.publishedDate ? new Date(b.publishedDate).getTime() - new Date(a.publishedDate).getTime() : 0))
+        .map((company, index) => (
           <section key={company.id} className="bg-white py-12 sm:py-16">
             <div className="mx-auto max-w-[1200px] px-4 sm:px-6 lg:px-8">
               <p className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60">
-                Featured Startup 🌟
+                Featured Startup 🌟• Published {company.publishedDate}
               </p>
-              <h2 className="mt-2 font-serif text-[30px] sm:text-[36px] leading-[1.1] tracking-[-0.01em] text-[#101010]">
-                This Week's Highlight
-              </h2>
+              {index === 0 ? (
+                <h2 className="mt-2 font-serif text-[30px] sm:text-[36px] leading-[1.1] tracking-[-0.01em] text-[#101010]">
+                  This Week's Highlight
+                </h2>
+              ) : (
+                <h2 className="mt-2 font-serif text-[30px] sm:text-[36px] leading-[1.1] tracking-[-0.01em] text-[#101010]/80">
+                  Previously Featured
+                </h2>
+              )}
 
               <div className="mt-8 bg-bg-warm border border-[#101010]/10 p-6 sm:p-8">
                 <div className="flex items-start justify-between">

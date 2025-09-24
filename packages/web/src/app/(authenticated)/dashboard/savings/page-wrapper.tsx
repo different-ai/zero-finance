@@ -75,7 +75,7 @@ const insuredPillAnimation = `
     mix-blend-mode: screen;
     opacity: 0;
     pointer-events: none;
-    animation: insuredShine 12s ease-in-out infinite;
+    animation: insuredShine 6s ease-in-out infinite;
   }
 `;
 

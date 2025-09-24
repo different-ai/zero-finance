@@ -1,6 +1,8 @@
 {
   "companies": [
     {
+      "publishedDate": "2025-09-15",
+      "featuredOrder": 2,
       "id": "mediar",
       "name": "Mediar",
       "tagline": "AI hands for every Windows desktop",
@@ -56,9 +58,10 @@
         "featured": true,
         "order": 1
       }
-    }
-    ,
+    },
     {
+      "publishedDate": "2025-09-22",
+      "featuredOrder": 1,
       "id": "shield",
       "name": "Shield",
       "tagline": "Neobank for global trade businesses",
@@ -128,53 +131,205 @@
     }
   ],
   "calculatorConfig": {
-    "bankRate": 4.0,
-    "zeroRate": 8.0,
+    "bankRate": 4,
+    "zeroRate": 8,
     "defaultAmount": 2800000,
     "minAmount": 100000,
     "maxAmount": 10000000,
     "step": 50000
   },
   "expenses": [
-    { "name": "AWS", "cost": 2000, "icon": "☁️" },
-    { "name": "Notion", "cost": 500, "icon": "📝" },
-    { "name": "Slack", "cost": 1200, "icon": "💬" },
-    { "name": "Vercel", "cost": 800, "icon": "▲" },
-    { "name": "GitHub", "cost": 600, "icon": "🐙" },
-    { "name": "Figma", "cost": 900, "icon": "🎨" },
-    { "name": "Linear", "cost": 400, "icon": "📊" },
-    { "name": "Office Space", "cost": 5000, "icon": "🏢" },
-    { "name": "Team Lunches", "cost": 2000, "icon": "🍕" },
-    { "name": "Conference Budget", "cost": 3000, "icon": "🎤" }
+    {
+      "name": "AWS",
+      "cost": 2000,
+      "icon": "☁️"
+    },
+    {
+      "name": "Notion",
+      "cost": 500,
+      "icon": "📝"
+    },
+    {
+      "name": "Slack",
+      "cost": 1200,
+      "icon": "💬"
+    },
+    {
+      "name": "Vercel",
+      "cost": 800,
+      "icon": "▲"
+    },
+    {
+      "name": "GitHub",
+      "cost": 600,
+      "icon": "🐙"
+    },
+    {
+      "name": "Figma",
+      "cost": 900,
+      "icon": "🎨"
+    },
+    {
+      "name": "Linear",
+      "cost": 400,
+      "icon": "📊"
+    },
+    {
+      "name": "Office Space",
+      "cost": 5000,
+      "icon": "🏢"
+    },
+    {
+      "name": "Team Lunches",
+      "cost": 2000,
+      "icon": "🍕"
+    },
+    {
+      "name": "Conference Budget",
+      "cost": 3000,
+      "icon": "🎤"
+    }
   ],
   "teamMembers": [
-    { "role": "Part-time Intern", "salary": 20000, "icon": "🎓" },
-    { "role": "Full-time Intern", "salary": 35000, "icon": "📚" },
-    { "role": "Virtual Assistant", "salary": 40000, "icon": "💼" },
-    { "role": "Junior Content Writer", "salary": 45000, "icon": "✍️" },
-    { "role": "Community Manager", "salary": 50000, "icon": "🌐" },
-    { "role": "Social Media Manager", "salary": 55000, "icon": "📱" },
-    { "role": "Content Writer", "salary": 60000, "icon": "📝" },
-    { "role": "Junior Designer", "salary": 65000, "icon": "🎨" },
-    { "role": "Customer Success", "salary": 70000, "icon": "🤝" },
-    { "role": "Sales Development Rep", "salary": 75000, "icon": "📞" },
-    { "role": "Junior Engineer", "salary": 80000, "icon": "👨‍💻" },
-    { "role": "Data Analyst", "salary": 85000, "icon": "📊" },
-    { "role": "Growth Marketer", "salary": 90000, "icon": "📈" },
-    { "role": "QA Engineer", "salary": 95000, "icon": "🔍" },
-    { "role": "Account Executive", "salary": 100000, "icon": "💰" },
-    { "role": "Product Manager", "salary": 110000, "icon": "🎯" },
-    { "role": "Product Designer", "salary": 120000, "icon": "🖌️" },
-    { "role": "DevOps Engineer", "salary": 130000, "icon": "⚙️" },
-    { "role": "Data Scientist", "salary": 140000, "icon": "🔬" },
-    { "role": "Senior Engineer", "salary": 150000, "icon": "🧑‍💻" },
-    { "role": "Senior Product Manager", "salary": 160000, "icon": "🎯" },
-    { "role": "Staff Engineer", "salary": 180000, "icon": "⭐" },
-    { "role": "Engineering Manager", "salary": 190000, "icon": "👔" },
-    { "role": "Head of Product", "salary": 200000, "icon": "🚀" },
-    { "role": "Principal Engineer", "salary": 220000, "icon": "💎" },
-    { "role": "VP Engineering", "salary": 250000, "icon": "🏆" },
-    { "role": "VP Sales", "salary": 260000, "icon": "📈" },
-    { "role": "CTO (Fractional)", "salary": 300000, "icon": "🔮" }
+    {
+      "role": "Part-time Intern",
+      "salary": 20000,
+      "icon": "🎓"
+    },
+    {
+      "role": "Full-time Intern",
+      "salary": 35000,
+      "icon": "📚"
+    },
+    {
+      "role": "Virtual Assistant",
+      "salary": 40000,
+      "icon": "💼"
+    },
+    {
+      "role": "Junior Content Writer",
+      "salary": 45000,
+      "icon": "✍️"
+    },
+    {
+      "role": "Community Manager",
+      "salary": 50000,
+      "icon": "🌐"
+    },
+    {
+      "role": "Social Media Manager",
+      "salary": 55000,
+      "icon": "📱"
+    },
+    {
+      "role": "Content Writer",
+      "salary": 60000,
+      "icon": "📝"
+    },
+    {
+      "role": "Junior Designer",
+      "salary": 65000,
+      "icon": "🎨"
+    },
+    {
+      "role": "Customer Success",
+      "salary": 70000,
+      "icon": "🤝"
+    },
+    {
+      "role": "Sales Development Rep",
+      "salary": 75000,
+      "icon": "📞"
+    },
+    {
+      "role": "Junior Engineer",
+      "salary": 80000,
+      "icon": "👨‍💻"
+    },
+    {
+      "role": "Data Analyst",
+      "salary": 85000,
+      "icon": "📊"
+    },
+    {
+      "role": "Growth Marketer",
+      "salary": 90000,
+      "icon": "📈"
+    },
+    {
+      "role": "QA Engineer",
+      "salary": 95000,
+      "icon": "🔍"
+    },
+    {
+      "role": "Account Executive",
+      "salary": 100000,
+      "icon": "💰"
+    },
+    {
+      "role": "Product Manager",
+      "salary": 110000,
+      "icon": "🎯"
+    },
+    {
+      "role": "Product Designer",
+      "salary": 120000,
+      "icon": "🖌️"
+    },
+    {
+      "role": "DevOps Engineer",
+      "salary": 130000,
+      "icon": "⚙️"
+    },
+    {
+      "role": "Data Scientist",
+      "salary": 140000,
+      "icon": "🔬"
+    },
+    {
+      "role": "Senior Engineer",
+      "salary": 150000,
+      "icon": "🧑‍💻"
+    },
+    {
+      "role": "Senior Product Manager",
+      "salary": 160000,
+      "icon": "🎯"
+    },
+    {
+      "role": "Staff Engineer",
+      "salary": 180000,
+      "icon": "⭐"
+    },
+    {
+      "role": "Engineering Manager",
+      "salary": 190000,
+      "icon": "👔"
+    },
+    {
+      "role": "Head of Product",
+      "salary": 200000,
+      "icon": "🚀"
+    },
+    {
+      "role": "Principal Engineer",
+      "salary": 220000,
+      "icon": "💎"
+    },
+    {
+      "role": "VP Engineering",
+      "salary": 250000,
+      "icon": "🏆"
+    },
+    {
+      "role": "VP Sales",
+      "salary": 260000,
+      "icon": "📈"
+    },
+    {
+      "role": "CTO (Fractional)",
+      "salary": 300000,
+      "icon": "🔮"
+    }
   ]
 }
