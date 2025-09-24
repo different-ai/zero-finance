@@ -61,4 +61,7 @@ memory/outreach-log.md
 .vercel
 
 # Local database files
+# Ignore all data directories
 data/
+# But don't ignore the companies.json file
+!packages/weloveyourstartup/src/data/companies.json
