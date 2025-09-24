@@ -7,9 +7,18 @@ const HERO_ONE_LINER =
   "A curated directory of founders we admire. See how much their idle cash could be earning with Zero Finance's 8% APY savings accounts.";
 
 // Helper to load images
-async function loadImage(url: string): Promise<string | null> {
+async function loadImage(
+  url: string,
+  baseUrl?: string,
+): Promise<string | null> {
   try {
-    const response = await fetch(url);
+    const resolvedUrl =
+      url.startsWith('http') || url.startsWith('data:')
+        ? url
+        : baseUrl
+          ? new URL(url, baseUrl).toString()
+          : url;
+    const response = await fetch(resolvedUrl);
     const arrayBuffer = await response.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
     const base64 = buffer.toString('base64');
@@ -25,10 +34,11 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const companyId = searchParams.get('company');
+    const { origin } = new URL(request.url);
 
     // Load Zero logo - using the hosted version for edge runtime
     const zeroLogoUrl = 'https://weloveyourstartup.com/images/new-logo-bluer.png';
-    const zeroLogo = await loadImage(zeroLogoUrl);
+    const zeroLogo = await loadImage(zeroLogoUrl, origin);
 
     if (!companyId) {
       return new ImageResponse(
@@ -91,11 +101,16 @@ export async function GET(request: Request) {
     }
 
     // Load company logo and founder avatars
-    const companyLogo = company.logo ? await loadImage(company.logo) : null;
+    const companyLogo = company.logo
+      ? await loadImage(company.logo, origin)
+      : null;
     const founderAvatars = await Promise.all(
       company.founders.slice(0, 3).map(async (founder) => {
         if (founder.avatar) {
-          return { id: founder.id, avatar: await loadImage(founder.avatar) };
+          return {
+            id: founder.id,
+            avatar: await loadImage(founder.avatar, origin),
+          };
         }
         return { id: founder.id, avatar: null };
       }),
@@ -114,6 +129,8 @@ export async function GET(request: Request) {
       company.funding.amount >= 1000000
         ? `$${(company.funding.amount / 1000000).toFixed(1)}M`
         : `$${(company.funding.amount / 1000).toFixed(0)}K`;
+
+    const headline = company.tagline || company.description.substring(0, 80);
 
     return new ImageResponse(
       (
@@ -242,7 +259,7 @@ export async function GET(request: Request) {
               {/* Tagline */}
               <p
                 style={{
-                  fontSize: '66px',
+                  fontSize: '48px',
                   color: '#101010',
                   opacity: 0.8,
                   lineHeight: 1.4,
@@ -311,6 +328,8 @@ export async function GET(request: Request) {
                 style={{
                   display: 'flex',
                   flexDirection: 'column',
+                  // wrap
+
                   gap: '8px',
                 }}
               >
