@@ -9,7 +9,7 @@ import { VirtualAccountOnboardingLayer } from './components/dashboard/virtual-ac
 import { USDC_ADDRESS } from '@/lib/constants';
 import { Skeleton } from '@/components/ui/skeleton';
 import { SavingsWrapper } from './components/savings-wrapper';
-import { InsuranceActivationHandler } from './components/insurance-activation-handler';
+import { DashboardRedirect } from './dashboard-redirect';
 import {
   EmptyCheckingAccount,
   OnboardingTasks,
@@ -112,46 +112,48 @@ export default async function DashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F7F7F2]">
-      {/* Main Content */}
-      <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
-        {/* Insurance Warning and Activation Handler */}
+    <DashboardRedirect>
+      <div className="min-h-screen bg-[#F7F7F2]">
+        {/* Main Content */}
+        <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
+          {/* Insurance Warning and Activation Handler */}
 
-        <div className="space-y-6">
-          {/* Balance Section - Checking Account */}
-          <div>
-            <h2 className="font-serif text-[24px] sm:text-[28px] leading-[1.1] tracking-[-0.01em] text-[#101010] mb-4">
-              Checking Account
-            </h2>
-            <Suspense fallback={<LoadingCard />}>
-              <FundsData />
-            </Suspense>
-          </div>
-
-          {/* Onboarding Section */}
-          <Suspense fallback={<LoadingCard />}>
-            <OnboardingData />
-          </Suspense>
-
-          {/* Savings/Yield Section */}
-          <SavingsWrapper />
-
-          {/* Transactions Section */}
-          <div className="bg-white border border-[#101010]/10 rounded-[12px] shadow-[0_2px_8px_rgba(16,16,16,0.04)]">
-            <div className="p-5 sm:p-6 border-b border-[#101010]/10">
-              <p className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60">
-                RECENT ACTIVITY
-              </p>
-              <h2 className="mt-2 font-serif text-[24px] sm:text-[28px] leading-[1.1] tracking-[-0.01em] text-[#101010]">
-                Transactions & Transfers
+          <div className="space-y-6">
+            {/* Balance Section - Checking Account */}
+            <div>
+              <h2 className="font-serif text-[24px] sm:text-[28px] leading-[1.1] tracking-[-0.01em] text-[#101010] mb-4">
+                Checking Account
               </h2>
+              <Suspense fallback={<LoadingCard />}>
+                <FundsData />
+              </Suspense>
             </div>
+
+            {/* Onboarding Section */}
             <Suspense fallback={<LoadingCard />}>
-              <TransactionTabsDemo />
+              <OnboardingData />
             </Suspense>
+
+            {/* Savings/Yield Section */}
+            <SavingsWrapper />
+
+            {/* Transactions Section */}
+            <div className="bg-white border border-[#101010]/10 rounded-[12px] shadow-[0_2px_8px_rgba(16,16,16,0.04)]">
+              <div className="p-5 sm:p-6 border-b border-[#101010]/10">
+                <p className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60">
+                  RECENT ACTIVITY
+                </p>
+                <h2 className="mt-2 font-serif text-[24px] sm:text-[28px] leading-[1.1] tracking-[-0.01em] text-[#101010]">
+                  Transactions & Transfers
+                </h2>
+              </div>
+              <Suspense fallback={<LoadingCard />}>
+                <TransactionTabsDemo />
+              </Suspense>
+            </div>
           </div>
         </div>
       </div>
-    </div>
+    </DashboardRedirect>
   );
 }

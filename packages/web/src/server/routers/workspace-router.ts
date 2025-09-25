@@ -11,7 +11,88 @@ import {
 import { eq, and, or, desc, isNull } from 'drizzle-orm';
 import crypto from 'crypto';
 
+const LOOPS_API_KEY = process.env.LOOPS_API_KEY;
+const LOOPS_API_BASE_URL = 'https://app.loops.so/api/v1';
+
 export const workspaceRouter = router({
+  /**
+   * Update workspace with company name and notify founders
+   */
+  updateCompanyName: protectedProcedure
+    .input(
+      z.object({
+        workspaceId: z.string().uuid(),
+        companyName: z.string().min(1).max(100),
+        userName: z.string().optional(),
+        userEmail: z.string().email().optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const { userId } = ctx;
+
+      if (!userId) {
+        throw new TRPCError({
+          code: 'UNAUTHORIZED',
+          message: 'User not authenticated',
+        });
+      }
+
+      // Verify user is member of workspace
+      const membership = await ctx.db
+        .select()
+        .from(workspaceMembers)
+        .where(
+          and(
+            eq(workspaceMembers.workspaceId, input.workspaceId),
+            eq(workspaceMembers.userId, userId),
+          ),
+        )
+        .limit(1);
+
+      if (!membership.length) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'Not a member of this workspace',
+        });
+      }
+
+      // Update workspace name
+      await ctx.db
+        .update(workspaces)
+        .set({
+          name: input.companyName,
+          updatedAt: new Date(),
+        })
+        .where(eq(workspaces.id, input.workspaceId));
+
+      // Send notification to founders via Loops
+      if (LOOPS_API_KEY) {
+        try {
+          await fetch(`${LOOPS_API_BASE_URL}/transactional`, {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${LOOPS_API_KEY}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              email: 'founders@0.finance',
+              transactionalId: 'cmcoz1sx04doqzc0iq66v9ewj', // Using same as feedback
+              dataVariables: {
+                userEmail: input.userEmail || 'Not provided',
+                feedback: `New signup - Company: ${input.companyName}, User: ${input.userName || 'Unknown'}, Email: ${input.userEmail || 'Not provided'}`,
+                submittedAt: new Date().toISOString(),
+              },
+            }),
+          });
+        } catch (error) {
+          console.error('Failed to send signup notification:', error);
+          // Don't fail the mutation if notification fails
+        }
+      }
+
+      return { success: true };
+    }),
+
   /**
    * Ensure the user has a default workspace, creating one on demand.
    */

@@ -30,9 +30,20 @@ export default function SignInContent() {
   // Redirect to dashboard if already authenticated
   useEffect(() => {
     if (authenticated) {
-      const redirectUrl = inviteToken
-        ? `/dashboard?invite=${inviteToken}`
-        : '/dashboard';
+      // Check if this is a new user who needs onboarding
+      const hasCompletedOnboarding =
+        localStorage.getItem('company_name_collected') === 'true';
+
+      let redirectUrl;
+      if (inviteToken) {
+        redirectUrl = `/dashboard?invite=${inviteToken}`;
+      } else if (!hasCompletedOnboarding) {
+        // New user, send to welcome page
+        redirectUrl = '/welcome';
+      } else {
+        redirectUrl = '/dashboard';
+      }
+
       window.location.href = redirectUrl;
     }
   }, [authenticated, inviteToken]);

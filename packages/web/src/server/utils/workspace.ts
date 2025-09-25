@@ -33,8 +33,9 @@ export function withWorkspaceIdArray<T extends { workspaceId?: string | null }>(
 }
 
 function buildWorkspaceName(user: typeof users.$inferSelect): string {
-  const parts = [user.companyName, user.firstName, user.lastName]
-    .filter((part) => part && part.trim().length > 0);
+  const parts = [user.companyName, user.firstName, user.lastName].filter(
+    (part) => part && part.trim().length > 0,
+  );
 
   if (parts.length > 0) {
     const name = parts.join(' ').trim();
@@ -186,8 +187,20 @@ export async function ensureUserWorkspace(
       const inserted = await tx
         .insert(users)
         .values({ privyDid: userId })
+        .onConflictDoNothing()
         .returning();
-      user = inserted[0];
+
+      // If insert returned nothing (conflict), query for the existing user
+      if (inserted.length === 0) {
+        const existing = await tx
+          .select()
+          .from(users)
+          .where(eq(users.privyDid, userId))
+          .limit(1);
+        user = existing[0];
+      } else {
+        user = inserted[0];
+      }
     }
 
     if (!user) {
@@ -195,7 +208,11 @@ export async function ensureUserWorkspace(
     }
 
     const workspaceId = await resolveWorkspaceId(tx, user);
-    const membership = await upsertPrimaryMembership(tx, user.privyDid, workspaceId);
+    const membership = await upsertPrimaryMembership(
+      tx,
+      user.privyDid,
+      workspaceId,
+    );
 
     if (user.primaryWorkspaceId !== workspaceId) {
       await tx

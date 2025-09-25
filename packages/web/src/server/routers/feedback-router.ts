@@ -32,7 +32,7 @@ export const feedbackRouter = router({
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            email: 'ben@0.finance',
+            email: 'founders@0.finance',
             transactionalId: 'cmcoz1sx04doqzc0iq66v9ewj', // you'll need to create this in loops
             dataVariables: {
               userEmail,
