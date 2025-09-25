@@ -15,7 +15,7 @@ export default function WelcomePage() {
   const [companyName, setCompanyName] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  const { data: workspaceData } = api.workspace.getOrCreateWorkspace.useQuery(undefined, {
+  const { data: workspaceData, isLoading: workspaceLoading } = api.workspace.getOrCreateWorkspace.useQuery(undefined, {
     enabled: ready && authenticated,
   });
   
@@ -56,7 +56,6 @@ export default function WelcomePage() {
 
       // Mark as completed
       localStorage.setItem('company_name_collected', 'true');
-      sessionStorage.setItem('company_name_collected', 'true');
       
       // Go to dashboard
       router.push('/dashboard');
@@ -67,13 +66,12 @@ export default function WelcomePage() {
   };
 
   const handleSkip = () => {
-    // Mark as skipped to avoid redirect loops
-    localStorage.setItem('company_name_collected', 'skipped');
-    sessionStorage.setItem('company_name_collected', 'true');
+    // Mark as collected to prevent future auto-redirects
+    localStorage.setItem('company_name_collected', 'true');
     router.push('/dashboard');
   };
 
-  if (!ready || !authenticated) {
+  if (!ready || !authenticated || workspaceLoading) {
     return (
       <div className="min-h-screen bg-[#F7F7F2] flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#101010]" />

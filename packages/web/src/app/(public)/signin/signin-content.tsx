@@ -30,23 +30,15 @@ export default function SignInContent() {
   // Redirect to dashboard if already authenticated
   useEffect(() => {
     if (authenticated) {
-      // Check if this is a new user who needs onboarding
-      const hasCompletedOnboarding = localStorage.getItem(
-        'company_name_collected',
-      );
-
       let redirectUrl;
+      
       if (inviteToken) {
+        // Handle invite flow
         redirectUrl = `/dashboard?invite=${inviteToken}`;
-      } else if (
-        !hasCompletedOnboarding || hasCompletedOnboarding === 'skipped' ||
-        hasCompletedOnboarding === 'skipped'
-      ) {
-        // New user or user who skipped, send to welcome page
-        // They can skip again if they want
-        redirectUrl = '/welcome';
       } else {
-        redirectUrl = '/dashboard';
+        // For regular signin/signup, go to dashboard
+        // The dashboard will redirect to welcome if needed
+        redirectUrl = "/dashboard";
       }
 
       window.location.href = redirectUrl;
@@ -55,18 +47,17 @@ export default function SignInContent() {
 
   // Track page view with source
   useEffect(() => {
-    posthog?.capture('signin_page_viewed', {
-      source: source || 'direct',
+    posthog?.capture("signin_page_viewed", {
+      source: source || "direct",
     });
   }, [source, posthog]);
 
   const handleSignIn = () => {
-    posthog?.capture('signin_attempted', {
-      source: source || 'direct',
+    posthog?.capture("signin_attempted", {
+      source: source || "direct",
     });
     login();
   };
-
   return (
     <div className="min-h-screen bg-[#F7F7F2]">
       {/* Header */}

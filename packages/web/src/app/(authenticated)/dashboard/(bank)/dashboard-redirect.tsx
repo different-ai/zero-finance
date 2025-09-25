@@ -1,34 +1,33 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { api } from '@/trpc/react';
 
 export function DashboardRedirect({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const { data: workspaceData } = api.workspace.getOrCreateWorkspace.useQuery();
+  const [hasChecked, setHasChecked] = useState(false);
+  const { data: workspaceData, isLoading } = api.workspace.getOrCreateWorkspace.useQuery();
 
   useEffect(() => {
-    // Check if user has been shown welcome page in this session
-    const shownInSession = sessionStorage.getItem('company_name_collected');
-    if (shownInSession) {
-      return; // Already handled in this session
-    }
+    // Don't check until workspace data is loaded
+    if (isLoading || hasChecked) return;
+    
+    // Only check once per mount
+    setHasChecked(true);
 
-    // Check if this is a new user who needs to provide company name
-    const hasCompletedWelcome = localStorage.getItem('company_name_collected');
-
-    // Only redirect new users who haven't seen welcome and have default workspace name
-    if (
-      workspaceData?.workspace &&
-      workspaceData.workspace.name === 'Personal Workspace' &&
-      !hasCompletedWelcome
-    ) {
-      // Mark that we're showing the welcome page in this session
-      sessionStorage.setItem('welcome_redirect_shown', 'true');
-      router.push('/welcome');
+    if (workspaceData?.workspace) {
+      const hasCompletedWelcome = localStorage.getItem('company_name_collected');
+      const hasDefaultName = workspaceData.workspace.name === 'Personal Workspace';
+      
+      // Redirect to welcome if:
+      // 1. User has default workspace name (new user)
+      // 2. AND hasn't completed or skipped welcome before
+      if (hasDefaultName && !hasCompletedWelcome) {
+        router.push('/welcome');
+      }
     }
-  }, [workspaceData, router]);
+  }, [workspaceData, isLoading, router, hasChecked]);
 
   return <>{children}</>;
 }
