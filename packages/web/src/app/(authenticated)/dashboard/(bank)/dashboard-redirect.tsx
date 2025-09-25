@@ -17,23 +17,16 @@ export function DashboardRedirect({ children }: { children: React.ReactNode }) {
     setHasChecked(true);
 
     if (workspaceData?.workspace) {
-      const hasCompletedWelcome = localStorage.getItem('company_name_collected');
-      const workspaceName = workspaceData.workspace.name;
-      const hasDefaultName = workspaceName === 'Personal Workspace';
+      // Check if user has explicitly completed the welcome flow
+      const welcomeStatus = localStorage.getItem('company_name_collected');
       
-      // Check if the workspace has a suspiciously short or test-like name
-      const hasInvalidName = hasDefaultName || 
-                            !workspaceName || 
-                            workspaceName.length < 2 ||
-                            workspaceName.toLowerCase() === 'test' ||
-                            workspaceName.toLowerCase() === 'fdsf';
-      
-      // Redirect to welcome if:
-      // 1. User has invalid/default workspace name
-      // 2. AND hasn't explicitly completed or skipped welcome
-      if (hasInvalidName && hasCompletedWelcome !== 'true') {
-        console.log('Redirecting to welcome - invalid company name:', workspaceName);
+      // If user hasn't explicitly completed welcome (either 'true' or 'skipped')
+      // then redirect them to welcome page
+      if (!welcomeStatus) {
+        console.log('No welcome status found, redirecting to welcome');
         router.push('/welcome');
+      } else {
+        console.log('Welcome already completed:', welcomeStatus);
       }
     }
   }, [workspaceData, isLoading, router, hasChecked]);
