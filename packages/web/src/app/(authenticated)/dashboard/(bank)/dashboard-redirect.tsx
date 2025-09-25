@@ -10,12 +10,6 @@ export function DashboardRedirect({ children }: { children: React.ReactNode }) {
   const { data: workspaceData, isLoading } = api.workspace.getOrCreateWorkspace.useQuery();
 
   useEffect(() => {
-    console.log('DashboardRedirect: Status', { 
-      isLoading, 
-      hasChecked, 
-      workspaceName: workspaceData?.workspace?.name 
-    });
-    
     // Don't check until workspace data is loaded
     if (isLoading || hasChecked) return;
     
@@ -24,20 +18,21 @@ export function DashboardRedirect({ children }: { children: React.ReactNode }) {
 
     if (workspaceData?.workspace) {
       const hasCompletedWelcome = localStorage.getItem('company_name_collected');
-      const hasDefaultName = workspaceData.workspace.name === 'Personal Workspace';
+      const workspaceName = workspaceData.workspace.name;
+      const hasDefaultName = workspaceName === 'Personal Workspace';
       
-      console.log('DashboardRedirect: Checking redirect', {
-        workspaceName: workspaceData.workspace.name,
-        hasDefaultName,
-        hasCompletedWelcome,
-        willRedirect: hasDefaultName && !hasCompletedWelcome
-      });
+      // Check if the workspace has a suspiciously short or test-like name
+      const hasInvalidName = hasDefaultName || 
+                            !workspaceName || 
+                            workspaceName.length < 2 ||
+                            workspaceName.toLowerCase() === 'test' ||
+                            workspaceName.toLowerCase() === 'fdsf';
       
       // Redirect to welcome if:
-      // 1. User has default workspace name (new user)  
-      // 2. AND hasn't completed or skipped welcome before
-      if (hasDefaultName && !hasCompletedWelcome) {
-        console.log('DashboardRedirect: Redirecting to /welcome');
+      // 1. User has invalid/default workspace name
+      // 2. AND hasn't explicitly completed or skipped welcome
+      if (hasInvalidName && hasCompletedWelcome !== 'true') {
+        console.log('Redirecting to welcome - invalid company name:', workspaceName);
         router.push('/welcome');
       }
     }

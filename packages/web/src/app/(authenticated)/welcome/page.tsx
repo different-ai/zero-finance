@@ -15,10 +15,11 @@ export default function WelcomePage() {
   const [companyName, setCompanyName] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  const { data: workspaceData, isLoading: workspaceLoading } = api.workspace.getOrCreateWorkspace.useQuery(undefined, {
-    enabled: ready && authenticated,
-  });
-  
+  const { data: workspaceData, isLoading: workspaceLoading } =
+    api.workspace.getOrCreateWorkspace.useQuery(undefined, {
+      enabled: ready && authenticated,
+    });
+
   const updateCompanyMutation = api.workspace.updateCompanyName.useMutation();
 
   useEffect(() => {
@@ -27,21 +28,6 @@ export default function WelcomePage() {
       router.push('/signin');
     }
   }, [ready, authenticated, router]);
-
-  // Pre-fill company name if workspace already has one
-  useEffect(() => {
-    if (workspaceData?.workspace && 
-        workspaceData.workspace.name !== 'Personal Workspace' &&
-        !companyName) {
-      setCompanyName(workspaceData.workspace.name);
-    }
-  }, [workspaceData, companyName]);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!companyName.trim() || !workspaceData?.workspaceId) {
-      return;
     }
 
     setIsLoading(true);
@@ -56,7 +42,7 @@ export default function WelcomePage() {
 
       // Mark as completed
       localStorage.setItem('company_name_collected', 'true');
-      
+
       // Go to dashboard
       router.push('/dashboard');
     } catch (error) {
@@ -98,8 +84,8 @@ export default function WelcomePage() {
 
             <form onSubmit={handleSubmit} className="space-y-5">
               <div className="space-y-2">
-                <Label 
-                  htmlFor="company-name" 
+                <Label
+                  htmlFor="company-name"
                   className="text-[13px] font-medium text-[#101010]/80 uppercase tracking-wider"
                 >
                   Company Name
@@ -130,7 +116,7 @@ export default function WelcomePage() {
                     'Continue to Dashboard'
                   )}
                 </Button>
-                
+
                 <Button
                   type="button"
                   variant="ghost"
