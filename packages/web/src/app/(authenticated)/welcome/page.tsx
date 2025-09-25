@@ -22,22 +22,20 @@ export default function WelcomePage() {
   const updateCompanyMutation = api.workspace.updateCompanyName.useMutation();
 
   useEffect(() => {
+    // Only redirect if not authenticated
     if (ready && !authenticated) {
       router.push('/signin');
     }
-    
-    // Check if company name was already collected
-    const companyNameCollected = localStorage.getItem('company_name_collected');
-    if (companyNameCollected === 'true') {
-      router.push('/dashboard');
+  }, [ready, authenticated, router]);
+
+  // Pre-fill company name if workspace already has one
+  useEffect(() => {
+    if (workspaceData?.workspace && 
+        workspaceData.workspace.name !== 'Personal Workspace' &&
+        !companyName) {
+      setCompanyName(workspaceData.workspace.name);
     }
-    
-    // If workspace already has a custom name (not "Personal Workspace"), skip this
-    if (workspaceData?.workspace && workspaceData.workspace.name !== 'Personal Workspace') {
-      localStorage.setItem('company_name_collected', 'true');
-      router.push('/dashboard');
-    }
-  }, [ready, authenticated, router, workspaceData]);
+  }, [workspaceData, companyName]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,8 +54,9 @@ export default function WelcomePage() {
         userEmail: user?.email?.address || user?.google?.email,
       });
 
-      // Store that we've collected company name
+      // Mark as completed
       localStorage.setItem('company_name_collected', 'true');
+      sessionStorage.setItem('company_name_collected', 'true');
       
       // Go to dashboard
       router.push('/dashboard');
@@ -68,8 +67,9 @@ export default function WelcomePage() {
   };
 
   const handleSkip = () => {
-    // Allow skipping but still mark as collected to avoid loop
-    localStorage.setItem('company_name_collected', 'true');
+    // Mark as skipped to avoid redirect loops
+    localStorage.setItem('company_name_collected', 'skipped');
+    sessionStorage.setItem('company_name_collected', 'true');
     router.push('/dashboard');
   };
 

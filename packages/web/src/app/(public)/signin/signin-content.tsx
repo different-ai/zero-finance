@@ -31,14 +31,19 @@ export default function SignInContent() {
   useEffect(() => {
     if (authenticated) {
       // Check if this is a new user who needs onboarding
-      const hasCompletedOnboarding =
-        localStorage.getItem('company_name_collected') === 'true';
+      const hasCompletedOnboarding = localStorage.getItem(
+        'company_name_collected',
+      );
 
       let redirectUrl;
       if (inviteToken) {
         redirectUrl = `/dashboard?invite=${inviteToken}`;
-      } else if (!hasCompletedOnboarding) {
-        // New user, send to welcome page
+      } else if (
+        !hasCompletedOnboarding || hasCompletedOnboarding === 'skipped' ||
+        hasCompletedOnboarding === 'skipped'
+      ) {
+        // New user or user who skipped, send to welcome page
+        // They can skip again if they want
         redirectUrl = '/welcome';
       } else {
         redirectUrl = '/dashboard';
