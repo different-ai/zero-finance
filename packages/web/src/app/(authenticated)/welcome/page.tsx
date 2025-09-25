@@ -28,6 +28,12 @@ export default function WelcomePage() {
       router.push('/signin');
     }
   }, [ready, authenticated, router]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!companyName.trim() || !workspaceData?.workspaceId) {
+      return;
     }
 
     setIsLoading(true);
