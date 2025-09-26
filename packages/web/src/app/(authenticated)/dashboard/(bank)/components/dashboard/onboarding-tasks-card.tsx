@@ -6,6 +6,7 @@ import { CheckCircle, Circle, Loader2, AlertTriangle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { api } from '@/trpc/react';
+import { OpenSavingsAccountButton } from '@/components/savings/components/open-savings-account-button';
 
 type OnboardingStepStatus =
   | 'not_started'
@@ -42,6 +43,8 @@ export function OnboardingTasksCard({ initialData }: OnboardingTasksProps) {
       refetchInterval: 5000,
       refetchOnWindowFocus: false,
     });
+
+  const { data: primarySafeData } = api.user.getPrimarySafeAddress.useQuery();
 
   if (isLoading) {
     return (
@@ -94,7 +97,39 @@ export function OnboardingTasksCard({ initialData }: OnboardingTasksProps) {
     ) : null,
   };
 
-  // Step 2: Verify Identity
+  // Step 2: Activate Savings (now comes before KYC)
+  const savingsContent = {
+    disabled: !isSafeComplete,
+    icon: isSavingsComplete ? (
+      <CheckCircle className="h-6 w-6 text-green-500" />
+    ) : !isSafeComplete ? (
+      <Circle className="h-6 w-6 text-gray-400" />
+    ) : (
+      <Circle className="h-6 w-6 text-gray-400" />
+    ),
+    title: 'Activate Savings',
+    description: !isSafeComplete
+      ? 'Complete account setup first.'
+      : isSavingsComplete
+        ? 'Your savings account is active - earning 8% APY'
+        : 'Activate automatic savings to earn 8% APY on idle funds',
+    button:
+      isSafeComplete &&
+      !isSavingsComplete &&
+      primarySafeData?.primarySafeAddress ? (
+        <div className="w-full sm:w-auto">
+          <OpenSavingsAccountButton
+            safeAddress={primarySafeData.primarySafeAddress as `0x${string}`}
+            onSuccess={() => {
+              // Refetch onboarding status after successful savings activation
+              window.location.reload();
+            }}
+          />
+        </div>
+      ) : null,
+  };
+
+  // Step 3: KYC (moved to step 3)
   let kycContent: {
     disabled?: boolean;
     icon: React.ReactNode;
@@ -134,43 +169,19 @@ export function OnboardingTasksCard({ initialData }: OnboardingTasksProps) {
     };
   } else {
     kycContent = {
-      disabled: !isSafeComplete,
+      disabled: !isSavingsComplete,
       icon: <Circle className="h-6 w-6 text-gray-400" />,
-      title: 'Verify Identity',
-      description: !isSafeComplete
-        ? 'Complete account setup first.'
-        : 'Verify your identity to unlock all features.',
-      button: isSafeComplete ? (
+      title: 'KYC',
+      description: !isSavingsComplete
+        ? 'Activate savings first.'
+        : 'Complete KYC to unlock all features.',
+      button: isSavingsComplete ? (
         <Button asChild size="sm" className="w-full sm:w-auto">
-          <Link href="/onboarding/kyc">Verify</Link>
+          <Link href="/onboarding/kyc">Start KYC</Link>
         </Button>
       ) : null,
     };
   }
-
-  // Step 3: Open Savings Account (always visible but disabled until KYC)
-  const savingsContent = {
-    disabled: !isKycComplete,
-    icon: isSavingsComplete ? (
-      <CheckCircle className="h-6 w-6 text-green-500" />
-    ) : !isKycComplete ? (
-      <Circle className="h-6 w-6 text-gray-400" />
-    ) : (
-      <Circle className="h-6 w-6 text-gray-400" />
-    ),
-    title: 'Activate High-Yield Savings',
-    description: !isKycComplete
-      ? 'Complete identity verification to unlock this step'
-      : isSavingsComplete
-        ? 'Your savings account is active - earning 8% APY'
-        : 'Activate automatic savings to earn 8% APY on idle funds',
-    button:
-      isKycComplete && !isSavingsComplete ? (
-        <Button asChild size="sm" className="w-full sm:w-auto">
-          <Link href="/dashboard/earn">Open Savings</Link>
-        </Button>
-      ) : null,
-  };
 
   return (
     <Card className="w-full">
@@ -202,30 +213,7 @@ export function OnboardingTasksCard({ initialData }: OnboardingTasksProps) {
             )}
           </div>
 
-          {/* Step 2: Verify Identity */}
-          <div
-            className={`flex flex-col sm:flex-row items-start gap-3 sm:gap-4 ${kycContent.disabled ? 'opacity-50' : ''}`}
-          >
-            <div className="flex items-start gap-3 flex-1 w-full">
-              <div className="flex-shrink-0 mt-0.5">{kycContent.icon}</div>
-              <div className="flex-1 min-w-0">
-                <p className="font-semibold text-gray-800 text-sm sm:text-base">
-                  <span className="text-[#101010]/40 mr-2">2.</span>
-                  {kycContent.title}
-                </p>
-                <p className="text-xs sm:text-sm text-gray-600 mt-1">
-                  {kycContent.description}
-                </p>
-              </div>
-            </div>
-            {kycContent.button && (
-              <div className="flex-shrink-0 w-full sm:w-auto sm:ml-9">
-                {kycContent.button}
-              </div>
-            )}
-          </div>
-
-          {/* Step 3: Open Savings Account (always shown) */}
+          {/* Step 2: Activate Savings */}
           <div
             className={`flex flex-col sm:flex-row items-start gap-3 sm:gap-4 ${savingsContent.disabled ? 'opacity-50' : ''}`}
           >
@@ -233,7 +221,7 @@ export function OnboardingTasksCard({ initialData }: OnboardingTasksProps) {
               <div className="flex-shrink-0 mt-0.5">{savingsContent.icon}</div>
               <div className="flex-1 min-w-0">
                 <p className="font-semibold text-gray-800 text-sm sm:text-base">
-                  <span className="text-[#101010]/40 mr-2">3.</span>
+                  <span className="text-[#101010]/40 mr-2">2.</span>
                   {savingsContent.title}
                 </p>
                 <p className="text-xs sm:text-sm text-gray-600 mt-1">
@@ -244,6 +232,29 @@ export function OnboardingTasksCard({ initialData }: OnboardingTasksProps) {
             {savingsContent.button && (
               <div className="flex-shrink-0 w-full sm:w-auto sm:ml-9">
                 {savingsContent.button}
+              </div>
+            )}
+          </div>
+
+          {/* Step 3: KYC */}
+          <div
+            className={`flex flex-col sm:flex-row items-start gap-3 sm:gap-4 ${kycContent.disabled ? 'opacity-50' : ''}`}
+          >
+            <div className="flex items-start gap-3 flex-1 w-full">
+              <div className="flex-shrink-0 mt-0.5">{kycContent.icon}</div>
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold text-gray-800 text-sm sm:text-base">
+                  <span className="text-[#101010]/40 mr-2">3.</span>
+                  {kycContent.title}
+                </p>
+                <p className="text-xs sm:text-sm text-gray-600 mt-1">
+                  {kycContent.description}
+                </p>
+              </div>
+            </div>
+            {kycContent.button && (
+              <div className="flex-shrink-0 w-full sm:w-auto sm:ml-9">
+                {kycContent.button}
               </div>
             )}
           </div>

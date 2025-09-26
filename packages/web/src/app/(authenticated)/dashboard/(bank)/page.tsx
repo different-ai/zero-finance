@@ -64,14 +64,15 @@ export default async function DashboardPage() {
     <DashboardRedirect>
       <div className="min-h-screen bg-[#F7F7F2]">
         {/* Main Content */}
-        <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
+        <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 ">
           {/* Insurance Warning and Activation Handler */}
 
-          <div className="space-y-6">
+          <div className="space-y-6 ">
             {/* Balance Section - Checking Account */}
+            <div className="bg-white border border-[#101010]/10 rounded-[12px] shadow-[0_2px_8px_rgba(16,16,16,0.04)]"></div>
             <div>
               <h2 className="font-serif text-[24px] sm:text-[28px] leading-[1.1] tracking-[-0.01em] text-[#101010] mb-4">
-                Checking Account
+                Ready to withdraw
               </h2>
               <Suspense fallback={<LoadingCard />}>
                 <FundsData />
@@ -87,7 +88,7 @@ export default async function DashboardPage() {
             <SavingsWrapper />
 
             {/* Transactions Section */}
-            <div className="bg-white border border-[#101010]/10 rounded-[12px] shadow-[0_2px_8px_rgba(16,16,16,0.04)]">
+            <div className="">
               <div className="p-5 sm:p-6 border-b border-[#101010]/10">
                 <p className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60">
                   RECENT ACTIVITY

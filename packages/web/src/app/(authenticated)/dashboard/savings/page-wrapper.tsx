@@ -720,7 +720,7 @@ export default function SavingsPageWrapper({
   }
 
   return (
-    <div className="bg-[#F7F7F2]">
+    <div className="">
       {/* Main Content */}
       <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Not Initialized State */}
@@ -826,83 +826,7 @@ export default function SavingsPageWrapper({
           )
         ) : (
           <div className="space-y-12">
-            {/* Checking Account Card */}
-            <div className="bg-white border border-[#101010]/10 rounded-[12px] shadow-[0_2px_8px_rgba(16,16,16,0.04)]">
-              <div className="p-6 space-y-4">
-                <div>
-                  <p className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60 mb-2">
-                    CHECKING ACCOUNT
-                  </p>
-                  <div className="flex items-baseline justify-between">
-                    <p className="font-serif text-[32px] sm:text-[36px] leading-[1.1] tabular-nums text-[#101010]">
-                      {formatUsd(checkingBalanceUsd)}
-                    </p>
-                    <div className="flex gap-2">
-                      <Button
-                        onClick={() => router.push('/dashboard')}
-                        variant="outline"
-                        size="sm"
-                        className="text-[12px]"
-                      >
-                        View Details
-                      </Button>
-                      {checkingBalanceUsd > 0 && displayVaults.length > 0 && (
-                        <Button
-                          onClick={() => {
-                            // Find the first non-contact vault and scroll to it
-                            const firstVault = displayVaults.find(
-                              (v) => !v.isContactOnly,
-                            );
-                            if (firstVault) {
-                              // Scroll to vaults section
-                              const vaultsSection =
-                                document.getElementById('vaults-section');
-                              if (vaultsSection) {
-                                vaultsSection.scrollIntoView({
-                                  behavior: 'smooth',
-                                  block: 'start',
-                                });
-                                // After scrolling, open the deposit modal
-                                setTimeout(() => {
-                                  toggleVaultAction('deposit', firstVault);
-                                }, 500);
-                              }
-                            }
-                          }}
-                          size="sm"
-                          className="bg-[#1B29FF] hover:bg-[#1420CC] text-white text-[12px]"
-                        >
-                          Move to Savings
-                          <ArrowRight className="ml-1 h-3 w-3" />
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Quick actions */}
-                {safeAddress && (
-                  <div className="flex gap-3 pt-2 border-t border-[#101010]/5">
-                    <button
-                      onClick={() => {
-                        navigator.clipboard.writeText(safeAddress);
-                        toast.success('Address copied to clipboard');
-                      }}
-                      className="text-[12px] text-[#101010]/60 hover:text-[#101010] transition-colors"
-                    >
-                      Copy address
-                    </button>
-                    <span className="text-[#101010]/20">•</span>
-                    <Link
-                      href="/dashboard/transfers"
-                      className="text-[12px] text-[#1B29FF] hover:text-[#1420CC] transition-colors"
-                    >
-                      Send/Receive funds
-                    </Link>
-                  </div>
-                )}
-              </div>
-            </div>
+            
 
             {/* Portfolio Overview - Grid Layout */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-px bg-[#101010]/10">
