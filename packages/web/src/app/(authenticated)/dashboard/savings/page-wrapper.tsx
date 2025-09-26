@@ -186,6 +186,12 @@ export default function SavingsPageWrapper({
     ? Number(checkingBalance.balance) / 1e6
     : 0;
 
+  // Get user profile to check insurance status
+  const { data: userProfile } = trpc.user.getProfile.useQuery(undefined, {
+    enabled: !isDemoMode,
+  });
+  const userIsInsured = userProfile?.isInsured || false;
+
   // Get real savings state
   const { savingsState: realSavingsState, isLoading: isLoadingRealState } =
     useRealSavingsState(safeAddress, 0);
@@ -454,23 +460,27 @@ export default function SavingsPageWrapper({
 
       let earnedUsd = 0;
 
-      if (ledgerEarnedUsd !== null && Number.isFinite(ledgerEarnedUsd)) {
+      // First priority: Use actual yield from ledger
+      if (
+        ledgerEarnedUsd !== null &&
+        Number.isFinite(ledgerEarnedUsd) &&
+        ledgerEarnedUsd >= 0
+      ) {
         earnedUsd = ledgerEarnedUsd;
-      } else if (balanceUsd > 0 && apy > 0) {
-        // Estimate earned based on balance and APY (assuming 30 days)
-        earnedUsd = (balanceUsd * (apy / 100) * 30) / 365;
       }
-
-      if (earnedUsd < 0 && fallbackEarnedUsd > 0) {
+      // Second priority: Use the difference between balance and principal if both are available
+      else if (fallbackEarnedUsd > 0 && principalUsd > 0) {
         earnedUsd = fallbackEarnedUsd;
       }
+      // Last resort: Estimate based on current balance and APY
+      else if (balanceUsd > 0 && apy > 0) {
+        // Very conservative estimate - 1 day of earnings
+        earnedUsd = (balanceUsd * (apy / 100)) / 365;
+      }
 
-      if (earnedUsd < 0 && earnedUsd > -0.01) {
+      // Ensure non-negative earnings
+      if (earnedUsd < 0) {
         earnedUsd = 0;
-      }
-
-      if (earnedUsd === 0 && fallbackEarnedUsd > 0) {
-        earnedUsd = fallbackEarnedUsd;
       }
 
       return {
@@ -487,9 +497,11 @@ export default function SavingsPageWrapper({
         recordedPrincipalUsd,
         rawEarnedUsd,
         yieldCorrectionReason: correctionReason,
-        isAuto: v.id === 'seamless',
+        isAuto: v.id === 'morphoGauntlet',
         instantApy,
-        isInsured: INSURED_VAULT_IDS.has(v.id),
+        isInsured:
+          INSURED_VAULT_IDS.has(v.id) ||
+          (userIsInsured && v.id === 'morphoGauntlet'),
         isContactOnly: false,
       };
     });
@@ -528,13 +540,13 @@ export default function SavingsPageWrapper({
       }
     }
 
-    const insured = [
-      insuredVaultEntry,
-      ...vaultsVM.filter((vault) => vault.isInsured),
-    ];
+    // Don't show the mock insured vault if user has real insurance
+    const insured = userIsInsured
+      ? [...vaultsVM.filter((vault) => vault.isInsured)]
+      : [insuredVaultEntry, ...vaultsVM.filter((vault) => vault.isInsured)];
     const others = vaultsVM.filter((vault) => !vault.isInsured);
     return [...insured, ...others];
-  }, [insuredVaultEntry, vaultsVM]);
+  }, [insuredVaultEntry, vaultsVM, userIsInsured]);
 
   const hasYieldCorrection = useMemo(
     () => vaultsVM.some((vault) => Boolean(vault.yieldCorrectionReason)),
@@ -798,8 +810,7 @@ export default function SavingsPageWrapper({
                   Activate Savings Account
                 </h2>
                 <p className="text-[16px] text-[#101010]/70 mb-8 max-w-[400px] mx-auto">
-                  Start earning up to {averageApy.toFixed(1)}% APY on your
-                  business funds.
+                  Start earning up to 8% APY on your business funds.
                 </p>
                 <Button
                   onClick={handleDemoActivate}
@@ -816,8 +827,7 @@ export default function SavingsPageWrapper({
                 Activate Savings Account
               </h2>
               <p className="text-[16px] text-[#101010]/70 mb-8 max-w-[400px] mx-auto">
-                Start earning up to {averageApy.toFixed(1)}% APY on your
-                business funds.
+                Start earning up to 8% APY on your business funds.
               </p>
               <OpenSavingsAccountButton
                 safeAddress={safeAddress || undefined}
@@ -826,10 +836,8 @@ export default function SavingsPageWrapper({
           )
         ) : (
           <div className="space-y-12">
-            
-
             {/* Portfolio Overview - Grid Layout */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-px bg-[#101010]/10">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-px bg-[#101010]/10">
               <div className="bg-white p-6">
                 <p className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60 mb-2">
                   Savings Balance
@@ -849,15 +857,6 @@ export default function SavingsPageWrapper({
                     apy={averageInstantApy}
                     balance={animatedBalance}
                   />
-                </p>
-              </div>
-
-              <div className="bg-white p-6">
-                <p className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60 mb-2">
-                  Average APY
-                </p>
-                <p className="font-serif text-[28px] sm:text-[32px] leading-[1.1] tabular-nums text-[#1B29FF]">
-                  {averageApy.toFixed(1)}%
                 </p>
               </div>
             </div>
