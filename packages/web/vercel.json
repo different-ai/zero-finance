@@ -7,7 +7,7 @@
   "crons": [
     {
       "path": "/api/cron/auto-earn",
-      "schedule": "*/15 * * * *"
+      "schedule": "*/1 * * * *"
     },
     {
       "path": "/api/cron/process-gmail-sync",
