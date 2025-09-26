@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 
 export default function TestEarningsPage() {
   const [percentage, setPercentage] = useState(8);
-  const [amount, setAmount] = useState(2000000);
+  const [amount, setAmount] = useState(1000); // Start with $1,000
   const [currentEarnings, setCurrentEarnings] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
 
@@ -39,14 +39,23 @@ export default function TestEarningsPage() {
     setIsAnimating(false);
   };
 
+  const formatAmount = (val: number) => {
+    if (val >= 1000000) {
+      return `$${(val / 1000000).toFixed(1)}M`;
+    } else if (val >= 1000) {
+      return `$${(val / 1000).toFixed(1)}K`;
+    }
+    return `$${val}`;
+  };
+
   return (
     <div className="container mx-auto p-8 max-w-4xl">
       <h1 className="text-3xl font-bold mb-8">Earnings Animation Test</h1>
-
+      
       <div className="space-y-6">
         <div className="bg-white rounded-lg p-6 shadow-md">
           <h2 className="text-xl font-semibold mb-4">Configuration</h2>
-
+          
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium mb-2">
@@ -61,35 +70,83 @@ export default function TestEarningsPage() {
                 className="w-full"
               />
             </div>
-
+            
             <div>
               <label className="block text-sm font-medium mb-2">
-                Principal Amount: ${(amount / 1000000).toFixed(1)}M
+                Principal Amount: {formatAmount(amount)}
               </label>
               <input
                 type="range"
-                min="100000"
+                min="100"
                 max="10000000"
-                step="100000"
+                step="100"
                 value={amount}
                 onChange={(e) => setAmount(Number(e.target.value))}
                 className="w-full"
               />
+              <div className="flex justify-between text-xs text-gray-500 mt-1">
+                <span>$100</span>
+                <span>$500</span>
+                <span>$1K</span>
+                <span>$10K</span>
+                <span>$100K</span>
+                <span>$1M</span>
+                <span>$10M</span>
+              </div>
+              <div className="flex gap-2 mt-3">
+                <button
+                  onClick={() => setAmount(500)}
+                  className="px-3 py-1 text-xs bg-gray-200 hover:bg-gray-300 rounded"
+                >
+                  $500
+                </button>
+                <button
+                  onClick={() => setAmount(1000)}
+                  className="px-3 py-1 text-xs bg-gray-200 hover:bg-gray-300 rounded"
+                >
+                  $1K
+                </button>
+                <button
+                  onClick={() => setAmount(10000)}
+                  className="px-3 py-1 text-xs bg-gray-200 hover:bg-gray-300 rounded"
+                >
+                  $10K
+                </button>
+                <button
+                  onClick={() => setAmount(100000)}
+                  className="px-3 py-1 text-xs bg-gray-200 hover:bg-gray-300 rounded"
+                >
+                  $100K
+                </button>
+                <button
+                  onClick={() => setAmount(1000000)}
+                  className="px-3 py-1 text-xs bg-gray-200 hover:bg-gray-300 rounded"
+                >
+                  $1M
+                </button>
+                <button
+                  onClick={() => setAmount(2000000)}
+                  className="px-3 py-1 text-xs bg-gray-200 hover:bg-gray-300 rounded"
+                >
+                  $2M
+                </button>
+              </div>
             </div>
           </div>
         </div>
 
         <div className="bg-white rounded-lg p-6 shadow-md">
           <h2 className="text-xl font-semibold mb-4">Earnings Display</h2>
-
+          
           <div className="text-4xl font-bold text-green-600 mb-4">
-            ${currentEarnings.toFixed(6)}
+            ${currentEarnings.toFixed(8)}
           </div>
-
+          
           <div className="text-sm text-gray-600 space-y-1">
             <p>Yearly Earnings: ${yearlyEarnings.toFixed(2)}</p>
-            <p>Daily Earnings: ${dailyEarnings.toFixed(2)}</p>
-            <p>Per Second: ${earningsPerSecond.toFixed(8)}</p>
+            <p>Daily Earnings: ${dailyEarnings.toFixed(4)}</p>
+            <p>Per Second: ${earningsPerSecond.toFixed(10)}</p>
+            <p>Per Hour: ${(earningsPerSecond * 3600).toFixed(6)}</p>
           </div>
         </div>
 
@@ -119,20 +176,17 @@ export default function TestEarningsPage() {
         <div className="bg-gray-100 rounded-lg p-6">
           <h3 className="font-semibold mb-2">Debug Info</h3>
           <pre className="text-xs">
-            {JSON.stringify(
-              {
-                isAnimating,
-                currentEarnings,
-                percentage,
-                amount,
-                yearlyEarnings,
-                dailyEarnings,
-                earningsPerSecond,
-                timestamp: new Date().toISOString(),
-              },
-              null,
-              2,
-            )}
+{JSON.stringify({
+  isAnimating,
+  currentEarnings,
+  percentage,
+  amount,
+  yearlyEarnings,
+  dailyEarnings,
+  earningsPerSecond,
+  earningsPerHour: earningsPerSecond * 3600,
+  timestamp: new Date().toISOString()
+}, null, 2)}
           </pre>
         </div>
       </div>
