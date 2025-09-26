@@ -22,14 +22,29 @@ export function AnimatedTotalEarned({
   }, [initialEarned]);
 
   useEffect(() => {
+    if (apy <= 0 || balance <= 0) {
+      return;
+    }
+
     const earningsPerSecond = (balance * apy) / (365 * 24 * 60 * 60);
 
+    if (!Number.isFinite(earningsPerSecond) || earningsPerSecond === 0) {
+      return;
+    }
+
     const interval = setInterval(() => {
-      setEarned((prev) => prev + earningsPerSecond * 0.1);
+      setEarned((prev) => {
+        const next = prev + earningsPerSecond * 0.1;
+        return Math.abs(next) < 1e-9 ? 0 : next;
+      });
     }, 100);
 
     return () => clearInterval(interval);
   }, [balance, apy]);
 
-  return <span className={className}>${earned.toFixed(9)}</span>;
+  const sanitizedEarned = Math.abs(earned) < 1e-9 ? 0 : earned;
+  const sign = sanitizedEarned >= 0 ? '+' : '-';
+  const amount = Math.abs(sanitizedEarned).toFixed(9);
+
+  return <span className={className}>{`${sign}$${amount}`}</span>;
 }

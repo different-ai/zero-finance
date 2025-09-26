@@ -1651,7 +1651,7 @@ export const earnRouter = router({
 
           // Get current value if there are shares
           let currentAssets = 0n;
-          let yieldAmount = 0n;
+          let yieldAmount = totalWithdrawn - totalDeposited;
 
           if (shares > 0n) {
             try {
@@ -1669,9 +1669,31 @@ export const earnRouter = router({
                 e,
               );
             }
-          } else {
-            // If no shares left, yield is withdrawn - deposited
-            yieldAmount = totalWithdrawn - totalDeposited;
+          }
+
+          const ledgerPrincipal = totalDeposited - totalWithdrawn;
+          const rawYieldAmount = yieldAmount;
+          const YIELD_TOLERANCE = 1000n; // $0.001 in 6 decimal USDC units
+          let correctedPrincipal = ledgerPrincipal;
+          let correctionReason: 'ledger_shortfall' | 'rounding' | null = null;
+
+          if (yieldAmount < 0n) {
+            const shortfall = ledgerPrincipal - currentAssets;
+
+            if (ledgerPrincipal > 0n && shortfall > YIELD_TOLERANCE) {
+              // The ledger thinks we have more principal than assets on-chain.
+              // Clamp principal to what actually exists and reset unrealized yield.
+              correctedPrincipal = currentAssets;
+              yieldAmount = 0n;
+              correctionReason = 'ledger_shortfall';
+              console.warn(
+                `Corrected negative yield for ${vaultAddress} / ${safeAddress}. Ledger principal ${ledgerPrincipal} > current assets ${currentAssets}.`,
+              );
+            } else if (yieldAmount > -YIELD_TOLERANCE) {
+              // Small negative due to rounding – treat as zero.
+              yieldAmount = 0n;
+              correctionReason = 'rounding';
+            }
           }
 
           return {
@@ -1681,9 +1703,12 @@ export const earnRouter = router({
             monthlyApy,
             monthlyNetApy,
             weeklyNetApy,
-            principal: totalDeposited - totalWithdrawn, // Net principal for display
+            principal: correctedPrincipal, // Net principal after corrections
+            principalRecorded: ledgerPrincipal,
             currentAssets,
             yield: yieldAmount,
+            yieldRecorded: rawYieldAmount,
+            yieldCorrectionApplied: correctionReason,
           };
         } catch (error) {
           console.error(

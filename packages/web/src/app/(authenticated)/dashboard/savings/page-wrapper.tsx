@@ -34,6 +34,9 @@ import { AnimatedYieldCounter } from '@/components/animated-yield-counter';
 import { AnimatedTotalEarned } from '@/components/animated-total-earned';
 import { toast } from 'sonner';
 import Image from 'next/image';
+import { USDC_ADDRESS } from '@/lib/constants';
+import { ArrowRight } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 const ZERO_LOGO_SRC = '/images/new-logo-bluer.png';
 const INSURANCE_CONTACT = {
@@ -87,6 +90,7 @@ export default function SavingsPageWrapper({
   mode = 'real',
 }: SavingsPageWrapperProps) {
   const isDemoMode = useIsDemoMode(mode);
+  const router = useRouter();
   const {
     isActivated: isDemoActivated,
     activateSavings: persistDemoActivation,
@@ -165,6 +169,22 @@ export default function SavingsPageWrapper({
 
   const primarySafe = safesData?.[0];
   const safeAddress = primarySafe?.safeAddress || null;
+
+  // Fetch checking account balance
+  const { data: checkingBalance } = trpc.safe.getBalance.useQuery(
+    {
+      safeAddress: safeAddress!,
+      tokenAddress: USDC_ADDRESS,
+    },
+    {
+      enabled: !!safeAddress && !isDemoMode,
+      refetchInterval: 10000,
+    },
+  );
+
+  const checkingBalanceUsd = checkingBalance
+    ? Number(checkingBalance.balance) / 1e6
+    : 0;
 
   // Get real savings state
   const { savingsState: realSavingsState, isLoading: isLoadingRealState } =
@@ -364,6 +384,26 @@ export default function SavingsPageWrapper({
 
       const balanceUsd = pos?.assetsUsd ? Number(pos.assetsUsd) : 0;
 
+      const extendedStat =
+        stat && typeof stat === 'object' && 'principal' in stat
+          ? (stat as {
+              principal: bigint;
+              principalRecorded?: bigint | null;
+              yieldRecorded?: bigint | null;
+              yieldCorrectionApplied?: 'ledger_shortfall' | 'rounding' | null;
+            })
+          : null;
+
+      const principalUsd = extendedStat
+        ? Number(extendedStat.principal) / 1e6
+        : balanceUsd;
+
+      const recordedPrincipalUsd =
+        extendedStat?.principalRecorded !== undefined &&
+        extendedStat?.principalRecorded !== null
+          ? Number(extendedStat.principalRecorded) / 1e6
+          : principalUsd;
+
       // APY is often returned as a decimal (0.0737 for 7.37%), convert to percentage
       const statWithApyFields = stat as
         | {
@@ -397,19 +437,40 @@ export default function SavingsPageWrapper({
 
       // Try multiple fields for earned amount
       // Handle BigInt conversion for yield field
+      const rawEarnedUsd =
+        extendedStat?.yieldRecorded !== undefined &&
+        extendedStat?.yieldRecorded !== null
+          ? Number(extendedStat.yieldRecorded) / 1e6
+          : null;
+
+      const correctionReason = extendedStat?.yieldCorrectionApplied ?? null;
+
+      const ledgerEarnedUsd =
+        stat?.yield !== undefined && stat?.yield !== null
+          ? Number(stat.yield) / 1e6
+          : null;
+
+      const fallbackEarnedUsd = balanceUsd - principalUsd;
+
       let earnedUsd = 0;
 
-      // Use stat?.yield which we know exists
-      if (stat?.yield) {
-        // Handle both BigInt and number types
-        const yieldValue =
-          typeof stat.yield === 'bigint'
-            ? Number(stat.yield) / 1e6
-            : Number(stat.yield) / 1e6;
-        earnedUsd = yieldValue;
+      if (ledgerEarnedUsd !== null && Number.isFinite(ledgerEarnedUsd)) {
+        earnedUsd = ledgerEarnedUsd;
       } else if (balanceUsd > 0 && apy > 0) {
         // Estimate earned based on balance and APY (assuming 30 days)
         earnedUsd = (balanceUsd * (apy / 100) * 30) / 365;
+      }
+
+      if (earnedUsd < 0 && fallbackEarnedUsd > 0) {
+        earnedUsd = fallbackEarnedUsd;
+      }
+
+      if (earnedUsd < 0 && earnedUsd > -0.01) {
+        earnedUsd = 0;
+      }
+
+      if (earnedUsd === 0 && fallbackEarnedUsd > 0) {
+        earnedUsd = fallbackEarnedUsd;
       }
 
       return {
@@ -422,6 +483,10 @@ export default function SavingsPageWrapper({
         apy,
         balanceUsd,
         earnedUsd,
+        principalUsd,
+        recordedPrincipalUsd,
+        rawEarnedUsd,
+        yieldCorrectionReason: correctionReason,
         isAuto: v.id === 'seamless',
         instantApy,
         isInsured: INSURED_VAULT_IDS.has(v.id),
@@ -471,6 +536,21 @@ export default function SavingsPageWrapper({
     return [...insured, ...others];
   }, [insuredVaultEntry, vaultsVM]);
 
+  const hasYieldCorrection = useMemo(
+    () => vaultsVM.some((vault) => Boolean(vault.yieldCorrectionReason)),
+    [vaultsVM],
+  );
+
+  const hasLedgerShortfallCorrection = useMemo(
+    () =>
+      vaultsVM.some(
+        (vault) => vault.yieldCorrectionReason === 'ledger_shortfall',
+      ),
+    [vaultsVM],
+  );
+
+  const showYieldCorrectionBanner = !isDemoMode && hasYieldCorrection;
+
   const InsuranceContactPanel = () => (
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -487,7 +567,8 @@ export default function SavingsPageWrapper({
               Speak with our coverage team
             </p>
             <p className="text-[13px] text-[#101010]/70 max-w-[420px]">
-              We arrange bespoke insurance policies for treasury deposits. Reach out to secure coverage on this 8% vault.
+              We arrange bespoke insurance policies for treasury deposits. Reach
+              out to secure coverage on this 8% vault.
             </p>
           </div>
         </div>
@@ -510,7 +591,9 @@ export default function SavingsPageWrapper({
       </div>
       <div className="border border-dashed border-[#1B29FF]/30 rounded-lg p-4 bg-[#1B29FF]/5">
         <p className="text-[13px] text-[#1B29FF]">
-          Coverage is issued through our underwriting partners after a short call. We’ll validate treasury size, coverage needs, and onboard you end-to-end.
+          Coverage is issued through our underwriting partners after a short
+          call. We’ll validate treasury size, coverage needs, and onboard you
+          end-to-end.
         </p>
       </div>
     </div>
@@ -638,9 +721,8 @@ export default function SavingsPageWrapper({
 
   return (
     <div className="bg-[#F7F7F2]">
-      {/* Header Section */}
       {/* Main Content */}
-      <div className="bg-white max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Not Initialized State */}
         {!isEarnModuleInitialized ? (
           isDemoMode ? (
@@ -744,6 +826,84 @@ export default function SavingsPageWrapper({
           )
         ) : (
           <div className="space-y-12">
+            {/* Checking Account Card */}
+            <div className="bg-white border border-[#101010]/10 rounded-[12px] shadow-[0_2px_8px_rgba(16,16,16,0.04)]">
+              <div className="p-6 space-y-4">
+                <div>
+                  <p className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60 mb-2">
+                    CHECKING ACCOUNT
+                  </p>
+                  <div className="flex items-baseline justify-between">
+                    <p className="font-serif text-[32px] sm:text-[36px] leading-[1.1] tabular-nums text-[#101010]">
+                      {formatUsd(checkingBalanceUsd)}
+                    </p>
+                    <div className="flex gap-2">
+                      <Button
+                        onClick={() => router.push('/dashboard')}
+                        variant="outline"
+                        size="sm"
+                        className="text-[12px]"
+                      >
+                        View Details
+                      </Button>
+                      {checkingBalanceUsd > 0 && displayVaults.length > 0 && (
+                        <Button
+                          onClick={() => {
+                            // Find the first non-contact vault and scroll to it
+                            const firstVault = displayVaults.find(
+                              (v) => !v.isContactOnly,
+                            );
+                            if (firstVault) {
+                              // Scroll to vaults section
+                              const vaultsSection =
+                                document.getElementById('vaults-section');
+                              if (vaultsSection) {
+                                vaultsSection.scrollIntoView({
+                                  behavior: 'smooth',
+                                  block: 'start',
+                                });
+                                // After scrolling, open the deposit modal
+                                setTimeout(() => {
+                                  toggleVaultAction('deposit', firstVault);
+                                }, 500);
+                              }
+                            }
+                          }}
+                          size="sm"
+                          className="bg-[#1B29FF] hover:bg-[#1420CC] text-white text-[12px]"
+                        >
+                          Move to Savings
+                          <ArrowRight className="ml-1 h-3 w-3" />
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Quick actions */}
+                {safeAddress && (
+                  <div className="flex gap-3 pt-2 border-t border-[#101010]/5">
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(safeAddress);
+                        toast.success('Address copied to clipboard');
+                      }}
+                      className="text-[12px] text-[#101010]/60 hover:text-[#101010] transition-colors"
+                    >
+                      Copy address
+                    </button>
+                    <span className="text-[#101010]/20">•</span>
+                    <Link
+                      href="/dashboard/transfers"
+                      className="text-[12px] text-[#1B29FF] hover:text-[#1420CC] transition-colors"
+                    >
+                      Send/Receive funds
+                    </Link>
+                  </div>
+                )}
+              </div>
+            </div>
+
             {/* Portfolio Overview - Grid Layout */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-px bg-[#101010]/10">
               <div className="bg-white p-6">
@@ -760,7 +920,6 @@ export default function SavingsPageWrapper({
                   Earnings (Live)
                 </p>
                 <p className="font-serif text-[28px] sm:text-[32px] leading-[1.1] tabular-nums text-[#1B29FF]">
-                  +
                   <AnimatedTotalEarned
                     initialEarned={animatedInitialEarned}
                     apy={averageInstantApy}
@@ -778,6 +937,29 @@ export default function SavingsPageWrapper({
                 </p>
               </div>
             </div>
+
+            {showYieldCorrectionBanner && (
+              <div className="bg-[#1B29FF]/5 border border-[#1B29FF]/40 rounded-lg p-5 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="space-y-1">
+                  <p className="text-[14px] font-medium text-[#101010]">
+                    Earnings counter resynced
+                  </p>
+                  <p className="text-[13px] text-[#101010]/70">
+                    {hasLedgerShortfallCorrection
+                      ? 'We detected an out-of-sync ledger entry and reset live earnings to match your on-chain balance.'
+                      : 'We resolved a rounding mismatch on your live earnings counter.'}
+                  </p>
+                </div>
+                <div className="flex gap-3">
+                  <Button
+                    onClick={triggerVaultRefresh}
+                    className="bg-[#1B29FF] hover:bg-[#1B29FF]/90 text-white"
+                  >
+                    Refresh now
+                  </Button>
+                </div>
+              </div>
+            )}
 
             {/* Live Yield Counter - Premium Card */}
             {totalSaved > 0 && (
@@ -801,7 +983,7 @@ export default function SavingsPageWrapper({
             )}
 
             {/* Vaults Section - Editorial Table Style */}
-            <div>
+            <div id="vaults-section">
               <div className="mb-8">
                 <p className="uppercase tracking-[0.18em] text-[11px] text-[#101010]/60">
                   Available Strategies
@@ -884,9 +1066,7 @@ export default function SavingsPageWrapper({
                                     {vault.name}
                                   </p>
                                   {vault.isInsured && (
-                                    <span
-                                      className="insured-pill animate-glow inline-flex items-center gap-1 px-2 py-1 rounded-full bg-[#1B29FF]/15 text-[#1B29FF] text-[10px] font-semibold uppercase tracking-[0.18em]"
-                                    >
+                                    <span className="insured-pill animate-glow inline-flex items-center gap-1 px-2 py-1 rounded-full bg-[#1B29FF]/15 text-[#1B29FF] text-[10px] font-semibold uppercase tracking-[0.18em]">
                                       <Image
                                         src={ZERO_LOGO_SRC}
                                         alt="0 Finance insured"
@@ -930,10 +1110,13 @@ export default function SavingsPageWrapper({
                           <div className="col-span-3 flex justify-end gap-1">
                             {vault.isContactOnly ? (
                               <button
-                                onClick={() => toggleVaultAction('insure', vault)}
+                                onClick={() =>
+                                  toggleVaultAction('insure', vault)
+                                }
                                 className={cn(
                                   'px-3 py-2 text-[12px] font-medium text-white bg-[#1B29FF] hover:bg-[#1420CC] transition-colors',
-                                  expandedAction === 'insure' && isSelected &&
+                                  expandedAction === 'insure' &&
+                                    isSelected &&
                                     'ring-2 ring-offset-1 ring-[#1B29FF]/40',
                                 )}
                               >
@@ -1000,23 +1183,24 @@ export default function SavingsPageWrapper({
                                 >
                                   Withdraw
                                 </button>
-                               {vault.appUrl && (
-                                 <a
-                                   href={vault.appUrl}
-                                   target="_blank"
-                                   rel="noopener noreferrer"
-                                   className="px-2 py-1 text-[#101010]/60 hover:text-[#101010] transition-colors flex items-center"
-                                 >
-                                   <ExternalLink className="h-3 w-3" />
-                                 </a>
-                               )}
+                                {vault.appUrl && (
+                                  <a
+                                    href={vault.appUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="px-2 py-1 text-[#101010]/60 hover:text-[#101010] transition-colors flex items-center"
+                                  >
+                                    <ExternalLink className="h-3 w-3" />
+                                  </a>
+                                )}
                               </>
                             )}
                           </div>
                         </div>
 
                         {/* Accordion Content - Clean Integrated Design */}
-                        {(expandedAction === 'insure' && isSelected) || (!isDemoMode && expandedAction && isSelected) ? (
+                        {(expandedAction === 'insure' && isSelected) ||
+                        (!isDemoMode && expandedAction && isSelected) ? (
                           <div
                             className={cn(
                               'transition-all duration-300 ease-out overflow-hidden',
@@ -1031,14 +1215,16 @@ export default function SavingsPageWrapper({
                               <div className="bg-white border border-[#101010]/10 p-5 sm:p-6">
                                 {expandedAction === 'insure' && isSelected ? (
                                   <InsuranceContactPanel />
-                                ) : expandedAction === 'deposit' && isSelected ? (
+                                ) : expandedAction === 'deposit' &&
+                                  isSelected ? (
                                   <DepositEarnCard
                                     key={`deposit-${vault.address}`}
                                     safeAddress={safeAddress as Address}
                                     vaultAddress={vault.address as Address}
                                     onDepositSuccess={handleDepositSuccess}
                                   />
-                                ) : expandedAction === 'withdraw' && isSelected ? (
+                                ) : expandedAction === 'withdraw' &&
+                                  isSelected ? (
                                   <WithdrawEarnCard
                                     key={`withdraw-${vault.address}`}
                                     safeAddress={safeAddress as Address}
@@ -1103,9 +1289,7 @@ export default function SavingsPageWrapper({
                                     {vault.name}
                                   </p>
                                   {vault.isInsured && (
-                                    <span
-                                      className="insured-pill animate-glow inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#1B29FF]/15 text-[#1B29FF] text-[10px] font-semibold uppercase tracking-[0.18em]"
-                                    >
+                                    <span className="insured-pill animate-glow inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#1B29FF]/15 text-[#1B29FF] text-[10px] font-semibold uppercase tracking-[0.18em]">
                                       <Image
                                         src={ZERO_LOGO_SRC}
                                         alt="0 Finance insured"
@@ -1152,10 +1336,13 @@ export default function SavingsPageWrapper({
                           <div className="flex gap-2 pt-2">
                             {vault.isContactOnly ? (
                               <button
-                                onClick={() => toggleVaultAction('insure', vault)}
+                                onClick={() =>
+                                  toggleVaultAction('insure', vault)
+                                }
                                 className={cn(
                                   'flex-1 px-3 py-2 text-[13px] text-white bg-[#1B29FF] hover:bg-[#1420CC] transition-colors',
-                                  expandedAction === 'insure' && isSelected &&
+                                  expandedAction === 'insure' &&
+                                    isSelected &&
                                     'ring-2 ring-offset-1 ring-[#1B29FF]/40',
                                 )}
                               >
@@ -1197,7 +1384,9 @@ export default function SavingsPageWrapper({
                             ) : (
                               <>
                                 <button
-                                  onClick={() => toggleVaultAction('deposit', vault)}
+                                  onClick={() =>
+                                    toggleVaultAction('deposit', vault)
+                                  }
                                   className={cn(
                                     'flex-1 px-3 py-2 text-[13px] text-white transition-colors',
                                     expandedAction === 'deposit' && isSelected
@@ -1208,7 +1397,9 @@ export default function SavingsPageWrapper({
                                   Deposit
                                 </button>
                                 <button
-                                  onClick={() => toggleVaultAction('withdraw', vault)}
+                                  onClick={() =>
+                                    toggleVaultAction('withdraw', vault)
+                                  }
                                   className={cn(
                                     'flex-1 px-3 py-2 text-[13px] text-[#101010] border border-[#101010]/10 transition-colors',
                                     expandedAction === 'withdraw' && isSelected
@@ -1233,7 +1424,8 @@ export default function SavingsPageWrapper({
                           </div>
 
                           {/* Mobile Accordion Content */}
-                          {(expandedAction === 'insure' && isSelected) || (!isDemoMode && expandedAction && isSelected) ? (
+                          {(expandedAction === 'insure' && isSelected) ||
+                          (!isDemoMode && expandedAction && isSelected) ? (
                             <div
                               className={cn(
                                 'transition-all duration-300 ease-out overflow-hidden',
@@ -1248,14 +1440,16 @@ export default function SavingsPageWrapper({
                                 <div className="bg-white border border-[#101010]/10 p-4">
                                   {expandedAction === 'insure' && isSelected ? (
                                     <InsuranceContactPanel />
-                                  ) : expandedAction === 'deposit' && isSelected ? (
+                                  ) : expandedAction === 'deposit' &&
+                                    isSelected ? (
                                     <DepositEarnCard
                                       key={`deposit-mobile-${vault.address}`}
                                       safeAddress={safeAddress as Address}
                                       vaultAddress={vault.address as Address}
                                       onDepositSuccess={handleDepositSuccess}
                                     />
-                                  ) : expandedAction === 'withdraw' && isSelected ? (
+                                  ) : expandedAction === 'withdraw' &&
+                                    isSelected ? (
                                     <WithdrawEarnCard
                                       key={`withdraw-mobile-${vault.address}`}
                                       safeAddress={safeAddress as Address}

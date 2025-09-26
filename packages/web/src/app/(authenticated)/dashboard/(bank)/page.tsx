@@ -1,37 +1,15 @@
-import { appRouter } from '@/server/routers/_app';
-import { getUserId } from '@/lib/auth';
-import { db } from '@/db';
 import { Suspense } from 'react';
 import { TransactionTabsDemo } from './components/dashboard/transaction-tabs-demo';
 import { redirect } from 'next/navigation';
-import { FundsDisplayWithDemo } from './components/dashboard/funds-display-with-demo';
 import { VirtualAccountOnboardingLayer } from './components/dashboard/virtual-account-onboarding-layer';
-import { USDC_ADDRESS } from '@/lib/constants';
-import { Skeleton } from '@/components/ui/skeleton';
 import { SavingsWrapper } from './components/savings-wrapper';
 import { DashboardRedirect } from './dashboard-redirect';
-import {
-  EmptyCheckingAccount,
-  OnboardingTasks,
-} from './components/dashboard/empty-states';
-
-// Loading components for Suspense boundaries
-function LoadingCard() {
-  return (
-    <div className="border border-[#101010]/10 bg-white rounded-md">
-      <div className="p-6 space-y-4">
-        <div className="space-y-2">
-          <Skeleton className="h-3 w-24 bg-[#101010]/5" />
-          <Skeleton className="h-10 w-48 bg-[#101010]/5" />
-        </div>
-        <div className="flex gap-4">
-          <Skeleton className="h-12 w-32 bg-[#101010]/5" />
-          <Skeleton className="h-12 w-32 bg-[#101010]/5" />
-        </div>
-      </div>
-    </div>
-  );
-}
+import { OnboardingTasks } from './components/dashboard/empty-states';
+import { LoadingCard } from './components/loading-card';
+import { FundsData } from './components/funds-data';
+import { appRouter } from '@/server/routers/_app';
+import { getUserId } from '@/lib/auth';
+import { db } from '@/db';
 
 // Create a simple log object
 const log = {
@@ -42,35 +20,6 @@ const log = {
   warn: (payload: any, message: string) =>
     console.warn(`[WARN] ${message}`, JSON.stringify(payload, null, 2)),
 };
-
-async function FundsData() {
-  const userId = await getUserId();
-
-  if (!userId) return <EmptyCheckingAccount />;
-
-  const caller = appRouter.createCaller({ userId, db, log });
-  const primarySafe = await caller.user.getPrimarySafeAddress();
-
-  // Show empty state for new users without a safe
-  if (!primarySafe?.primarySafeAddress) {
-    return <EmptyCheckingAccount />;
-  }
-
-  // Get balance
-  const balanceData = await caller.safe.getBalance({
-    safeAddress: primarySafe.primarySafeAddress,
-    tokenAddress: USDC_ADDRESS, // USDC on Base
-  });
-
-  const totalBalance = balanceData ? Number(balanceData.balance) / 1e6 : 0;
-
-  return (
-    <FundsDisplayWithDemo
-      totalBalance={totalBalance}
-      walletAddress={primarySafe.primarySafeAddress}
-    />
-  );
-}
 
 // Server components for data fetching
 async function OnboardingData() {
