@@ -4,14 +4,7 @@
  */
 export const featureConfig = {
   align: {
-    enabled: !!(
-      process.env.ALIGN_API_KEY &&
-      process.env.ALIGN_SECRET &&
-      process.env.ALIGN_CLIENT_ID &&
-      process.env.ALIGN_ENVIRONMENT &&
-      process.env.ALIGN_WEBHOOK_SECRET &&
-      process.env.NEXT_PUBLIC_ALIGN_PUBLISHABLE_KEY
-    ),
+    enabled: !!process.env.ALIGN_API_KEY,
     get apiKey() {
       return process.env.ALIGN_API_KEY;
     },
