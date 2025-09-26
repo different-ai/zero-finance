@@ -8,7 +8,7 @@ import {
   autoEarnConfigs,
 } from '@/db/schema';
 import type { UserSafe } from '@/db/schema';
-import { eq, and, or, isNull } from 'drizzle-orm';
+import { eq, and, or, isNull, desc } from 'drizzle-orm';
 import { TRPCError } from '@trpc/server';
 import { USDC_ADDRESS } from '@/lib/constants';
 import { getBaseRpcUrl } from '@/lib/base-rpc-url';
@@ -20,7 +20,6 @@ import {
 import {
   createWalletClient,
   http,
-  encodeFunctionData,
   parseAbi,
   Hex,
   getAddress,
@@ -76,7 +75,8 @@ function getPublicClientForChain(chainId: number) {
   if (chainId === ETHEREUM_CHAIN_ID) {
     if (!ethereumPublicClient) {
       const rpcUrl =
-        process.env.ETHEREUM_RPC_URL ?? process.env.NEXT_PUBLIC_ETHEREUM_RPC_URL;
+        process.env.ETHEREUM_RPC_URL ??
+        process.env.NEXT_PUBLIC_ETHEREUM_RPC_URL;
 
       if (!rpcUrl) {
         throw new Error(
@@ -101,7 +101,9 @@ function getPublicClientForVault(vaultAddress: string) {
   return getPublicClientForChain(chainId);
 }
 
-type SafeWithWorkspace = Omit<UserSafe, 'workspaceId'> & { workspaceId: string };
+type SafeWithWorkspace = Omit<UserSafe, 'workspaceId'> & {
+  workspaceId: string;
+};
 
 function requireWorkspaceId(workspaceId: string | null | undefined): string {
   if (!workspaceId) {
@@ -113,7 +115,10 @@ function requireWorkspaceId(workspaceId: string | null | undefined): string {
   return workspaceId;
 }
 
-function requirePrivyDid(ctx: { user?: { id?: string | null }; userId?: string | null }): string {
+function requirePrivyDid(ctx: {
+  user?: { id?: string | null };
+  userId?: string | null;
+}): string {
   const privyDid = ctx.user?.id ?? ctx.userId;
   if (!privyDid) {
     throw new TRPCError({
@@ -125,7 +130,11 @@ function requirePrivyDid(ctx: { user?: { id?: string | null }; userId?: string |
 }
 
 async function getSafeForWorkspace(
-  ctx: { user?: { id?: string | null }; userId?: string | null; workspaceId?: string | null },
+  ctx: {
+    user?: { id?: string | null };
+    userId?: string | null;
+    workspaceId?: string | null;
+  },
   safeAddress: string,
 ): Promise<SafeWithWorkspace> {
   const privyDid = requirePrivyDid(ctx);
@@ -137,7 +146,10 @@ async function getSafeForWorkspace(
       helpers.and(
         helpers.eq(tbl.userDid, privyDid),
         helpers.eq(tbl.safeAddress, normalizedSafeAddress as `0x${string}`),
-        helpers.or(helpers.eq(tbl.workspaceId, workspaceId), helpers.isNull(tbl.workspaceId)),
+        helpers.or(
+          helpers.eq(tbl.workspaceId, workspaceId),
+          helpers.isNull(tbl.workspaceId),
+        ),
       ),
   });
 
@@ -442,7 +454,6 @@ export const earnRouter = router({
 
               if (decodedEvent.eventName === 'Deposit') {
                 const {
-                  caller,
                   owner,
                   assets: depositedAssets,
                   shares,
@@ -618,6 +629,110 @@ export const earnRouter = router({
           message: `Failed to query earn module initialization status on-chain: ${error.message || 'Unknown error'}`,
         });
       }
+    }),
+
+  // NEW: Get earnings events for event-based calculation
+  getEarningsEvents: protectedProcedure
+    .input(
+      z.object({
+        safeAddress: z
+          .string()
+          .length(42)
+          .transform((val) => getAddress(val)),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const { safeAddress } = input;
+      const safeUserLink = await getSafeForWorkspace(ctx, safeAddress);
+      const workspaceId = safeUserLink.workspaceId;
+
+      // Fetch deposits
+      const deposits = await db.query.earnDeposits.findMany({
+        where: (tbl, { and, eq, or, isNull }) =>
+          and(
+            eq(tbl.safeAddress, safeAddress),
+            or(eq(tbl.workspaceId, workspaceId), isNull(tbl.workspaceId)),
+          ),
+        orderBy: (tbl, { asc }) => [asc(tbl.timestamp)],
+      });
+
+      // Fetch withdrawals
+      const withdrawals = await db.query.earnWithdrawals.findMany({
+        where: (tbl, { and, eq, or, isNull }) =>
+          and(
+            eq(tbl.safeAddress, safeAddress),
+            or(eq(tbl.workspaceId, workspaceId), isNull(tbl.workspaceId)),
+          ),
+        orderBy: (tbl, { asc }) => [asc(tbl.timestamp)],
+      });
+
+      // Get current APY for each vault
+      const vaultApys = new Map<string, number>();
+      for (const vault of BASE_USDC_VAULTS) {
+        try {
+          const response = await fetch('https://blue-api.morpho.org/graphql', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({
+              query: `
+                query ($address: String!, $chainId: Int!) {
+                  vaultByAddress(address: $address, chainId: $chainId) {
+                    address
+                    state {
+                      apy
+                    }
+                  }
+                }`,
+              variables: {
+                address: vault.address.toLowerCase(),
+                chainId: vault.chainId || BASE_CHAIN_ID,
+              },
+            }),
+          });
+
+          if (response.ok) {
+            const result = await response.json();
+            if (result.data?.vaultByAddress?.state?.apy !== undefined) {
+              const apy = Number(result.data.vaultByAddress.state.apy);
+              // Convert from decimal to percentage if needed
+              vaultApys.set(
+                vault.address.toLowerCase(),
+                apy > 1 ? apy : apy * 100,
+              );
+            }
+          }
+        } catch (e) {
+          console.warn(`Failed to fetch APY for vault ${vault.address}:`, e);
+        }
+      }
+
+      // Transform to event format
+      const events = [
+        ...deposits.map((dep) => ({
+          id: dep.txHash,
+          type: 'deposit' as const,
+          timestamp: dep.timestamp.toISOString(),
+          amount: dep.assetsDeposited.toString(),
+          vaultAddress: dep.vaultAddress,
+          // Use current APY or fallback to 8%
+          apy: vaultApys.get(dep.vaultAddress.toLowerCase()) || 8,
+          shares: dep.sharesReceived.toString(),
+        })),
+        ...withdrawals.map((wit) => ({
+          id: wit.txHash || wit.userOpHash || wit.id,
+          type: 'withdrawal' as const,
+          timestamp: wit.timestamp.toISOString(),
+          amount: wit.assetsWithdrawn.toString(),
+          vaultAddress: wit.vaultAddress,
+          apy: vaultApys.get(wit.vaultAddress.toLowerCase()) || 8,
+          shares: wit.sharesBurned.toString(),
+        })),
+      ].sort(
+        (a, b) =>
+          new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
+      );
+
+      return events;
     }),
 
   // New 'stats' query
@@ -965,7 +1080,7 @@ export const earnRouter = router({
     .query(async ({ ctx, input }) => {
       const { safeAddress, vaultAddress } = input;
 
-      const safeRecord = await getSafeForWorkspace(ctx, safeAddress);
+      await getSafeForWorkspace(ctx, safeAddress);
 
       const publicClient = createPublicClient({
         chain: base,
@@ -1220,7 +1335,10 @@ export const earnRouter = router({
           and(
             eq(autoEarnConfigs.userDid, userId),
             eq(autoEarnConfigs.safeAddress, safeAddress as `0x${string}`),
-            or(eq(autoEarnConfigs.workspaceId, workspaceId), isNull(autoEarnConfigs.workspaceId)),
+            or(
+              eq(autoEarnConfigs.workspaceId, workspaceId),
+              isNull(autoEarnConfigs.workspaceId),
+            ),
           ),
         );
 
@@ -1267,7 +1385,10 @@ export const earnRouter = router({
           .where(
             and(
               eq(autoEarnConfigs.userDid, userDid),
-              eq(autoEarnConfigs.safeAddress, input.safeAddress as `0x${string}`),
+              eq(
+                autoEarnConfigs.safeAddress,
+                input.safeAddress as `0x${string}`,
+              ),
             ),
           );
       }
@@ -1483,7 +1604,10 @@ export const earnRouter = router({
             and(
               eq(autoEarnConfigs.userDid, userId),
               eq(autoEarnConfigs.safeAddress, safeAddress as `0x${string}`),
-              or(eq(autoEarnConfigs.workspaceId, workspaceId), isNull(autoEarnConfigs.workspaceId)),
+              or(
+                eq(autoEarnConfigs.workspaceId, workspaceId),
+                isNull(autoEarnConfigs.workspaceId),
+              ),
             ),
           );
 
@@ -1585,13 +1709,13 @@ export const earnRouter = router({
                       }
                     }
                   }`,
-                variables: {
-                  address: vaultAddress.toLowerCase(),
-                  chainId,
-                },
-              }),
-            },
-          );
+                  variables: {
+                    address: vaultAddress.toLowerCase(),
+                    chainId,
+                  },
+                }),
+              },
+            );
 
             if (response.ok) {
               const result = await response.json();
@@ -1860,7 +1984,10 @@ export const earnRouter = router({
         // Update existing config
         await db
           .update(autoEarnConfigs)
-          .set({ autoVaultAddress: autoVaultAddress as `0x${string}`, workspaceId })
+          .set({
+            autoVaultAddress: autoVaultAddress as `0x${string}`,
+            workspaceId,
+          })
           .where(
             and(
               eq(autoEarnConfigs.userDid, userId),
