@@ -17,10 +17,12 @@ import {
   Sparkles,
   Banknote,
   Users,
+  Building,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { usePrivy } from '@privy-io/react-auth';
 import { featureConfigClient } from '@/lib/feature-config-client';
+import { api } from '@/trpc/react';
 
 // Navigation items types
 type NavigationItem = {
@@ -35,9 +37,11 @@ export function Sidebar() {
   const { logout, authenticated, user } = usePrivy();
   const router = useRouter();
   const [dropdownOpen, setDropdownOpen] = useState(false);
-  // wait for lowding
   const [showPromo, setShowPromo] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Fetch workspace data
+  const { data: workspaceData } = api.workspace.getOrCreateWorkspace.useQuery();
 
   // For now, check if URL has contractor parameter (we'll implement proper role checking later)
   const isContractor =
@@ -120,15 +124,25 @@ export function Sidebar() {
         href="/dashboard"
         className="block px-6 py-7 border-b border-[#101010]/10"
       >
-        <div className="flex items-center gap-2">
-          <Image
-            src="/new-logo-bluer.png"
-            alt="Zero Finance"
-            width={32}
-            height={32}
-            className="h-8 w-8"
-          />
-          <span className="text-xl font-medium text-[#0050ff]">finance</span>
+        <div>
+          <div className="flex items-center gap-2">
+            <Image
+              src="/new-logo-bluer.png"
+              alt="Zero Finance"
+              width={32}
+              height={32}
+              className="h-8 w-8"
+            />
+            <span className="text-xl font-medium text-[#0050ff]">finance</span>
+          </div>
+          {workspaceData?.workspace?.name && (
+            <div className="mt-2 flex items-center gap-1.5">
+              <Building className="h-3.5 w-3.5 text-[#101010]/40" />
+              <span className="text-[12px] text-[#101010]/60">
+                {workspaceData.workspace.name}
+              </span>
+            </div>
+          )}
         </div>
       </Link>
 
@@ -173,7 +187,7 @@ export function Sidebar() {
               >
                 {/* Active rail indicator */}
                 {isActive && (
-                  <span className="absolute left-0 top-1/2 -translate-y-1/2 h-6 w-[2px] bg-[#1B29FF] rounded-full" />
+                  <span className="absolute left-0 top-1/2 -translate-y-1/2 h-6 w-[2px] bg-[#0050ff] rounded-full" />
                 )}
                 {React.createElement(item.icon, {
                   className: cn(
@@ -225,7 +239,7 @@ export function Sidebar() {
               href="https://buy.polar.sh/polar_cl_FJM7jQ61Kj8vMDH4H1KrcsGdstxyeozSXdgvc2FL0yb"
               target="_blank"
               rel="noopener noreferrer"
-              className="block w-full py-2.5 px-4 bg-[#1B29FF] hover:bg-[#1B29FF]/90 text-white text-xs uppercase tracking-wider text-center transition-all duration-200"
+              className="block w-full py-2.5 px-4 bg-[#0050ff] hover:bg-[#0050ff]/90 text-white text-xs uppercase tracking-wider text-center transition-all duration-200"
             >
               Purchase now
             </a>
@@ -279,17 +293,22 @@ export function Sidebar() {
                 className="w-full flex items-center gap-3 p-3 hover:bg-white/50 transition-colors"
               >
                 <div className="relative">
-                  <div className="h-10 w-10 bg-[#1B29FF] flex items-center justify-center text-white font-medium text-sm">
+                  <div className="h-10 w-10 bg-[#0050ff] flex items-center justify-center text-white font-medium text-sm">
                     {user?.email?.address?.[0]?.toUpperCase() || (
                       <User className="h-5 w-5" />
                     )}
                   </div>
-                  <div className="absolute -bottom-0.5 -right-0.5 h-3 w-3 bg-[#1B29FF] border-2 border-white" />
+                  <div className="absolute -bottom-0.5 -right-0.5 h-3 w-3 bg-[#0050ff] border-2 border-white" />
                 </div>
                 <div className="flex-1 text-left">
                   <p className="text-sm font-medium text-[#101010] truncate">
                     {user?.email?.address?.split('@')[0] || 'User'}
                   </p>
+                  {workspaceData?.workspace?.name && (
+                    <p className="text-xs text-[#101010]/50 truncate">
+                      {workspaceData.workspace.name}
+                    </p>
+                  )}
                 </div>
                 <ChevronDown
                   className={cn(

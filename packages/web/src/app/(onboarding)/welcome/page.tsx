@@ -11,7 +11,7 @@ import GeneratedComponent from '@/app/(landing)/welcome-gradient';
 export default function WelcomePage() {
   const router = useRouter();
   const { user, ready, authenticated } = usePrivy();
-  const [companyName, setCompanyName] = useState('');
+  const [workspaceName, setWorkspaceName] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
   const { data: workspaceData, isLoading: workspaceLoading } =
@@ -31,7 +31,7 @@ export default function WelcomePage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!companyName.trim() || !workspaceData?.workspaceId) {
+    if (!workspaceName.trim() || !workspaceData?.workspaceId) {
       return;
     }
 
@@ -40,7 +40,7 @@ export default function WelcomePage() {
     try {
       await updateCompanyMutation.mutateAsync({
         workspaceId: workspaceData.workspaceId,
-        companyName: companyName.trim(),
+        companyName: workspaceName.trim(),
         userName: user?.google?.name || user?.email?.address?.split('@')[0],
         userEmail: user?.email?.address || user?.google?.email,
       });
@@ -51,7 +51,7 @@ export default function WelcomePage() {
       // Go to dashboard
       router.push('/dashboard');
     } catch (error) {
-      console.error('Failed to update company name:', error);
+      console.error('Failed to update workspace name:', error);
       setIsLoading(false);
     }
   };
@@ -65,7 +65,7 @@ export default function WelcomePage() {
   if (!ready || !authenticated || workspaceLoading) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-2 border-[#1B29FF] border-t-transparent" />
+        <div className="animate-spin rounded-full h-8 w-8 border-2 border-[#0050ff] border-t-transparent" />
       </div>
     );
   }
@@ -88,7 +88,7 @@ export default function WelcomePage() {
                 Let's get started
               </h1>
               <p className="mt-4 text-[15px] sm:text-[16px] leading-[1.5] text-[#101010]/70">
-                Tell us about your company to personalize your treasury management experience.
+                Name your workspace to get started. You can create companies and invite team members later.
               </p>
             </div>
 
@@ -96,33 +96,36 @@ export default function WelcomePage() {
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="space-y-2">
                 <label
-                  htmlFor="company-name"
+                  htmlFor="workspace-name"
                   className="block text-[11px] sm:text-[12px] uppercase tracking-[0.14em] text-[#101010]/60 font-medium"
                 >
-                  Company Name
+                  Workspace Name
                 </label>
                 <input
-                  id="company-name"
+                  id="workspace-name"
                   type="text"
-                  placeholder="Enter your company name"
-                  value={companyName}
-                  onChange={(e) => setCompanyName(e.target.value)}
-                  className="w-full h-12 px-4 border border-[#101010]/10 rounded-md text-[15px] sm:text-[16px] text-[#101010] placeholder:text-[#101010]/40 focus:border-[#1B29FF] focus:outline-none focus:ring-1 focus:ring-[#1B29FF]/20 transition-all"
+                  placeholder="e.g., Acme Corp, My Freelance Business"
+                  value={workspaceName}
+                  onChange={(e) => setWorkspaceName(e.target.value)}
+                  className="w-full h-12 px-4 border border-[#101010]/10 rounded-md text-[15px] sm:text-[16px] text-[#101010] placeholder:text-[#101010]/40 focus:border-[#0050ff] focus:outline-none focus:ring-1 focus:ring-[#0050ff]/20 transition-all"
                   autoFocus
                 />
+                <p className="text-[12px] text-[#101010]/50 mt-1">
+                  This is your personal workspace. You can create company profiles separately.
+                </p>
               </div>
 
               {/* Actions */}
               <div className="space-y-3">
                 <button
                   type="submit"
-                  disabled={!companyName.trim() || isLoading}
-                  className="w-full inline-flex items-center justify-center px-6 py-3 text-[15px] sm:text-[16px] font-medium text-white bg-[#1B29FF] hover:bg-[#1420CC] rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={!workspaceName.trim() || isLoading}
+                  className="w-full inline-flex items-center justify-center px-6 py-3 text-[15px] sm:text-[16px] font-medium text-white bg-[#0050ff] hover:bg-[#0040dd] rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isLoading ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Setting up your account...
+                      Setting up your workspace...
                     </>
                   ) : (
                     <>
@@ -146,7 +149,7 @@ export default function WelcomePage() {
             {/* Footer note */}
             <div className="pt-4 border-t border-[#101010]/10">
               <p className="text-[12px] sm:text-[13px] text-[#101010]/50 text-center">
-                You can update your company information anytime in settings
+                You can update workspace settings and create companies anytime
               </p>
             </div>
           </div>
