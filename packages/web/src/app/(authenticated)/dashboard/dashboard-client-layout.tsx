@@ -96,12 +96,12 @@ export default function DashboardClientLayout({
 
         {/* Main content area */}
         <div className="flex-1 flex flex-col overflow-hidden">
-          <Header onMenuClick={toggleMobileMenu} />
+          <Header onMenuClick={toggleMobileMenu}  />
 
           <main className="flex-1 overflow-x-hidden overflow-y-auto">
             <Breadcrumbs
               items={generateBreadcrumbs(usePathname())}
-              className="px-4 sm:px-6 lg:px-8 py-3 bg-white border-b border-[#101010]/10"
+              className="px-4 sm:px-6 lg:px-8 py-3 bg-white border-b border-[#101010]/10 z-10"
             />
             <div className="flex-1">{children}</div>
           </main>

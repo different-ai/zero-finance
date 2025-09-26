@@ -35,7 +35,7 @@ export default function LegalPage() {
                 height={24}
                 className="w-5 h-5 sm:w-6 sm:h-6 object-contain"
               />
-              <span className="text-[13px] sm:text-[14px] font-medium tracking-tight text-[#101010]">
+              <span className="text-[13px] sm:text-[14px] font-medium tracking-tight text-[#0050ff]">
                 finance
               </span>
             </Link>
@@ -50,7 +50,7 @@ export default function LegalPage() {
               </Link>
               <Link
                 href="/legal"
-                className="text-[13px] uppercase tracking-[0.14em] text-[#1B29FF] transition-colors"
+                className="text-[13px] uppercase tracking-[0.14em] text-[#0050ff] transition-colors"
               >
                 Legal & Security
               </Link>
@@ -65,7 +65,7 @@ export default function LegalPage() {
             {/* Mobile Menu Button */}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="md:hidden p-2 text-[#101010] hover:text-[#1B29FF] transition-colors"
+              className="md:hidden p-2 text-[#101010] hover:text-[#0050ff] transition-colors"
             >
               {mobileMenuOpen ? (
                 <X className="w-5 h-5" />
@@ -88,7 +88,7 @@ export default function LegalPage() {
             </Link>
             <Link
               href="/legal"
-              className="block text-[13px] uppercase tracking-[0.14em] text-[#1B29FF] py-2"
+              className="block text-[13px] uppercase tracking-[0.14em] text-[#0050ff] py-2"
               onClick={() => setMobileMenuOpen(false)}
             >
               Legal & Security
@@ -110,7 +110,7 @@ export default function LegalPage() {
           <h1 className="text-2xl sm:text-3xl lg:text-5xl font-bold text-[#101010] mb-4 sm:mb-6 leading-tight">
             Enterprise-Grade Security
             <br />
-            <span className="text-[#1B29FF]">for Your Business</span>
+            <span className="text-[#0050ff]">for Your Business</span>
           </h1>
           <p className="text-[14px] sm:text-[16px] lg:text-[18px] text-[#101010]/70 mb-6 sm:mb-8 max-w-3xl mx-auto">
             Bank-level security meets blockchain innovation. Your funds are
@@ -123,7 +123,7 @@ export default function LegalPage() {
       <section className="px-4 sm:px-6 lg:px-8 py-8 sm:py-12 lg:py-16 bg-white border-t border-[#101010]/10">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-8 sm:mb-12">
-            <Shield className="w-12 h-12 sm:w-16 sm:h-16 text-[#1B29FF] mx-auto mb-3 sm:mb-4" />
+            <Shield className="w-12 h-12 sm:w-16 sm:h-16 text-[#0050ff] mx-auto mb-3 sm:mb-4" />
             <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-[#101010] mb-3 sm:mb-4">
               8% APY - Fully Insured
             </h2>

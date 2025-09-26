@@ -128,7 +128,7 @@ export function Sidebar() {
             height={32}
             className="h-8 w-8"
           />
-          <span className="text-xl font-medium text-[#1B29FF]">finance</span>
+          <span className="text-xl font-medium text-[#0050ff]">finance</span>
         </div>
       </Link>
 
@@ -215,7 +215,7 @@ export function Sidebar() {
           <div className="relative z-10">
             <h3 className="text-sm font-medium mb-2 flex items-center gap-2 text-[#101010]">
               Get 0 Finance AI
-              <Sparkles className="h-4 w-4 text-[#1B29FF] flex-shrink-0" />
+              <Sparkles className="h-4 w-4 text-[#0050ff] flex-shrink-0" />
             </h3>
             <p className="text-xs text-[#101010]/60 mb-4 leading-relaxed">
               Your own AI CFO. Unlimited categorizations, auto-labeling, and

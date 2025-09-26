@@ -3,11 +3,10 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { api } from '@/trpc/react';
-import { Loader2 } from 'lucide-react';
+import { Loader2, ArrowRight } from 'lucide-react';
+import { GradientBackground } from '@/app/(landing)/gradient-background';
+import GeneratedComponent from '@/app/(landing)/welcome-gradient';
 
 export default function WelcomePage() {
   const router = useRouter();
@@ -65,78 +64,94 @@ export default function WelcomePage() {
 
   if (!ready || !authenticated || workspaceLoading) {
     return (
-      <div className="min-h-screen bg-[#F7F7F2] flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#101010]" />
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-2 border-[#1B29FF] border-t-transparent" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#F7F7F2] flex items-center justify-center px-4">
-      <div className="w-full max-w-md">
-        <div className="bg-white border border-[#101010]/10 rounded-[12px] p-8 shadow-[0_2px_8px_rgba(16,16,16,0.04)]">
+    <section className="relative min-h-screen border-y border-[#101010]/10 bg-white/90 overflow-hidden flex items-center justify-center">
+      {/* Gradient Background - positioned behind content */}
+      <GeneratedComponent className="z-0 bg-[#F6F5EF]" />
+      
+      {/* Content - positioned above gradient */}
+      <div className="relative z-10 w-full max-w-[500px] px-4">
+        <div className="bg-white/95 backdrop-blur-sm border border-[#101010]/10 rounded-lg shadow-[0_2px_8px_rgba(16,16,16,0.04)] p-8 sm:p-10">
           <div className="space-y-6">
+            {/* Header */}
             <div>
-              <p className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60 mb-2">
+              <p className="uppercase tracking-[0.14em] sm:tracking-[0.18em] text-[11px] sm:text-[12px] font-medium text-[#101010]/70 mb-3">
                 WELCOME TO ZERO FINANCE
               </p>
-              <h1 className="font-serif text-[32px] sm:text-[36px] leading-[1.1] tracking-[-0.01em] text-[#101010]">
+              <h1 className="font-serif text-[36px] sm:text-[44px] leading-[0.96] tracking-[-0.015em] text-[#101010]">
                 Let's get started
               </h1>
-              <p className="mt-3 text-[#101010]/60 text-[15px] leading-relaxed">
-                Tell us about your company to personalize your experience.
+              <p className="mt-4 text-[15px] sm:text-[16px] leading-[1.5] text-[#101010]/70">
+                Tell us about your company to personalize your treasury management experience.
               </p>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-5">
+            {/* Form */}
+            <form onSubmit={handleSubmit} className="space-y-6">
               <div className="space-y-2">
-                <Label
+                <label
                   htmlFor="company-name"
-                  className="text-[13px] font-medium text-[#101010]/80 uppercase tracking-wider"
+                  className="block text-[11px] sm:text-[12px] uppercase tracking-[0.14em] text-[#101010]/60 font-medium"
                 >
                   Company Name
-                </Label>
-                <Input
+                </label>
+                <input
                   id="company-name"
                   type="text"
                   placeholder="Enter your company name"
                   value={companyName}
                   onChange={(e) => setCompanyName(e.target.value)}
-                  className="h-12 border-[#101010]/10 focus:border-[#101010]/20 text-[15px]"
+                  className="w-full h-12 px-4 border border-[#101010]/10 rounded-md text-[15px] sm:text-[16px] text-[#101010] placeholder:text-[#101010]/40 focus:border-[#1B29FF] focus:outline-none focus:ring-1 focus:ring-[#1B29FF]/20 transition-all"
                   autoFocus
                 />
               </div>
 
+              {/* Actions */}
               <div className="space-y-3">
-                <Button
+                <button
                   type="submit"
                   disabled={!companyName.trim() || isLoading}
-                  className="w-full h-12 bg-[#101010] text-white hover:bg-[#101010]/90 font-medium text-[15px]"
+                  className="w-full inline-flex items-center justify-center px-6 py-3 text-[15px] sm:text-[16px] font-medium text-white bg-[#1B29FF] hover:bg-[#1420CC] rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isLoading ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Setting up...
+                      Setting up your account...
                     </>
                   ) : (
-                    'Continue to Dashboard'
+                    <>
+                      Continue to Dashboard
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </>
                   )}
-                </Button>
+                </button>
 
-                <Button
+                <button
                   type="button"
-                  variant="ghost"
                   onClick={handleSkip}
                   disabled={isLoading}
-                  className="w-full h-10 text-[#101010]/60 hover:text-[#101010] text-[14px]"
+                  className="w-full px-6 py-3 text-[14px] sm:text-[15px] text-[#101010]/60 hover:text-[#101010] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Skip for now
-                </Button>
+                </button>
               </div>
             </form>
+
+            {/* Footer note */}
+            <div className="pt-4 border-t border-[#101010]/10">
+              <p className="text-[12px] sm:text-[13px] text-[#101010]/50 text-center">
+                You can update your company information anytime in settings
+              </p>
+            </div>
           </div>
         </div>
       </div>
-    </div>
+    </section>
   );
 }

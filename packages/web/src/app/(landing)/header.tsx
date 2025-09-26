@@ -17,13 +17,13 @@ export function Header() {
               height={24}
               className="w-5 h-5 sm:w-6 sm:h-6 object-contain"
             />
-            <span className="ml-1 font-bold text-[13px] sm:text-[14px] tracking-tight text-[#101010]">
+            <span className="ml-1 font-bold text-[13px] sm:text-[14px] tracking-tight text-[#0050ff]">
               finance
             </span>
           </Link>
           <nav className="flex items-center gap-3 sm:gap-4">
             <Link
-              className="px-3 sm:px-4 py-1.5 sm:py-2 text-[#101010] hover:text-[#1B29FF] text-[12px] sm:text-[13px] font-medium transition-colors"
+              className="px-3 sm:px-4 py-1.5 sm:py-2 text-[#101010] hover:text-[#0050ff] text-[12px] sm:text-[13px] font-medium transition-colors"
               href="/dashboard?demo=true"
             >
               Demo

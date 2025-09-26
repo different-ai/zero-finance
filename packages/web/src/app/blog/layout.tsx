@@ -20,7 +20,7 @@ export default function BlogLayout({
                 height={24}
                 className="w-5 h-5 sm:w-6 sm:h-6 object-contain"
               />
-              <span className="ml-2 font-bold text-[#1B29FF] text-[13px] sm:text-[14px] tracking-tight">
+              <span className="ml-2 font-bold text-[#0050ff] text-[13px] sm:text-[14px] tracking-tight">
                 finance
               </span>
             </Link>
@@ -28,13 +28,13 @@ export default function BlogLayout({
             <nav className="flex items-center gap-6">
               <Link
                 href="/blog"
-                className="text-[14px] text-[#101010] hover:text-[#1B29FF] transition-colors"
+                className="text-[14px] text-[#101010] hover:text-[#0050ff] transition-colors"
               >
                 All Posts
               </Link>
               <Link
                 href="/high-yield-startup-savings"
-                className="text-[14px] text-[#101010] hover:text-[#1B29FF] transition-colors"
+                className="text-[14px] text-[#101010] hover:text-[#0050ff] transition-colors"
               >
                 Product
               </Link>
@@ -62,19 +62,19 @@ export default function BlogLayout({
             <div className="flex gap-4">
               <Link
                 href="/blog"
-                className="text-[12px] text-[#101010]/60 hover:text-[#1B29FF]"
+                className="text-[12px] text-[#101010]/60 hover:text-[#0050ff]"
               >
                 Blog
               </Link>
               <Link
                 href="/compare"
-                className="text-[12px] text-[#101010]/60 hover:text-[#1B29FF]"
+                className="text-[12px] text-[#101010]/60 hover:text-[#0050ff]"
               >
                 Compare
               </Link>
               <Link
                 href="/runway-calculator"
-                className="text-[12px] text-[#101010]/60 hover:text-[#1B29FF]"
+                className="text-[12px] text-[#101010]/60 hover:text-[#0050ff]"
               >
                 Calculator
               </Link>

@@ -156,7 +156,7 @@ export default function SoloLandingPage() {
               height={48}
               className="w-12 h-12 sm:w-16 sm:h-16 object-contain rounded-md"
             />
-            <span className="text-xl sm:text-2xl font-semibold text-[#00225b] tracking-tight">
+            <span className="text-xl sm:text-2xl font-semibold text-[#0050ff] tracking-tight">
               finance
             </span>
           </Link>

@@ -1,10 +1,18 @@
-"use client";
+'use client';
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
-import { Mail, Shield, ArrowRight, Zap, Link2, Wallet, Key, Settings2, Coins, Building2, Users } from 'lucide-react';
-import { motion } from 'framer-motion';
+import {
+  Mail,
+  Shield,
+  ArrowRight,
+  Zap,
+  Link2,
+  Wallet,
+  Key,
+  Coins,
+  Building2,
+  Users,
+} from 'lucide-react';
 import Link from 'next/link';
 
 export function SettingsClientContent() {
@@ -12,57 +20,30 @@ export function SettingsClientContent() {
 
   const settingsOptions = [
     {
-      id: 'integrations',
-      title: 'Integrations',
-      description: 'Connect external services like Gmail, Slack, and accounting software',
-      icon: Link2,
-      color: 'from-blue-500 to-cyan-500',
-      bgPattern: 'bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-950/20 dark:to-cyan-950/20',
-      features: [
-        { icon: Mail, text: 'Email sync' },
-        { icon: Zap, text: 'Automation' },
-      ],
-      path: '/dashboard/settings/integrations',
-    },
-    {
       id: 'advanced-wallet',
       title: 'Advanced Wallet Settings',
-      description: 'Manage wallet addresses, recovery options, and security settings',
+      description:
+        'Manage wallet addresses, recovery options, and security settings',
       icon: Shield,
-      color: 'from-purple-500 to-pink-500',
-      bgPattern: 'bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-950/20 dark:to-pink-950/20',
-      features: [
-        { icon: Wallet, text: 'Wallet management' },
-        { icon: Key, text: 'Recovery options' },
-      ],
+      features: ['Wallet management', 'Recovery options'],
       path: '/dashboard/settings/advanced-wallet',
     },
     {
       id: 'payment-accounts',
       title: 'Payment & Virtual Accounts',
-      description: 'Manage virtual bank accounts and transfer funds between fiat and crypto',
+      description:
+        'Manage virtual bank accounts and transfer funds between fiat and crypto',
       icon: Building2,
-      color: 'from-indigo-500 to-purple-500',
-      bgPattern: 'bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-950/20 dark:to-purple-950/20',
-      features: [
-        { icon: Building2, text: 'Virtual accounts' },
-        { icon: Coins, text: 'Fiat transfers' },
-        { icon: Zap, text: 'Auto-conversion' },
-      ],
+      features: ['Virtual accounts', 'Fiat transfers', 'Auto-conversion'],
       path: '/dashboard/settings/payment-accounts',
     },
     {
       id: 'company',
       title: 'Company Management',
-      description: 'Manage your company profile and invite contractors to your network',
+      description:
+        'Manage your company profile and invite contractors to your network',
       icon: Users,
-      color: 'from-green-500 to-emerald-500',
-      bgPattern: 'bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20',
-      features: [
-        { icon: Building2, text: 'Company profile' },
-        { icon: Users, text: 'Contractor invites' },
-        { icon: Link2, text: 'Shared data' },
-      ],
+      features: ['Company profile', 'Contractor invites', 'Shared data'],
       path: '/dashboard/settings/company',
     },
     {
@@ -70,118 +51,93 @@ export function SettingsClientContent() {
       title: 'My Companies',
       description: 'View all companies you own or are a member of',
       icon: Building2,
-      color: 'from-orange-500 to-red-500',
-      bgPattern: 'bg-gradient-to-br from-orange-50 to-red-50 dark:from-orange-950/20 dark:to-red-950/20',
-      features: [
-        { icon: Building2, text: 'Company overview' },
-        { icon: Users, text: 'Membership status' },
-        { icon: Settings2, text: 'Quick actions' },
-      ],
+      features: ['Company overview', 'Membership status', 'Quick actions'],
       path: '/dashboard/settings/companies',
     },
   ];
 
   return (
-    <div className="w-full space-y-8 p-4">
-      {/* Header */}
-      <div className="space-y-2">
-        <h1 className="text-4xl font-bold bg-gradient-to-r from-neutral-900 to-neutral-600 dark:from-white dark:to-neutral-400 bg-clip-text text-transparent">
-          Settings
-        </h1>
-        <p className="text-lg text-muted-foreground">
-          Configure your account, integrations, and security preferences
-        </p>
-      </div>
+    <div className="min-h-screen bg-[#F7F7F2]">
+      {/* Dashboard Header - Following Design Language */}
+      <header className="sticky top-0 z-40 bg-[#F7F7F2] border-b border-[#101010]/10">
+        <div className="h-[60px] flex items-center px-4 sm:px-6 max-w-[1400px] mx-auto">
+          <p className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60 mr-3">
+            Account
+          </p>
+          <h1 className="font-serif text-[24px] sm:text-[28px] leading-[1] text-[#101010]">
+            Settings
+          </h1>
+        </div>
+      </header>
 
-      {/* Settings Cards Grid */}
-      <div className="grid gap-6 md:grid-cols-2">
-        {settingsOptions.map((option, index) => {
-          const Icon = option.icon;
-          return (
-            <motion.div
-              key={option.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1 }}
-            >
-              <Card 
-                className="group relative overflow-hidden border-neutral-200 dark:border-neutral-800 hover:shadow-xl transition-all duration-300 cursor-pointer"
+      {/* Main Content */}
+      <main className="px-4 sm:px-6 py-6 sm:py-8 max-w-[1400px] mx-auto">
+        {/* Settings Cards Grid */}
+        <div className="grid gap-5 sm:gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {settingsOptions.map((option) => {
+            const Icon = option.icon;
+            return (
+              <div
+                key={option.id}
+                className="bg-white border border-[#101010]/10 rounded-lg p-5 sm:p-6 hover:shadow-sm transition-shadow cursor-pointer"
                 onClick={() => router.push(option.path)}
               >
-                {/* Background Pattern */}
-                <div className={`absolute inset-0 ${option.bgPattern} opacity-50 group-hover:opacity-70 transition-opacity`} />
-                
-                {/* Gradient Accent */}
-                <div className={`absolute top-0 right-0 w-32 h-32 bg-gradient-to-br ${option.color} opacity-10 blur-3xl group-hover:opacity-20 transition-opacity`} />
-                
-                <CardHeader className="relative">
-                  <div className="flex items-start justify-between">
-                    <div className="space-y-3">
-                      <div className={`inline-flex p-3 rounded-xl bg-gradient-to-br ${option.color} shadow-lg`}>
-                        <Icon className="h-6 w-6 text-white" />
-                      </div>
-                      <div>
-                        <CardTitle className="text-2xl font-bold">{option.title}</CardTitle>
-                        <CardDescription className="mt-2 text-base">
-                          {option.description}
-                        </CardDescription>
-                      </div>
-                    </div>
-                    <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:translate-x-1 transition-transform" />
-                  </div>
-                </CardHeader>
-                
-                <CardContent className="relative">
-                  <div className="flex flex-wrap gap-3">
-                    {option.features.map((feature, featureIndex) => {
-                      const FeatureIcon = feature.icon;
-                      return (
-                        <div
-                          key={featureIndex}
-                          className="flex items-center gap-2 px-3 py-1.5 bg-white/80 dark:bg-neutral-800/80 backdrop-blur-sm rounded-full border border-neutral-200 dark:border-neutral-700"
-                        >
-                          <FeatureIcon className="h-3.5 w-3.5 text-muted-foreground" />
-                          <span className="text-sm font-medium">{feature.text}</span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                  
-                  <div className="mt-6">
-                    <Button 
-                      variant="ghost" 
-                      className="group-hover:bg-neutral-100 dark:group-hover:bg-neutral-800 group-hover:text-neutral-900 dark:group-hover:text-neutral-100 transition-all"
-                    >
-                      <span className="mr-2">Configure</span>
-                      <Settings2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-          );
-        })}
-      </div>
+                <div className="flex items-start gap-3">
+                  <Icon className="h-5 w-5 text-[#0050ff] mt-1 flex-shrink-0" />
+                  <div className="flex-1">
+                    <h2 className="text-[15px] sm:text-[16px] font-medium text-[#101010]">
+                      {option.title}
+                    </h2>
+                    <p className="mt-2 text-[13px] sm:text-[14px] text-[#101010]/70 leading-[1.5]">
+                      {option.description}
+                    </p>
 
-      {/* Quick Actions */}
-      <div className="mt-12 p-6 bg-gradient-to-r from-neutral-50 to-neutral-100 dark:from-neutral-900 dark:to-neutral-800 rounded-xl border border-neutral-200 dark:border-neutral-700">
-        <h3 className="text-lg font-semibold mb-2">Need help?</h3>
-        <p className="text-muted-foreground mb-4">
-          Check out our documentation or contact support for assistance with your settings.
-        </p>
-        <div className="flex gap-3">
-          <Link href="/support">
-          <Button variant="outline" size="sm">
-            View Documentation
-          </Button>
-          </Link>
-          <Link href="/support">
-          <Button variant="outline" size="sm">
-            Contact Support
-          </Button>
-          </Link>
+                    {/* Features */}
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      {option.features.map((feature, index) => (
+                        <span
+                          key={index}
+                          className="inline-flex px-2.5 py-1 bg-[#F7F7F2] text-[11px] text-[#101010]/60 rounded-md"
+                        >
+                          {feature}
+                        </span>
+                      ))}
+                    </div>
+
+                    <button className="inline-flex items-center mt-4 text-[13px] text-[#0050ff] hover:text-[#0040dd] transition-colors">
+                      Configure
+                      <ArrowRight className="ml-1 h-3 w-3" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
         </div>
-      </div>
+
+        {/* Help Section */}
+        <div className="mt-8 bg-white border border-[#101010]/10 rounded-lg p-5 sm:p-6">
+          <h3 className="text-[15px] font-medium text-[#101010] mb-2">
+            Need help?
+          </h3>
+          <p className="text-[13px] text-[#101010]/60 mb-4">
+            Check out our documentation or contact support for assistance with
+            your settings.
+          </p>
+          <div className="flex gap-3">
+            <Link href="/support">
+              <button className="px-4 py-2 text-[13px] font-medium text-[#101010] bg-white border border-[#101010]/20 rounded-md hover:bg-[#F7F7F2] transition-colors">
+                View Documentation
+              </button>
+            </Link>
+            <Link href="/support">
+              <button className="px-4 py-2 text-[13px] font-medium text-[#101010] bg-white border border-[#101010]/20 rounded-md hover:bg-[#F7F7F2] transition-colors">
+                Contact Support
+              </button>
+            </Link>
+          </div>
+        </div>
+      </main>
     </div>
   );
-}  
+}

@@ -18,7 +18,7 @@ export function Footer() {
                 height={48}
                 className="w-12 h-12 object-contain rounded-md"
               />
-              <span className="text-xl font-semibold text-[#00225b] tracking-tight">
+              <span className="text-xl font-semibold text-[#0050ff] tracking-tight">
                 finance
               </span>
             </div>

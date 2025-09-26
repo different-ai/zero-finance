@@ -71,7 +71,7 @@ export default function SignInContent() {
               height={24}
               className="w-6 h-6 object-contain"
             />
-            <span className="ml-1 text-[14px] font-bold text-[#101010] tracking-tight">
+            <span className="ml-1 text-[14px] font-bold text-[#0050ff] tracking-tight">
               finance
             </span>
           </Link>
@@ -87,7 +87,7 @@ export default function SignInContent() {
                 Business Savings Account
               </p>
               <h1 className="font-serif text-[36px] sm:text-[48px] lg:text-[56px] leading-[0.96] tracking-[-0.015em] text-[#101010] mb-6">
-                Earn <span className="text-[#1B29FF]">8% APY</span>
+                Earn <span className="text-[#0050ff]">8% APY</span>
               </h1>
               <p className="text-[16px] leading-[1.5] text-[#101010]/80 max-w-[400px]">
                 High-yield savings for startups. No minimums, no lock-ups, full
@@ -104,7 +104,7 @@ export default function SignInContent() {
               ].map((item, index) => (
                 <div key={index} className="flex items-start gap-3">
                   <div className="h-5 w-5 rounded-full bg-[#1B29FF]/10 flex items-center justify-center flex-shrink-0 mt-0.5">
-                    <Check className="h-3 w-3 text-[#1B29FF]" />
+                    <Check className="h-3 w-3 text-[#0050ff]" />
                   </div>
                   <span className="text-[14px] text-[#101010]/70">{item}</span>
                 </div>
@@ -138,7 +138,7 @@ export default function SignInContent() {
             {inviteToken && inviteCompany && (
               <div className="mb-8 p-4 bg-white border border-[#101010]/10 rounded-md">
                 <div className="flex items-start gap-3">
-                  <Building2 className="h-5 w-5 text-[#1B29FF] mt-0.5" />
+                  <Building2 className="h-5 w-5 text-[#0050ff] mt-0.5" />
                   <div className="flex-1">
                     <p className="text-[14px] font-medium text-[#101010] mb-1">
                       Company Invitation
@@ -201,7 +201,7 @@ export default function SignInContent() {
                 <div className="text-center">
                   <Link
                     href={source ? `/${source}` : '/'}
-                    className="text-[14px] text-[#101010]/70 hover:text-[#1B29FF] transition-colors"
+                    className="text-[14px] text-[#101010]/70 hover:text-[#0050ff] transition-colors"
                   >
                     ← Back to {'Landing'}
                   </Link>
