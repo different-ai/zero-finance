@@ -1,12 +1,20 @@
 'use client';
 
 import { useState } from 'react';
-import { type Address, Hex, encodeFunctionData, encodeAbiParameters } from 'viem';
+import {
+  type Address,
+  Hex,
+  encodeFunctionData,
+  encodeAbiParameters,
+} from 'viem';
 import { toast } from 'sonner';
 import { useSmartWallets } from '@privy-io/react-auth/smart-wallets';
 import { useSafeRelay } from '@/hooks/use-safe-relay';
 import { api } from '@/trpc/react';
-import { AUTO_EARN_MODULE_ADDRESS, CONFIG_HASH_DECIMAL } from '@/lib/earn-module-constants';
+import {
+  AUTO_EARN_MODULE_ADDRESS,
+  CONFIG_HASH_DECIMAL,
+} from '@/lib/earn-module-constants';
 import { Button } from '@/components/ui/button';
 import { Loader2, CheckCircle, Wallet } from 'lucide-react';
 
@@ -32,12 +40,18 @@ interface OpenSavingsAccountButtonProps {
   onSuccess?: () => void;
 }
 
-export function OpenSavingsAccountButton({ safeAddress, onSuccess }: OpenSavingsAccountButtonProps) {
+export function OpenSavingsAccountButton({
+  safeAddress,
+  onSuccess,
+}: OpenSavingsAccountButtonProps) {
   const [isProcessing, setIsProcessing] = useState(false);
-  const [currentStep, setCurrentStep] = useState<'idle' | 'enabling-module' | 'installing-config' | 'complete'>('idle');
+  const [currentStep, setCurrentStep] = useState<
+    'idle' | 'enabling-module' | 'installing-config' | 'complete'
+  >('idle');
 
   const { client: smartClient } = useSmartWallets();
-  const { ready: isRelayReady, send: sendTxViaRelay } = useSafeRelay(safeAddress);
+  const { ready: isRelayReady, send: sendTxViaRelay } =
+    useSafeRelay(safeAddress);
 
   // Check module status
   const {
@@ -62,13 +76,16 @@ export function OpenSavingsAccountButton({ safeAddress, onSuccess }: OpenSavings
   const isConfigInstalled = initStatus?.isInitializedOnChain || false;
 
   const recordInstallMutation = api.earn.recordInstall.useMutation();
+  const setAutoEarnPctMutation = api.earn.setAutoEarnPct.useMutation();
 
   const isFullySetUp = isModuleEnabled && isConfigInstalled;
   const isLoading = isLoadingModuleStatus || isLoadingInitStatus;
 
   const handleOpenAccount = async () => {
     if (!safeAddress || !isRelayReady || !smartClient?.account) {
-      toast.error('Prerequisites not met. Please ensure your wallet is connected.');
+      toast.error(
+        'Prerequisites not met. Please ensure your wallet is connected.',
+      );
       return;
     }
 
@@ -78,7 +95,7 @@ export function OpenSavingsAccountButton({ safeAddress, onSuccess }: OpenSavings
       // Step 1: Enable module if needed
       if (!isModuleEnabled) {
         setCurrentStep('enabling-module');
-        
+
         const enableTx = [
           {
             to: safeAddress,
@@ -92,11 +109,15 @@ export function OpenSavingsAccountButton({ safeAddress, onSuccess }: OpenSavings
           },
         ];
 
-        toast.info('Step 1/2: Enabling savings module...', { id: 'open-savings-account' });
+        toast.info('Step 1/2: Enabling savings module...', {
+          id: 'open-savings-account',
+        });
         const enableUserOpHash = await sendTxViaRelay(enableTx, 300_000n);
-        
-        toast.info('Waiting for module to be enabled...', { id: 'open-savings-account' });
-        
+
+        toast.info('Waiting for module to be enabled...', {
+          id: 'open-savings-account',
+        });
+
         // Poll for module enablement
         let moduleEnabledOnChain = false;
         const moduleStart = Date.now();
@@ -117,8 +138,11 @@ export function OpenSavingsAccountButton({ safeAddress, onSuccess }: OpenSavings
       // Step 2: Install config if needed
       if (!isConfigInstalled) {
         setCurrentStep('installing-config');
-        
-        const onInstallArgBytes = encodeAbiParameters([{ type: 'uint256' }], [BigInt(CONFIG_HASH_DECIMAL)]);
+
+        const onInstallArgBytes = encodeAbiParameters(
+          [{ type: 'uint256' }],
+          [BigInt(CONFIG_HASH_DECIMAL)],
+        );
         const configTx = [
           {
             to: AUTO_EARN_MODULE_ADDRESS,
@@ -132,11 +156,15 @@ export function OpenSavingsAccountButton({ safeAddress, onSuccess }: OpenSavings
           },
         ];
 
-        toast.info('Step 2/2: Configuring savings account...', { id: 'open-savings-account' });
+        toast.info('Step 2/2: Configuring savings account...', {
+          id: 'open-savings-account',
+        });
         const configUserOpHash = await sendTxViaRelay(configTx, 300_000n);
-        
-        toast.info('Finalizing account setup...', { id: 'open-savings-account' });
-        
+
+        toast.info('Finalizing account setup...', {
+          id: 'open-savings-account',
+        });
+
         // Poll for config installation
         let configInstalledOnChain = false;
         const configStart = Date.now();
@@ -157,16 +185,34 @@ export function OpenSavingsAccountButton({ safeAddress, onSuccess }: OpenSavings
         await recordInstallMutation.mutateAsync({ safeAddress });
       }
 
+      // Set the auto-earn percentage to 100%
+      try {
+        await setAutoEarnPctMutation.mutateAsync({
+          safeAddress: safeAddress as string,
+          pct: 100,
+        });
+        toast.success('Auto-save set to 100% of incoming deposits', {
+          id: 'auto-earn-percentage',
+        });
+      } catch (error) {
+        console.error('Failed to set auto-earn percentage:', error);
+        // Don't fail the whole process if this fails, just log it
+      }
+
       setCurrentStep('complete');
-      toast.success('Savings account opened successfully!', { id: 'open-savings-account' });
-      
+      toast.success('Savings account opened successfully!', {
+        id: 'open-savings-account',
+      });
+
       // Call success callback if provided
       if (onSuccess) {
         onSuccess();
       }
     } catch (error: any) {
       console.error('Failed to open savings account:', error);
-      toast.error(error.message || 'Failed to open savings account', { id: 'open-savings-account' });
+      toast.error(error.message || 'Failed to open savings account', {
+        id: 'open-savings-account',
+      });
     } finally {
       setIsProcessing(false);
       setCurrentStep('idle');
@@ -185,13 +231,12 @@ export function OpenSavingsAccountButton({ safeAddress, onSuccess }: OpenSavings
 
   // Button icon based on state
   const getButtonIcon = () => {
-    if (isLoading || isProcessing) return <Loader2 className="mr-2 h-4 w-4 animate-spin" />;
+    if (isLoading || isProcessing)
+      return <Loader2 className="mr-2 h-4 w-4 animate-spin" />;
     if (isFullySetUp) return <CheckCircle className="mr-2 h-4 w-4" />;
     return <Wallet className="mr-2 h-4 w-4" />;
   };
 
-
-  
   return (
     <Button
       onClick={handleOpenAccount}
@@ -203,4 +248,4 @@ export function OpenSavingsAccountButton({ safeAddress, onSuccess }: OpenSavings
       {getButtonText()}
     </Button>
   );
-} 
+}
