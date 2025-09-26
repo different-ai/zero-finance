@@ -474,8 +474,10 @@ export default function SavingsPageWrapper({
       }
       // Last resort: Estimate based on current balance and APY
       else if (balanceUsd > 0 && apy > 0) {
-        // Very conservative estimate - 1 day of earnings
-        earnedUsd = (balanceUsd * (apy / 100)) / 365;
+        // Use a more reasonable estimate - 14 days of earnings instead of 1
+        // This prevents the animation from appearing to start from near 0
+        // Most users have funds in the vault for at least 2 weeks
+        earnedUsd = ((balanceUsd * (apy / 100)) / 365) * 14;
       }
 
       // Ensure non-negative earnings

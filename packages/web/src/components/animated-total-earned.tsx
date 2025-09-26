@@ -15,10 +15,17 @@ export function AnimatedTotalEarned({
   balance,
   className = '',
 }: AnimatedTotalEarnedProps) {
-  const [earned, setEarned] = useState(initialEarned);
+  // Always start from the initial earned value, not 0
+  const [earned, setEarned] = useState(() => {
+    // Ensure we never start from 0 if there's a positive initial value
+    return initialEarned > 0 ? initialEarned : 0;
+  });
 
   useEffect(() => {
-    setEarned(initialEarned);
+    // Only update if we receive a meaningful initial value
+    if (initialEarned > 0 || earned === 0) {
+      setEarned(initialEarned);
+    }
   }, [initialEarned]);
 
   useEffect(() => {

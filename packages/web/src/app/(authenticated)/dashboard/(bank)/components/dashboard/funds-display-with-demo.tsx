@@ -176,7 +176,7 @@ export function FundsDisplayWithDemo({
         <div className="flex items-start justify-between">
           <div>
             <p className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60 mb-2">
-              Active Balance · Checking
+             Withdrawable Balance
             </p>
             <div className="font-serif tabular-nums text-[#101010]">
               {balanceDisplay.isNegative && (
