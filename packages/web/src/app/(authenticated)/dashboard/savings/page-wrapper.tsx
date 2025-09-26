@@ -898,8 +898,7 @@ export default function SavingsPageWrapper({
                   showYearly={true}
                   formatOptions={{
                     minimumFractionDigits: 2,
-                    maximumFractionDigits:
-                      totalSaved < 1000 ? 8 : totalSaved < 10000 ? 6 : 4,
+                    maximumFractionDigits: 6,
                   }}
                 />
               </div>

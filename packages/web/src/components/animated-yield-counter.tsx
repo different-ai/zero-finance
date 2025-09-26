@@ -70,8 +70,8 @@ export function AnimatedYieldCounter({
         setCurrentYield((prev) => {
           // Calculate yield per millisecond for smooth animation
           const yieldPerMs = daily / (24 * 60 * 60 * 1000);
-          // Speed up animation by 10x for better visibility
-          const speedMultiplier = 10;
+          // Real-time accumulation (1x speed - actual earnings rate)
+          const speedMultiplier = 1;
           return prev + yieldPerMs * deltaTime * speedMultiplier;
         });
         animationRef.current = requestAnimationFrame(animate);

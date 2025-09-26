@@ -105,50 +105,11 @@ export default function InsuranceActivatePage() {
                 </h1>
 
                 <p className="mt-4 text-[15px] sm:text-[16px] leading-[1.5] text-[#101010]/70">
-                  Enable insurance protection for your savings accounts and
-                  remove all risk warnings from your dashboard.
+                  Enable insurance protection for your savings accounts.
                 </p>
               </div>
 
-              {/* Benefits */}
-              <div className="space-y-3 bg-[#F7F7F2]/50 rounded-lg p-4">
-                <div className="flex items-start gap-3">
-                  <CheckCircle2 className="w-5 h-5 text-[#1B29FF] mt-0.5 flex-shrink-0" />
-                  <div>
-                    <p className="text-[14px] font-medium text-[#101010]">
-                      Full Coverage Protection
-                    </p>
-                    <p className="text-[13px] text-[#101010]/60">
-                      Your deposits are protected against smart contract risks
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-3">
-                  <CheckCircle2 className="w-5 h-5 text-[#1B29FF] mt-0.5 flex-shrink-0" />
-                  <div>
-                    <p className="text-[14px] font-medium text-[#101010]">
-                      No More Warnings
-                    </p>
-                    <p className="text-[13px] text-[#101010]/60">
-                      Risk disclaimers will be removed from your interface
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-3">
-                  <CheckCircle2 className="w-5 h-5 text-[#1B29FF] mt-0.5 flex-shrink-0" />
-                  <div>
-                    <p className="text-[14px] font-medium text-[#101010]">
-                      Priority Support
-                    </p>
-                    <p className="text-[13px] text-[#101010]/60">
-                      Access to dedicated insurance support team
-                    </p>
-                  </div>
-                </div>
-              </div>
-
+              
               {/* Actions */}
               <div className="space-y-3">
                 <button
