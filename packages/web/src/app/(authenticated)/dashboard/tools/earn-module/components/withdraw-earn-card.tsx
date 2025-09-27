@@ -167,27 +167,48 @@ export function WithdrawEarnCard({
       setIsWithdrawing(true);
       const amountInSmallestUnit = parseUnits(amount, vaultInfo.assetDecimals);
 
+      if (amountInSmallestUnit > vaultInfo.assets) {
+        throw new Error('Amount exceeds available vault balance.');
+      }
+
+      const isMaxWithdrawal = amountInSmallestUnit >= vaultInfo.assets;
+
       // Convert the asset amount to shares using the vault's conversion function
       console.log('Converting assets to shares...', {
         assets: amountInSmallestUnit.toString(),
         vaultAddress,
       });
 
-      const sharesToRedeem = await publicClient.readContract({
-        address: vaultAddress,
-        abi: VAULT_ABI,
-        functionName: 'convertToShares',
-        args: [amountInSmallestUnit],
-      });
+      let sharesToRedeem: bigint;
+
+      if (isMaxWithdrawal) {
+        sharesToRedeem = vaultInfo.shares;
+      } else {
+        sharesToRedeem = await publicClient.readContract({
+          address: vaultAddress,
+          abi: VAULT_ABI,
+          functionName: 'convertToShares',
+          args: [amountInSmallestUnit],
+        });
+
+        if (sharesToRedeem === 0n) {
+          throw new Error('Requested amount is below the minimum withdrawable size.');
+        }
+
+        if (sharesToRedeem > vaultInfo.shares) {
+          const roundingDelta = sharesToRedeem - vaultInfo.shares;
+          // Allow for a one-wei rounding discrepancy, otherwise surface the error
+          if (roundingDelta <= 1n) {
+            sharesToRedeem = vaultInfo.shares;
+          } else {
+            throw new Error(
+              `Insufficient shares. Required: ${formatUnits(sharesToRedeem, vaultInfo.shareDecimals)}, Available: ${formatUnits(vaultInfo.shares, vaultInfo.shareDecimals)}`,
+            );
+          }
+        }
+      }
 
       console.log('Shares to redeem:', sharesToRedeem.toString());
-
-      // Check if user has enough shares
-      if (sharesToRedeem > vaultInfo.shares) {
-        throw new Error(
-          `Insufficient shares. Required: ${formatUnits(sharesToRedeem, vaultInfo.shareDecimals)}, Available: ${formatUnits(vaultInfo.shares, vaultInfo.shareDecimals)}`,
-        );
-      }
 
       // Encode the redeem function call
       const redeemData = encodeFunctionData({
@@ -281,6 +302,30 @@ export function WithdrawEarnCard({
     },
   );
 
+  const hasAmountInput = amount.trim().length > 0;
+  let parsedAmount: bigint | null = null;
+  let amountParseFailed = false;
+
+  if (hasAmountInput && vaultInfo) {
+    try {
+      parsedAmount = parseUnits(amount, vaultInfo.assetDecimals);
+    } catch {
+      amountParseFailed = true;
+    }
+  }
+
+  const amountIsPositive = parsedAmount !== null && parsedAmount > 0n;
+  const amountExceedsBalance =
+    parsedAmount !== null && parsedAmount > vaultInfo.assets;
+
+  const disableWithdraw =
+    !hasAmountInput ||
+    amountParseFailed ||
+    !amountIsPositive ||
+    amountExceedsBalance ||
+    isWithdrawing ||
+    !isRelayReady;
+
   return (
     <div className="space-y-4">
       {/* Current Balance */}
@@ -330,13 +375,7 @@ export function WithdrawEarnCard({
       {/* Withdraw Button */}
       <Button
         onClick={handleWithdraw}
-        disabled={
-          !amount ||
-          parseFloat(amount) <= 0 ||
-          parseFloat(amount) > parseFloat(availableBalance) ||
-          isWithdrawing ||
-          !isRelayReady
-        }
+        disabled={disableWithdraw}
         className="w-full"
         size="lg"
       >
@@ -355,6 +394,18 @@ export function WithdrawEarnCard({
         Withdrawals are processed through your Safe wallet and may take a few
         moments to complete
       </p>
+
+      {amountParseFailed && (
+        <p className="text-xs text-red-500 text-center">
+          Unable to parse the withdrawal amount. Please check the format.
+        </p>
+      )}
+
+      {amountExceedsBalance && (
+        <p className="text-xs text-red-500 text-center">
+          Amount exceeds your available vault balance.
+        </p>
+      )}
     </div>
   );
 }

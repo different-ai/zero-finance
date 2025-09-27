@@ -144,19 +144,42 @@ export function WithdrawEarnCardAdvanced({ safeAddress, vaultAddress }: Withdraw
           setIsProcessing(false); return;
         }
         
+        if (assetsParsed > vaultInfo.assets) {
+          toast.error('Amount exceeds available vault balance.');
+          setIsProcessing(false); return;
+        }
+
+        const isMaxWithdrawal = assetsParsed >= vaultInfo.assets;
+
         toast.info('Calculating shares needed for asset amount...');
-        sharesToRedeem = await publicClient.readContract({
-          address: vaultAddress,
-          abi: VAULT_ABI,
-          functionName: 'convertToShares',
-          args: [assetsParsed],
-        });
+
+        if (isMaxWithdrawal) {
+          sharesToRedeem = vaultInfo.shares;
+        } else {
+          sharesToRedeem = await publicClient.readContract({
+            address: vaultAddress,
+            abi: VAULT_ABI,
+            functionName: 'convertToShares',
+            args: [assetsParsed],
+          });
+        }
+
         console.log(`Calculated shares to redeem for ${withdrawAmount} assets: ${sharesToRedeem.toString()}`);
+
+        if (sharesToRedeem === 0n) {
+          toast.error('Requested amount is below the minimum withdrawable size.');
+          setIsProcessing(false); return;
+        }
 
         // Sanity check: ensure user has enough shares
         if (sharesToRedeem > vaultInfo.shares) {
-            toast.error(`Insufficient shares (${formatUnits(vaultInfo.shares, vaultInfo.shareDecimals)}) to withdraw ${withdrawAmount} assets. Calculated shares needed: ${formatUnits(sharesToRedeem, vaultInfo.shareDecimals)}`);
-            setIsProcessing(false); return;
+            const roundingDelta = sharesToRedeem - vaultInfo.shares;
+            if (roundingDelta <= 1n) {
+              sharesToRedeem = vaultInfo.shares;
+            } else {
+              toast.error(`Insufficient shares (${formatUnits(vaultInfo.shares, vaultInfo.shareDecimals)}) to withdraw ${withdrawAmount} assets. Calculated shares needed: ${formatUnits(sharesToRedeem, vaultInfo.shareDecimals)}`);
+              setIsProcessing(false); return;
+            }
         }
 
       } else {
@@ -270,6 +293,44 @@ export function WithdrawEarnCardAdvanced({ safeAddress, vaultAddress }: Withdraw
     ? Number(formatUnits(vaultInfo.assets, vaultInfo.assetDecimals)).toLocaleString(undefined, { maximumFractionDigits: vaultInfo.assetDecimals })
     : '0';
 
+  const hasAmountInput = withdrawAmount.trim().length > 0;
+  let parsedAdvancedAmount: bigint | null = null;
+  let advancedAmountParseFailed = false;
+  let advancedAmountExceedsBalance = false;
+
+  if (hasAmountInput && vaultInfo) {
+    const decimals =
+      withdrawType === 'assets'
+        ? vaultInfo.assetDecimals
+        : vaultInfo.shareDecimals;
+    try {
+      parsedAdvancedAmount = parseUnits(withdrawAmount, decimals);
+    } catch {
+      advancedAmountParseFailed = true;
+    }
+
+    if (parsedAdvancedAmount !== null) {
+      if (withdrawType === 'assets') {
+        advancedAmountExceedsBalance = parsedAdvancedAmount > vaultInfo.assets;
+      } else {
+        advancedAmountExceedsBalance = parsedAdvancedAmount > vaultInfo.shares;
+      }
+    }
+  }
+
+  const advancedAmountIsPositive =
+    parsedAdvancedAmount !== null && parsedAdvancedAmount > 0n;
+
+  const disableAdvancedWithdraw =
+    !isRelayReady ||
+    isProcessing ||
+    isLoadingVaultInfo ||
+    !vaultInfo ||
+    !hasAmountInput ||
+    advancedAmountParseFailed ||
+    !advancedAmountIsPositive ||
+    advancedAmountExceedsBalance;
+
   return (
     <Card>
       <CardHeader>
@@ -370,14 +431,7 @@ export function WithdrawEarnCardAdvanced({ safeAddress, vaultAddress }: Withdraw
       <CardFooter className="flex flex-col space-y-2">
         <Button
           onClick={handleWithdraw}
-          disabled={
-            !isRelayReady || 
-            isProcessing || 
-            isLoadingVaultInfo ||
-            !vaultInfo || 
-            !withdrawAmount ||
-            parseFloat(withdrawAmount) <= 0
-          }
+          disabled={disableAdvancedWithdraw}
           className="w-full"
         >
           {isProcessing ? (
@@ -386,6 +440,18 @@ export function WithdrawEarnCardAdvanced({ safeAddress, vaultAddress }: Withdraw
             'Withdraw / Redeem' 
           )}
         </Button>
+
+        {advancedAmountParseFailed && (
+          <p className="text-xs text-red-500 text-center">
+            Unable to parse the withdrawal amount. Please check the format.
+          </p>
+        )}
+
+        {advancedAmountExceedsBalance && (
+          <p className="text-xs text-red-500 text-center">
+            Amount exceeds your available balance for the selected mode.
+          </p>
+        )}
       </CardFooter>
     </Card>
   );
