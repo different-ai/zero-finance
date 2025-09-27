@@ -163,6 +163,7 @@ function CheckingActionsCard({
 }: CheckingActionsCardProps) {
   const [isMoveModalOpen, setIsMoveModalOpen] = useState(false);
   const [isAddressCopied, setIsAddressCopied] = useState(false);
+  const [showAdvancedDetails, setShowAdvancedDetails] = useState(false);
   const isMobile = useIsMobile();
   const { ready, authenticated, user } = usePrivy();
 
@@ -188,10 +189,6 @@ function CheckingActionsCard({
 
   const hasVirtualAccounts = Boolean(achAccount || ibanAccount);
 
-  const safeAddressDisplay = safeAddress
-    ? `${safeAddress.slice(0, 6)}…${safeAddress.slice(-4)}`
-    : null;
-
   const handleCopyAddress = () => {
     if (!safeAddress || typeof navigator === 'undefined') return;
     navigator.clipboard
@@ -202,6 +199,13 @@ function CheckingActionsCard({
       })
       .catch((error) => console.error('Failed to copy address', error));
   };
+
+  const canInitiateMove = (isDemoMode || balanceUsd > 0) && !!safeAddress;
+  const disableReason = !safeAddress
+    ? 'Add a treasury safe to move funds'
+    : balanceUsd <= 0
+      ? 'No withdrawable balance available'
+      : undefined;
 
   return (
     <div className="bg-white border border-[#101010]/10 rounded-[12px] p-6 space-y-6">
@@ -217,20 +221,6 @@ function CheckingActionsCard({
             {formatUsd(balanceUsd)}
           </p>
         </div>
-        {safeAddressDisplay && (
-          <button
-            type="button"
-            onClick={handleCopyAddress}
-            className="inline-flex items-center gap-2 rounded-full border border-[#101010]/15 bg-white px-3 py-1.5 text-[12px] font-medium text-[#101010] hover:border-[#1B29FF]/30 hover:text-[#1B29FF] transition-colors"
-          >
-            <span>{safeAddressDisplay}</span>
-            {isAddressCopied ? (
-              <Check className="h-3.5 w-3.5" />
-            ) : (
-              <Copy className="h-3.5 w-3.5" />
-            )}
-          </button>
-        )}
       </div>
 
       <div className="flex flex-col sm:flex-row gap-3">
@@ -238,12 +228,8 @@ function CheckingActionsCard({
           <DialogTrigger asChild>
             <Button
               className="flex-1 inline-flex items-center justify-center gap-2 px-5 py-3 text-[15px] font-semibold text-white bg-[#1B29FF] hover:bg-[#1420CC] transition-colors"
-              disabled={!isDemoMode && !hasVirtualAccounts}
-              title={
-                !isDemoMode && !hasVirtualAccounts
-                  ? 'Connect a virtual account to enable transfers'
-                  : undefined
-              }
+              disabled={!isDemoMode && !canInitiateMove}
+              title={!isDemoMode && !canInitiateMove ? disableReason : undefined}
             >
               <ArrowRightCircle className="h-5 w-5" />
               Move Funds
@@ -282,6 +268,48 @@ function CheckingActionsCard({
                   <Building2 className="h-5 w-5 text-[#101010]/60" />
                   Virtual account details
                 </DialogTitle>
+                {safeAddress && (
+                  <div className="mt-6 border-t border-[#101010]/10 pt-4">
+                    <button
+                      type="button"
+                      onClick={() => setShowAdvancedDetails((prev) => !prev)}
+                      className="inline-flex items-center gap-2 text-[12px] font-medium text-[#101010]/70 hover:text-[#1B29FF] transition-colors"
+                    >
+                      {showAdvancedDetails ? 'Hide advanced' : 'Show advanced'} details
+                    </button>
+
+                    {showAdvancedDetails && (
+                      <div className="mt-3 rounded-[10px] border border-[#101010]/10 bg-[#F7F7F2] p-3 text-[12px] text-[#101010]/70">
+                        <p className="uppercase tracking-[0.14em] text-[10px] text-[#101010]/50 mb-2">
+                          Treasury safe address
+                        </p>
+                        <div className="flex items-center justify-between gap-3">
+                          <code className="font-mono text-[11px] text-[#101010]">
+                            {safeAddress}
+                          </code>
+                          <button
+                            type="button"
+                            onClick={handleCopyAddress}
+                            className="inline-flex items-center gap-1 rounded-full border border-[#101010]/15 bg-white px-3 py-1 text-[11px] text-[#101010] hover:border-[#1B29FF]/30 hover:text-[#1B29FF] transition-colors"
+                          >
+                            {isAddressCopied ? (
+                              <>
+                                <Check className="h-3 w-3" /> Copied
+                              </>
+                            ) : (
+                              <>
+                                <Copy className="h-3 w-3" /> Copy
+                              </>
+                            )}
+                          </button>
+                        </div>
+                        <p className="mt-2 text-[11px] text-[#101010]/50">
+                          Use this address only for advanced treasury workflows.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </DialogHeader>
 

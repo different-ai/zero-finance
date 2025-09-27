@@ -154,6 +154,7 @@ Labels: uppercase tracking-[0.14em] text-[11px] text-[#101010]/60
 ### Notes for Dashboard Quality
 
 - Avoid alternating page backgrounds inside the app; contrast should come from card surfaces and typography
+- Hide complex crypto primitives from primary UX flows. Keep deposit addresses, chain selectors, and advanced toggles inside “Advanced” sections or settings panels so banking-first customers aren’t overwhelmed.
 - Keep scroll anchors stable using sticky headers for the top bar and subheader
 - Use `tabular-nums` for KPIs and right-align amounts in tables
 - Prefer subtle elevation via `shadow-premium-subtle` plus a 1px border, not heavy drop shadows
