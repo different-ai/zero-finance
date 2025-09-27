@@ -2,7 +2,7 @@
 
 import { FundsDisplayWithDemo } from '@/app/(authenticated)/dashboard/(bank)/components/dashboard/funds-display-with-demo';
 import { TransactionTabsDemo } from '@/app/(authenticated)/dashboard/(bank)/components/dashboard/transaction-tabs-demo';
-import { SavingsWrapper } from '@/app/(authenticated)/dashboard/(bank)/components/savings-wrapper';
+import SavingsPageWrapper from '@/app/(authenticated)/dashboard/savings/page-wrapper';
 
 // Demo funds component that always shows demo data
 function DemoFunds() {
@@ -74,7 +74,21 @@ export default function DemoPageContent() {
           </div>
 
           {/* Savings/Yield Section */}
-          <SavingsWrapper mode="demo" />
+          <div>
+            <div className="mb-4">
+              <h2 className="font-serif text-[24px] sm:text-[28px] leading-[1.1] tracking-[-0.01em] text-[#101010]">
+                Savings
+              </h2>
+              <p className="mt-1 text-[14px] text-[#101010]/60">
+                Earn 8% APY on your idle cash reserves
+              </p>
+            </div>
+            <div className="bg-white border border-[#101010]/10 rounded-[12px] shadow-[0_2px_8px_rgba(16,16,16,0.04)]">
+              <div className="p-6 sm:p-8">
+                <SavingsPageWrapper mode="demo" />
+              </div>
+            </div>
+          </div>
 
           {/* Transactions Section */}
           <div className="bg-white border border-[#101010]/10 rounded-[12px] shadow-[0_2px_8px_rgba(16,16,16,0.04)]">

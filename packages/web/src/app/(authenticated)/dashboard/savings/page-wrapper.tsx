@@ -10,7 +10,7 @@ import {
   useIsDemoMode,
   type SavingsExperienceMode,
 } from '@/hooks/use-demo-savings';
-import { trpc } from '@/utils/trpc';
+import { trpc, type RouterOutputs } from '@/utils/trpc';
 import { useMemo, useEffect, useState, useRef, useCallback } from 'react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
@@ -36,7 +36,6 @@ import { AnimatedTotalEarnedV2 } from '@/components/animated-total-earned-v2';
 import { toast } from 'sonner';
 import Image from 'next/image';
 import { USDC_ADDRESS } from '@/lib/constants';
-import { ArrowRight } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 const ZERO_LOGO_SRC = '/images/new-logo-bluer.png';
@@ -85,10 +84,14 @@ const insuredPillAnimation = `
 
 export type SavingsPageWrapperProps = {
   mode?: SavingsExperienceMode;
+  initialSafeAddress?: string | null;
+  initialCheckingBalance?: RouterOutputs['safe']['getBalance'] | null;
 };
 
 export default function SavingsPageWrapper({
   mode = 'real',
+  initialSafeAddress = null,
+  initialCheckingBalance = null,
 }: SavingsPageWrapperProps) {
   const isDemoMode = useIsDemoMode(mode);
   const router = useRouter();
@@ -162,14 +165,13 @@ export default function SavingsPageWrapper({
   }, [isDemoActivated]);
 
   // Get safe data
-  const {
-    data: safesData,
-    isLoading: isLoadingSafes,
-    isError: safesError,
-  } = useUserSafes();
+  const safesQuery = useUserSafes();
+  const safesData = safesQuery.data;
+  const safesError = safesQuery.isError;
+  const isLoadingSafes = safesQuery.isLoading && !initialSafeAddress;
 
   const primarySafe = safesData?.[0];
-  const safeAddress = primarySafe?.safeAddress || null;
+  const safeAddress = primarySafe?.safeAddress || initialSafeAddress || null;
 
   // Fetch checking account balance
   const { data: checkingBalance } = trpc.safe.getBalance.useQuery(
@@ -180,12 +182,15 @@ export default function SavingsPageWrapper({
     {
       enabled: !!safeAddress && !isDemoMode,
       refetchInterval: 10000,
+      initialData: initialCheckingBalance ?? undefined,
     },
   );
 
-  const checkingBalanceUsd = checkingBalance
-    ? Number(checkingBalance.balance) / 1e6
+  const effectiveCheckingBalance = checkingBalance ?? initialCheckingBalance;
+  const checkingBalanceUsd = effectiveCheckingBalance
+    ? Number(effectiveCheckingBalance.balance) / 1e6
     : 0;
+  const withdrawableBalanceUsd = isDemoMode ? 2500000 : checkingBalanceUsd;
 
   // Get user profile to check insurance status
   const { data: userProfile } = trpc.user.getProfile.useQuery(undefined, {
@@ -656,46 +661,37 @@ export default function SavingsPageWrapper({
   // Loading state with skeleton
   if (isInitialLoading) {
     return (
-      <div className="min-h-screen bg-[#F7F7F2] animate-in fade-in duration-300">
-        {/* Header Section */}
-        <div className="border-b border-[#101010]/10 bg-white">
-          <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-            <div className="h-3 w-32 bg-[#101010]/5 rounded animate-pulse mb-3" />
-            <div className="h-12 w-96 bg-[#101010]/5 rounded animate-pulse mb-3" />
-            <div className="h-4 w-full max-w-[65ch] bg-[#101010]/5 rounded animate-pulse" />
-          </div>
+      <div className="space-y-8 animate-in fade-in duration-300">
+        <div className="space-y-2">
+          <div className="h-3 w-28 bg-[#101010]/5 rounded animate-pulse" />
+          <div className="h-10 w-64 bg-[#101010]/5 rounded animate-pulse" />
+          <div className="h-4 w-full max-w-[440px] bg-[#101010]/5 rounded animate-pulse" />
         </div>
 
-        {/* Main Content Skeleton */}
-        <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <div className="space-y-12">
-            {/* Portfolio Overview Skeleton */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-px bg-[#101010]/10">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="bg-white p-6">
-                  <div className="h-3 w-24 bg-[#101010]/5 rounded animate-pulse mb-2" />
-                  <div className="h-8 w-32 bg-[#101010]/5 rounded animate-pulse" />
-                </div>
-              ))}
-            </div>
-
-            {/* Yield Counter Skeleton */}
-            <div className="bg-white border border-[#101010]/10 p-8">
-              <div className="h-3 w-48 bg-[#101010]/5 rounded animate-pulse mb-6" />
-              <div className="h-16 w-64 bg-[#101010]/5 rounded animate-pulse" />
-            </div>
-
-            {/* Vaults Table Skeleton */}
-            <div className="bg-white border border-[#101010]/10">
-              <div className="p-4 border-b border-[#101010]/10 bg-[#F7F7F2]">
-                <div className="h-4 w-full bg-[#101010]/5 rounded animate-pulse" />
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-px bg-[#101010]/10 rounded-lg overflow-hidden">
+            {[1, 2, 3].map((item) => (
+              <div key={item} className="bg-white p-6 space-y-3">
+                <div className="h-3 w-20 bg-[#101010]/5 rounded animate-pulse" />
+                <div className="h-8 w-28 bg-[#101010]/5 rounded animate-pulse" />
               </div>
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="p-4 border-b border-[#101010]/5">
-                  <div className="h-6 w-full bg-[#101010]/5 rounded animate-pulse" />
-                </div>
-              ))}
+            ))}
+          </div>
+
+          <div className="bg-white border border-[#101010]/10 rounded-lg p-6 space-y-4">
+            <div className="h-3 w-36 bg-[#101010]/5 rounded animate-pulse" />
+            <div className="h-12 w-52 bg-[#101010]/5 rounded animate-pulse" />
+          </div>
+
+          <div className="bg-white border border-[#101010]/10 rounded-lg">
+            <div className="p-4 border-b border-[#101010]/10 bg-[#F7F7F2]">
+              <div className="h-4 w-full bg-[#101010]/5 rounded animate-pulse" />
             </div>
+            {[1, 2, 3].map((item) => (
+              <div key={item} className="p-4 border-b border-[#101010]/5">
+                <div className="h-6 w-full bg-[#101010]/5 rounded animate-pulse" />
+              </div>
+            ))}
           </div>
         </div>
       </div>
@@ -705,9 +701,9 @@ export default function SavingsPageWrapper({
   // Show activation prompt for users without a safe (new users)
   if (!safeAddress && !isDemoMode) {
     return (
-      <div className="bg-white border border-[#101010]/10 p-12 text-center">
+      <div className="py-10 text-center">
         <Wallet className="h-12 w-12 text-[#101010]/40 mx-auto mb-6" />
-        <h2 className="font-serif text-[36px] leading-[1.1] text-[#101010] mb-3">
+        <h2 className="font-serif text-[32px] leading-[1.1] text-[#101010] mb-3">
           Activate Your Savings Account
         </h2>
         <p className="text-[16px] text-[#101010]/70 mb-8 max-w-[400px] mx-auto">
@@ -726,106 +722,85 @@ export default function SavingsPageWrapper({
   // Error state only for actual errors
   if (safesError) {
     return (
-      <div className="bg-white border border-[#101010]/10 p-8">
-        <Alert className="border-[#101010]/10">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription className="text-[#101010]/70">
-            Unable to load savings data. Please try again later.
-          </AlertDescription>
-        </Alert>
-      </div>
+      <Alert className="border-[#101010]/10">
+        <AlertCircle className="h-4 w-4" />
+        <AlertDescription className="text-[#101010]/70">
+          Unable to load savings data. Please try again later.
+        </AlertDescription>
+      </Alert>
     );
   }
 
   return (
-    <div className="">
-      {/* Main Content */}
-      <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Not Initialized State */}
-        {!isEarnModuleInitialized ? (
-          isDemoMode ? (
-            isActivatingDemo ? (
-              <div className="bg-white border border-[#101010]/10 p-12">
-                <div className="max-w-md mx-auto space-y-8">
-                  <div className="flex justify-center">
-                    <div className="relative">
-                      <div className="absolute inset-0 bg-[#1B29FF]/20 rounded-full animate-ping" />
-                      <div className="relative bg-[#1B29FF]/10 rounded-full p-4">
-                        <Sparkles className="h-8 w-8 text-[#1B29FF] animate-pulse" />
-                      </div>
+    <div className="space-y-10">
+      {/* Not Initialized State */}
+      {!isEarnModuleInitialized ? (
+        isDemoMode ? (
+          isActivatingDemo ? (
+            <div className="bg-white border border-[#101010]/10 p-12">
+              <div className="max-w-md mx-auto space-y-8">
+                <div className="flex justify-center">
+                  <div className="relative">
+                    <div className="absolute inset-0 bg-[#1B29FF]/20 rounded-full animate-ping" />
+                    <div className="relative bg-[#1B29FF]/10 rounded-full p-4">
+                      <Sparkles className="h-8 w-8 text-[#1B29FF] animate-pulse" />
                     </div>
-                  </div>
-
-                  <div className="space-y-4">
-                    <h3 className="font-serif text-[24px] text-center text-[#101010]">
-                      Activating Your Savings
-                    </h3>
-
-                    <div className="space-y-3">
-                      {activationSteps.map((step, index) => (
-                        <div
-                          key={step}
-                          className="flex items-center gap-3 transition-all duration-300"
-                          style={{
-                            opacity: index <= activationStep ? 1 : 0.3,
-                            transform:
-                              index <= activationStep
-                                ? 'translateX(0)'
-                                : 'translateX(-10px)',
-                          }}
-                        >
-                          <div className="flex-shrink-0">
-                            {index < activationStep ? (
-                              <CheckCircle2 className="h-5 w-5 text-green-500" />
-                            ) : index === activationStep ? (
-                              <div className="h-5 w-5 border-2 border-[#1B29FF] rounded-full border-t-transparent animate-spin" />
-                            ) : (
-                              <div className="h-5 w-5 border-2 border-[#101010]/20 rounded-full" />
-                            )}
-                          </div>
-                          <span
-                            className={`text-[14px] ${index <= activationStep ? 'text-[#101010]' : 'text-[#101010]/40'}`}
-                          >
-                            {step}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-
-                    <div className="relative h-2 bg-[#101010]/5 rounded-full overflow-hidden">
-                      <div
-                        className="absolute inset-y-0 left-0 bg-gradient-to-r from-[#1B29FF] to-[#1B29FF]/80 rounded-full transition-all duration-500 ease-out"
-                        style={{
-                          width: `${((activationStep + 1) / activationSteps.length) * 100}%`,
-                        }}
-                      >
-                        <div className="absolute inset-0 bg-white/30 animate-shimmer" />
-                      </div>
-                    </div>
-
-                    <p className="text-center text-[12px] text-[#101010]/50">
-                      Setting up your high-yield savings account...
-                    </p>
                   </div>
                 </div>
+
+                <div className="space-y-4">
+                  <h3 className="font-serif text-[24px] text-center text-[#101010]">
+                    Activating Your Savings
+                  </h3>
+
+                  <div className="space-y-3">
+                    {activationSteps.map((step, index) => (
+                      <div
+                        key={step}
+                        className="flex items-center gap-3 transition-all duration-300"
+                        style={{
+                          opacity: index <= activationStep ? 1 : 0.3,
+                          transform:
+                            index <= activationStep
+                              ? 'translateX(0)'
+                              : 'translateX(-10px)',
+                        }}
+                      >
+                        <div className="flex-shrink-0">
+                          {index < activationStep ? (
+                            <CheckCircle2 className="h-5 w-5 text-green-500" />
+                          ) : index === activationStep ? (
+                            <div className="h-5 w-5 border-2 border-[#1B29FF] rounded-full border-t-transparent animate-spin" />
+                          ) : (
+                            <div className="h-5 w-5 border-2 border-[#101010]/20 rounded-full" />
+                          )}
+                        </div>
+                        <span
+                          className={`text-[14px] ${index <= activationStep ? 'text-[#101010]' : 'text-[#101010]/40'}`}
+                        >
+                          {step}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="relative h-2 bg-[#101010]/5 rounded-full overflow-hidden">
+                    <div
+                      className="absolute inset-y-0 left-0 bg-gradient-to-r from-[#1B29FF] to-[#1B29FF]/80 rounded-full transition-all duration-500 ease-out"
+                      style={{
+                        width: `${((activationStep + 1) / activationSteps.length) * 100}%`,
+                      }}
+                    >
+                      <div className="absolute inset-0 bg-white/30 animate-shimmer" />
+                    </div>
+                  </div>
+
+                  <p className="text-center text-[12px] text-[#101010]/50">
+                    Setting up your high-yield savings account...
+                  </p>
+                </div>
               </div>
-            ) : (
-              <div className="bg-white border border-[#101010]/10 p-12 text-center">
-                <Wallet className="h-12 w-12 text-[#101010]/40 mx-auto mb-6" />
-                <h2 className="font-serif text-[36px] leading-[1.1] text-[#101010] mb-3">
-                  Activate Savings Account
-                </h2>
-                <p className="text-[16px] text-[#101010]/70 mb-8 max-w-[400px] mx-auto">
-                  Start earning up to 8% APY on your business funds.
-                </p>
-                <Button
-                  onClick={handleDemoActivate}
-                  className="bg-[#1B29FF] hover:bg-[#1B29FF]/90 transition-all hover:scale-[1.02]"
-                >
-                  Activate Savings
-                </Button>
-              </div>
-            )
+            </div>
           ) : (
             <div className="bg-white border border-[#101010]/10 p-12 text-center">
               <Wallet className="h-12 w-12 text-[#101010]/40 mx-auto mb-6" />
@@ -835,309 +810,553 @@ export default function SavingsPageWrapper({
               <p className="text-[16px] text-[#101010]/70 mb-8 max-w-[400px] mx-auto">
                 Start earning up to 8% APY on your business funds.
               </p>
-              <OpenSavingsAccountButton
-                safeAddress={safeAddress || undefined}
-              />
+              <Button
+                onClick={handleDemoActivate}
+                className="bg-[#1B29FF] hover:bg-[#1B29FF]/90 transition-all hover:scale-[1.02]"
+              >
+                Activate Savings
+              </Button>
             </div>
           )
         ) : (
-          <div className="space-y-12">
-            {/* Portfolio Overview - Grid Layout */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-px bg-[#101010]/10">
-              <div className="bg-white p-6">
-                <p className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60 mb-2">
-                  Savings Balance
-                </p>
-                <p className="font-serif text-[28px] sm:text-[32px] leading-[1.1] tabular-nums text-[#101010]">
-                  {formatUsd(totalSaved)}
-                </p>
-              </div>
-
-              <div className="bg-white p-6">
-                <p className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60 mb-2">
-                  Earnings (Live)
-                </p>
-                <p className="font-serif text-[28px] sm:text-[32px] leading-[1.1] tabular-nums text-[#1B29FF]">
-                  {isDemoMode ? (
-                    <AnimatedTotalEarned
-                      initialEarned={animatedInitialEarned}
-                      apy={averageInstantApy}
-                      balance={animatedBalance}
-                    />
-                  ) : safeAddress ? (
-                    <AnimatedTotalEarnedV2
-                      safeAddress={safeAddress}
-                      fallbackApy={fallbackApyPercent}
-                      fallbackBalance={totalSaved}
-                      className="inline-block"
-                    />
-                  ) : (
-                    <span className="text-[#101010]/40">Calculating...</span>
-                  )}
-                </p>
-              </div>
+          <div className="bg-white border border-[#101010]/10 p-12 text-center">
+            <Wallet className="h-12 w-12 text-[#101010]/40 mx-auto mb-6" />
+            <h2 className="font-serif text-[36px] leading-[1.1] text-[#101010] mb-3">
+              Activate Savings Account
+            </h2>
+            <p className="text-[16px] text-[#101010]/70 mb-8 max-w-[400px] mx-auto">
+              Start earning up to 8% APY on your business funds.
+            </p>
+            <OpenSavingsAccountButton safeAddress={safeAddress || undefined} />
+          </div>
+        )
+      ) : (
+        <div className="space-y-12">
+          {/* Portfolio Overview - Grid Layout */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-px bg-[#101010]/10">
+            <div className="bg-white p-6">
+              <p className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60 mb-2">
+                Withdrawable Balance
+              </p>
+              <p className="font-serif text-[28px] sm:text-[32px] leading-[1.1] tabular-nums text-[#101010]">
+                {formatUsd(withdrawableBalanceUsd)}
+              </p>
             </div>
 
-            {showYieldCorrectionBanner && (
-              <div className="bg-[#1B29FF]/5 border border-[#1B29FF]/40 rounded-lg p-5 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                <div className="space-y-1">
-                  <p className="text-[14px] font-medium text-[#101010]">
-                    Earnings counter resynced
-                  </p>
-                  <p className="text-[13px] text-[#101010]/70">
-                    {hasLedgerShortfallCorrection
-                      ? 'We detected an out-of-sync ledger entry and reset live earnings to match your on-chain balance.'
-                      : 'We resolved a rounding mismatch on your live earnings counter.'}
-                  </p>
-                </div>
-                <div className="flex gap-3">
-                  <Button
-                    onClick={triggerVaultRefresh}
-                    className="bg-[#1B29FF] hover:bg-[#1B29FF]/90 text-white"
-                  >
-                    Refresh now
-                  </Button>
-                </div>
-              </div>
-            )}
+            <div className="bg-white p-6">
+              <p className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60 mb-2">
+                Savings Balance
+              </p>
+              <p className="font-serif text-[28px] sm:text-[32px] leading-[1.1] tabular-nums text-[#101010]">
+                {formatUsd(totalSaved)}
+              </p>
+            </div>
 
-            {/* Live Yield Counter - Premium Card */}
-            {totalSaved > 0 && (
-              <div className="bg-white border border-[#101010]/10 p-8">
-                <p className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60 mb-6">
-                  Real-Time Yield Accumulation
+            <div className="bg-white p-6">
+              <p className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60 mb-2">
+                Earnings (Live)
+              </p>
+              <p className="font-serif text-[28px] sm:text-[32px] leading-[1.1] tabular-nums text-[#1B29FF]">
+                {isDemoMode ? (
+                  <AnimatedTotalEarned
+                    initialEarned={animatedInitialEarned}
+                    apy={averageInstantApy}
+                    balance={animatedBalance}
+                  />
+                ) : safeAddress ? (
+                  <AnimatedTotalEarnedV2
+                    safeAddress={safeAddress}
+                    fallbackApy={fallbackApyPercent}
+                    fallbackBalance={totalSaved}
+                    className="inline-block"
+                  />
+                ) : (
+                  <span className="text-[#101010]/40">Calculating...</span>
+                )}
+              </p>
+            </div>
+          </div>
+
+          {showYieldCorrectionBanner && (
+            <div className="bg-[#1B29FF]/5 border border-[#1B29FF]/40 rounded-lg p-5 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="space-y-1">
+                <p className="text-[14px] font-medium text-[#101010]">
+                  Earnings counter resynced
                 </p>
-                <AnimatedYieldCounter
-                  principal={totalSaved}
-                  apy={averageApy}
-                  showDaily={true}
-                  showMonthly={true}
-                  showYearly={true}
-                  formatOptions={{
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 6,
-                  }}
-                />
-              </div>
-            )}
-
-            {/* Vaults Section - Editorial Table Style */}
-            <div id="vaults-section">
-              <div className="mb-8">
-                <p className="uppercase tracking-[0.18em] text-[11px] text-[#101010]/60">
-                  Available Strategies
+                <p className="text-[13px] text-[#101010]/70">
+                  {hasLedgerShortfallCorrection
+                    ? 'We detected an out-of-sync ledger entry and reset live earnings to match your on-chain balance.'
+                    : 'We resolved a rounding mismatch on your live earnings counter.'}
                 </p>
               </div>
+              <div className="flex gap-3">
+                <Button
+                  onClick={triggerVaultRefresh}
+                  className="bg-[#1B29FF] hover:bg-[#1B29FF]/90 text-white"
+                >
+                  Refresh now
+                </Button>
+              </div>
+            </div>
+          )}
 
-              {/* Vault Table - Responsive */}
-              <div className="bg-white border border-[#101010]/10 overflow-x-auto">
-                {/* Desktop Table View */}
-                <div className="hidden lg:block min-w-[800px]">
-                  {/* Table Header */}
-                  <div className="grid grid-cols-12 gap-3 p-4 border-b border-[#101010]/10 bg-[#F7F7F2]">
-                    <div className="col-span-5">
-                      <p className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60">
-                        Vault Name
-                      </p>
-                    </div>
-                    <div className="col-span-2 text-right">
-                      <p className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60">
-                        APY
-                      </p>
-                    </div>
-                    <div className="col-span-2 text-right">
-                      <p className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60">
-                        Balance
-                      </p>
-                    </div>
-                    <div className="col-span-3 text-right">
-                      <p className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60">
-                        Actions
-                      </p>
-                    </div>
+          {/* Live Yield Counter - Premium Card */}
+          {totalSaved > 0 && (
+            <div className="bg-white border border-[#101010]/10 p-8">
+              <p className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60 mb-6">
+                Real-Time Yield Accumulation
+              </p>
+              <AnimatedYieldCounter
+                principal={totalSaved}
+                apy={averageApy}
+                showDaily={true}
+                showMonthly={true}
+                showYearly={true}
+                formatOptions={{
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 6,
+                }}
+              />
+            </div>
+          )}
+
+          {/* Vaults Section - Editorial Table Style */}
+          <div id="vaults-section">
+            <div className="mb-8">
+              <p className="uppercase tracking-[0.18em] text-[11px] text-[#101010]/60">
+                Available Strategies
+              </p>
+            </div>
+
+            {/* Vault Table - Responsive */}
+            <div className="bg-white border border-[#101010]/10 overflow-x-auto">
+              {/* Desktop Table View */}
+              <div className="hidden lg:block min-w-[800px]">
+                {/* Table Header */}
+                <div className="grid grid-cols-12 gap-3 p-4 border-b border-[#101010]/10 bg-[#F7F7F2]">
+                  <div className="col-span-5">
+                    <p className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60">
+                      Vault Name
+                    </p>
                   </div>
+                  <div className="col-span-2 text-right">
+                    <p className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60">
+                      APY
+                    </p>
+                  </div>
+                  <div className="col-span-2 text-right">
+                    <p className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60">
+                      Balance
+                    </p>
+                  </div>
+                  <div className="col-span-3 text-right">
+                    <p className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60">
+                      Actions
+                    </p>
+                  </div>
+                </div>
 
-                  {/* Vault Rows */}
-                  {displayVaults.map((vault, index) => {
-                    const normalizedAddress = vault.address.toLowerCase();
-                    const isSelected =
-                      selectedVault.vaultAddress?.toLowerCase() ===
-                      normalizedAddress;
-                    const expandedAction = isSelected
-                      ? selectedVault.action
-                      : null;
-                    const isExpanding = expandingVault === normalizedAddress;
-                    const isCollapsing = collapsingVault === normalizedAddress;
+                {/* Vault Rows */}
+                {displayVaults.map((vault, index) => {
+                  const normalizedAddress = vault.address.toLowerCase();
+                  const isSelected =
+                    selectedVault.vaultAddress?.toLowerCase() ===
+                    normalizedAddress;
+                  const expandedAction = isSelected
+                    ? selectedVault.action
+                    : null;
+                  const isExpanding = expandingVault === normalizedAddress;
+                  const isCollapsing = collapsingVault === normalizedAddress;
 
-                    return (
+                  return (
+                    <div
+                      key={vault.id}
+                      className={cn(
+                        'group relative overflow-hidden',
+                        index !== displayVaults.length - 1 &&
+                          !isSelected &&
+                          'border-b border-[#101010]/10',
+                      )}
+                    >
                       <div
-                        key={vault.id}
                         className={cn(
-                          'group relative overflow-hidden',
-                          index !== displayVaults.length - 1 &&
-                            !isSelected &&
-                            'border-b border-[#101010]/10',
+                          'grid grid-cols-12 gap-3 p-4 items-center transition-all duration-200 relative z-10',
+                          vault.isInsured
+                            ? 'bg-[#1B29FF]/5 hover:bg-[#1B29FF]/10 border-l-2 border-[#1B29FF]'
+                            : 'hover:bg-[#F7F7F2]/30',
+                          isSelected &&
+                            (vault.isInsured
+                              ? 'ring-1 ring-[#1B29FF]/30 bg-[#1B29FF]/12'
+                              : 'bg-[#F7F7F2]/50'),
+                          (isExpanding || isCollapsing) && 'transition-none',
                         )}
                       >
-                        <div
-                          className={cn(
-                            'grid grid-cols-12 gap-3 p-4 items-center transition-all duration-200 relative z-10',
-                            vault.isInsured
-                              ? 'bg-[#1B29FF]/5 hover:bg-[#1B29FF]/10 border-l-2 border-[#1B29FF]'
-                              : 'hover:bg-[#F7F7F2]/30',
-                            isSelected &&
-                              (vault.isInsured
-                                ? 'ring-1 ring-[#1B29FF]/30 bg-[#1B29FF]/12'
-                                : 'bg-[#F7F7F2]/50'),
-                            (isExpanding || isCollapsing) && 'transition-none',
-                          )}
-                        >
-                          <div className="col-span-5">
-                            <div className="flex items-start gap-2">
-                              <div className="min-w-0">
-                                <div className="flex flex-wrap items-center gap-2">
-                                  {vault.isAuto && (
-                                    <span className="px-1.5 py-0.5 bg-[#1B29FF] text-white text-[9px] uppercase tracking-wider shrink-0">
-                                      Auto
-                                    </span>
-                                  )}
-                                  <p className="text-[15px] font-medium text-[#101010] truncate">
-                                    {vault.name}
-                                  </p>
-                                  {vault.isInsured && (
-                                    <span className="insured-pill animate-glow inline-flex items-center gap-1 px-2 py-1 rounded-full bg-[#1B29FF]/15 text-[#1B29FF] text-[10px] font-semibold uppercase tracking-[0.18em]">
-                                      <Image
-                                        src={ZERO_LOGO_SRC}
-                                        alt="0 Finance insured"
-                                        width={14}
-                                        height={14}
-                                        className="h-3.5 w-3.5"
-                                      />
-                                      Insured
-                                    </span>
-                                  )}
-                                </div>
-                                <p className="text-[12px] text-[#101010]/60 truncate mt-1">
-                                  {vault.curator}
-                                  {vault.risk ? ` · ${vault.risk}` : ''}
-                                  {vault.isContactOnly &&
-                                    ' · Coverage arranged via 0 Finance'}
+                        <div className="col-span-5">
+                          <div className="flex items-start gap-2">
+                            <div className="min-w-0">
+                              <div className="flex flex-wrap items-center gap-2">
+                                {vault.isAuto && (
+                                  <span className="px-1.5 py-0.5 bg-[#1B29FF] text-white text-[9px] uppercase tracking-wider shrink-0">
+                                    Auto
+                                  </span>
+                                )}
+                                <p className="text-[15px] font-medium text-[#101010] truncate">
+                                  {vault.name}
                                 </p>
+                                {vault.isInsured && (
+                                  <span className="insured-pill animate-glow inline-flex items-center gap-1 px-2 py-1 rounded-full bg-[#1B29FF]/15 text-[#1B29FF] text-[10px] font-semibold uppercase tracking-[0.18em]">
+                                    <Image
+                                      src={ZERO_LOGO_SRC}
+                                      alt="0 Finance insured"
+                                      width={14}
+                                      height={14}
+                                      className="h-3.5 w-3.5"
+                                    />
+                                    Insured
+                                  </span>
+                                )}
                               </div>
-                            </div>
-                          </div>
-
-                          <div className="col-span-2 text-right">
-                            <p className="text-[18px] font-medium tabular-nums text-[#1B29FF]">
-                              {vault.apy.toFixed(1)}%
-                            </p>
-                          </div>
-
-                          <div className="col-span-2 text-right">
-                            <p className="text-[16px] tabular-nums text-[#101010]">
-                              {vault.isContactOnly
-                                ? '—'
-                                : formatUsd(vault.balanceUsd)}
-                            </p>
-                            {vault.earnedUsd > 0 && !vault.isContactOnly && (
-                              <p className="text-[12px] tabular-nums text-[#1B29FF]">
-                                +{formatUsd(vault.earnedUsd)}
+                              <p className="text-[12px] text-[#101010]/60 truncate mt-1">
+                                {vault.curator}
+                                {vault.risk ? ` · ${vault.risk}` : ''}
+                                {vault.isContactOnly &&
+                                  ' · Coverage arranged via 0 Finance'}
                               </p>
-                            )}
-                          </div>
-
-                          <div className="col-span-3 flex justify-end gap-1">
-                            {vault.isContactOnly ? (
-                              <button
-                                onClick={() =>
-                                  toggleVaultAction('insure', vault)
-                                }
-                                className={cn(
-                                  'px-3 py-2 text-[12px] font-medium text-white bg-[#1B29FF] hover:bg-[#1420CC] transition-colors',
-                                  expandedAction === 'insure' &&
-                                    isSelected &&
-                                    'ring-2 ring-offset-1 ring-[#1B29FF]/40',
-                                )}
-                              >
-                                Connect with coverage
-                              </button>
-                            ) : isDemoMode ? (
-                              <>
-                                <button
-                                  onClick={() =>
-                                    toast(
-                                      'Sign in to deposit funds from your real account.',
-                                    )
-                                  }
-                                  className="px-2.5 py-1 text-[12px] text-white bg-[#1B29FF] hover:bg-[#1420CC] transition-colors"
-                                >
-                                  Deposit
-                                </button>
-                                <button
-                                  onClick={() =>
-                                    toast(
-                                      'Sign in to withdraw from live vault positions.',
-                                    )
-                                  }
-                                  className="px-2.5 py-1 text-[12px] text-[#101010] border border-[#101010]/10 hover:bg-[#F7F7F2] transition-colors"
-                                >
-                                  Withdraw
-                                </button>
-                                {vault.appUrl && (
-                                  <a
-                                    href={vault.appUrl}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="px-2 py-1 text-[#101010]/60 hover:text-[#101010] transition-colors flex items-center"
-                                  >
-                                    <ExternalLink className="h-3 w-3" />
-                                  </a>
-                                )}
-                              </>
-                            ) : (
-                              <>
-                                <button
-                                  onClick={() =>
-                                    toggleVaultAction('deposit', vault)
-                                  }
-                                  className={cn(
-                                    'px-2.5 py-1 text-[12px] text-white transition-colors',
-                                    expandedAction === 'deposit' && isSelected
-                                      ? 'bg-[#1420CC]'
-                                      : 'bg-[#1B29FF] hover:bg-[#1420CC]',
-                                  )}
-                                >
-                                  Deposit
-                                </button>
-                                <button
-                                  onClick={() =>
-                                    toggleVaultAction('withdraw', vault)
-                                  }
-                                  className={cn(
-                                    'px-2.5 py-1 text-[12px] text-[#101010] border border-[#101010]/10 transition-colors',
-                                    expandedAction === 'withdraw' && isSelected
-                                      ? 'bg-[#F7F7F2]'
-                                      : 'bg-white hover:bg-[#F7F7F2]',
-                                  )}
-                                >
-                                  Withdraw
-                                </button>
-                                {vault.appUrl && (
-                                  <a
-                                    href={vault.appUrl}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="px-2 py-1 text-[#101010]/60 hover:text-[#101010] transition-colors flex items-center"
-                                  >
-                                    <ExternalLink className="h-3 w-3" />
-                                  </a>
-                                )}
-                              </>
-                            )}
+                            </div>
                           </div>
                         </div>
 
-                        {/* Accordion Content - Clean Integrated Design */}
+                        <div className="col-span-2 text-right">
+                          <p className="text-[18px] font-medium tabular-nums text-[#1B29FF]">
+                            {vault.apy.toFixed(1)}%
+                          </p>
+                        </div>
+
+                        <div className="col-span-2 text-right">
+                          <p className="text-[16px] tabular-nums text-[#101010]">
+                            {vault.isContactOnly
+                              ? '—'
+                              : formatUsd(vault.balanceUsd)}
+                          </p>
+                          {vault.earnedUsd > 0 && !vault.isContactOnly && (
+                            <p className="text-[12px] tabular-nums text-[#1B29FF]">
+                              +{formatUsd(vault.earnedUsd)}
+                            </p>
+                          )}
+                        </div>
+
+                        <div className="col-span-3 flex justify-end gap-1">
+                          {vault.isContactOnly ? (
+                            <button
+                              onClick={() => toggleVaultAction('insure', vault)}
+                              className={cn(
+                                'px-3 py-2 text-[12px] font-medium text-white bg-[#1B29FF] hover:bg-[#1420CC] transition-colors',
+                                expandedAction === 'insure' &&
+                                  isSelected &&
+                                  'ring-2 ring-offset-1 ring-[#1B29FF]/40',
+                              )}
+                            >
+                              Connect with coverage
+                            </button>
+                          ) : isDemoMode ? (
+                            <>
+                              <button
+                                onClick={() =>
+                                  toast(
+                                    'Sign in to deposit funds from your real account.',
+                                  )
+                                }
+                                className="px-2.5 py-1 text-[12px] text-white bg-[#1B29FF] hover:bg-[#1420CC] transition-colors"
+                              >
+                                Deposit
+                              </button>
+                              <button
+                                onClick={() =>
+                                  toast(
+                                    'Sign in to withdraw from live vault positions.',
+                                  )
+                                }
+                                className="px-2.5 py-1 text-[12px] text-[#101010] border border-[#101010]/10 hover:bg-[#F7F7F2] transition-colors"
+                              >
+                                Withdraw
+                              </button>
+                              {vault.appUrl && (
+                                <a
+                                  href={vault.appUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="px-2 py-1 text-[#101010]/60 hover:text-[#101010] transition-colors flex items-center"
+                                >
+                                  <ExternalLink className="h-3 w-3" />
+                                </a>
+                              )}
+                            </>
+                          ) : (
+                            <>
+                              <button
+                                onClick={() =>
+                                  toggleVaultAction('deposit', vault)
+                                }
+                                className={cn(
+                                  'px-2.5 py-1 text-[12px] text-white transition-colors',
+                                  expandedAction === 'deposit' && isSelected
+                                    ? 'bg-[#1420CC]'
+                                    : 'bg-[#1B29FF] hover:bg-[#1420CC]',
+                                )}
+                              >
+                                Deposit
+                              </button>
+                              <button
+                                onClick={() =>
+                                  toggleVaultAction('withdraw', vault)
+                                }
+                                className={cn(
+                                  'px-2.5 py-1 text-[12px] text-[#101010] border border-[#101010]/10 transition-colors',
+                                  expandedAction === 'withdraw' && isSelected
+                                    ? 'bg-[#F7F7F2]'
+                                    : 'bg-white hover:bg-[#F7F7F2]',
+                                )}
+                              >
+                                Withdraw
+                              </button>
+                              {vault.appUrl && (
+                                <a
+                                  href={vault.appUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="px-2 py-1 text-[#101010]/60 hover:text-[#101010] transition-colors flex items-center"
+                                >
+                                  <ExternalLink className="h-3 w-3" />
+                                </a>
+                              )}
+                            </>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Accordion Content - Clean Integrated Design */}
+                      {(expandedAction === 'insure' && isSelected) ||
+                      (!isDemoMode && expandedAction && isSelected) ? (
+                        <div
+                          className={cn(
+                            'transition-all duration-300 ease-out overflow-hidden',
+                            expandedAction && isSelected
+                              ? 'max-h-[800px] opacity-100'
+                              : 'max-h-0 opacity-0',
+                            isExpanding &&
+                              'animate-in fade-in slide-in-from-top-1',
+                          )}
+                        >
+                          <div className="px-4 pb-4 bg-[#F7F7F2]/50">
+                            <div className="bg-white border border-[#101010]/10 p-5 sm:p-6">
+                              {expandedAction === 'insure' && isSelected ? (
+                                <InsuranceContactPanel />
+                              ) : expandedAction === 'deposit' && isSelected ? (
+                                <DepositEarnCard
+                                  key={`deposit-${vault.address}`}
+                                  safeAddress={safeAddress as Address}
+                                  vaultAddress={vault.address as Address}
+                                  onDepositSuccess={handleDepositSuccess}
+                                />
+                              ) : expandedAction === 'withdraw' &&
+                                isSelected ? (
+                                <WithdrawEarnCard
+                                  key={`withdraw-${vault.address}`}
+                                  safeAddress={safeAddress as Address}
+                                  vaultAddress={vault.address as Address}
+                                  onWithdrawSuccess={handleWithdrawSuccess}
+                                />
+                              ) : null}
+                            </div>
+                          </div>
+                        </div>
+                      ) : null}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Mobile Card View */}
+              <div className="lg:hidden">
+                {displayVaults.map((vault, index) => {
+                  const normalizedAddress = vault.address.toLowerCase();
+                  const isSelected =
+                    selectedVault.vaultAddress?.toLowerCase() ===
+                    normalizedAddress;
+                  const expandedAction = isSelected
+                    ? selectedVault.action
+                    : null;
+                  const isExpanding = expandingVault === normalizedAddress;
+                  const isCollapsing = collapsingVault === normalizedAddress;
+
+                  return (
+                    <div
+                      key={vault.id}
+                      className={cn(
+                        'relative overflow-hidden transition-all duration-200',
+                        index !== displayVaults.length - 1 &&
+                          !isSelected &&
+                          'border-b border-[#101010]/5',
+                      )}
+                    >
+                      <div
+                        className={cn(
+                          'p-4 space-y-3 transition-all duration-200',
+                          vault.isInsured ? 'bg-[#1B29FF]/10' : 'bg-white',
+                          isSelected &&
+                            (vault.isInsured
+                              ? 'ring-1 ring-[#1B29FF]/40 bg-[#1B29FF]/14'
+                              : 'bg-[#F7F7F2]/40'),
+                          (isExpanding || isCollapsing) && 'transition-none',
+                        )}
+                      >
+                        {/* Vault Header */}
+                        <div className="flex items-start justify-between">
+                          <div className="flex items-start gap-2">
+                            <div className="flex flex-col gap-1">
+                              <div className="flex flex-wrap items-center gap-2">
+                                {vault.isAuto && (
+                                  <span className="px-1.5 py-0.5 bg-[#1B29FF] text-white text-[9px] uppercase tracking-wider">
+                                    Auto
+                                  </span>
+                                )}
+                                <p className="text-[15px] font-medium text-[#101010]">
+                                  {vault.name}
+                                </p>
+                                {vault.isInsured && (
+                                  <span className="insured-pill animate-glow inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#1B29FF]/15 text-[#1B29FF] text-[10px] font-semibold uppercase tracking-[0.18em]">
+                                    <Image
+                                      src={ZERO_LOGO_SRC}
+                                      alt="0 Finance insured"
+                                      width={14}
+                                      height={14}
+                                      className="h-3.5 w-3.5"
+                                    />
+                                    Insured
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-[12px] text-[#101010]/60">
+                                {vault.curator}
+                                {vault.risk ? ` · ${vault.risk}` : ''}
+                                {vault.isContactOnly &&
+                                  ' · Coverage arranged via 0 Finance'}
+                              </p>
+                            </div>
+                          </div>
+                          <p className="text-[18px] font-medium tabular-nums text-[#1B29FF]">
+                            {vault.apy.toFixed(1)}%
+                          </p>
+                        </div>
+
+                        {/* Vault Stats */}
+                        <div className="flex justify-between text-[14px]">
+                          <span className="text-[#101010]/60">Balance</span>
+                          <span className="tabular-nums text-[#101010]">
+                            {vault.isContactOnly
+                              ? '—'
+                              : formatUsd(vault.balanceUsd)}
+                          </span>
+                        </div>
+                        {vault.earnedUsd > 0 && !vault.isContactOnly && (
+                          <div className="flex justify-between text-[14px]">
+                            <span className="text-[#101010]/60">Earned</span>
+                            <span className="tabular-nums text-[#1B29FF]">
+                              +{formatUsd(vault.earnedUsd)}
+                            </span>
+                          </div>
+                        )}
+
+                        {/* Actions */}
+                        <div className="flex gap-2 pt-2">
+                          {vault.isContactOnly ? (
+                            <button
+                              onClick={() => toggleVaultAction('insure', vault)}
+                              className={cn(
+                                'flex-1 px-3 py-2 text-[13px] text-white bg-[#1B29FF] hover:bg-[#1420CC] transition-colors',
+                                expandedAction === 'insure' &&
+                                  isSelected &&
+                                  'ring-2 ring-offset-1 ring-[#1B29FF]/40',
+                              )}
+                            >
+                              Connect with coverage
+                            </button>
+                          ) : isDemoMode ? (
+                            <>
+                              <button
+                                onClick={() =>
+                                  toast(
+                                    'Sign in to deposit funds from your real account.',
+                                  )
+                                }
+                                className="flex-1 px-3 py-2 text-[13px] text-white bg-[#1B29FF] hover:bg-[#1420CC] transition-colors"
+                              >
+                                Deposit
+                              </button>
+                              <button
+                                onClick={() =>
+                                  toast(
+                                    'Sign in to withdraw from live vault positions.',
+                                  )
+                                }
+                                className="flex-1 px-3 py-2 text-[13px] text-[#101010] border border-[#101010]/10 hover:bg-[#F7F7F2] transition-colors"
+                              >
+                                Withdraw
+                              </button>
+                              {vault.appUrl && (
+                                <a
+                                  href={vault.appUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="px-3 py-2 text-[13px] text-[#101010]/60 hover:text-[#101010] border border-[#101010]/10 hover:bg-[#F7F7F2] transition-colors flex items-center justify-center"
+                                >
+                                  <ExternalLink className="h-3 w-3" />
+                                </a>
+                              )}
+                            </>
+                          ) : (
+                            <>
+                              <button
+                                onClick={() =>
+                                  toggleVaultAction('deposit', vault)
+                                }
+                                className={cn(
+                                  'flex-1 px-3 py-2 text-[13px] text-white transition-colors',
+                                  expandedAction === 'deposit' && isSelected
+                                    ? 'bg-[#1420CC]'
+                                    : 'bg-[#1B29FF] hover:bg-[#1420CC]',
+                                )}
+                              >
+                                Deposit
+                              </button>
+                              <button
+                                onClick={() =>
+                                  toggleVaultAction('withdraw', vault)
+                                }
+                                className={cn(
+                                  'flex-1 px-3 py-2 text-[13px] text-[#101010] border border-[#101010]/10 transition-colors',
+                                  expandedAction === 'withdraw' && isSelected
+                                    ? 'bg-[#F7F7F2]'
+                                    : 'bg-white hover:bg-[#F7F7F2]',
+                                )}
+                              >
+                                Withdraw
+                              </button>
+                              {vault.appUrl && (
+                                <a
+                                  href={vault.appUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="px-3 py-2 text-[13px] text-[#101010]/60 hover:text-[#101010] border border-[#101010]/10 hover:bg-[#F7F7F2] transition-colors flex items-center justify-center"
+                                >
+                                  <ExternalLink className="h-3 w-3" />
+                                </a>
+                              )}
+                            </>
+                          )}
+                        </div>
+
+                        {/* Mobile Accordion Content */}
                         {(expandedAction === 'insure' && isSelected) ||
                         (!isDemoMode && expandedAction && isSelected) ? (
                           <div
@@ -1150,14 +1369,14 @@ export default function SavingsPageWrapper({
                                 'animate-in fade-in slide-in-from-top-1',
                             )}
                           >
-                            <div className="px-4 pb-4 bg-[#F7F7F2]/50">
-                              <div className="bg-white border border-[#101010]/10 p-5 sm:p-6">
+                            <div className="px-4 pt-3 pb-4">
+                              <div className="bg-white border border-[#101010]/10 p-4">
                                 {expandedAction === 'insure' && isSelected ? (
                                   <InsuranceContactPanel />
                                 ) : expandedAction === 'deposit' &&
                                   isSelected ? (
                                   <DepositEarnCard
-                                    key={`deposit-${vault.address}`}
+                                    key={`deposit-mobile-${vault.address}`}
                                     safeAddress={safeAddress as Address}
                                     vaultAddress={vault.address as Address}
                                     onDepositSuccess={handleDepositSuccess}
@@ -1165,7 +1384,7 @@ export default function SavingsPageWrapper({
                                 ) : expandedAction === 'withdraw' &&
                                   isSelected ? (
                                   <WithdrawEarnCard
-                                    key={`withdraw-${vault.address}`}
+                                    key={`withdraw-mobile-${vault.address}`}
                                     safeAddress={safeAddress as Address}
                                     vaultAddress={vault.address as Address}
                                     onWithdrawSuccess={handleWithdrawSuccess}
@@ -1176,294 +1395,68 @@ export default function SavingsPageWrapper({
                           </div>
                         ) : null}
                       </div>
-                    );
-                  })}
-                </div>
-
-                {/* Mobile Card View */}
-                <div className="lg:hidden">
-                  {displayVaults.map((vault, index) => {
-                    const normalizedAddress = vault.address.toLowerCase();
-                    const isSelected =
-                      selectedVault.vaultAddress?.toLowerCase() ===
-                      normalizedAddress;
-                    const expandedAction = isSelected
-                      ? selectedVault.action
-                      : null;
-                    const isExpanding = expandingVault === normalizedAddress;
-                    const isCollapsing = collapsingVault === normalizedAddress;
-
-                    return (
-                      <div
-                        key={vault.id}
-                        className={cn(
-                          'relative overflow-hidden transition-all duration-200',
-                          index !== displayVaults.length - 1 &&
-                            !isSelected &&
-                            'border-b border-[#101010]/5',
-                        )}
-                      >
-                        <div
-                          className={cn(
-                            'p-4 space-y-3 transition-all duration-200',
-                            vault.isInsured ? 'bg-[#1B29FF]/10' : 'bg-white',
-                            isSelected &&
-                              (vault.isInsured
-                                ? 'ring-1 ring-[#1B29FF]/40 bg-[#1B29FF]/14'
-                                : 'bg-[#F7F7F2]/40'),
-                            (isExpanding || isCollapsing) && 'transition-none',
-                          )}
-                        >
-                          {/* Vault Header */}
-                          <div className="flex items-start justify-between">
-                            <div className="flex items-start gap-2">
-                              <div className="flex flex-col gap-1">
-                                <div className="flex flex-wrap items-center gap-2">
-                                  {vault.isAuto && (
-                                    <span className="px-1.5 py-0.5 bg-[#1B29FF] text-white text-[9px] uppercase tracking-wider">
-                                      Auto
-                                    </span>
-                                  )}
-                                  <p className="text-[15px] font-medium text-[#101010]">
-                                    {vault.name}
-                                  </p>
-                                  {vault.isInsured && (
-                                    <span className="insured-pill animate-glow inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#1B29FF]/15 text-[#1B29FF] text-[10px] font-semibold uppercase tracking-[0.18em]">
-                                      <Image
-                                        src={ZERO_LOGO_SRC}
-                                        alt="0 Finance insured"
-                                        width={14}
-                                        height={14}
-                                        className="h-3.5 w-3.5"
-                                      />
-                                      Insured
-                                    </span>
-                                  )}
-                                </div>
-                                <p className="text-[12px] text-[#101010]/60">
-                                  {vault.curator}
-                                  {vault.risk ? ` · ${vault.risk}` : ''}
-                                  {vault.isContactOnly &&
-                                    ' · Coverage arranged via 0 Finance'}
-                                </p>
-                              </div>
-                            </div>
-                            <p className="text-[18px] font-medium tabular-nums text-[#1B29FF]">
-                              {vault.apy.toFixed(1)}%
-                            </p>
-                          </div>
-
-                          {/* Vault Stats */}
-                          <div className="flex justify-between text-[14px]">
-                            <span className="text-[#101010]/60">Balance</span>
-                            <span className="tabular-nums text-[#101010]">
-                              {vault.isContactOnly
-                                ? '—'
-                                : formatUsd(vault.balanceUsd)}
-                            </span>
-                          </div>
-                          {vault.earnedUsd > 0 && !vault.isContactOnly && (
-                            <div className="flex justify-between text-[14px]">
-                              <span className="text-[#101010]/60">Earned</span>
-                              <span className="tabular-nums text-[#1B29FF]">
-                                +{formatUsd(vault.earnedUsd)}
-                              </span>
-                            </div>
-                          )}
-
-                          {/* Actions */}
-                          <div className="flex gap-2 pt-2">
-                            {vault.isContactOnly ? (
-                              <button
-                                onClick={() =>
-                                  toggleVaultAction('insure', vault)
-                                }
-                                className={cn(
-                                  'flex-1 px-3 py-2 text-[13px] text-white bg-[#1B29FF] hover:bg-[#1420CC] transition-colors',
-                                  expandedAction === 'insure' &&
-                                    isSelected &&
-                                    'ring-2 ring-offset-1 ring-[#1B29FF]/40',
-                                )}
-                              >
-                                Connect with coverage
-                              </button>
-                            ) : isDemoMode ? (
-                              <>
-                                <button
-                                  onClick={() =>
-                                    toast(
-                                      'Sign in to deposit funds from your real account.',
-                                    )
-                                  }
-                                  className="flex-1 px-3 py-2 text-[13px] text-white bg-[#1B29FF] hover:bg-[#1420CC] transition-colors"
-                                >
-                                  Deposit
-                                </button>
-                                <button
-                                  onClick={() =>
-                                    toast(
-                                      'Sign in to withdraw from live vault positions.',
-                                    )
-                                  }
-                                  className="flex-1 px-3 py-2 text-[13px] text-[#101010] border border-[#101010]/10 hover:bg-[#F7F7F2] transition-colors"
-                                >
-                                  Withdraw
-                                </button>
-                                {vault.appUrl && (
-                                  <a
-                                    href={vault.appUrl}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="px-3 py-2 text-[13px] text-[#101010]/60 hover:text-[#101010] border border-[#101010]/10 hover:bg-[#F7F7F2] transition-colors flex items-center justify-center"
-                                  >
-                                    <ExternalLink className="h-3 w-3" />
-                                  </a>
-                                )}
-                              </>
-                            ) : (
-                              <>
-                                <button
-                                  onClick={() =>
-                                    toggleVaultAction('deposit', vault)
-                                  }
-                                  className={cn(
-                                    'flex-1 px-3 py-2 text-[13px] text-white transition-colors',
-                                    expandedAction === 'deposit' && isSelected
-                                      ? 'bg-[#1420CC]'
-                                      : 'bg-[#1B29FF] hover:bg-[#1420CC]',
-                                  )}
-                                >
-                                  Deposit
-                                </button>
-                                <button
-                                  onClick={() =>
-                                    toggleVaultAction('withdraw', vault)
-                                  }
-                                  className={cn(
-                                    'flex-1 px-3 py-2 text-[13px] text-[#101010] border border-[#101010]/10 transition-colors',
-                                    expandedAction === 'withdraw' && isSelected
-                                      ? 'bg-[#F7F7F2]'
-                                      : 'bg-white hover:bg-[#F7F7F2]',
-                                  )}
-                                >
-                                  Withdraw
-                                </button>
-                                {vault.appUrl && (
-                                  <a
-                                    href={vault.appUrl}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="px-3 py-2 text-[13px] text-[#101010]/60 hover:text-[#101010] border border-[#101010]/10 hover:bg-[#F7F7F2] transition-colors flex items-center justify-center"
-                                  >
-                                    <ExternalLink className="h-3 w-3" />
-                                  </a>
-                                )}
-                              </>
-                            )}
-                          </div>
-
-                          {/* Mobile Accordion Content */}
-                          {(expandedAction === 'insure' && isSelected) ||
-                          (!isDemoMode && expandedAction && isSelected) ? (
-                            <div
-                              className={cn(
-                                'transition-all duration-300 ease-out overflow-hidden',
-                                expandedAction && isSelected
-                                  ? 'max-h-[800px] opacity-100'
-                                  : 'max-h-0 opacity-0',
-                                isExpanding &&
-                                  'animate-in fade-in slide-in-from-top-1',
-                              )}
-                            >
-                              <div className="px-4 pt-3 pb-4">
-                                <div className="bg-white border border-[#101010]/10 p-4">
-                                  {expandedAction === 'insure' && isSelected ? (
-                                    <InsuranceContactPanel />
-                                  ) : expandedAction === 'deposit' &&
-                                    isSelected ? (
-                                    <DepositEarnCard
-                                      key={`deposit-mobile-${vault.address}`}
-                                      safeAddress={safeAddress as Address}
-                                      vaultAddress={vault.address as Address}
-                                      onDepositSuccess={handleDepositSuccess}
-                                    />
-                                  ) : expandedAction === 'withdraw' &&
-                                    isSelected ? (
-                                    <WithdrawEarnCard
-                                      key={`withdraw-mobile-${vault.address}`}
-                                      safeAddress={safeAddress as Address}
-                                      vaultAddress={vault.address as Address}
-                                      onWithdrawSuccess={handleWithdrawSuccess}
-                                    />
-                                  ) : null}
-                                </div>
-                              </div>
-                            </div>
-                          ) : null}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-
-            {/* Auto-Savings Status - Minimal Card */}
-            {savingsState?.enabled && (
-              <div className="bg-[#F6F5EF] border border-[#101010]/10 p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60 mb-2">
-                      Auto-Savings Active
-                    </p>
-                    <p className="text-[16px] text-[#101010]">
-                      Automatically saving {savingsState.allocation}% of
-                      incoming deposits
-                    </p>
-                  </div>
-                  {isDemoMode ? (
-                    <button
-                      onClick={() =>
-                        toast(
-                          'Configure auto-savings once your live account is activated.',
-                        )
-                      }
-                      className="text-[14px] text-[#1B29FF] hover:text-[#1420CC] underline decoration-[#1B29FF]/30 underline-offset-[4px] transition-colors"
-                    >
-                      Configure →
-                    </button>
-                  ) : (
-                    <Link
-                      href="/dashboard/savings/settings"
-                      className="text-[14px] text-[#1B29FF] hover:text-[#1420CC] underline decoration-[#1B29FF]/30 underline-offset-[4px] transition-colors"
-                    >
-                      Configure →
-                    </Link>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Risk Disclosure - Clean Alert */}
-            <div className="bg-[#FFF8E6] border border-[#FFA500]/20 p-6">
-              <div className="flex gap-4">
-                <AlertCircle className="h-5 w-5 text-[#FFA500] flex-shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-[14px] font-medium text-[#101010] mb-2">
-                    Risk Disclosure
-                  </p>
-                  <p className="text-[13px] text-[#101010]/70 leading-relaxed">
-                    All DeFi protocols carry inherent risks. Vaults are audited
-                    and insured where possible, but past performance does not
-                    guarantee future returns. APY rates are variable and subject
-                    to market conditions.
-                  </p>
-                </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </div>
-        )}
-      </div>
+
+          {/* Auto-Savings Status - Minimal Card */}
+          {savingsState?.enabled && (
+            <div className="bg-[#F6F5EF] border border-[#101010]/10 p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60 mb-2">
+                    Auto-Savings Active
+                  </p>
+                  <p className="text-[16px] text-[#101010]">
+                    Automatically saving {savingsState.allocation}% of incoming
+                    deposits
+                  </p>
+                </div>
+                {isDemoMode ? (
+                  <button
+                    onClick={() =>
+                      toast(
+                        'Configure auto-savings once your live account is activated.',
+                      )
+                    }
+                    className="text-[14px] text-[#1B29FF] hover:text-[#1420CC] underline decoration-[#1B29FF]/30 underline-offset-[4px] transition-colors"
+                  >
+                    Configure →
+                  </button>
+                ) : (
+                  <Link
+                    href="/dashboard/savings/settings"
+                    className="text-[14px] text-[#1B29FF] hover:text-[#1420CC] underline decoration-[#1B29FF]/30 underline-offset-[4px] transition-colors"
+                  >
+                    Configure →
+                  </Link>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Risk Disclosure - Clean Alert */}
+          <div className="bg-[#FFF8E6] border border-[#FFA500]/20 p-6">
+            <div className="flex gap-4">
+              <AlertCircle className="h-5 w-5 text-[#FFA500] flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="text-[14px] font-medium text-[#101010] mb-2">
+                  Risk Disclosure
+                </p>
+                <p className="text-[13px] text-[#101010]/70 leading-relaxed">
+                  All DeFi protocols carry inherent risks. Vaults are audited
+                  and insured where possible, but past performance does not
+                  guarantee future returns. APY rates are variable and subject
+                  to market conditions.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

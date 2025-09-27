@@ -2,14 +2,13 @@ import { Suspense } from 'react';
 import { TransactionTabsDemo } from './components/dashboard/transaction-tabs-demo';
 import { redirect } from 'next/navigation';
 import { VirtualAccountOnboardingLayer } from './components/dashboard/virtual-account-onboarding-layer';
-import { SavingsWrapper } from './components/savings-wrapper';
 import { DashboardRedirect } from './dashboard-redirect';
 import { OnboardingTasks } from './components/dashboard/empty-states';
 import { LoadingCard } from './components/loading-card';
-import { FundsData } from './components/funds-data';
 import { appRouter } from '@/server/routers/_app';
 import { getUserId } from '@/lib/auth';
 import { db } from '@/db';
+import { SavingsSection } from './components/savings-section';
 
 // Create a simple log object
 const log = {
@@ -68,24 +67,13 @@ export default async function DashboardPage() {
           {/* Insurance Warning and Activation Handler */}
 
           <div className="space-y-6 ">
-            {/* Balance Section - Checking Account */}
-            <div className="bg-white border border-[#101010]/10 rounded-[12px] shadow-[0_2px_8px_rgba(16,16,16,0.04)]"></div>
-            <div>
-              <h2 className="font-serif text-[24px] sm:text-[28px] leading-[1.1] tracking-[-0.01em] text-[#101010] mb-4">
-                Ready to withdraw
-              </h2>
-              <Suspense fallback={<LoadingCard />}>
-                <FundsData />
-              </Suspense>
-            </div>
-
             {/* Onboarding Section */}
             <Suspense fallback={<LoadingCard />}>
               <OnboardingData />
             </Suspense>
 
             {/* Savings/Yield Section */}
-            <SavingsWrapper />
+            <SavingsSection />
 
             {/* Transactions Section */}
             <div className="">
