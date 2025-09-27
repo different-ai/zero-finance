@@ -59,6 +59,13 @@ export default async function DashboardPage() {
     redirect('/signin');
   }
 
+  const caller = appRouter.createCaller({ userId, db, log });
+  const onboardingStatus = await caller.onboarding.getOnboardingStatus();
+
+  if (!onboardingStatus?.primarySafeAddress) {
+    redirect('/welcome');
+  }
+
   return (
     <DashboardRedirect>
       <div className="min-h-screen bg-[#F7F7F2]">
