@@ -149,10 +149,10 @@ function SimplifiedOffRampDemo({
               <CheckCircle2 className="relative h-12 w-12 text-green-500" />
             </div>
             <div className="text-center space-y-2">
-              <h3 className="font-serif text-[28px] sm:text-[32px] leading-[1.1] text-[#101010]">
-                Transfer Initiated
+              <h3 className="text-[28px] sm:text-[32px] font-semibold tracking-[-0.01em] text-[#101010]">
+                Transfer initiated
               </h3>
-              <p className="text-[14px] text-[#101010]/60 max-w-md">
+              <p className="text-[14px] text-[#101010]/65 max-w-md">
                 Your transfer of {formatUsd(Number(amount || 0))} has been
                 successfully initiated. Funds will arrive in 1-2 business days.
               </p>
@@ -163,7 +163,7 @@ function SimplifiedOffRampDemo({
                   <span className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60">
                     AMOUNT
                   </span>
-                  <span className="font-serif text-[20px] tabular-nums text-[#101010]">
+                  <span className="text-[20px] font-semibold tabular-nums text-[#101010]">
                     {formatUsd(Number(amount || 0))}
                   </span>
                 </div>
@@ -220,8 +220,8 @@ function SimplifiedOffRampDemo({
               </div>
             </div>
             <div className="space-y-2 text-center">
-              <h3 className="font-serif text-[24px] sm:text-[28px] leading-[1.1] text-[#101010]">
-                Processing Transfer
+              <h3 className="text-[24px] sm:text-[28px] font-semibold tracking-[-0.01em] text-[#101010]">
+                Processing transfer
               </h3>
               <p className="text-[14px] text-[#1B29FF] animate-pulse">
                 {processingSteps[step - 1]}
@@ -247,8 +247,8 @@ function SimplifiedOffRampDemo({
         <p className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60 mb-2">
           MOVE FUNDS
         </p>
-        <h2 className="font-serif text-[24px] sm:text-[28px] leading-[1.1] text-[#101010]">
-          Transfer to Bank Account
+        <h2 className="text-[22px] sm:text-[24px] font-semibold tracking-[-0.01em] text-[#101010]">
+          Transfer to bank account
         </h2>
       </div>
       <div className="p-5 sm:p-6 space-y-5">
@@ -266,7 +266,7 @@ function SimplifiedOffRampDemo({
               type="number"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
-              className="pl-10 text-[20px] font-serif tabular-nums h-12 border-[#101010]/10 bg-white"
+              className="pl-10 text-[20px] font-semibold tabular-nums h-12 border-[#101010]/10 bg-white"
               placeholder="0.00"
             />
           </div>
@@ -401,7 +401,7 @@ function SimplifiedOffRampDemo({
               <span className="text-[13px] font-medium text-[#101010]">
                 Total to receive
               </span>
-              <span className="font-serif text-[18px] tabular-nums text-[#101010]">
+              <span className="text-[18px] font-semibold tabular-nums text-[#101010]">
                 {formatUsd(Number(amount || 0))}
               </span>
             </div>
@@ -906,10 +906,10 @@ function SimplifiedOffRampReal({
               <CheckCircle2 className="relative h-12 w-12 text-green-500" />
             </div>
             <div className="text-center space-y-2">
-              <h3 className="font-serif text-[28px] sm:text-[32px] leading-[1.1] text-[#101010]">
-                Transfer Processing
+              <h3 className="text-[28px] sm:text-[32px] font-semibold tracking-[-0.01em] text-[#101010]">
+                Transfer processing
               </h3>
-              <p className="text-[14px] text-[#101010]/60 max-w-md">
+              <p className="text-[14px] text-[#101010]/65 max-w-md">
                 {cryptoTxHash
                   ? 'Your crypto transfer has been completed successfully.'
                   : 'Your funds are on their way to your bank account.'}
@@ -950,8 +950,8 @@ function SimplifiedOffRampReal({
           <p className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60 mb-2">
             CONFIRM TRANSFER
           </p>
-          <h2 className="font-serif text-[24px] sm:text-[28px] leading-[1.1] text-[#101010]">
-            Review Transfer Details
+          <h2 className="text-[22px] sm:text-[24px] font-semibold tracking-[-0.01em] text-[#101010]">
+            Review transfer details
           </h2>
         </div>
         <div className="p-5 sm:p-6 space-y-5">
@@ -961,7 +961,7 @@ function SimplifiedOffRampReal({
                 <span className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60">
                   AMOUNT TO SEND
                 </span>
-                <span className="font-serif text-[24px] tabular-nums text-[#101010]">
+                <span className="text-[24px] font-semibold tabular-nums text-[#101010]">
                   {transferDetails?.depositAmount} USDC
                 </span>
               </div>
@@ -1033,7 +1033,7 @@ function SimplifiedOffRampReal({
         <p className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60 mb-2">
           STEP {formStep} OF 3
         </p>
-        <h2 className="font-serif text-[24px] sm:text-[28px] leading-[1.1] text-[#101010]">
+        <h2 className="text-[22px] sm:text-[24px] font-semibold tracking-[-0.01em] text-[#101010]">
           {formStep === 1
             ? 'Select Transfer Method'
             : formStep === 2
@@ -1229,7 +1229,7 @@ function SimplifiedOffRampReal({
                       },
                     })}
                     placeholder="0.00"
-                    className="pl-10 text-[20px] font-serif tabular-nums h-12 border-[#101010]/10 bg-white"
+                    className="pl-10 text-[20px] font-semibold tabular-nums h-12 border-[#101010]/10 bg-white"
                   />
                   {isLoadingBalance ? (
                     <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
@@ -1621,7 +1621,7 @@ function SimplifiedOffRampReal({
                       },
                     })}
                     placeholder="0.00"
-                    className="pl-10 text-[20px] font-serif tabular-nums h-12 border-[#101010]/10 bg-white"
+                    className="pl-10 text-[20px] font-semibold tabular-nums h-12 border-[#101010]/10 bg-white"
                   />
                   {usdcBalance !== null && (
                     <button
@@ -1693,104 +1693,118 @@ function SimplifiedOffRampReal({
 
           {/* Step 3: Review */}
           {formStep === 3 && (
-            <div className="space-y-5">
-              <div className="bg-[#F7F7F2] border border-[#101010]/10 rounded-[12px] p-5">
-                <p className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60 mb-4">
-                  TRANSFER SUMMARY
-                </p>
-                <div className="space-y-3">
-                  <div className="flex justify-between items-center">
-                    <span className="text-[13px] text-[#101010]/60">Type</span>
-                    <span className="text-[13px] font-medium text-[#101010]">
-                      {destinationType === 'ach'
-                        ? 'ACH Transfer'
-                        : destinationType === 'iban'
-                          ? 'SEPA Transfer'
-                          : 'Crypto Transfer'}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-[13px] text-[#101010]/60">
-                      Amount
-                    </span>
-                    <span className="font-serif text-[18px] tabular-nums text-[#101010]">
-                      {watch('amount')} USDC
-                    </span>
-                  </div>
+            <div className="relative">
+              {createTransferMutation.isPending && (
+                <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 rounded-[12px] bg-white/85 backdrop-blur-sm">
+                  <Loader2 className="h-5 w-5 animate-spin text-[#1B29FF]" />
+                  <p className="text-[13px] text-[#101010]/70">
+                    Submitting transfer...
+                  </p>
+                </div>
+              )}
 
-                  {destinationType !== 'crypto' && (
-                    <>
-                      <div className="border-t border-[#101010]/10 pt-3 flex justify-between">
-                        <span className="text-[13px] text-[#101010]/60">
-                          Recipient
-                        </span>
-                        <span className="text-[13px] text-[#101010]">
-                          {accountHolderType === 'individual'
-                            ? `${watch('accountHolderFirstName')} ${watch('accountHolderLastName')}`
-                            : watch('accountHolderBusinessName')}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-[13px] text-[#101010]/60">
-                          Bank
-                        </span>
-                        <span className="text-[13px] text-[#101010]">
-                          {watch('bankName')}
-                        </span>
-                      </div>
-                    </>
-                  )}
-
-                  {destinationType === 'crypto' && (
-                    <div className="border-t border-[#101010]/10 pt-3 flex justify-between">
-                      <span className="text-[13px] text-[#101010]/60">
-                        Wallet
-                      </span>
-                      <span className="text-[12px] font-mono text-[#101010]">
-                        {watch('cryptoAddress')?.slice(0, 6)}...
-                        {watch('cryptoAddress')?.slice(-4)}
+              <div
+                className={cn(
+                  'space-y-5',
+                  createTransferMutation.isPending && 'pointer-events-none opacity-40',
+                )}
+              >
+                <div className="bg-[#F7F7F2] border border-[#101010]/10 rounded-[12px] p-5">
+                  <p className="uppercase tracking-[0.12em] text-[11px] text-[#101010]/60 mb-4">
+                    Transfer summary
+                  </p>
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-[13px] text-[#101010]/60">Type</span>
+                      <span className="text-[13px] font-medium text-[#101010]">
+                        {destinationType === 'ach'
+                          ? 'ACH transfer'
+                          : destinationType === 'iban'
+                            ? 'SEPA transfer'
+                            : 'Crypto transfer'}
                       </span>
                     </div>
-                  )}
+                    <div className="flex justify-between items-center">
+                      <span className="text-[13px] text-[#101010]/60">Amount</span>
+                      <span className="text-[18px] font-semibold tabular-nums text-[#101010]">
+                        {watch('amount')} USDC
+                      </span>
+                    </div>
+
+                    {destinationType !== 'crypto' && (
+                      <>
+                        <div className="border-t border-[#101010]/10 pt-3 flex justify-between">
+                          <span className="text-[13px] text-[#101010]/60">
+                            Recipient
+                          </span>
+                          <span className="text-[13px] text-[#101010]">
+                            {accountHolderType === 'individual'
+                              ? `${watch('accountHolderFirstName')} ${watch('accountHolderLastName')}`
+                              : watch('accountHolderBusinessName')}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-[13px] text-[#101010]/60">
+                            Bank
+                          </span>
+                          <span className="text-[13px] text-[#101010]">
+                            {watch('bankName')}
+                          </span>
+                        </div>
+                      </>
+                    )}
+
+                    {destinationType === 'crypto' && (
+                      <div className="border-t border-[#101010]/10 pt-3 flex justify-between">
+                        <span className="text-[13px] text-[#101010]/60">
+                          Wallet
+                        </span>
+                        <span className="text-[12px] font-mono text-[#101010]">
+                          {watch('cryptoAddress')?.slice(0, 6)}...
+                          {watch('cryptoAddress')?.slice(-4)}
+                        </span>
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
 
-              <Alert className="bg-[#FFF8E6] border-[#FFA500]/20">
-                <AlertCircle className="h-4 w-4 text-[#FFA500]" />
-                <AlertDescription className="text-[12px] text-[#101010]/70">
-                  {destinationType === 'crypto'
-                    ? 'Crypto transfers are irreversible. Please verify the address carefully.'
-                    : 'Bank transfers typically process within 1-3 business days.'}
-                </AlertDescription>
-              </Alert>
+                <Alert className="bg-[#FFF8E6] border-[#FFA500]/20">
+                  <AlertCircle className="h-4 w-4 text-[#FFA500]" />
+                  <AlertDescription className="text-[12px] text-[#101010]/70">
+                    {destinationType === 'crypto'
+                      ? 'Crypto transfers are irreversible. Please verify the address carefully.'
+                      : 'Bank transfers typically process within 1-3 business days.'}
+                  </AlertDescription>
+                </Alert>
 
-              <div className="flex gap-3">
-                <Button
-                  type="button"
-                  onClick={handlePreviousStep}
-                  variant="outline"
-                  className="flex-1 h-11 border-[#101010]/10 hover:bg-[#F7F7F2]/50"
-                >
-                  <ArrowLeft className="mr-2 h-4 w-4" />
-                  Back
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={createTransferMutation.isPending}
-                  className="flex-1 bg-[#1B29FF] hover:bg-[#1420CC] text-white h-12 text-[14px] font-medium"
-                >
-                  {createTransferMutation.isPending ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Processing...
-                    </>
-                  ) : (
-                    <>
-                      Complete Transfer
-                      <ArrowRight className="ml-2 h-4 w-4" />
-                    </>
-                  )}
-                </Button>
+                <div className="flex gap-3">
+                  <Button
+                    type="button"
+                    onClick={handlePreviousStep}
+                    variant="outline"
+                    className="flex-1 h-11 border-[#101010]/10 hover:bg-[#F7F7F2]/50"
+                  >
+                    <ArrowLeft className="mr-2 h-4 w-4" />
+                    Back
+                  </Button>
+                  <Button
+                    type="submit"
+                    disabled={createTransferMutation.isPending}
+                    className="flex-1 bg-[#1B29FF] hover:bg-[#1420CC] text-white h-12 text-[14px] font-semibold"
+                  >
+                    {createTransferMutation.isPending ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Processing…
+                      </>
+                    ) : (
+                      <>
+                        Complete transfer
+                        <ArrowRight className="ml-2 h-4 w-4" />
+                      </>
+                    )}
+                  </Button>
+                </div>
               </div>
             </div>
           )}
