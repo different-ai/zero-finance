@@ -174,7 +174,7 @@ export function OnboardingTasksCard({ initialData }: OnboardingTasksProps) {
       title: 'KYC',
       description: !isSavingsComplete
         ? 'Activate savings first.'
-        : 'Complete KYC to unlock all features.',
+        : 'Crypto transfers are available. Complete KYC to unlock bank deposits.',
       button: isSavingsComplete ? (
         <Button asChild size="sm" className="w-full sm:w-auto">
           <Link href="/onboarding/kyc">Start KYC</Link>

@@ -1,18 +1,31 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
 import { api } from '@/trpc/react';
-import { Loader2, ArrowRight } from 'lucide-react';
+import {
+  Loader2,
+  ArrowRight,
+  CheckCircle2,
+  AlertTriangle,
+  Circle,
+} from 'lucide-react';
 import { GradientBackground } from '@/app/(landing)/gradient-background';
 import GeneratedComponent from '@/app/(landing)/welcome-gradient';
+import { EnsureEmbeddedWallet } from '@/components/auth/ensure-embedded-wallet';
+import {
+  StepStatus,
+  usePrimaryAccountSetup,
+} from '@/hooks/use-primary-account-setup';
 
 export default function WelcomePage() {
   const router = useRouter();
   const { user, ready, authenticated } = usePrivy();
   const [workspaceName, setWorkspaceName] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const [workspaceStatus, setWorkspaceStatus] = useState<StepStatus>('pending');
+  const [submissionError, setSubmissionError] = useState<string | null>(null);
+  const [isSetupComplete, setIsSetupComplete] = useState(false);
 
   const { data: workspaceData, isLoading: workspaceLoading } =
     api.workspace.getOrCreateWorkspace.useQuery(undefined, {
@@ -20,6 +33,15 @@ export default function WelcomePage() {
     });
 
   const updateCompanyMutation = api.workspace.updateCompanyName.useMutation();
+  const {
+    progress,
+    isRunning: isSettingUp,
+    error: setupError,
+    runSetup,
+    reset,
+  } = usePrimaryAccountSetup();
+
+  const isProcessing = updateCompanyMutation.isPending || isSettingUp;
 
   useEffect(() => {
     // Only redirect if not authenticated
@@ -30,12 +52,13 @@ export default function WelcomePage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!workspaceName.trim() || !workspaceData?.workspaceId) {
       return;
     }
 
-    setIsLoading(true);
+    setSubmissionError(null);
+    setWorkspaceStatus('in_progress');
 
     try {
       await updateCompanyMutation.mutateAsync({
@@ -44,23 +67,59 @@ export default function WelcomePage() {
         userName: user?.google?.name || user?.email?.address?.split('@')[0],
         userEmail: user?.email?.address || user?.google?.email,
       });
-
-      // Mark as completed
-      localStorage.setItem('company_name_collected', 'true');
-
-      // Go to dashboard
-      router.push('/dashboard');
+      setWorkspaceStatus('success');
     } catch (error) {
       console.error('Failed to update workspace name:', error);
-      setIsLoading(false);
+      const message =
+        error instanceof Error ? error.message : 'Something went wrong.';
+      setSubmissionError(message);
+      setWorkspaceStatus('error');
+      return;
+    }
+
+    try {
+      await runSetup();
+      setIsSetupComplete(true);
+      router.push('/dashboard');
+    } catch (error) {
+      console.error('Primary account setup failed:', error);
     }
   };
 
-  const handleSkip = () => {
-    // Mark as collected to prevent future auto-redirects
-    localStorage.setItem('company_name_collected', 'true');
-    router.push('/dashboard');
+  const handleRetry = async () => {
+    setSubmissionError(null);
+    setWorkspaceStatus('success');
+    reset();
+    try {
+      await runSetup();
+      setIsSetupComplete(true);
+      router.push('/dashboard');
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Something went wrong.';
+      setSubmissionError(message);
+    }
   };
+
+  const statusItems = useMemo(() => {
+    return [
+      {
+        title: 'Save workspace details',
+        status: workspaceStatus,
+        detail:
+          workspaceStatus === 'success'
+            ? `Workspace set to ${workspaceName.trim()}`
+            : undefined,
+      },
+      ...progress.map((item) => ({
+        title: item.label,
+        status: item.status,
+        detail: item.detail,
+      })),
+    ];
+  }, [progress, workspaceName, workspaceStatus]);
+
+  const canRetrySetup = workspaceStatus === 'success' && !!setupError;
 
   if (!ready || !authenticated || workspaceLoading) {
     return (
@@ -70,6 +129,19 @@ export default function WelcomePage() {
     );
   }
 
+  const renderStatusIcon = (status: StepStatus) => {
+    switch (status) {
+      case 'success':
+        return <CheckCircle2 className="h-5 w-5 text-green-500" />;
+      case 'in_progress':
+        return <Loader2 className="h-5 w-5 animate-spin text-[#0050ff]" />;
+      case 'error':
+        return <AlertTriangle className="h-5 w-5 text-red-500" />;
+      default:
+        return <Circle className="h-5 w-5 text-gray-300" />;
+    }
+  };
+
   return (
     <section className="relative min-h-screen border-y border-[#101010]/10 bg-white/90 overflow-hidden flex items-center justify-center">
       {/* Gradient Background - positioned behind content */}
@@ -77,6 +149,7 @@ export default function WelcomePage() {
       
       {/* Content - positioned above gradient */}
       <div className="relative z-10 w-full max-w-[500px] px-4">
+        <EnsureEmbeddedWallet />
         <div className="bg-white/95 backdrop-blur-sm border border-[#101010]/10 rounded-lg shadow-[0_2px_8px_rgba(16,16,16,0.04)] p-8 sm:p-10">
           <div className="space-y-6">
             {/* Header */}
@@ -85,7 +158,7 @@ export default function WelcomePage() {
                 WELCOME TO ZERO FINANCE
               </p>
               <h1 className="font-serif text-[36px] sm:text-[44px] leading-[0.96] tracking-[-0.015em] text-[#101010]">
-                Let's get started
+                Let&apos;s get started
               </h1>
               <p className="mt-4 text-[15px] sm:text-[16px] leading-[1.5] text-[#101010]/70">
                 Name your workspace to get started. You can create companies and invite team members later.
@@ -107,7 +180,8 @@ export default function WelcomePage() {
                   placeholder="e.g., Acme Corp, My Freelance Business"
                   value={workspaceName}
                   onChange={(e) => setWorkspaceName(e.target.value)}
-                  className="w-full h-12 px-4 border border-[#101010]/10 rounded-md text-[15px] sm:text-[16px] text-[#101010] placeholder:text-[#101010]/40 focus:border-[#0050ff] focus:outline-none focus:ring-1 focus:ring-[#0050ff]/20 transition-all"
+                  disabled={isProcessing || isSetupComplete}
+                  className="w-full h-12 px-4 border border-[#101010]/10 rounded-md text-[15px] sm:text-[16px] text-[#101010] placeholder:text-[#101010]/40 focus:border-[#0050ff] focus:outline-none focus:ring-1 focus:ring-[#0050ff]/20 transition-all disabled:bg-[#F2F2EC] disabled:text-[#101010]/50"
                   autoFocus
                 />
                 <p className="text-[12px] text-[#101010]/50 mt-1">
@@ -119,13 +193,20 @@ export default function WelcomePage() {
               <div className="space-y-3">
                 <button
                   type="submit"
-                  disabled={!workspaceName.trim() || isLoading}
+                  disabled={
+                    !workspaceName.trim() || isProcessing || isSetupComplete
+                  }
                   className="w-full inline-flex items-center justify-center px-6 py-3 text-[15px] sm:text-[16px] font-medium text-white bg-[#0050ff] hover:bg-[#0040dd] rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {isLoading ? (
+                  {isProcessing ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Setting up your workspace...
+                      Setting up your account...
+                    </>
+                  ) : isSetupComplete ? (
+                    <>
+                      Redirecting to Dashboard
+                      <Loader2 className="ml-2 h-4 w-4 animate-spin" />
                     </>
                   ) : (
                     <>
@@ -134,17 +215,54 @@ export default function WelcomePage() {
                     </>
                   )}
                 </button>
-
-                <button
-                  type="button"
-                  onClick={handleSkip}
-                  disabled={isLoading}
-                  className="w-full px-6 py-3 text-[14px] sm:text-[15px] text-[#101010]/60 hover:text-[#101010] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Skip for now
-                </button>
               </div>
             </form>
+
+            {/* Progress */}
+            <div className="space-y-3 border border-[#101010]/10 rounded-md px-4 py-4 bg-[#F9F9F3]">
+              <p className="text-[12px] uppercase tracking-[0.12em] text-[#101010]/60">
+                Account Setup Progress
+              </p>
+              <ul className="space-y-3">
+                {statusItems.map((item) => (
+                  <li key={item.title} className="flex items-start gap-3">
+                    <div className="mt-0.5">{renderStatusIcon(item.status)}</div>
+                    <div>
+                      <p className="text-sm font-medium text-[#101010]">
+                        {item.title}
+                      </p>
+                      {item.detail && (
+                        <p className="text-xs text-[#101010]/70 mt-1">
+                          {item.detail}
+                        </p>
+                      )}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+
+              {(submissionError || setupError) && (
+                <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                  {submissionError || setupError}
+                </div>
+              )}
+
+              {isSetupComplete && (
+                <div className="rounded-md border border-[#0050ff]/20 bg-[#EAF0FF] px-3 py-2 text-sm text-[#0038cc]">
+                  All set! Redirecting you to the dashboard.
+                </div>
+              )}
+
+              {canRetrySetup && (
+                <button
+                  type="button"
+                  onClick={handleRetry}
+                  className="w-full inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-white bg-[#101010] hover:bg-[#040404] rounded-md transition-colors"
+                >
+                  Retry setup
+                </button>
+              )}
+            </div>
 
             {/* Footer note */}
             <div className="pt-4 border-t border-[#101010]/10">

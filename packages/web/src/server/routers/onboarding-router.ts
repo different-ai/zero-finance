@@ -24,14 +24,6 @@ export const onboardingRouter = router({
           eq(table.userDid, userId) && eq(table.safeType, 'primary'),
       });
 
-      if (primarySafe) {
-        return {
-          skippedOrCompletedOnboardingStepper: true,
-          primarySafeAddress: primarySafe.safeAddress,
-        };
-      }
-
-      // 2. Fallback to the old user_profiles table for legacy users
       const profile = await db.query.userProfilesTable.findFirst({
         where: eq(userProfilesTable.privyDid, userId),
         columns: {
@@ -39,6 +31,15 @@ export const onboardingRouter = router({
           primarySafeAddress: true,
         },
       });
+
+      if (primarySafe) {
+        return {
+          skippedOrCompletedOnboardingStepper: true,
+          primarySafeAddress: primarySafe.safeAddress,
+          onboardingCompletedFlag:
+            profile?.skippedOrCompletedOnboardingStepper ?? false,
+        };
+      }
 
       if (profile?.primarySafeAddress && !primarySafe) {
         // Found a legacy user, let's sync them to the new tables
@@ -69,6 +70,8 @@ export const onboardingRouter = router({
         skippedOrCompletedOnboardingStepper:
           !!profile?.skippedOrCompletedOnboardingStepper,
         primarySafeAddress: profile?.primarySafeAddress,
+        onboardingCompletedFlag:
+          profile?.skippedOrCompletedOnboardingStepper ?? false,
       };
     } catch (error) {
       console.error('Error fetching onboarding status:', error);
@@ -152,22 +155,22 @@ export const onboardingRouter = router({
     const userId = ctx.user.id;
     const userEmail = ctx.user.email?.address;
 
-    try {
-      // Upsert user profile with skipped flag
-      await db
-        .insert(userProfilesTable)
-        .values({
-          privyDid: userId,
-          email: userEmail,
-          skippedOrCompletedOnboardingStepper: true,
-        })
-        .onConflictDoUpdate({
-          target: userProfilesTable.privyDid,
-          set: {
+      try {
+        // Upsert user profile with skipped flag
+        await db
+          .insert(userProfilesTable)
+          .values({
+            privyDid: userId,
+            email: userEmail,
             skippedOrCompletedOnboardingStepper: true,
-            updatedAt: new Date(),
-          },
-        });
+          })
+          .onConflictDoUpdate({
+            target: userProfilesTable.privyDid,
+            set: {
+              skippedOrCompletedOnboardingStepper: true,
+              updatedAt: new Date(),
+            },
+          });
 
       return {
         success: true,
