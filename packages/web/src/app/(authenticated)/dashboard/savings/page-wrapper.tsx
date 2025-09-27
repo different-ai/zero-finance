@@ -33,6 +33,7 @@ import { BASE_USDC_VAULTS } from '@/server/earn/base-vaults';
 import { AnimatedYieldCounter } from '@/components/animated-yield-counter';
 import { AnimatedTotalEarned } from '@/components/animated-total-earned';
 import { AnimatedTotalEarnedV2 } from '@/components/animated-total-earned-v2';
+import { FundsDisplayWithDemo } from '@/app/(authenticated)/dashboard/(bank)/components/dashboard/funds-display-with-demo';
 import { toast } from 'sonner';
 import Image from 'next/image';
 import { USDC_ADDRESS } from '@/lib/constants';
@@ -833,47 +834,58 @@ export default function SavingsPageWrapper({
       ) : (
         <div className="space-y-12">
           {/* Portfolio Overview - Grid Layout */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-px bg-[#101010]/10">
-            <div className="bg-white p-6">
-              <p className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60 mb-2">
-                Withdrawable Balance
-              </p>
-              <p className="font-serif text-[28px] sm:text-[32px] leading-[1.1] tabular-nums text-[#101010]">
-                {formatUsd(withdrawableBalanceUsd)}
-              </p>
-            </div>
+          <div className="grid gap-6 lg:grid-cols-[minmax(0,380px)_1fr]">
+            <FundsDisplayWithDemo
+              totalBalance={withdrawableBalanceUsd}
+              walletAddress={safeAddress ?? undefined}
+              isDemo={isDemoMode}
+            />
 
-            <div className="bg-white p-6">
-              <p className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60 mb-2">
-                Savings Balance
-              </p>
-              <p className="font-serif text-[28px] sm:text-[32px] leading-[1.1] tabular-nums text-[#101010]">
-                {formatUsd(totalSaved)}
-              </p>
-            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-px bg-[#101010]/10">
+              <div className="bg-white p-6">
+                <p className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60 mb-2">
+                  Savings Balance
+                </p>
+                <p className="font-serif text-[28px] sm:text-[32px] leading-[1.1] tabular-nums text-[#101010]">
+                  {formatUsd(totalSaved)}
+                </p>
+              </div>
 
-            <div className="bg-white p-6">
-              <p className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60 mb-2">
-                Earnings (Live)
-              </p>
-              <p className="font-serif text-[28px] sm:text-[32px] leading-[1.1] tabular-nums text-[#1B29FF]">
-                {isDemoMode ? (
-                  <AnimatedTotalEarned
-                    initialEarned={animatedInitialEarned}
-                    apy={averageInstantApy}
-                    balance={animatedBalance}
-                  />
-                ) : safeAddress ? (
-                  <AnimatedTotalEarnedV2
-                    safeAddress={safeAddress}
-                    fallbackApy={fallbackApyPercent}
-                    fallbackBalance={totalSaved}
-                    className="inline-block"
-                  />
-                ) : (
-                  <span className="text-[#101010]/40">Calculating...</span>
-                )}
-              </p>
+              <div className="bg-white p-6">
+                <p className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60 mb-2">
+                  Earnings (Live)
+                </p>
+                <p className="font-serif text-[28px] sm:text-[32px] leading-[1.1] tabular-nums text-[#1B29FF]">
+                  {isDemoMode ? (
+                    <AnimatedTotalEarned
+                      initialEarned={animatedInitialEarned}
+                      apy={averageInstantApy}
+                      balance={animatedBalance}
+                    />
+                  ) : safeAddress ? (
+                    <AnimatedTotalEarnedV2
+                      safeAddress={safeAddress}
+                      fallbackApy={fallbackApyPercent}
+                      fallbackBalance={totalSaved}
+                      className="inline-block"
+                    />
+                  ) : (
+                    <span className="text-[#101010]/40">Calculating...</span>
+                  )}
+                </p>
+              </div>
+
+              <div className="bg-white p-6">
+                <p className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60 mb-2">
+                  Average APY
+                </p>
+                <p className="font-serif text-[28px] sm:text-[32px] leading-[1.1] tabular-nums text-[#101010]">
+                  {(averageInstantApy * 100).toFixed(2)}%
+                </p>
+                <p className="mt-2 text-[13px] text-[#101010]/60">
+                  Blended yield across {vaultsVM.length} active strategies.
+                </p>
+              </div>
             </div>
           </div>
 
