@@ -21,6 +21,11 @@ import {
   CheckCircle2,
   Mail,
   CalendarDays,
+  ArrowRightCircle,
+  Info,
+  Building2,
+  DollarSign,
+  Euro,
 } from 'lucide-react';
 import { WithdrawEarnCard } from '@/app/(authenticated)/dashboard/tools/earn-module/components/withdraw-earn-card';
 import { DepositEarnCard } from '@/app/(authenticated)/dashboard/tools/earn-module/components/deposit-earn-card';
@@ -33,7 +38,18 @@ import { BASE_USDC_VAULTS } from '@/server/earn/base-vaults';
 import { AnimatedYieldCounter } from '@/components/animated-yield-counter';
 import { AnimatedTotalEarned } from '@/components/animated-total-earned';
 import { AnimatedTotalEarnedV2 } from '@/components/animated-total-earned-v2';
-import { FundsDisplayWithDemo } from '@/app/(authenticated)/dashboard/(bank)/components/dashboard/funds-display-with-demo';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import { SimplifiedOffRamp } from '@/components/transfers/simplified-off-ramp';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { usePrivy } from '@privy-io/react-auth';
+import { api } from '@/trpc/react';
+import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
 import Image from 'next/image';
 import { USDC_ADDRESS } from '@/lib/constants';
@@ -45,6 +61,55 @@ const INSURANCE_CONTACT = {
   scheduleUrl: 'https://cal.com/team/0finance/30',
 };
 const INSURED_VAULT_IDS = new Set<string>();
+
+const demoFundingSources = [
+  {
+    id: 'demo-ach-1',
+    sourceAccountType: 'us_ach' as const,
+    sourceBankName: 'JPMorgan Chase',
+    sourceCurrency: 'USD',
+    sourceAccountNumber: '****5678',
+    sourceRoutingNumber: '021000021',
+    sourceBankBeneficiaryName: 'Demo Company Inc.',
+    destinationCurrency: 'USDC',
+    destinationPaymentRail: 'Base',
+  },
+  {
+    id: 'demo-iban-1',
+    sourceAccountType: 'iban' as const,
+    sourceBankName: 'Deutsche Bank',
+    sourceCurrency: 'EUR',
+    sourceIban: 'DE89 3704 0044 0532 0130 00',
+    sourceBicSwift: 'DEUTDEFF',
+    sourceBankBeneficiaryName: 'Bridge Building Sp.z.o.o.',
+    sourceBankAddress: 'Taunusanlage 12, 60325 Frankfurt am Main, Germany',
+    destinationCurrency: 'USDC',
+    destinationPaymentRail: 'Base',
+  },
+];
+
+const demoUserData = {
+  firstName: 'John',
+  lastName: 'Doe',
+  companyName: 'Demo Company Inc.',
+};
+
+const getRecipientName = (source: any, userData: any) => {
+  if (source.sourceAccountType === 'iban') {
+    return 'Bridge Building Sp.z.o.o.';
+  }
+  if (source.sourceAccountType === 'us_ach') {
+    if (userData?.companyName) return userData.companyName;
+    if (userData?.firstName && userData?.lastName) {
+      return `${userData.firstName} ${userData.lastName}`;
+    }
+    if (source.sourceBankBeneficiaryName) {
+      return source.sourceBankBeneficiaryName;
+    }
+    return 'Account Holder';
+  }
+  return source.sourceBankBeneficiaryName || 'Account Holder';
+};
 
 const insuredPillAnimation = `
   @keyframes insuredShine {
@@ -82,6 +147,277 @@ const insuredPillAnimation = `
     animation: insuredShine 6s ease-in-out infinite;
   }
 `;
+
+type CheckingActionsCardProps = {
+  balanceUsd: number;
+  safeAddress: string | null;
+  isDemoMode: boolean;
+};
+
+function CheckingActionsCard({
+  balanceUsd,
+  safeAddress,
+  isDemoMode,
+}: CheckingActionsCardProps) {
+  const [isMoveModalOpen, setIsMoveModalOpen] = useState(false);
+  const [isAddressCopied, setIsAddressCopied] = useState(false);
+  const isMobile = useIsMobile();
+  const { ready, authenticated, user } = usePrivy();
+
+  const {
+    data: accountData,
+    isLoading: isLoadingFundingSources,
+    refetch: refetchFundingSources,
+  } = api.align.getVirtualAccountDetails.useQuery(undefined, {
+    enabled: !isDemoMode && ready && authenticated && !!user?.id,
+  });
+
+  const fundingSources = isDemoMode
+    ? demoFundingSources
+    : accountData?.fundingSources || [];
+  const userData = isDemoMode ? demoUserData : accountData?.userData;
+
+  const achAccount = fundingSources.find(
+    (source) => source.sourceAccountType === 'us_ach',
+  );
+  const ibanAccount = fundingSources.find(
+    (source) => source.sourceAccountType === 'iban',
+  );
+
+  const hasVirtualAccounts = Boolean(achAccount || ibanAccount);
+
+  const safeAddressDisplay = safeAddress
+    ? `${safeAddress.slice(0, 6)}…${safeAddress.slice(-4)}`
+    : null;
+
+  const handleCopyAddress = () => {
+    if (!safeAddress || typeof navigator === 'undefined') return;
+    navigator.clipboard
+      .writeText(safeAddress)
+      .then(() => {
+        setIsAddressCopied(true);
+        setTimeout(() => setIsAddressCopied(false), 2000);
+      })
+      .catch((error) => console.error('Failed to copy address', error));
+  };
+
+  return (
+    <div className="bg-white border border-[#101010]/10 rounded-[12px] p-6 space-y-6">
+      <div className="space-y-3">
+        <div>
+          <p className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60 mb-2">
+            Withdrawable Balance
+          </p>
+          <p className="font-serif text-[36px] leading-[1.1] tabular-nums text-[#101010]">
+            {formatUsd(balanceUsd)}
+          </p>
+        </div>
+        {safeAddressDisplay && (
+          <div className="inline-flex items-center gap-2 rounded-full bg-[#F7F7F2] px-3 py-1 text-[12px] text-[#101010]/70">
+            <span>Treasury Safe · {safeAddressDisplay}</span>
+            <button
+              type="button"
+              onClick={handleCopyAddress}
+              className="text-[#1B29FF] hover:text-[#1420CC]"
+            >
+              {isAddressCopied ? 'Copied' : 'Copy'}
+            </button>
+          </div>
+        )}
+      </div>
+
+      <div className="flex flex-col sm:flex-row gap-3">
+        <Dialog open={isMoveModalOpen} onOpenChange={setIsMoveModalOpen}>
+          <DialogTrigger asChild>
+            <Button
+              className="flex-1 inline-flex items-center justify-center gap-2 px-5 py-3 text-[15px] font-medium text-white bg-[#1B29FF] hover:bg-[#1420CC] transition-colors"
+              disabled={!isDemoMode && !hasVirtualAccounts}
+              title={
+                !isDemoMode && !hasVirtualAccounts
+                  ? 'Connect a virtual account to enable transfers'
+                  : undefined
+              }
+            >
+              <ArrowRightCircle className="h-5 w-5" />
+              Move Funds
+            </Button>
+          </DialogTrigger>
+          <DialogContent
+            className={`p-0 ${isMobile ? 'h-screen max-h-screen w-screen max-w-none m-0' : 'max-w-2xl'}`}
+          >
+            <SimplifiedOffRamp fundingSources={fundingSources} />
+          </DialogContent>
+        </Dialog>
+
+        <Dialog
+          onOpenChange={(open) => {
+            if (open && !isDemoMode) {
+              void refetchFundingSources();
+            }
+          }}
+        >
+          <DialogTrigger asChild>
+            <Button
+              variant="outline"
+              className="flex-1 inline-flex items-center justify-center gap-2 px-5 py-3 text-[15px] font-medium text-[#101010] border border-[#101010]/10 hover:border-[#1B29FF]/20 hover:text-[#1B29FF] hover:bg-[#F7F7F2] transition-colors"
+            >
+              <Info className="h-5 w-5 text-[#101010]/60" />
+              Details
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="bg-white border-[#101010]/10 max-w-3xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader className="border-b border-[#101010]/10 pb-4">
+              <DialogTitle className="font-serif text-[24px] leading-[1.1] text-[#101010] flex items-center gap-2">
+                <Building2 className="h-5 w-5 text-[#101010]/60" />
+                Virtual Account Details
+              </DialogTitle>
+            </DialogHeader>
+
+            {isLoadingFundingSources ? (
+              <div className="space-y-3 py-6">
+                {[1, 2, 3].map((item) => (
+                  <Skeleton key={item} className="h-12 w-full bg-[#101010]/5" />
+                ))}
+              </div>
+            ) : hasVirtualAccounts ? (
+              <div className="space-y-6 py-6">
+                {achAccount && (
+                  <section className="rounded-[12px] border border-[#101010]/10 bg-[#F7F7F2] p-5">
+                    <div className="flex items-center gap-3 mb-4">
+                      <DollarSign className="h-5 w-5 text-[#101010]/60" />
+                      <div>
+                        <p className="text-[14px] font-medium text-[#101010]">
+                          US ACH & Wire
+                        </p>
+                        <p className="text-[12px] text-[#101010]/60">
+                          Domestic USD transfers
+                        </p>
+                      </div>
+                    </div>
+                    <dl className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-[13px] text-[#101010]/80">
+                      <div>
+                        <dt className="uppercase tracking-[0.16em] text-[10px] text-[#101010]/50">
+                          Bank Name
+                        </dt>
+                        <dd className="text-[14px] font-medium text-[#101010]">
+                          {achAccount.sourceBankName}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="uppercase tracking-[0.16em] text-[10px] text-[#101010]/50">
+                          Routing Number
+                        </dt>
+                        <dd className="text-[14px] font-medium text-[#101010]">
+                          {achAccount.sourceRoutingNumber}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="uppercase tracking-[0.16em] text-[10px] text-[#101010]/50">
+                          Account Number
+                        </dt>
+                        <dd className="text-[14px] font-medium text-[#101010]">
+                          {achAccount.sourceAccountNumber}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="uppercase tracking-[0.16em] text-[10px] text-[#101010]/50">
+                          Beneficiary
+                        </dt>
+                        <dd className="text-[14px] font-medium text-[#101010]">
+                          {getRecipientName(achAccount, userData)}
+                        </dd>
+                      </div>
+                    </dl>
+                  </section>
+                )}
+
+                {ibanAccount && (
+                  <section className="rounded-[12px] border border-[#101010]/10 bg-[#F7F7F2] p-5">
+                    <div className="flex items-center gap-3 mb-4">
+                      <Euro className="h-5 w-5 text-[#101010]/60" />
+                      <div>
+                        <p className="text-[14px] font-medium text-[#101010]">
+                          SEPA / IBAN
+                        </p>
+                        <p className="text-[12px] text-[#101010]/60">
+                          Eurozone & international wires
+                        </p>
+                      </div>
+                    </div>
+                    <dl className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-[13px] text-[#101010]/80">
+                      <div>
+                        <dt className="uppercase tracking-[0.16em] text-[10px] text-[#101010]/50">
+                          Bank Name
+                        </dt>
+                        <dd className="text-[14px] font-medium text-[#101010]">
+                          {ibanAccount.sourceBankName}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="uppercase tracking-[0.16em] text-[10px] text-[#101010]/50">
+                          IBAN
+                        </dt>
+                        <dd className="text-[14px] font-medium text-[#101010]">
+                          {ibanAccount.sourceIban}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="uppercase tracking-[0.16em] text-[10px] text-[#101010]/50">
+                          BIC / SWIFT
+                        </dt>
+                        <dd className="text-[14px] font-medium text-[#101010]">
+                          {ibanAccount.sourceBicSwift}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="uppercase tracking-[0.16em] text-[10px] text-[#101010]/50">
+                          Beneficiary
+                        </dt>
+                        <dd className="text-[14px] font-medium text-[#101010]">
+                          {getRecipientName(ibanAccount, userData)}
+                        </dd>
+                      </div>
+                      {ibanAccount.sourceBankAddress && (
+                        <div className="sm:col-span-2">
+                          <dt className="uppercase tracking-[0.16em] text-[10px] text-[#101010]/50">
+                            Bank Address
+                          </dt>
+                          <dd className="text-[14px] font-medium text-[#101010]">
+                            {ibanAccount.sourceBankAddress}
+                          </dd>
+                        </div>
+                      )}
+                    </dl>
+                  </section>
+                )}
+              </div>
+            ) : (
+              <div className="py-6 text-[14px] text-[#101010]/70">
+                No virtual bank accounts are connected yet. Connect an account
+                in onboarding to enable transfers.
+              </div>
+            )}
+
+            {isDemoMode && (
+              <div className="mt-4 rounded-[10px] border border-[#101010]/10 bg-[#F7F7F2] p-4 text-[12px] text-[#101010]/70">
+                Demo mode shows sample banking instructions. Sign in to your
+                live workspace to view real account numbers.
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      <p className="text-[12px] text-[#101010]/60">
+        {isDemoMode
+          ? 'Use these controls to explore how deposits and withdrawals work in Zero Finance.'
+          : hasVirtualAccounts
+            ? 'Transfers settle directly into your Zero treasury safe.'
+            : 'Once your virtual account is approved, you can pull cash into savings here.'}
+      </p>
+    </div>
+  );
+}
 
 export type SavingsPageWrapperProps = {
   mode?: SavingsExperienceMode;
@@ -834,24 +1170,27 @@ export default function SavingsPageWrapper({
       ) : (
         <div className="space-y-12">
           {/* Portfolio Overview - Grid Layout */}
-          <div className="grid gap-6 lg:grid-cols-[minmax(0,380px)_1fr]">
-            <FundsDisplayWithDemo
-              totalBalance={withdrawableBalanceUsd}
-              walletAddress={safeAddress ?? undefined}
-              isDemo={isDemoMode}
+          <div className="grid gap-6 lg:grid-cols-[minmax(0,360px)_1fr]">
+            <CheckingActionsCard
+              balanceUsd={withdrawableBalanceUsd}
+              safeAddress={safeAddress}
+              isDemoMode={isDemoMode}
             />
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-px bg-[#101010]/10">
-              <div className="bg-white p-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="bg-white border border-[#101010]/10 rounded-[12px] p-6">
                 <p className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60 mb-2">
                   Savings Balance
                 </p>
                 <p className="font-serif text-[28px] sm:text-[32px] leading-[1.1] tabular-nums text-[#101010]">
                   {formatUsd(totalSaved)}
                 </p>
+                <p className="mt-2 text-[13px] text-[#101010]/60">
+                  Deposited across {vaultsVM.length} active strategies.
+                </p>
               </div>
 
-              <div className="bg-white p-6">
+              <div className="bg-white border border-[#101010]/10 rounded-[12px] p-6">
                 <p className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60 mb-2">
                   Earnings (Live)
                 </p>
@@ -873,17 +1212,8 @@ export default function SavingsPageWrapper({
                     <span className="text-[#101010]/40">Calculating...</span>
                   )}
                 </p>
-              </div>
-
-              <div className="bg-white p-6">
-                <p className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60 mb-2">
-                  Average APY
-                </p>
-                <p className="font-serif text-[28px] sm:text-[32px] leading-[1.1] tabular-nums text-[#101010]">
-                  {(averageInstantApy * 100).toFixed(2)}%
-                </p>
                 <p className="mt-2 text-[13px] text-[#101010]/60">
-                  Blended yield across {vaultsVM.length} active strategies.
+                  Live counter refreshes as vault yield accrues.
                 </p>
               </div>
             </div>
