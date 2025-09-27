@@ -71,7 +71,8 @@ Labels: uppercase tracking-[0.14-0.18em] text-[11-13px]
 ### Typography Scale (Dashboard)
 
 ```
-Section Headers: font-serif text-[24-28px]
+Primary Page Titles: font-serif text-[24-28px] (use sparingly)
+Section Subheads / Modals: text-[20-22px] font-semibold tracking-[-0.01em] (sans)
 Card Titles: text-[15-16px] font-medium
 Body: text-[13-14px]
 Labels: uppercase tracking-[0.14em] text-[11px] text-[#101010]/60
@@ -82,7 +83,7 @@ Labels: uppercase tracking-[0.14em] text-[11px] text-[#101010]/60
 #### App Dashboard Header
 
 - Compact height 56-64px with sticky positioning when useful
-- Serif headline optional and compact; prefer sans for day-to-day screens
+- Serif headline optional and compact; prefer sans for day-to-day screens and modals
 - Title sizes: 24px on mobile, 28-32px on desktop
 - Optional uppercase label above title for section context
 - Keep background `#F7F7F2`; separate header with a 1px bottom border `border-[#101010]/10`

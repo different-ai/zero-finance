@@ -26,6 +26,8 @@ import {
   Building2,
   DollarSign,
   Euro,
+  Copy,
+  Check,
 } from 'lucide-react';
 import { WithdrawEarnCard } from '@/app/(authenticated)/dashboard/tools/earn-module/components/withdraw-earn-card';
 import { DepositEarnCard } from '@/app/(authenticated)/dashboard/tools/earn-module/components/deposit-earn-card';
@@ -203,26 +205,31 @@ function CheckingActionsCard({
 
   return (
     <div className="bg-white border border-[#101010]/10 rounded-[12px] p-6 space-y-6">
-      <div className="space-y-3">
+      <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <p className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60 mb-2">
-            Withdrawable Balance
+          <p className="uppercase tracking-[0.12em] text-[11px] text-[#101010]/60 mb-2">
+            Treasury Checking
           </p>
-          <p className="font-serif text-[36px] leading-[1.1] tabular-nums text-[#101010]">
+          <p className="text-[20px] sm:text-[22px] font-semibold tracking-[-0.01em] text-[#101010]">
+            Withdrawable balance
+          </p>
+          <p className="mt-2 text-[32px] sm:text-[36px] font-semibold leading-[1.1] tabular-nums text-[#101010]">
             {formatUsd(balanceUsd)}
           </p>
         </div>
         {safeAddressDisplay && (
-          <div className="inline-flex items-center gap-2 rounded-full bg-[#F7F7F2] px-3 py-1 text-[12px] text-[#101010]/70">
-            <span>Treasury Safe · {safeAddressDisplay}</span>
-            <button
-              type="button"
-              onClick={handleCopyAddress}
-              className="text-[#1B29FF] hover:text-[#1420CC]"
-            >
-              {isAddressCopied ? 'Copied' : 'Copy'}
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={handleCopyAddress}
+            className="inline-flex items-center gap-2 rounded-full border border-[#101010]/15 bg-white px-3 py-1.5 text-[12px] font-medium text-[#101010] hover:border-[#1B29FF]/30 hover:text-[#1B29FF] transition-colors"
+          >
+            <span>{safeAddressDisplay}</span>
+            {isAddressCopied ? (
+              <Check className="h-3.5 w-3.5" />
+            ) : (
+              <Copy className="h-3.5 w-3.5" />
+            )}
+          </button>
         )}
       </div>
 
@@ -230,7 +237,7 @@ function CheckingActionsCard({
         <Dialog open={isMoveModalOpen} onOpenChange={setIsMoveModalOpen}>
           <DialogTrigger asChild>
             <Button
-              className="flex-1 inline-flex items-center justify-center gap-2 px-5 py-3 text-[15px] font-medium text-white bg-[#1B29FF] hover:bg-[#1420CC] transition-colors"
+              className="flex-1 inline-flex items-center justify-center gap-2 px-5 py-3 text-[15px] font-semibold text-white bg-[#1B29FF] hover:bg-[#1420CC] transition-colors"
               disabled={!isDemoMode && !hasVirtualAccounts}
               title={
                 !isDemoMode && !hasVirtualAccounts
@@ -259,7 +266,7 @@ function CheckingActionsCard({
           <DialogTrigger asChild>
             <Button
               variant="outline"
-              className="flex-1 inline-flex items-center justify-center gap-2 px-5 py-3 text-[15px] font-medium text-[#101010] border border-[#101010]/10 hover:border-[#1B29FF]/20 hover:text-[#1B29FF] hover:bg-[#F7F7F2] transition-colors"
+              className="flex-1 inline-flex items-center justify-center gap-2 px-5 py-3 text-[15px] font-semibold text-[#101010] border border-[#101010]/10 hover:border-[#1B29FF]/20 hover:text-[#1B29FF] hover:bg-[#F7F7F2] transition-colors"
             >
               <Info className="h-5 w-5 text-[#101010]/60" />
               Details
@@ -267,10 +274,15 @@ function CheckingActionsCard({
           </DialogTrigger>
           <DialogContent className="bg-white border-[#101010]/10 max-w-3xl max-h-[90vh] overflow-y-auto">
             <DialogHeader className="border-b border-[#101010]/10 pb-4">
-              <DialogTitle className="font-serif text-[24px] leading-[1.1] text-[#101010] flex items-center gap-2">
-                <Building2 className="h-5 w-5 text-[#101010]/60" />
-                Virtual Account Details
-              </DialogTitle>
+              <div>
+                <p className="uppercase tracking-[0.12em] text-[11px] text-[#101010]/60 mb-2">
+                  Banking instructions
+                </p>
+                <DialogTitle className="text-[22px] font-semibold tracking-[-0.01em] text-[#101010] flex items-center gap-2">
+                  <Building2 className="h-5 w-5 text-[#101010]/60" />
+                  Virtual account details
+                </DialogTitle>
+              </div>
             </DialogHeader>
 
             {isLoadingFundingSources ? (
@@ -282,12 +294,14 @@ function CheckingActionsCard({
             ) : hasVirtualAccounts ? (
               <div className="space-y-6 py-6">
                 {achAccount && (
-                  <section className="rounded-[12px] border border-[#101010]/10 bg-[#F7F7F2] p-5">
-                    <div className="flex items-center gap-3 mb-4">
-                      <DollarSign className="h-5 w-5 text-[#101010]/60" />
+                  <section className="rounded-[14px] border border-[#101010]/10 bg-[#F7F7F2] p-5 sm:p-6">
+                    <div className="flex items-center gap-3 mb-4 text-[#101010]">
+                      <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white border border-[#101010]/10 text-[#1B29FF]">
+                        <DollarSign className="h-4 w-4" />
+                      </span>
                       <div>
-                        <p className="text-[14px] font-medium text-[#101010]">
-                          US ACH & Wire
+                        <p className="text-[15px] font-semibold tracking-[-0.01em]">
+                          US ACH & wire
                         </p>
                         <p className="text-[12px] text-[#101010]/60">
                           Domestic USD transfers
@@ -296,31 +310,31 @@ function CheckingActionsCard({
                     </div>
                     <dl className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-[13px] text-[#101010]/80">
                       <div>
-                        <dt className="uppercase tracking-[0.16em] text-[10px] text-[#101010]/50">
-                          Bank Name
+                        <dt className="uppercase tracking-[0.16em] text-[10px] text-[#101010]/45">
+                          Bank name
                         </dt>
                         <dd className="text-[14px] font-medium text-[#101010]">
                           {achAccount.sourceBankName}
                         </dd>
                       </div>
                       <div>
-                        <dt className="uppercase tracking-[0.16em] text-[10px] text-[#101010]/50">
-                          Routing Number
+                        <dt className="uppercase tracking-[0.16em] text-[10px] text-[#101010]/45">
+                          Routing number
                         </dt>
                         <dd className="text-[14px] font-medium text-[#101010]">
                           {achAccount.sourceRoutingNumber}
                         </dd>
                       </div>
                       <div>
-                        <dt className="uppercase tracking-[0.16em] text-[10px] text-[#101010]/50">
-                          Account Number
+                        <dt className="uppercase tracking-[0.16em] text-[10px] text-[#101010]/45">
+                          Account number
                         </dt>
                         <dd className="text-[14px] font-medium text-[#101010]">
                           {achAccount.sourceAccountNumber}
                         </dd>
                       </div>
                       <div>
-                        <dt className="uppercase tracking-[0.16em] text-[10px] text-[#101010]/50">
+                        <dt className="uppercase tracking-[0.16em] text-[10px] text-[#101010]/45">
                           Beneficiary
                         </dt>
                         <dd className="text-[14px] font-medium text-[#101010]">
@@ -332,11 +346,13 @@ function CheckingActionsCard({
                 )}
 
                 {ibanAccount && (
-                  <section className="rounded-[12px] border border-[#101010]/10 bg-[#F7F7F2] p-5">
-                    <div className="flex items-center gap-3 mb-4">
-                      <Euro className="h-5 w-5 text-[#101010]/60" />
+                  <section className="rounded-[14px] border border-[#101010]/10 bg-[#F7F7F2] p-5 sm:p-6">
+                    <div className="flex items-center gap-3 mb-4 text-[#101010]">
+                      <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white border border-[#101010]/10 text-[#1B29FF]">
+                        <Euro className="h-4 w-4" />
+                      </span>
                       <div>
-                        <p className="text-[14px] font-medium text-[#101010]">
+                        <p className="text-[15px] font-semibold tracking-[-0.01em]">
                           SEPA / IBAN
                         </p>
                         <p className="text-[12px] text-[#101010]/60">
@@ -346,15 +362,15 @@ function CheckingActionsCard({
                     </div>
                     <dl className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-[13px] text-[#101010]/80">
                       <div>
-                        <dt className="uppercase tracking-[0.16em] text-[10px] text-[#101010]/50">
-                          Bank Name
+                        <dt className="uppercase tracking-[0.16em] text-[10px] text-[#101010]/45">
+                          Bank name
                         </dt>
                         <dd className="text-[14px] font-medium text-[#101010]">
                           {ibanAccount.sourceBankName}
                         </dd>
                       </div>
                       <div>
-                        <dt className="uppercase tracking-[0.16em] text-[10px] text-[#101010]/50">
+                        <dt className="uppercase tracking-[0.16em] text-[10px] text-[#101010]/45">
                           IBAN
                         </dt>
                         <dd className="text-[14px] font-medium text-[#101010]">
@@ -362,7 +378,7 @@ function CheckingActionsCard({
                         </dd>
                       </div>
                       <div>
-                        <dt className="uppercase tracking-[0.16em] text-[10px] text-[#101010]/50">
+                        <dt className="uppercase tracking-[0.16em] text-[10px] text-[#101010]/45">
                           BIC / SWIFT
                         </dt>
                         <dd className="text-[14px] font-medium text-[#101010]">
@@ -370,7 +386,7 @@ function CheckingActionsCard({
                         </dd>
                       </div>
                       <div>
-                        <dt className="uppercase tracking-[0.16em] text-[10px] text-[#101010]/50">
+                        <dt className="uppercase tracking-[0.16em] text-[10px] text-[#101010]/45">
                           Beneficiary
                         </dt>
                         <dd className="text-[14px] font-medium text-[#101010]">
@@ -379,8 +395,8 @@ function CheckingActionsCard({
                       </div>
                       {ibanAccount.sourceBankAddress && (
                         <div className="sm:col-span-2">
-                          <dt className="uppercase tracking-[0.16em] text-[10px] text-[#101010]/50">
-                            Bank Address
+                          <dt className="uppercase tracking-[0.16em] text-[10px] text-[#101010]/45">
+                            Bank address
                           </dt>
                           <dd className="text-[14px] font-medium text-[#101010]">
                             {ibanAccount.sourceBankAddress}
