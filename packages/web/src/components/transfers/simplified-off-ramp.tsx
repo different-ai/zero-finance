@@ -660,6 +660,8 @@ function SimplifiedOffRampReal({
       onSettled: () => setIsLoading(false),
     });
 
+  const isSubmittingTransfer = isLoading || createTransferMutation.isPending;
+
   const handleNextStep = async () => {
     let fieldsToValidate: (keyof OffRampFormValues)[] = [];
 
@@ -1694,11 +1696,11 @@ function SimplifiedOffRampReal({
           {/* Step 3: Review */}
           {formStep === 3 && (
             <div className="relative">
-              {createTransferMutation.isPending && (
+              {isSubmittingTransfer && (
                 <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 rounded-[12px] bg-white/85 backdrop-blur-sm">
                   <Loader2 className="h-5 w-5 animate-spin text-[#1B29FF]" />
                   <p className="text-[13px] text-[#101010]/70">
-                    Submitting transfer...
+                    {isLoading ? loadingMessage : 'Submitting transfer...'}
                   </p>
                 </div>
               )}
@@ -1706,7 +1708,7 @@ function SimplifiedOffRampReal({
               <div
                 className={cn(
                   'space-y-5',
-                  createTransferMutation.isPending && 'pointer-events-none opacity-40',
+                  isSubmittingTransfer && 'pointer-events-none opacity-40',
                 )}
               >
                 <div className="bg-[#F7F7F2] border border-[#101010]/10 rounded-[12px] p-5">
@@ -1782,6 +1784,7 @@ function SimplifiedOffRampReal({
                     type="button"
                     onClick={handlePreviousStep}
                     variant="outline"
+                    disabled={isSubmittingTransfer}
                     className="flex-1 h-11 border-[#101010]/10 hover:bg-[#F7F7F2]/50"
                   >
                     <ArrowLeft className="mr-2 h-4 w-4" />
@@ -1789,13 +1792,13 @@ function SimplifiedOffRampReal({
                   </Button>
                   <Button
                     type="submit"
-                    disabled={createTransferMutation.isPending}
+                    disabled={isSubmittingTransfer}
                     className="flex-1 bg-[#1B29FF] hover:bg-[#1420CC] text-white h-12 text-[14px] font-semibold"
                   >
-                    {createTransferMutation.isPending ? (
+                    {isSubmittingTransfer ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Processing…
+                        {isLoading ? loadingMessage : 'Processing…'}
                       </>
                     ) : (
                       <>
