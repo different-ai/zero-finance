@@ -39,7 +39,11 @@ export function PostAuthRedirect() {
     if (onboardingLoading) return;
 
     const hasPrimarySafe = Boolean(onboardingStatus?.primarySafeAddress);
-    if (!hasPrimarySafe) {
+    const hasCompletedFlag = Boolean(
+      onboardingStatus?.skippedOrCompletedOnboardingStepper,
+    );
+
+    if (!hasPrimarySafe && !hasCompletedFlag) {
       router.replace('/welcome');
     }
   }, [
@@ -48,6 +52,7 @@ export function PostAuthRedirect() {
     inviteToken,
     onboardingLoading,
     onboardingStatus?.primarySafeAddress,
+    onboardingStatus?.skippedOrCompletedOnboardingStepper,
     router,
   ]);
 

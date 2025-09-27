@@ -8,7 +8,7 @@ import { LoadingCard } from './components/loading-card';
 import { appRouter } from '@/server/routers/_app';
 import { getUserId } from '@/lib/auth';
 import { db } from '@/db';
-import { userSafes } from '@/db/schema';
+import { userSafes, userProfilesTable } from '@/db/schema';
 import { and, eq } from 'drizzle-orm';
 import { SavingsSection } from './components/savings-section';
 
@@ -82,7 +82,15 @@ export default async function DashboardPage({
       columns: { safeAddress: true },
     });
 
-    if (!primarySafe?.safeAddress) {
+    const profile = await db.query.userProfilesTable.findFirst({
+      where: eq(userProfilesTable.privyDid, userId),
+      columns: { skippedOrCompletedOnboardingStepper: true },
+    });
+
+    if (
+      !primarySafe?.safeAddress &&
+      !profile?.skippedOrCompletedOnboardingStepper
+    ) {
       redirect('/welcome');
     }
   }
