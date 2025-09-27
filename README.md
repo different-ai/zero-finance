@@ -4,16 +4,6 @@
 
 <img width="1840" height="1191" alt="Screenshot 2025-07-10 at 18 57 54" src="https://github.com/user-attachments/assets/14b8476f-1f02-4fb1-92c0-48bb1487ae06" />
 
-## ⚠️ Risk Disclosure
-
-**DeFi yields are NOT FDIC insured.** Smart contract risks apply.
-
-### 🛡️ Want Insurance Coverage?
-
-Contact us for protected accounts:
-
-- 📧 Email: raghav@0.finance
-- 📅 Book a call: [Schedule 15 minutes](https://cal.com/team/0finance/15)
 
 ## What Zero Finance Does
 
@@ -22,7 +12,6 @@ Contact us for protected accounts:
 - **Get Paid Easily** - Create invoices in seconds and get paid directly to your personal IBAN
 - **Spend Anywhere** - Use a debit card worldwide with 0% conversion fees
 - **Optimize Yield** - AI automatically allocates idle funds to highest-yielding opportunities
-- **Automate Finances** - Complete accounting system with expense tracking and tax optimization
 
 ## Current Status
 
