@@ -8,6 +8,8 @@ import { LoadingCard } from './components/loading-card';
 import { appRouter } from '@/server/routers/_app';
 import { getUserId } from '@/lib/auth';
 import { db } from '@/db';
+import { userSafes } from '@/db/schema';
+import { and, eq } from 'drizzle-orm';
 import { SavingsSection } from './components/savings-section';
 
 // Create a simple log object
@@ -51,7 +53,17 @@ async function OnboardingData() {
   }
 }
 
-export default async function DashboardPage() {
+type DashboardSearchParams = {
+  invite?: string;
+  token?: string;
+  [key: string]: string | string[] | undefined;
+};
+
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams?: DashboardSearchParams;
+}) {
   const userId = await getUserId();
 
   // Redirect if no user
@@ -59,10 +71,39 @@ export default async function DashboardPage() {
     redirect('/signin');
   }
 
-  const caller = appRouter.createCaller({ userId, db, log });
-  const onboardingStatus = await caller.onboarding.getOnboardingStatus();
+  const inviteToken = searchParams?.invite || searchParams?.token;
 
-  if (!onboardingStatus?.primarySafeAddress) {
+  if (!inviteToken) {
+    const primarySafe = await db.query.userSafes.findFirst({
+      where: and(
+        eq(userSafes.userDid, userId),
+        eq(userSafes.safeType, 'primary'),
+      ),
+      columns: { safeAddress: true },
+    });
+
+    if (!primarySafe?.safeAddress) {
+      redirect('/welcome');
+    }
+  }
+
+  if (inviteToken) {
+    redirect(`/join-team?token=${inviteToken}`);
+  }
+
+  const caller = appRouter.createCaller({ userId, db, log });
+  const onboardingStatus = await caller.onboarding.getOnboardingSteps();
+
+  if (
+    onboardingStatus?.isCompleted === false &&
+    !(searchParams && 'showOnboarding' in searchParams)
+  ) {
+    // continue rendering onboarding layer below
+  }
+
+  const onboardingStatusForCard = await caller.onboarding.getOnboardingStatus();
+
+  if (!onboardingStatusForCard?.primarySafeAddress && !inviteToken) {
     redirect('/welcome');
   }
 
