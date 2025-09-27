@@ -9,11 +9,7 @@ import Safe, {
   type SafeDeploymentConfig,
 } from '@safe-global/protocol-kit';
 import { base } from 'viem/chains';
-import {
-  type Address,
-  encodeAbiParameters,
-  encodeFunctionData,
-} from 'viem';
+import { type Address, encodeAbiParameters, encodeFunctionData } from 'viem';
 import { createPublicClient, http } from 'viem';
 import type { MetaTransactionData } from '@safe-global/safe-core-sdk-types';
 import {
@@ -92,11 +88,8 @@ async function waitUntilDeployed(addr: Address) {
 
 export function usePrimaryAccountSetup() {
   const utils = api.useUtils();
-  const {
-    hasSmartWallet,
-    smartWalletAddress,
-    createSmartWallet,
-  } = useSmartWallet();
+  const { hasSmartWallet, smartWalletAddress, createSmartWallet } =
+    useSmartWallet();
   const { client: smartWalletClient } = useSmartWallets();
 
   const completeOnboardingMutation =
@@ -177,7 +170,8 @@ export function usePrimaryAccountSetup() {
         detail: undefined,
       });
 
-      const existingSafe = await utils.settings.userSafes.getPrimarySafeAddress.fetch();
+      const existingSafe =
+        await utils.settings.userSafes.getPrimarySafeAddress.fetch();
 
       if (existingSafe) {
         updateStep('primarySafe', { status: 'success' });
@@ -207,7 +201,8 @@ export function usePrimaryAccountSetup() {
       });
 
       const predictedSafeAddress = (await protocolKit.getAddress()) as Address;
-      const deploymentTransaction = await protocolKit.createSafeDeploymentTransaction();
+      const deploymentTransaction =
+        await protocolKit.createSafeDeploymentTransaction();
 
       await smartWalletClient.sendTransaction(
         {

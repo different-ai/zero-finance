@@ -1802,24 +1802,7 @@ export default function SavingsPageWrapper({
               </div>
             </div>
           )}
-
-          {/* Risk Disclosure - Clean Alert */}
-          <div className="bg-[#FFF8E6] border border-[#FFA500]/20 p-6">
-            <div className="flex gap-4">
-              <AlertCircle className="h-5 w-5 text-[#FFA500] flex-shrink-0 mt-0.5" />
-              <div>
-                <p className="text-[14px] font-medium text-[#101010] mb-2">
-                  Risk Disclosure
-                </p>
-                <p className="text-[13px] text-[#101010]/70 leading-relaxed">
-                  All DeFi protocols carry inherent risks. Vaults are audited
-                  and insured where possible, but past performance does not
-                  guarantee future returns. APY rates are variable and subject
-                  to market conditions.
-                </p>
-              </div>
-            </div>
-          </div>
+          
         </div>
       )}
     </div>

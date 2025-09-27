@@ -63,11 +63,7 @@ type BuildOpts = {
 /** create a SafeTx with optional overridden safeTxGas */
 export async function buildSafeTx(
   txs: MetaTransactionData[],
-  {
-    safeAddress,
-    providerUrl = getBaseRpcUrl(),
-    gas = 200_000n,
-  }: BuildOpts,
+  { safeAddress, providerUrl = getBaseRpcUrl(), gas = 200_000n }: BuildOpts,
 ): Promise<EthSafeTransaction> {
   console.log('building safe tx', safeAddress);
   const sdk = await Safe.init({ provider: providerUrl, safeAddress });
@@ -184,12 +180,19 @@ export async function relaySafeTx(
     args: execArgs,
   });
   console.log('execData', execData);
-  return smartClient.sendTransaction({
-    chain,
-    to: safeAddress,
-    data: execData,
-    value: 0n,
-  });
+  return smartClient.sendTransaction(
+    {
+      chain,
+      to: safeAddress,
+      data: execData,
+      value: 0n,
+    },
+    {
+      uiOptions: {
+        showWalletUIs: false,
+      },
+    },
+  );
 }
 
 /* -------------------------------------------------------------------------- */
