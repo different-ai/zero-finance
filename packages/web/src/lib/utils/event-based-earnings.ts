@@ -12,6 +12,7 @@ export interface EarningsEvent {
   vaultAddress: string;
   apy: number; // APY at the time of the event (as percentage, e.g., 8 for 8%)
   shares?: bigint; // For tracking proportional withdrawals
+  decimals?: number; // Asset decimals for the amount (defaults to 6 if omitted)
 }
 
 export interface VaultPosition {
@@ -27,6 +28,28 @@ export interface DepositPosition {
   originalAmount: bigint;
   currentAmount: bigint; // After proportional withdrawals
   apy: number; // APY at deposit time
+  decimals: number;
+}
+
+const DEFAULT_DECIMALS = 6;
+const AGGREGATE_DECIMALS = 18;
+
+function scaleAmount(
+  amount: bigint,
+  fromDecimals: number,
+  targetDecimals: number = AGGREGATE_DECIMALS,
+): bigint {
+  if (fromDecimals === targetDecimals) {
+    return amount;
+  }
+
+  if (fromDecimals < targetDecimals) {
+    const factor = BigInt(10) ** BigInt(targetDecimals - fromDecimals);
+    return amount * factor;
+  }
+
+  const divisor = BigInt(10) ** BigInt(fromDecimals - targetDecimals);
+  return amount / divisor;
 }
 
 /**
@@ -101,10 +124,12 @@ export function buildPositionsFromEvents(
         vaultAddress: event.vaultAddress,
         deposits: [],
         currentApy: event.apy,
-        decimals: 6, // Default to USDC decimals, should be passed in production
+        decimals: event.decimals ?? DEFAULT_DECIMALS,
       };
       vaultPositions.set(event.vaultAddress, vault);
     }
+
+    const decimals = event.decimals ?? vault.decimals ?? DEFAULT_DECIMALS;
 
     if (event.type === 'deposit') {
       vault.deposits.push({
@@ -113,8 +138,10 @@ export function buildPositionsFromEvents(
         originalAmount: event.amount,
         currentAmount: event.amount,
         apy: event.apy,
+        decimals,
       });
       vault.currentApy = event.apy; // Update to latest APY
+      vault.decimals = decimals;
     } else if (event.type === 'withdrawal') {
       // Process proportional withdrawal
       vault.deposits = processWithdrawal(vault.deposits, event.amount);
@@ -134,6 +161,7 @@ export function calculateTotalEarnings(
   totalEarnings: bigint;
   byVault: Map<string, bigint>;
   totalPrincipal: bigint;
+  // All aggregates are normalised to 18 decimals to allow cross-asset comparisons
 } {
   const positions = buildPositionsFromEvents(events);
   const byVault = new Map<string, bigint>();
@@ -146,8 +174,8 @@ export function calculateTotalEarnings(
 
     for (const deposit of vault.deposits) {
       const earnings = calculatePositionEarnings(deposit, currentTime);
-      vaultEarnings += earnings;
-      vaultPrincipal += deposit.currentAmount;
+      vaultEarnings += scaleAmount(earnings, deposit.decimals);
+      vaultPrincipal += scaleAmount(deposit.currentAmount, deposit.decimals);
     }
 
     byVault.set(vaultAddress, vaultEarnings);
@@ -178,7 +206,10 @@ export function calculateEarningsPerSecond(events: EarningsEvent[]): bigint {
         const apyBasisPoints = BigInt(Math.floor(deposit.apy * 100));
         const earningsPerSecond =
           (deposit.currentAmount * apyBasisPoints) / (10000n * secondsInYear);
-        totalEarningsPerSecond += earningsPerSecond;
+        totalEarningsPerSecond += scaleAmount(
+          earningsPerSecond,
+          deposit.decimals,
+        );
       }
     }
   }
@@ -189,8 +220,11 @@ export function calculateEarningsPerSecond(events: EarningsEvent[]): bigint {
 /**
  * Convert from smallest unit to decimal for display
  */
-export function formatEarnings(amount: bigint, decimals: number = 6): number {
-  const divisor = BigInt(10 ** decimals);
+export function formatEarnings(
+  amount: bigint,
+  decimals: number = DEFAULT_DECIMALS,
+): number {
+  const divisor = BigInt(10) ** BigInt(decimals);
   const whole = amount / divisor;
   const remainder = amount % divisor;
 
@@ -217,9 +251,10 @@ export function initializeEarningsAnimation(
   const earningsPerSecond = calculateEarningsPerSecond(events);
 
   return {
-    initialValue: formatEarnings(totalEarnings),
-    earningsPerSecond: formatEarnings(earningsPerSecond * 1000n) / 1000, // More precision for per-second
-    totalPrincipal: formatEarnings(totalPrincipal),
+    initialValue: formatEarnings(totalEarnings, AGGREGATE_DECIMALS),
+    earningsPerSecond:
+      formatEarnings(earningsPerSecond * 1000n, AGGREGATE_DECIMALS) / 1000, // More precision for per-second
+    totalPrincipal: formatEarnings(totalPrincipal, AGGREGATE_DECIMALS),
   };
 }
 

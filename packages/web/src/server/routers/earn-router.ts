@@ -18,6 +18,10 @@ import {
   ETHEREUM_CHAIN_ID,
 } from '../earn/base-vaults';
 import {
+  getVaultApyBasisPoints,
+  resolveVaultDecimals,
+} from '../earn/vault-apy-service';
+import {
   createWalletClient,
   http,
   parseAbi,
@@ -519,6 +523,8 @@ export const earnRouter = router({
             );
         }
         const depositPercentage = autoEarnConfig?.pct || null;
+        const { apyBasisPoints } = await getVaultApyBasisPoints(vaultAddress);
+        const assetDecimals = resolveVaultDecimals(vaultAddress);
 
         // 6. Record the deposit in the database with the percentage used
         await db.insert(earnDeposits).values({
@@ -533,6 +539,8 @@ export const earnRouter = router({
           txHash: txHash,
           timestamp: new Date(),
           depositPercentage: depositPercentage, // Store the percentage used at deposit time
+          apyBasisPoints,
+          assetDecimals,
         });
         console.log(
           `Deposit recorded in DB for tx ${txHash} with percentage ${depositPercentage}.`,
@@ -666,68 +674,86 @@ export const earnRouter = router({
         orderBy: (tbl, { asc }) => [asc(tbl.timestamp)],
       });
 
-      // Get current APY for each vault
-      const vaultApys = new Map<string, number>();
-      for (const vault of BASE_USDC_VAULTS) {
-        try {
-          const response = await fetch('https://blue-api.morpho.org/graphql', {
-            method: 'POST',
-            headers: { 'content-type': 'application/json' },
-            body: JSON.stringify({
-              query: `
-                query ($address: String!, $chainId: Int!) {
-                  vaultByAddress(address: $address, chainId: $chainId) {
-                    address
-                    state {
-                      apy
-                    }
-                  }
-                }`,
-              variables: {
-                address: vault.address.toLowerCase(),
-                chainId: vault.chainId || BASE_CHAIN_ID,
-              },
-            }),
-          });
+      const vaultApyCache = new Map<string, number>();
+      const vaultDecimalsCache = new Map<string, number>();
 
-          if (response.ok) {
-            const result = await response.json();
-            if (result.data?.vaultByAddress?.state?.apy !== undefined) {
-              const apy = Number(result.data.vaultByAddress.state.apy);
-              // Convert from decimal to percentage if needed
-              vaultApys.set(
-                vault.address.toLowerCase(),
-                apy > 1 ? apy : apy * 100,
-              );
-            }
-          }
-        } catch (e) {
-          console.warn(`Failed to fetch APY for vault ${vault.address}:`, e);
+      const ensureVaultApy = async (
+        vaultAddress: string,
+        existingBasisPoints?: number | null,
+      ) => {
+        const key = vaultAddress.toLowerCase();
+        if (existingBasisPoints !== undefined && existingBasisPoints !== null) {
+          vaultApyCache.set(key, existingBasisPoints);
+          return existingBasisPoints;
         }
+        if (vaultApyCache.has(key)) {
+          return vaultApyCache.get(key)!;
+        }
+        const { apyBasisPoints } = await getVaultApyBasisPoints(vaultAddress);
+        vaultApyCache.set(key, apyBasisPoints);
+        return apyBasisPoints;
+      };
+
+      const events = [] as Array<{
+        id: string;
+        type: 'deposit' | 'withdrawal';
+        timestamp: string;
+        amount: string;
+        shares?: string;
+        vaultAddress: string;
+        apy: number;
+        decimals: number;
+      }>;
+
+      for (const deposit of deposits) {
+        const decimals = deposit.assetDecimals ?? resolveVaultDecimals(deposit.vaultAddress);
+        vaultDecimalsCache.set(deposit.vaultAddress.toLowerCase(), decimals);
+
+        let apyBasisPoints = deposit.apyBasisPoints ?? null;
+        if (apyBasisPoints === null) {
+          apyBasisPoints = await ensureVaultApy(deposit.vaultAddress, null);
+          await db
+            .update(earnDeposits)
+            .set({ apyBasisPoints })
+            .where(eq(earnDeposits.id, deposit.id));
+        } else {
+          await ensureVaultApy(deposit.vaultAddress, apyBasisPoints);
+        }
+
+        events.push({
+          id: deposit.txHash,
+          type: 'deposit',
+          timestamp: deposit.timestamp.toISOString(),
+          amount: deposit.assetsDeposited.toString(),
+          shares: deposit.sharesReceived.toString(),
+          vaultAddress: deposit.vaultAddress,
+          apy: Number(apyBasisPoints) / 100,
+          decimals,
+        });
+      }
+
+      for (const withdrawal of withdrawals) {
+        const key = withdrawal.vaultAddress.toLowerCase();
+        const decimals =
+          vaultDecimalsCache.get(key) ?? resolveVaultDecimals(withdrawal.vaultAddress);
+        const apyBasisPoints =
+          vaultApyCache.get(key) ??
+          (await ensureVaultApy(withdrawal.vaultAddress));
+
+        events.push({
+          id: withdrawal.txHash || withdrawal.userOpHash || withdrawal.id,
+          type: 'withdrawal',
+          timestamp: withdrawal.timestamp.toISOString(),
+          amount: withdrawal.assetsWithdrawn.toString(),
+          shares: withdrawal.sharesBurned.toString(),
+          vaultAddress: withdrawal.vaultAddress,
+          apy: Number(apyBasisPoints) / 100,
+          decimals,
+        });
       }
 
       // Transform to event format
-      const events = [
-        ...deposits.map((dep) => ({
-          id: dep.txHash,
-          type: 'deposit' as const,
-          timestamp: dep.timestamp.toISOString(),
-          amount: dep.assetsDeposited.toString(),
-          vaultAddress: dep.vaultAddress,
-          // Use current APY or fallback to 8%
-          apy: vaultApys.get(dep.vaultAddress.toLowerCase()) || 8,
-          shares: dep.sharesReceived.toString(),
-        })),
-        ...withdrawals.map((wit) => ({
-          id: wit.txHash || wit.userOpHash || wit.id,
-          type: 'withdrawal' as const,
-          timestamp: wit.timestamp.toISOString(),
-          amount: wit.assetsWithdrawn.toString(),
-          vaultAddress: wit.vaultAddress,
-          apy: vaultApys.get(wit.vaultAddress.toLowerCase()) || 8,
-          shares: wit.sharesBurned.toString(),
-        })),
-      ].sort(
+      events.sort(
         (a, b) =>
           new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
       );

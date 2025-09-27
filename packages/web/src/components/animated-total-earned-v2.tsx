@@ -65,6 +65,7 @@ export function AnimatedTotalEarnedV2({
       vaultAddress: e.vaultAddress,
       apy: e.apy,
       shares: e.shares ? BigInt(e.shares) : undefined,
+      decimals: e.decimals,
     }));
 
     return initializeEarningsAnimation(events);

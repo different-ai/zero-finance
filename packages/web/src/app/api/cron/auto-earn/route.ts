@@ -1,6 +1,11 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { db } from '@/db';
-import { autoEarnConfigs, userSafes, earnDeposits, incomingDeposits } from '@/db/schema';
+import {
+  autoEarnConfigs,
+  userSafes,
+  earnDeposits,
+  incomingDeposits,
+} from '@/db/schema';
 import { eq, and, isNull, desc } from 'drizzle-orm';
 import {
   createPublicClient,
@@ -19,6 +24,10 @@ import crypto from 'crypto';
 import { USDC_ADDRESS, USDC_DECIMALS } from '@/lib/constants';
 import { getBaseRpcUrl } from '@/lib/base-rpc-url';
 import { ensureUserWorkspace } from '@/server/utils/workspace';
+import {
+  getVaultApyBasisPoints,
+  resolveVaultDecimals,
+} from '@/server/earn/vault-apy-service';
 
 // Helper to validate the cron key (to protect endpoint from unauthorized access)
 function validateCronKey(req: NextRequest): boolean {
@@ -354,19 +363,28 @@ async function sweep() {
           actualAmountDeposited = amountToSave;
         }
 
+        const resolvedVaultAddress =
+          vaultAddress ?? '0x0000000000000000000000000000000000000000';
+        const { apyBasisPoints } = await getVaultApyBasisPoints(
+          resolvedVaultAddress,
+        );
+        const assetDecimals = resolveVaultDecimals(resolvedVaultAddress);
+
         // Record deposit in earnDeposits table
         await db.insert(earnDeposits).values({
           id: crypto.randomUUID(),
           userDid,
           workspaceId: workspaceId ?? null,
           safeAddress: safeAddr,
-          vaultAddress: vaultAddress ?? '0x0000000000000000000000000000000000000000',
+          vaultAddress: resolvedVaultAddress,
           tokenAddress: USDC_ADDRESS,
           assetsDeposited: actualAmountDeposited,
           sharesReceived,
           txHash,
           timestamp: new Date(),
           depositPercentage: pct,
+          apyBasisPoints,
+          assetDecimals,
         });
 
         // Update incoming deposit as swept

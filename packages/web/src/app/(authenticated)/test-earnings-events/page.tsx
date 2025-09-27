@@ -17,6 +17,7 @@ export default function TestEarningsEventsPage() {
       amount: 1000000000n, // $1000 in USDC (6 decimals)
       vaultAddress: '0xVault1',
       apy: 8.5,
+      decimals: 6,
     },
     {
       id: 'tx2',
@@ -25,6 +26,7 @@ export default function TestEarningsEventsPage() {
       amount: 500000000n, // $500 in USDC
       vaultAddress: '0xVault1',
       apy: 8.2,
+      decimals: 6,
     },
     {
       id: 'tx3',
@@ -33,6 +35,7 @@ export default function TestEarningsEventsPage() {
       amount: 2000000000n, // $2000 in USDC
       vaultAddress: '0xVault2',
       apy: 7.8,
+      decimals: 6,
     },
   ]);
 
@@ -44,6 +47,7 @@ export default function TestEarningsEventsPage() {
       amount: BigInt(Math.floor(Math.random() * 5000 + 500) * 1000000), // Random $500-$5500
       vaultAddress: Math.random() > 0.5 ? '0xVault1' : '0xVault2',
       apy: 7 + Math.random() * 3, // Random 7-10% APY
+      decimals: 6,
     };
     setEvents([...events, newEvent]);
   };
@@ -56,6 +60,7 @@ export default function TestEarningsEventsPage() {
       amount: 500000000n, // $500 withdrawal
       vaultAddress: '0xVault1',
       apy: 8.0,
+      decimals: 6,
     };
     setEvents([...events, newEvent]);
   };
@@ -175,21 +180,21 @@ export default function TestEarningsEventsPage() {
               <div className="flex justify-between py-2 border-b">
                 <span className="text-gray-600">Total Principal:</span>
                 <span className="font-medium">
-                  ${formatEarnings(totalPrincipal).toFixed(2)}
+                  ${formatEarnings(totalPrincipal, 18).toFixed(2)}
                 </span>
               </div>
 
               <div className="flex justify-between py-2 border-b">
                 <span className="text-gray-600">Accumulated Earnings:</span>
                 <span className="font-medium text-green-600">
-                  +${formatEarnings(totalEarnings).toFixed(6)}
+                  +${formatEarnings(totalEarnings, 18).toFixed(6)}
                 </span>
               </div>
 
               <div className="flex justify-between py-2 border-b">
                 <span className="text-gray-600">Total Value:</span>
                 <span className="font-medium">
-                  ${formatEarnings(totalPrincipal + totalEarnings).toFixed(2)}
+                  ${formatEarnings(totalPrincipal + totalEarnings, 18).toFixed(2)}
                 </span>
               </div>
             </div>
@@ -203,7 +208,7 @@ export default function TestEarningsEventsPage() {
                 <div key={vault} className="flex justify-between py-2 border-b">
                   <span className="text-sm text-gray-600">{vault}:</span>
                   <span className="text-sm font-medium text-green-600">
-                    +${formatEarnings(earnings).toFixed(6)}
+                    +${formatEarnings(earnings, 18).toFixed(6)}
                   </span>
                 </div>
               ))}

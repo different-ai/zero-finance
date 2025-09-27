@@ -2,70 +2,71 @@
 
 ## What Landed
 
-- API: New TRPC endpoint `earn.getEarningsEvents` (packages/web/src/server/routers/earn-router.ts)
+- **API** — `earn.getEarningsEvents` (`packages/web/src/server/routers/earn-router.ts`)
+  - Returns a chronological deposit/withdrawal feed for a Safe (id, type, ISO timestamp, amount/shares as strings, vaultAddress, apy, decimals).
+  - Persists APY-at-deposit (`earn_deposits.apy_basis_points`) and asset decimals, backfilling older rows on demand.
+  - Resolves vault APY via cached snapshots (`earn_vault_apy_snapshots`) with a 10‑minute TTL before reaching Morpho.
+  - Ensures events are workspace-scoped and sorted server-side so the FE receives ready-to-use history.
 
-  - Returns chronological list of deposit/withdrawal events for a Safe.
-  - Event shape (stringified amounts/shares for transport):
-    - id, type: 'deposit' | 'withdrawal', timestamp (ISO), amount (string), shares (string), vaultAddress, apy (number).
-  - APY pulled live per vault via Morpho GraphQL (current rate used; historical APY not yet captured).
+- **APY snapshots** — `earn_vault_apy_snapshots` (`packages/web/src/db/schema.ts` + `packages/web/drizzle/0105_clever_vivisector.sql`)
+  - Records the latest APY basis points per vault, chain, and source (`morpho`, `fallback_default`, etc.).
+  - Shared helper (`packages/web/src/server/earn/vault-apy-service.ts`) exposes cached reads for routers, cron jobs, and future tasks.
 
-- Calc engine: `event-based-earnings.ts` (packages/web/src/lib/utils)
+- **Calculation engine** — `event-based-earnings.ts` (`packages/web/src/lib/utils`)
+  - Uses pure `bigint` math to build per-vault positions, apply proportional withdrawals, and keep precision.
+  - Normalises all aggregates to 18 decimals so mixed-asset vaults sum correctly.
+  - Exposes helpers for total earnings, earnings-per-second, formatting, and `initializeEarningsAnimation` (drives the UI animation seed + rate).
+  - Accepts per-event decimals (default 6) and carries them through proportional withdrawals.
 
-  - Pure BigInt math for accuracy; deposits tracked with timestamps; withdrawals applied proportionally across positions.
-  - Helpers: build positions from events, compute accumulated earnings, earnings/sec, and an initializer suitable for live animation.
+- **UI components** — `AnimatedEarningsV2` & `AnimatedTotalEarnedV2` (`packages/web/src/components`)
+  - Never start from $0; they hydrate immediately with the accumulated total from events.
+  - Fall back to a 14-day earnings estimate when no history exists but a balance/APY is provided.
+  - Smoothly animate via `requestAnimationFrame` and expose a lightweight loading state (“Calculating…”).
 
-- UI components:
+- **Verification routes** — `/test-earnings`, `/test-earnings-fixed`, `/test-earnings-events`
+  - Cover the legacy baseline vs. new initializer, small value handling, and multi-vault event playback with withdrawals.
 
-  - `AnimatedEarningsV2` and `AnimatedTotalEarnedV2` (packages/web/src/components)
-    - Initialize from accumulated earnings (never start at $0 if data exists).
-    - Smooth animation via requestAnimationFrame; handles loading/mount correctly.
-
-- Test pages to verify behavior:
-  - `/test-earnings` and `/test-earnings-fixed` (basic and accumulated start, small amounts enabled).
-  - `/test-earnings-events` (interactive event-based demo across multiple vaults).
-
-## Current Dashboard State
+## Dashboard Integration (Live)
 
 - File: packages/web/src/app/(authenticated)/dashboard/savings/page-wrapper.tsx
+  - Uses `AnimatedTotalEarnedV2` for real safes, auto-passing `safeAddress`, `fallbackApy={averageInstantApy * 100}`, and `fallbackBalance={totalSaved}`.
+  - Retains `AnimatedTotalEarned` for demo mode to keep canned flows intact.
+  - Shows a lightweight placeholder if a real safe is not yet available.
 
-  - Still uses `AnimatedTotalEarned` (legacy) with computed `initialEarned`/`balance`.
-  - Not yet wired to event-based flow.
+## How the Pieces Fit Together
 
-- File: packages/web/src/server/routers/earn-router.ts
-  - `getEarningsEvents` is implemented and available for the FE.
+1. **API call**: Dashboard asks `earn.getEarningsEvents` for the authenticated Safe.
+2. **Transport format**: Server returns stringified amounts (asset units), persisted APY basis points, and decimals per event.
+3. **Client transform**: `AnimatedTotalEarnedV2` converts strings to `bigint` and funnels them into `initializeEarningsAnimation`.
+4. **Initializer output**: Helper returns `{ initialValue, earningsPerSecond }` as floats for display.
+5. **Animation loop**: Component seeds the counter with `initialValue` immediately, then increments each frame using the computed rate.
 
-## Recommended Integration (Dashboard)
-
-- Replace the legacy component with the V2 animated component when not in demo mode:
-
-  - Import `AnimatedTotalEarnedV2`.
-  - Render as soon as `safeAddress` is available:
-    - `<AnimatedTotalEarnedV2 safeAddress={safeAddress} fallbackApy={averageInstantApy * 100 /* if decimal */} fallbackBalance={totalSaved} />`
-    - Note: `averageInstantApy` in the page is a decimal (e.g., 0.08). `AnimatedTotalEarnedV2` expects APY as percentage. Pass `averageInstantApy * 100`.
-  - Keep existing skeleton/loading guard; V2 shows "Calculating..." while events load.
-
-- Retain the legacy display in demo mode.
+For bespoke visualizations, use `AnimatedEarningsV2` and pass pre-fetched events alongside optional `fallbackApy`/`fallbackBalance` props.
 
 ## Design Notes & Pitfalls Addressed
 
-- No $0 start: initial value is the accumulated earnings computed from actual deposit times.
-- Time zones: timestamps are handled in UTC with ISO strings.
-- Precision: calculations use BigInt; convert to decimal only for display.
-- Multiple vaults: computed per vault then summed.
-- Withdrawals: applied proportionally across positions to avoid FIFO/LIFO complexity.
-- APY: currently uses live APY at calculation time; historical APY per deposit is not yet persisted.
+- No $0 start: accumulated earnings seed the counter even on first paint.
+- Time zones: everything stays in ISO/UTC until display; no local math.
+- Precision: `bigint` throughout, float conversion happens only once for rendering.
+- Multiple vaults: events group by vault, earnings roll up across positions.
+- Withdrawals: proportional reductions keep the math audit-friendly without FIFO/LIFO disputes.
+- APY: captured per deposit and cached via snapshots so historical math is stable while network traffic stays low.
+- Fallback path: when the API returns no events, we estimate ~14 days of earnings off the provided balance/APY so the UI still moves.
 
 ## Gaps / Follow-ups
 
-1. Persist APY-at-deposit (and optionally APY changes over time) to improve historical accuracy.
-2. Consider server-side pre-aggregation or hourly checkpoints to reduce client work and ensure continuity.
-3. Migrate dashboard to `AnimatedTotalEarnedV2` (see Recommended Integration) and validate on real data.
+1. Extend `resolveVaultDecimals` to pull real token metadata instead of defaulting to 6 (pre-work for non-USDC assets).
+2. Add scheduled snapshotting so APY history is captured even without fresh deposits/withdrawals.
+3. Add regression tests around multi-decimal event mixes (e.g., 6 vs 18 decimals) to prevent future math regressions.
 
 ## Validation Checklist
 
-- With real deposits, "Earnings (Live)" should no longer appear to start at $0 on mount.
-- Add deposits/withdrawals and confirm proportional effects in `/test-earnings-events`.
-- Multiple vaults show accumulated earnings based on each deposit timestamp.
+- Confirm `packages/web/src/app/(authenticated)/dashboard/savings/page-wrapper.tsx` renders `AnimatedTotalEarnedV2` (non-demo path) with `safeAddress`, `fallbackApy={averageInstantApy * 100}`, `fallbackBalance={totalSaved}` and keeps demo mode on the legacy counter.
+- Confirm `packages/web/src/server/routers/earn-router.ts` exposes `earn.getEarningsEvents` with persisted APY/decimals and chronological ordering.
+- With real deposits, “Earnings (Live)” should hydrate above $0 instead of counting from zero.
+- Add deposits/withdrawals in `/test-earnings-events` and ensure proportional reductions behave as expected.
+- Validate multiple vaults aggregate correctly by comparing against manual calculations (18-decimal normalisation).
+- Inspect `earn_vault_apy_snapshots` to ensure new entries are written during deposits and snapshot refreshes.
 
 ## Key Files
 

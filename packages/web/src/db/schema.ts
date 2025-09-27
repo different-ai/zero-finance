@@ -628,6 +628,8 @@ export const earnDeposits = pgTable(
       .notNull()
       .defaultNow(),
     depositPercentage: integer('deposit_percentage'),
+    apyBasisPoints: integer('apy_basis_points'),
+    assetDecimals: integer('asset_decimals').notNull().default(6),
   },
   (table) => {
     return {
@@ -676,6 +678,31 @@ export const earnWithdrawals = pgTable(
       userDidIdx: index('earn_withdrawals_user_did_idx').on(table.userDid),
       workspaceIdx: index('earn_withdrawals_workspace_idx').on(table.workspaceId),
       statusIdx: index('earn_withdrawals_status_idx').on(table.status),
+    };
+  },
+);
+
+export const earnVaultApySnapshots = pgTable(
+  'earn_vault_apy_snapshots',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    vaultAddress: varchar('vault_address', { length: 42 }).notNull(),
+    chainId: integer('chain_id').notNull(),
+    apyBasisPoints: integer('apy_basis_points').notNull(),
+    source: text('source'),
+    capturedAt: timestamp('captured_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => {
+    return {
+      vaultIdx: index('earn_vault_apy_snapshots_vault_idx').on(
+        table.vaultAddress,
+      ),
+      vaultTimeIdx: index('earn_vault_apy_snapshots_vault_time_idx').on(
+        table.vaultAddress,
+        table.capturedAt,
+      ),
     };
   },
 );
@@ -1031,6 +1058,9 @@ export type NewEarnDeposit = typeof earnDeposits.$inferInsert;
 
 export type EarnWithdrawal = typeof earnWithdrawals.$inferSelect;
 export type NewEarnWithdrawal = typeof earnWithdrawals.$inferInsert;
+
+export type EarnVaultApySnapshot = typeof earnVaultApySnapshots.$inferSelect;
+export type NewEarnVaultApySnapshot = typeof earnVaultApySnapshots.$inferInsert;
 
 // Type inference for incoming deposits
 export type IncomingDeposit = typeof incomingDeposits.$inferSelect;

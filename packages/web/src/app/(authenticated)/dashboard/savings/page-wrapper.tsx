@@ -32,6 +32,7 @@ import { Address } from 'viem';
 import { BASE_USDC_VAULTS } from '@/server/earn/base-vaults';
 import { AnimatedYieldCounter } from '@/components/animated-yield-counter';
 import { AnimatedTotalEarned } from '@/components/animated-total-earned';
+import { AnimatedTotalEarnedV2 } from '@/components/animated-total-earned-v2';
 import { toast } from 'sonner';
 import Image from 'next/image';
 import { USDC_ADDRESS } from '@/lib/constants';
@@ -640,6 +641,9 @@ export default function SavingsPageWrapper({
 
   const animatedInitialEarned = isDemoMode ? 0 : totalEarned;
   const animatedBalance = isDemoMode ? totalSaved || 2500000 : totalSaved;
+  const fallbackApyPercent = Number.isFinite(averageInstantApy)
+    ? averageInstantApy * 100
+    : 8;
 
   const isInitialLoading =
     isLoadingSafes ||
@@ -854,11 +858,22 @@ export default function SavingsPageWrapper({
                   Earnings (Live)
                 </p>
                 <p className="font-serif text-[28px] sm:text-[32px] leading-[1.1] tabular-nums text-[#1B29FF]">
-                  <AnimatedTotalEarned
-                    initialEarned={animatedInitialEarned}
-                    apy={averageInstantApy}
-                    balance={animatedBalance}
-                  />
+                  {isDemoMode ? (
+                    <AnimatedTotalEarned
+                      initialEarned={animatedInitialEarned}
+                      apy={averageInstantApy}
+                      balance={animatedBalance}
+                    />
+                  ) : safeAddress ? (
+                    <AnimatedTotalEarnedV2
+                      safeAddress={safeAddress}
+                      fallbackApy={fallbackApyPercent}
+                      fallbackBalance={totalSaved}
+                      className="inline-block"
+                    />
+                  ) : (
+                    <span className="text-[#101010]/40">Calculating...</span>
+                  )}
                 </p>
               </div>
             </div>
