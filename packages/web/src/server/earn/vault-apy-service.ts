@@ -85,7 +85,7 @@ export async function getVaultApyBasisPoints(
     orderBy: (tbl, { desc: descLocal }) => [descLocal(tbl.capturedAt)],
   });
 
-  if (isFresh(latest)) {
+  if (latest && isFresh(latest)) {
     return {
       apyBasisPoints: latest.apyBasisPoints,
       source: latest.source ?? 'cache',

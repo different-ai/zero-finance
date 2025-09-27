@@ -115,8 +115,6 @@ export function AlignKycStatus({
     },
   });
 
-
-
   const createKycSessionMutation = api.align.createKycSession.useMutation({
     onSuccess: (data) => {
       console.log('[AlignKycStatus createKycSessionMutation] Success:', data);
@@ -438,7 +436,9 @@ export function AlignKycStatus({
 
   const handleUserFinishedVerification = () => {
     console.log(`[AlignKycStatus] User clicked I've Finished My Verification`);
-    toast.info('Please wait while we check your verification status with our partner.');
+    toast.info(
+      'Please wait while we check your verification status with our partner.',
+    );
     handleRefresh();
   };
 
@@ -519,13 +519,7 @@ export function AlignKycStatus({
               )}{' '}
               Start Verification Process
             </Button>
-            <Button
-              onClick={handleCopyLink}
-              variant="outline"
-              className="flex-1 sm:flex-none"
-            >
-              <Copy className="mr-2 h-4 w-4" /> Copy Link
-            </Button>
+    
           </div>
         );
         break;
@@ -611,9 +605,10 @@ export function AlignKycStatus({
 
       case 'statusActionRequired':
         title = 'Action Required';
-        description = statusData?.kycSubStatus === 'kyc_form_resubmission_required'
-          ? 'Additional information or documents are needed. Please use the link below to resubmit your verification.'
-          : 'Your identity verification is pending. Please continue the process using the link provided.';
+        description =
+          statusData?.kycSubStatus === 'kyc_form_resubmission_required'
+            ? 'Additional information or documents are needed. Please use the link below to resubmit your verification.'
+            : 'Your identity verification is pending. Please continue the process using the link provided.';
         icon = <AlertCircle className="h-5 w-5 text-amber-500" />;
         actions = (
           <div className="w-full flex flex-col sm:flex-row gap-2">
@@ -671,113 +666,157 @@ export function AlignKycStatus({
         break;
 
       case 'showKycIframe':
-        return (
-          <div className="min-h-screen bg-gray-50 -m-4 md:-m-6">
-            {/* Header - Mobile optimized */}
-            <div className="bg-white border-b border-gray-200 p-3 md:p-4">
-              <div className="max-w-4xl mx-auto">
-                <h3 className="text-base md:text-lg font-semibold text-gray-800 mb-2 text-center">
-                  Complete Your KYC Verification
-                </h3>
-                <p className="text-xs md:text-sm text-gray-600 text-center mb-3">
-                  Please complete the form below. For the best experience, you
-                  can also open this in a new tab.
+        // For embedded variant (onboarding flow), show minimal chrome
+        if (variant === 'embedded') {
+          return (
+            <div className="w-full">
+              {/* Minimal header with just the "Open in New Tab" option */}
+              <div className="flex items-center justify-between mb-4">
+                <p className="text-[13px] text-[#101010]/70">
+                  Complete the verification form below
                 </p>
-                <div className="flex flex-col sm:flex-row justify-center gap-2">
-                  <Button
-                    onClick={handleStartVerification}
-                    variant="outline"
-                    size="sm"
-                    disabled={isOpeningExternalLink}
-                    className="w-full sm:w-auto text-xs md:text-sm"
-                  >
-                    {isOpeningExternalLink ? (
-                      <Loader2 className="mr-2 h-3 w-3 md:h-4 md:w-4 animate-spin" />
-                    ) : (
-                      <ExternalLink className="mr-2 h-3 w-3 md:h-4 md:w-4" />
-                    )}
-                    Open in New Tab
-                  </Button>
-                  <Button
-                    onClick={handleCopyLink}
-                    variant="ghost"
-                    size="sm"
-                    className="w-full sm:w-auto text-xs md:text-sm"
-                  >
-                    <Copy className="mr-2 h-3 w-3 md:h-4 md:w-4" /> Copy Link
-                  </Button>
+                <Button
+                  onClick={handleStartVerification}
+                  variant="ghost"
+                  size="sm"
+                  disabled={isOpeningExternalLink}
+                  className="text-[#101010]/60 hover:text-[#101010] hover:bg-transparent -mr-2"
+                >
+                  {isOpeningExternalLink ? (
+                    <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                  ) : (
+                    <ExternalLink className="mr-1 h-3 w-3" />
+                  )}
+                  <span className="text-[12px]">Open in new tab</span>
+                </Button>
+              </div>
+
+              {/* Iframe container */}
+              <div className="relative bg-white rounded-lg overflow-hidden border border-[#101010]/10"
+                   style={{ height: '600px' }}>
+                {statusData?.kycFlowLink ? (
+                  <iframe
+                    src={statusData.kycFlowLink}
+                    title="KYC Verification"
+                    className="w-full h-full border-0"
+                    allow="camera; microphone; fullscreen; autoplay"
+                    sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-top-navigation allow-popups-to-escape-sandbox"
+                    loading="lazy"
+                    style={{
+                      backgroundColor: '#ffffff',
+                      colorScheme: 'light',
+                    }}
+                  />
+                ) : (
+                  <div className="w-full h-full bg-white flex items-center justify-center">
+                    <div className="flex flex-col items-center gap-4">
+                      <div className="relative">
+                        <div className="h-12 w-12 rounded-full bg-[#0050ff]/10 animate-pulse" />
+                        <Loader2 className="h-6 w-6 text-[#0050ff] animate-spin absolute top-3 left-3" />
+                      </div>
+                      <div className="text-center">
+                        <p className="text-[14px] font-medium text-[#101010]">
+                          Loading verification form
+                        </p>
+                        <p className="text-[13px] text-[#101010]/60 mt-1">
+                          This may take a moment...
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Info message below iframe */}
+              <div className="mt-4 text-center">
+                <p className="text-[12px] text-[#101010]/50">
+                  Click &ldquo;Get Started&rdquo; above to begin verification
+                </p>
+              </div>
+            </div>
+          );
+        }
+
+        // Standalone variant (settings page) - keep full-screen experience
+        return (
+          <div className="min-h-screen bg-[#F7F7F2] -m-4 md:-m-6">
+            {/* Dashboard-style header */}
+            <div className="sticky top-0 z-50 bg-[#F7F7F2] border-b border-[#101010]/10">
+              <div className="h-[56px] sm:h-[64px] flex items-center px-4 sm:px-6">
+                <div className="flex items-center gap-3 flex-1">
+                  <p className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60 hidden sm:block">
+                    verification
+                  </p>
+                  <h1 className="font-serif text-[24px] sm:text-[28px] leading-[1] text-[#101010]">
+                    Complete KYC
+                  </h1>
                 </div>
+                <Button
+                  onClick={handleStartVerification}
+                  variant="outline"
+                  size="sm"
+                  disabled={isOpeningExternalLink}
+                  className="border-[#101010]/20 hover:bg-[#101010]/5 text-[13px] sm:text-[14px]"
+                >
+                  {isOpeningExternalLink ? (
+                    <Loader2 className="mr-2 h-3 w-3 sm:h-4 sm:w-4 animate-spin" />
+                  ) : (
+                    <ExternalLink className="mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+                  )}
+                  Open in New Tab
+                </Button>
               </div>
             </div>
 
-            {/* Iframe container - Responsive height */}
-            <div
-              className="w-full overflow-hidden relative"
-              style={{
-                height: 'calc(100vh - 200px)', // Mobile: smaller header/footer
-                minHeight: '400px', // Minimum height for usability
-              }}
-            >
+            {/* Subtle info banner */}
+            <div className="bg-white/60 backdrop-blur-sm border-b border-[#101010]/5 px-4 sm:px-6 py-3">
+              <p className="text-[13px] sm:text-[14px] text-[#101010]/70 text-center max-w-2xl mx-auto">
+                Complete the verification form below. This process is secured by our partner Align.
+              </p>
+            </div>
+
+            {/* Iframe container with improved styling */}
+            <div className="relative bg-white" style={{ height: 'calc(100vh - 140px)', minHeight: '500px' }}>
+              {/* Top fade overlay for seamless transition */}
+              <div className="absolute top-0 left-0 right-0 h-8 bg-gradient-to-b from-white/80 to-transparent pointer-events-none z-10" />
+
               {statusData?.kycFlowLink ? (
-                <iframe
-                  src={statusData.kycFlowLink}
-                  title="KYC Verification"
-                  className="w-full h-full border-0 absolute inset-0"
-                  allow="camera; microphone; fullscreen; autoplay"
-                  sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-top-navigation allow-popups-to-escape-sandbox"
-                  loading="lazy"
-                />
+                <>
+                  {/* Iframe with better integration */}
+                  <iframe
+                    src={statusData.kycFlowLink}
+                    title="KYC Verification"
+                    className="w-full h-full border-0"
+                    allow="camera; microphone; fullscreen; autoplay"
+                    sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-top-navigation allow-popups-to-escape-sandbox"
+                    loading="lazy"
+                    style={{
+                      backgroundColor: '#ffffff',
+                      colorScheme: 'light',
+                    }}
+                  />
+
+                  {/* Bottom fade overlay */}
+                  <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-[#F7F7F2]/80 to-transparent pointer-events-none z-10" />
+                </>
               ) : (
-                <div className="w-full h-full bg-gray-100 animate-pulse flex items-center justify-center">
+                <div className="w-full h-full bg-white flex items-center justify-center">
                   <div className="flex flex-col items-center gap-4">
-                    <Loader2 className="h-8 w-8 text-gray-400 animate-spin" />
-                    <p className="text-sm text-gray-500">Loading verification form...</p>
+                    <div className="relative">
+                      <div className="h-12 w-12 rounded-full bg-[#0050ff]/10 animate-pulse" />
+                      <Loader2 className="h-6 w-6 text-[#0050ff] animate-spin absolute top-3 left-3" />
+                    </div>
+                    <div className="text-center">
+                      <p className="text-[14px] font-medium text-[#101010]">
+                        Loading verification form
+                      </p>
+                      <p className="text-[13px] text-[#101010]/60 mt-1">
+                        This may take a moment...
+                      </p>
+                    </div>
                   </div>
                 </div>
               )}
-            </div>
-
-            {/* Footer - Mobile optimized */}
-            <div className="bg-white border-t border-gray-200 p-3 md:p-4">
-              <div className="max-w-4xl mx-auto">
-                <div className="flex flex-col gap-2">
-                  {statusData?.kycSubStatus !== 'kyc_form_submission_accepted' && (
-                    <Button
-                      onClick={handleUserFinishedVerification}
-                      disabled={
-                        isOpeningExternalLink ||
-                        isFetching
-                      }
-                      className="w-full bg-green-600 hover:bg-green-700 text-sm md:text-base py-3 md:py-2"
-                    >
-                      {isOpeningExternalLink ||
-                      isFetching ? (
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      ) : (
-                        <CheckCircle className="mr-2 h-4 w-4" />
-                      )}
-                      I&apos;ve Finished My Verification
-                    </Button>
-                  )}
-                  <Button
-                    onClick={handleStartVerification}
-                    variant="outline"
-                    className="w-full text-sm md:text-base"
-                    disabled={isOpeningExternalLink || isFetching}
-                  >
-                    {isOpeningExternalLink ? (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    ) : (
-                      <RefreshCw className="mr-2 h-4 w-4" />
-                    )}
-                    Reload Form
-                  </Button>
-                </div>
-                <p className="text-xs text-gray-500 mt-2 text-center">
-                  Complete all steps in the form above, then click
-                  &quot;I&apos;ve Finished My Verification&quot;
-                </p>
-              </div>
             </div>
           </div>
         );
@@ -889,11 +928,12 @@ export function AlignKycStatus({
       case 'pendingReview':
         title = 'Verification Pending Review';
         icon = <Loader2 className="h-8 w-8 animate-spin text-primary" />;
-        description = statusData?.kycSubStatus === 'kyc_form_submission_accepted'
-          ? "Your verification has been submitted successfully and is under review. This usually takes a few minutes to a few hours."
-          : statusData?.kycMarkedDone
-          ? "We're checking with our verification partner for updates. If you finished by mistake, you can correct it below."
-          : "Your information is under review. This usually takes a few minutes. We'll notify you of any updates.";
+        description =
+          statusData?.kycSubStatus === 'kyc_form_submission_accepted'
+            ? 'Your verification has been submitted successfully and is under review. This usually takes a few minutes to a few hours.'
+            : statusData?.kycMarkedDone
+              ? "We're checking with our verification partner for updates. If you finished by mistake, you can correct it below."
+              : "Your information is under review. This usually takes a few minutes. We'll notify you of any updates.";
         actions = (
           <div className="w-full flex flex-col sm:flex-row items-center justify-center gap-3">
             <Button
@@ -906,19 +946,20 @@ export function AlignKycStatus({
               ) : null}
               Refresh Status
             </Button>
-            {statusData?.kycMarkedDone && statusData?.kycSubStatus !== 'kyc_form_submission_accepted' && (
-              <Button
-                onClick={handleUnmarkFinishedVerification}
-                variant="ghost"
-                className="text-gray-600 hover:bg-gray-100 rounded-lg w-full sm:w-auto hover:text-gray-900"
-                disabled={isFetching}
-              >
-                {isFetching ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : null}
-                I haven&apos;t finished yet
-              </Button>
-            )}
+            {statusData?.kycMarkedDone &&
+              statusData?.kycSubStatus !== 'kyc_form_submission_accepted' && (
+                <Button
+                  onClick={handleUnmarkFinishedVerification}
+                  variant="ghost"
+                  className="text-gray-600 hover:bg-gray-100 rounded-lg w-full sm:w-auto hover:text-gray-900"
+                  disabled={isFetching}
+                >
+                  {isFetching ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : null}
+                  I haven&apos;t finished yet
+                </Button>
+              )}
           </div>
         );
         break;
@@ -946,18 +987,18 @@ export function AlignKycStatus({
       'statusActionRequired',
       'notStarted',
       'expired',
-      'statusRejected'
+      'statusRejected',
     ].includes(currentStep) &&
     currentStep !== 'statusApproved' &&
     currentStep !== 'statusPendingReview';
 
   const cardBody = (
-     <div className="text-center">
-        <div className="flex justify-center mb-5">{icon}</div>
-        <h3 className="text-xl font-bold text-gray-800 mb-2">{title}</h3>
-        <p className="text-base text-gray-600 mb-6 px-4">{description}</p>
-        {actions && <div className="w-full">{actions}</div>}
-      </div>
+    <div className="text-center">
+      <div className="flex justify-center mb-5">{icon}</div>
+      <h3 className="text-xl font-bold text-gray-800 mb-2">{title}</h3>
+      <p className="text-base text-gray-600 mb-6 px-4">{description}</p>
+      {actions && <div className="w-full">{actions}</div>}
+    </div>
   );
 
   if (variant === 'embedded') {
@@ -965,7 +1006,7 @@ export function AlignKycStatus({
       <div className="space-y-4 w-full p-4 bg-white rounded-lg">
         {cardBody}
         {showRequirements && (
-           <div className="mt-4 rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 flex items-start gap-2 text-xs sm:text-sm text-blue-900">
+          <div className="mt-4 rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 flex items-start gap-2 text-xs sm:text-sm text-blue-900">
             <Info className="h-4 w-4 mt-0.5 text-blue-500 shrink-0" />
             <div>
               <div className="font-semibold mb-1">What you&apos;ll need</div>
@@ -984,9 +1025,9 @@ export function AlignKycStatus({
   return (
     <Card className="mb-6 w-full max-w-md mx-auto bg-white border border-gray-200 shadow-lg rounded-xl">
       <CardContent className="p-6 sm:p-8">
-         {cardBody}
-         {showRequirements && (
-           <div className="mt-6 rounded-lg border border-blue-100 bg-blue-50 px-4 py-3 flex items-start gap-3 text-sm text-blue-900">
+        {cardBody}
+        {showRequirements && (
+          <div className="mt-6 rounded-lg border border-blue-100 bg-blue-50 px-4 py-3 flex items-start gap-3 text-sm text-blue-900">
             <Info className="h-5 w-5 mt-0.5 text-blue-500 shrink-0" />
             <div>
               <div className="font-semibold mb-1">What you&apos;ll need</div>

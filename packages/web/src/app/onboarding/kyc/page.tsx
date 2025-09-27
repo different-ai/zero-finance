@@ -27,10 +27,12 @@ const completeOnboardingStep = (step: string) => {
 export default function KycOnboardingPage() {
   const router = useRouter();
   const { skipOnboarding, isSkipping } = useSkipOnboarding();
+  const [kycApproved, setKycApproved] = React.useState(false);
 
   const handleKycApproved = () => {
     console.log('KYC Approved! User can now continue manually.');
     completeOnboardingStep('kyc');
+    setKycApproved(true);
     // Note: No automatic redirect - user must click continue
   };
 
@@ -109,24 +111,25 @@ export default function KycOnboardingPage() {
           >
             <ArrowLeft className="mr-2 h-4 w-4" /> Back
           </Button>
-          <Button
-            onClick={handleContinue}
-            className="bg-[#1B29FF] hover:bg-[#1B29FF]/90 text-white"
-          >
-            Continue
-          </Button>
+          {kycApproved ? (
+            <Button
+              onClick={handleContinue}
+              className="bg-green-600 hover:bg-green-700 text-white"
+            >
+              Continue to Next Step
+            </Button>
+          ) : (
+            <Button
+              onClick={skipOnboarding}
+              variant="outline"
+              disabled={isSkipping}
+              className="border-[#101010]/10 text-[#101010] hover:bg-white"
+            >
+              {isSkipping ? 'Skipping...' : 'Skip KYC for now'}
+            </Button>
+          )}
         </CardFooter>
       </Card>
-      <div className="text-center mt-6">
-        <Button
-          variant="ghost"
-          onClick={skipOnboarding}
-          disabled={isSkipping}
-          className="text-[#101010]/60 hover:text-[#101010]"
-        >
-          {isSkipping ? 'Skipping...' : 'Skip for now'}
-        </Button>
-      </div>
     </div>
   );
 }
