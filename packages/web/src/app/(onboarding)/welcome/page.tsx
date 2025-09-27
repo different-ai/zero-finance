@@ -25,6 +25,7 @@ export default function WelcomePage() {
   const [workspaceName, setWorkspaceName] = useState('');
   const [workspaceStatus, setWorkspaceStatus] = useState<StepStatus>('pending');
   const [submissionError, setSubmissionError] = useState<string | null>(null);
+  const [isSetupComplete, setIsSetupComplete] = useState(false);
 
   const { data: workspaceData, isLoading: workspaceLoading } =
     api.workspace.getOrCreateWorkspace.useQuery(undefined, {
@@ -78,6 +79,7 @@ export default function WelcomePage() {
 
     try {
       await runSetup();
+      setIsSetupComplete(true);
       router.push('/dashboard');
     } catch (error) {
       console.error('Primary account setup failed:', error);
@@ -90,6 +92,7 @@ export default function WelcomePage() {
     reset();
     try {
       await runSetup();
+      setIsSetupComplete(true);
       router.push('/dashboard');
     } catch (error) {
       const message =
@@ -155,7 +158,7 @@ export default function WelcomePage() {
                 WELCOME TO ZERO FINANCE
               </p>
               <h1 className="font-serif text-[36px] sm:text-[44px] leading-[0.96] tracking-[-0.015em] text-[#101010]">
-                Let's get started
+                Let&apos;s get started
               </h1>
               <p className="mt-4 text-[15px] sm:text-[16px] leading-[1.5] text-[#101010]/70">
                 Name your workspace to get started. You can create companies and invite team members later.
@@ -177,7 +180,8 @@ export default function WelcomePage() {
                   placeholder="e.g., Acme Corp, My Freelance Business"
                   value={workspaceName}
                   onChange={(e) => setWorkspaceName(e.target.value)}
-                  className="w-full h-12 px-4 border border-[#101010]/10 rounded-md text-[15px] sm:text-[16px] text-[#101010] placeholder:text-[#101010]/40 focus:border-[#0050ff] focus:outline-none focus:ring-1 focus:ring-[#0050ff]/20 transition-all"
+                  disabled={isProcessing || isSetupComplete}
+                  className="w-full h-12 px-4 border border-[#101010]/10 rounded-md text-[15px] sm:text-[16px] text-[#101010] placeholder:text-[#101010]/40 focus:border-[#0050ff] focus:outline-none focus:ring-1 focus:ring-[#0050ff]/20 transition-all disabled:bg-[#F2F2EC] disabled:text-[#101010]/50"
                   autoFocus
                 />
                 <p className="text-[12px] text-[#101010]/50 mt-1">
@@ -189,13 +193,20 @@ export default function WelcomePage() {
               <div className="space-y-3">
                 <button
                   type="submit"
-                  disabled={!workspaceName.trim() || isProcessing}
+                  disabled={
+                    !workspaceName.trim() || isProcessing || isSetupComplete
+                  }
                   className="w-full inline-flex items-center justify-center px-6 py-3 text-[15px] sm:text-[16px] font-medium text-white bg-[#0050ff] hover:bg-[#0040dd] rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isProcessing ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       Setting up your account...
+                    </>
+                  ) : isSetupComplete ? (
+                    <>
+                      Redirecting to Dashboard
+                      <Loader2 className="ml-2 h-4 w-4 animate-spin" />
                     </>
                   ) : (
                     <>
@@ -233,6 +244,12 @@ export default function WelcomePage() {
               {(submissionError || setupError) && (
                 <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
                   {submissionError || setupError}
+                </div>
+              )}
+
+              {isSetupComplete && (
+                <div className="rounded-md border border-[#0050ff]/20 bg-[#EAF0FF] px-3 py-2 text-sm text-[#0038cc]">
+                  All set! Redirecting you to the dashboard.
                 </div>
               )}
 
