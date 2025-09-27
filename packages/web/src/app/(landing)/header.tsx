@@ -15,9 +15,9 @@ export function Header() {
               alt="Zero Finance"
               width={24}
               height={24}
-              className="w-5 h-5 sm:w-6 sm:h-6 object-contain"
+              className="w-8 h-8 sm:w-9 sm:h-9 object-contain"
             />
-            <span className="ml-1 font-bold text-[13px] sm:text-[14px] tracking-tight text-[#0050ff]">
+            <span className="ml-1 font-bold text-[20px] sm:text-[21px] tracking-tight text-[#0050ff]">
               finance
             </span>
           </Link>
