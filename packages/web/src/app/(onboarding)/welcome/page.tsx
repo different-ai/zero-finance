@@ -98,14 +98,6 @@ export default function WelcomePage() {
     }
   };
 
-  if (!ready || !authenticated || workspaceLoading) {
-    return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-2 border-[#0050ff] border-t-transparent" />
-      </div>
-    );
-  }
-
   const statusItems = useMemo(() => {
     return [
       {
@@ -125,6 +117,14 @@ export default function WelcomePage() {
   }, [progress, workspaceName, workspaceStatus]);
 
   const canRetrySetup = workspaceStatus === 'success' && !!setupError;
+
+  if (!ready || !authenticated || workspaceLoading) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-2 border-[#0050ff] border-t-transparent" />
+      </div>
+    );
+  }
 
   const renderStatusIcon = (status: StepStatus) => {
     switch (status) {
