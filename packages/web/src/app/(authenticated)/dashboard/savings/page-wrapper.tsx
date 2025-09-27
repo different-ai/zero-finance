@@ -877,28 +877,7 @@ export default function SavingsPageWrapper({
             </div>
           </div>
 
-          {showYieldCorrectionBanner && (
-            <div className="bg-[#1B29FF]/5 border border-[#1B29FF]/40 rounded-lg p-5 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <div className="space-y-1">
-                <p className="text-[14px] font-medium text-[#101010]">
-                  Earnings counter resynced
-                </p>
-                <p className="text-[13px] text-[#101010]/70">
-                  {hasLedgerShortfallCorrection
-                    ? 'We detected an out-of-sync ledger entry and reset live earnings to match your on-chain balance.'
-                    : 'We resolved a rounding mismatch on your live earnings counter.'}
-                </p>
-              </div>
-              <div className="flex gap-3">
-                <Button
-                  onClick={triggerVaultRefresh}
-                  className="bg-[#1B29FF] hover:bg-[#1B29FF]/90 text-white"
-                >
-                  Refresh now
-                </Button>
-              </div>
-            </div>
-          )}
+          
 
           {/* Live Yield Counter - Premium Card */}
           {totalSaved > 0 && (
