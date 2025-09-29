@@ -1,0 +1,2 @@
+ALTER TABLE "user_requests" ALTER COLUMN "id" SET DEFAULT '6110be6d-04be-4ed9-9ba2-40f872663812';--> statement-breakpoint
+ALTER TABLE "workspace_invites" ADD COLUMN "add_as_safe_owner" boolean DEFAULT false;
