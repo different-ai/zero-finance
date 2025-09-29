@@ -11,6 +11,9 @@ import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { MetaTransactionData } from '@safe-global/safe-core-sdk-types';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { AlertCircle } from 'lucide-react';
+import { api } from '@/trpc/react';
 
 // Placeholder ABI - Replace with actual Gnosis Safe L2 ABI if different
 const safeAbi = [
@@ -63,6 +66,11 @@ export function RecoveryWalletManager({ primarySafeAddress }: RecoveryWalletMana
   const [recoveryAddress, setRecoveryAddress] = useState<string>('');
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const { ready: isRelayReady, send: sendSponsoredTx } = useSafeRelay(primarySafeAddress ?? undefined);
+
+  // Check if current user is owner of this Safe
+  const { data: safes } = api.safe.list.useQuery();
+  const currentSafe = safes?.find(s => s.safeAddress === primarySafeAddress);
+  const isOwner = currentSafe?.isOwner ?? true; // Default to true for backward compatibility
 
   const handleAddRecoveryWallet = useCallback(async () => {
     if (!isRelayReady || !primarySafeAddress) {
@@ -145,6 +153,31 @@ export function RecoveryWalletManager({ primarySafeAddress }: RecoveryWalletMana
     // Don't show the card if no primary safe is detected yet,
     // let the parent component handle loading/error states for safes.
     return null;
+  }
+
+  // Show read-only message if user is not an owner
+  if (!isOwner) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Recovery Wallet</CardTitle>
+          <CardDescription>Add an additional owner wallet to your Safe.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Alert>
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              You don't have permission to modify this Safe. Only Safe owners can add recovery wallets.
+              {currentSafe?.createdBy && (
+                <span className="block mt-1 text-xs text-muted-foreground">
+                  This Safe is owned by another workspace member.
+                </span>
+              )}
+            </AlertDescription>
+          </Alert>
+        </CardContent>
+      </Card>
+    );
   }
 
   return (

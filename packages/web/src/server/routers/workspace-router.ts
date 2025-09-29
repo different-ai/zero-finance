@@ -422,9 +422,36 @@ export const workspaceRouter = router({
         })
         .where(eq(workspaceInvites.id, inviteData.id));
 
+      // Check if invite includes Safe ownership
+      let pendingSafeOwnership = null;
+      if (inviteData.addAsSafeOwner) {
+        // Get inviter's primary Safe
+        const primarySafe = await ctx.db.query.userSafes.findFirst({
+          where: and(
+            eq(userSafes.userDid, inviteData.createdBy),
+            eq(userSafes.safeType, 'primary'),
+            eq(userSafes.workspaceId, inviteData.workspaceId),
+          ),
+        });
+
+        if (primarySafe) {
+          // Get invitee's wallet address from context
+          const inviteeWallet = ctx.user?.wallet?.address;
+
+          if (inviteeWallet) {
+            pendingSafeOwnership = {
+              safeAddress: primarySafe.safeAddress,
+              newOwner: inviteeWallet,
+              inviterUserId: inviteData.createdBy,
+            };
+          }
+        }
+      }
+
       return {
         success: true,
         workspaceId: inviteData.workspaceId,
+        pendingSafeOwnership,
       };
     }),
 
@@ -501,6 +528,7 @@ export const workspaceRouter = router({
       z.object({
         workspaceId: z.string().uuid(),
         role: z.enum(['admin', 'member', 'viewer']).default('member'),
+        addAsSafeOwner: z.boolean().optional().default(false),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -549,6 +577,7 @@ export const workspaceRouter = router({
           role: input.role,
           shareInbox: true,
           shareCompanyData: true,
+          addAsSafeOwner: input.addAsSafeOwner,
           expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
         })
         .returning();
@@ -757,4 +786,51 @@ export const workspaceRouter = router({
 
     return memberships;
   }),
+
+  /**
+   * Set active workspace for the user
+   */
+  setActiveWorkspace: protectedProcedure
+    .input(
+      z.object({
+        workspaceId: z.string().uuid(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const { userId } = ctx;
+
+      if (!userId) {
+        throw new TRPCError({
+          code: 'UNAUTHORIZED',
+          message: 'User not authenticated',
+        });
+      }
+
+      // Verify user is a member of this workspace
+      const membership = await ctx.db
+        .select()
+        .from(workspaceMembers)
+        .where(
+          and(
+            eq(workspaceMembers.workspaceId, input.workspaceId),
+            eq(workspaceMembers.userId, userId),
+          ),
+        )
+        .limit(1);
+
+      if (!membership.length) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'Not a member of this workspace',
+        });
+      }
+
+      // Update user's primary workspace
+      await ctx.db
+        .update(users)
+        .set({ primaryWorkspaceId: input.workspaceId })
+        .where(eq(users.privyDid, userId));
+
+      return { success: true, workspaceId: input.workspaceId };
+    }),
 });

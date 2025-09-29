@@ -31,6 +31,7 @@ import {
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -49,6 +50,7 @@ interface TeamTabProps {
 export function TeamTab({ companyId }: TeamTabProps) {
   const [copiedLink, setCopiedLink] = useState<string | null>(null);
   const [memberToRemove, setMemberToRemove] = useState<any>(null);
+  const [addAsSafeOwner, setAddAsSafeOwner] = useState<boolean>(false);
 
   // Fetch workspace data
   const {
@@ -151,6 +153,7 @@ export function TeamTab({ companyId }: TeamTabProps) {
       createInvite.mutate({
         workspaceId: workspace.workspaceId,
         role: 'member' as const,
+        addAsSafeOwner: addAsSafeOwner,
       });
     }
   };
@@ -385,28 +388,45 @@ export function TeamTab({ companyId }: TeamTabProps) {
         </CardHeader>
         <CardContent>
           {canManageTeam && (
-            <Button
-              onClick={handleCreateTeamInvite}
-              className="w-full mb-4"
-              disabled={isLoadingWorkspace || createInvite.isPending}
-            >
-              {isLoadingWorkspace ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Loading workspace...
-                </>
-              ) : createInvite.isPending ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Creating invite...
-                </>
-              ) : (
-                <>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create Team Invite Link
-                </>
-              )}
-            </Button>
+            <div className="space-y-4 mb-4">
+              <div className="flex items-center space-x-2 p-3 border rounded-lg">
+                <Checkbox
+                  id="add-safe-owner"
+                  checked={addAsSafeOwner}
+                  onCheckedChange={(checked) => setAddAsSafeOwner(checked as boolean)}
+                />
+                <div className="flex-1">
+                  <Label htmlFor="add-safe-owner" className="text-sm font-medium cursor-pointer">
+                    Add invitee as co-owner of primary Safe
+                  </Label>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    The invited user will be added as an owner to your primary Safe wallet (requires manual confirmation)
+                  </p>
+                </div>
+              </div>
+              <Button
+                onClick={handleCreateTeamInvite}
+                className="w-full"
+                disabled={isLoadingWorkspace || createInvite.isPending}
+              >
+                {isLoadingWorkspace ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Loading workspace...
+                  </>
+                ) : createInvite.isPending ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Creating invite...
+                  </>
+                ) : (
+                  <>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Create Team Invite Link
+                  </>
+                )}
+              </Button>
+            </div>
           )}
 
           {isLoadingInvites ? (
