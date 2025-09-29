@@ -43,7 +43,9 @@ export default function CompanySettingsPage() {
     paymentTerms: '',
   });
   const [sharedData, setSharedData] = useState<Record<string, string>>({});
+  const [workspaceName, setWorkspaceName] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const [isSavingWorkspace, setIsSavingWorkspace] = useState(false);
   const [copiedLink, setCopiedLink] = useState<string | null>(null);
 
   // Tab routing
@@ -63,6 +65,14 @@ export default function CompanySettingsPage() {
     sp.set('tab', value);
     router.replace(`${pathname}?${sp.toString()}`);
   };
+
+  // Fetch workspace data
+  const { data: currentWorkspace, refetch: refetchWorkspace } =
+    api.workspace.getOrCreateWorkspace.useQuery();
+  const { data: workspace } = api.workspace.getWorkspace.useQuery(
+    { workspaceId: currentWorkspace?.workspaceId || '' },
+    { enabled: !!currentWorkspace?.workspaceId },
+  );
 
   // Fetch company data
   const {
@@ -88,6 +98,7 @@ export default function CompanySettingsPage() {
   const deleteInviteLink = api.company.deleteInviteLink.useMutation();
   const removeMember = api.company.removeMember.useMutation();
   const deleteCompany = api.company.deleteCompany.useMutation();
+  const renameWorkspace = api.workspace.renameWorkspace.useMutation();
 
   useEffect(() => {
     if (company) {
@@ -114,6 +125,12 @@ export default function CompanySettingsPage() {
       }
     }
   }, [company]);
+
+  useEffect(() => {
+    if (workspace) {
+      setWorkspaceName(workspace.name);
+    }
+  }, [workspace]);
 
   const handleSave = async () => {
     setIsSaving(true);
@@ -238,6 +255,27 @@ export default function CompanySettingsPage() {
     }
   };
 
+  const handleSaveWorkspace = async () => {
+    if (!currentWorkspace?.workspaceId || !workspaceName.trim()) {
+      toast.error('Workspace name is required');
+      return;
+    }
+
+    setIsSavingWorkspace(true);
+    try {
+      await renameWorkspace.mutateAsync({
+        workspaceId: currentWorkspace.workspaceId,
+        name: workspaceName.trim(),
+      });
+      toast.success('Workspace renamed successfully');
+      refetchWorkspace();
+    } catch (error) {
+      toast.error('Failed to rename workspace');
+    } finally {
+      setIsSavingWorkspace(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-[#F7F7F2]">
@@ -315,7 +353,54 @@ export default function CompanySettingsPage() {
         {/* Company Info Tab */}
         {tab === 'info' && (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6">
-            <div className="lg:col-span-8">
+            <div className="lg:col-span-8 space-y-5 sm:space-y-6">
+              {/* Workspace Settings */}
+              <div className="bg-white border border-[#101010]/10 rounded-lg shadow-sm">
+                <div className="border-b border-[#101010]/10 px-5 sm:px-6 py-4">
+                  <h2 className="font-serif text-[20px] sm:text-[24px] text-[#101010] tracking-[-0.02em]">
+                    Workspace Settings
+                  </h2>
+                  <p className="text-sm text-[#666666] mt-1">
+                    Your workspace name and settings
+                  </p>
+                </div>
+                <div className="p-5 sm:p-6 space-y-4">
+                  <div>
+                    <Label
+                      htmlFor="workspaceName"
+                      className="text-sm font-medium text-[#101010]"
+                    >
+                      Workspace Name
+                    </Label>
+                    <div className="flex gap-2 mt-1.5">
+                      <Input
+                        id="workspaceName"
+                        value={workspaceName}
+                        onChange={(e) => setWorkspaceName(e.target.value)}
+                        placeholder="My Workspace"
+                        className="flex-1 border-[#E5E5E5] focus:border-[#1B29FF] focus:ring-[#1B29FF]"
+                      />
+                      <Button
+                        onClick={handleSaveWorkspace}
+                        disabled={
+                          isSavingWorkspace ||
+                          !workspaceName.trim() ||
+                          workspaceName === workspace?.name
+                        }
+                        className="bg-[#1B29FF] text-white hover:bg-[#1B29FF]/90 border-0"
+                      >
+                        {isSavingWorkspace ? 'Saving...' : 'Save'}
+                      </Button>
+                    </div>
+                    <p className="text-xs text-[#666666] mt-1">
+                      This is the name of your workspace, visible to you and
+                      your team members
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Company Information */}
               <div className="bg-white border border-[#101010]/10 rounded-lg shadow-sm">
                 <div className="border-b border-[#101010]/10 px-5 sm:px-6 py-4">
                   <h2 className="font-serif text-[20px] sm:text-[24px] text-[#101010] tracking-[-0.02em]">

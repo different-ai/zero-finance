@@ -1,37 +1,59 @@
-'use client'
+'use client';
 
-import { useState } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { toast } from 'sonner'
-import { api } from '@/trpc/react'
-import { Building2, Calendar, Users, Mail, ExternalLink, Crown, Trash2 } from 'lucide-react'
-import { Skeleton } from '@/components/ui/skeleton'
-import Link from 'next/link'
+import { useState } from 'react';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { toast } from 'sonner';
+import { api } from '@/trpc/react';
+import {
+  Building2,
+  Calendar,
+  Users,
+  Mail,
+  ExternalLink,
+  Crown,
+  Trash2,
+} from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
+import Link from 'next/link';
 
 export default function MyCompaniesPage() {
   // Fetch user's companies
-  const { data: companies = [], isLoading, refetch } = api.company.getMyCompanies.useQuery()
-  
+  const {
+    data: companies = [],
+    isLoading,
+    refetch,
+  } = api.company.getMyCompanies.useQuery();
+
   // Delete mutation
   const deleteCompany = api.company.deleteCompany.useMutation({
     onSuccess: () => {
-      toast.success('Company deleted successfully')
-      refetch()
+      toast.success('Company deleted successfully');
+      refetch();
     },
     onError: () => {
-      toast.error('Failed to delete company')
-    }
-  })
-  
+      toast.error('Failed to delete company');
+    },
+  });
+
   const handleDeleteCompany = async (company: any) => {
-    if (!confirm(`Are you sure you want to delete ${company.name}? This action cannot be undone.`)) {
-      return
+    if (
+      !confirm(
+        `Are you sure you want to delete ${company.name}? This action cannot be undone.`,
+      )
+    ) {
+      return;
     }
-    
-    await deleteCompany.mutateAsync({ id: company.id })
-  }
+
+    await deleteCompany.mutateAsync({ id: company.id });
+  };
 
   if (isLoading) {
     return (
@@ -43,7 +65,7 @@ export default function MyCompaniesPage() {
           ))}
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -51,10 +73,15 @@ export default function MyCompaniesPage() {
       <div className="mb-6">
         <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-2">
           <Building2 className="h-8 w-8" />
-          My Companies
+          Company Profiles
         </h1>
         <p className="text-gray-600 mt-2">
-          Companies you own or are a member of
+          Company profiles for invoicing. These are used as "Bill To" or "Bill
+          From" information when creating invoices.
+        </p>
+        <p className="text-sm text-gray-500 mt-1">
+          Note: This is different from your workspace, which is your
+          team/organization.
         </p>
       </div>
 
@@ -62,15 +89,18 @@ export default function MyCompaniesPage() {
         <Card>
           <CardContent className="py-12 text-center">
             <Building2 className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No companies yet</h3>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">
+              No company profiles yet
+            </h3>
             <p className="text-gray-500 mb-6">
-              You haven't created or joined any companies yet. Create your first company or ask for an invite link.
+              Create a company profile to use for invoicing. You can have
+              multiple profiles for different clients or businesses.
             </p>
             <div className="flex gap-4 justify-center">
               <Link href="/dashboard/settings/company">
                 <Button>
                   <Building2 className="h-4 w-4 mr-2" />
-                  Create Company
+                  Create Company Profile
                 </Button>
               </Link>
             </div>
@@ -79,7 +109,10 @@ export default function MyCompaniesPage() {
       ) : (
         <div className="space-y-6">
           {companies.map((company) => (
-            <Card key={company.id} className="hover:shadow-md transition-shadow">
+            <Card
+              key={company.id}
+              className="hover:shadow-md transition-shadow"
+            >
               <CardHeader>
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-3">
@@ -99,7 +132,9 @@ export default function MyCompaniesPage() {
                       </CardDescription>
                     </div>
                   </div>
-                  <Badge variant={company.role === 'owner' ? 'default' : 'secondary'}>
+                  <Badge
+                    variant={company.role === 'owner' ? 'default' : 'secondary'}
+                  >
                     {company.role === 'owner' ? 'Owner' : 'Member'}
                   </Badge>
                 </div>
@@ -122,14 +157,10 @@ export default function MyCompaniesPage() {
                       Joined {new Date(company.createdAt).toLocaleDateString()}
                     </div>
                     {(company.settings as any)?.taxId && (
-                      <div>
-                        Tax ID: {(company.settings as any).taxId}
-                      </div>
+                      <div>Tax ID: {(company.settings as any).taxId}</div>
                     )}
                     {(company.settings as any)?.paymentTerms && (
-                      <div>
-                        Terms: {(company.settings as any).paymentTerms}
-                      </div>
+                      <div>Terms: {(company.settings as any).paymentTerms}</div>
                     )}
                   </div>
 
@@ -143,8 +174,8 @@ export default function MyCompaniesPage() {
                             Manage Company
                           </Button>
                         </Link>
-                        <Button 
-                          variant="destructive" 
+                        <Button
+                          variant="destructive"
                           size="sm"
                           onClick={() => handleDeleteCompany(company)}
                           disabled={deleteCompany.isPending}
@@ -165,20 +196,22 @@ export default function MyCompaniesPage() {
             <CardContent className="pt-6">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
                 <div>
-                  <p className="text-2xl font-bold text-gray-900">{companies.length}</p>
-                  <p className="text-sm text-gray-600">Total Companies</p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {companies.length}
+                  </p>
+                  <p className="text-sm text-gray-600">Total Profiles</p>
                 </div>
                 <div>
                   <p className="text-2xl font-bold text-gray-900">
-                    {companies.filter(c => c.role === 'owner').length}
+                    {companies.filter((c) => c.role === 'owner').length}
                   </p>
-                  <p className="text-sm text-gray-600">Companies Owned</p>
+                  <p className="text-sm text-gray-600">Profiles Owned</p>
                 </div>
                 <div>
                   <p className="text-2xl font-bold text-gray-900">
-                    {companies.filter(c => c.role === 'member').length}
+                    {companies.filter((c) => c.role === 'member').length}
                   </p>
-                  <p className="text-sm text-gray-600">Member Of</p>
+                  <p className="text-sm text-gray-600">Client Profiles</p>
                 </div>
               </div>
             </CardContent>
@@ -186,5 +219,5 @@ export default function MyCompaniesPage() {
         </div>
       )}
     </div>
-  )
+  );
 }

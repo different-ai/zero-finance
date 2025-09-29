@@ -850,4 +850,115 @@ export const workspaceRouter = router({
 
       return { success: true, workspaceId: input.workspaceId };
     }),
+
+  /**
+   * Rename workspace
+   */
+  renameWorkspace: protectedProcedure
+    .input(
+      z.object({
+        workspaceId: z.string().uuid(),
+        name: z.string().min(1).max(100),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const { userId } = ctx;
+
+      if (!userId) {
+        throw new TRPCError({
+          code: 'UNAUTHORIZED',
+          message: 'User not authenticated',
+        });
+      }
+
+      // Verify user is admin/owner of workspace
+      const membership = await ctx.db
+        .select()
+        .from(workspaceMembers)
+        .where(
+          and(
+            eq(workspaceMembers.workspaceId, input.workspaceId),
+            eq(workspaceMembers.userId, userId),
+            or(
+              eq(workspaceMembers.role, 'owner'),
+              eq(workspaceMembers.role, 'admin'),
+            ),
+          ),
+        )
+        .limit(1);
+
+      if (!membership.length) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'Only workspace owners and admins can rename workspace',
+        });
+      }
+
+      // Update workspace name
+      const [updated] = await ctx.db
+        .update(workspaces)
+        .set({
+          name: input.name,
+          updatedAt: new Date(),
+        })
+        .where(eq(workspaces.id, input.workspaceId))
+        .returning();
+
+      return updated;
+    }),
+
+  /**
+   * Get workspace details
+   */
+  getWorkspace: protectedProcedure
+    .input(
+      z.object({
+        workspaceId: z.string().uuid(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const { userId } = ctx;
+
+      if (!userId) {
+        throw new TRPCError({
+          code: 'UNAUTHORIZED',
+          message: 'User not authenticated',
+        });
+      }
+
+      // Verify user is member of workspace
+      const membership = await ctx.db
+        .select()
+        .from(workspaceMembers)
+        .where(
+          and(
+            eq(workspaceMembers.workspaceId, input.workspaceId),
+            eq(workspaceMembers.userId, userId),
+          ),
+        )
+        .limit(1);
+
+      if (!membership.length) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'Not a member of this workspace',
+        });
+      }
+
+      // Get workspace
+      const [workspace] = await ctx.db
+        .select()
+        .from(workspaces)
+        .where(eq(workspaces.id, input.workspaceId))
+        .limit(1);
+
+      if (!workspace) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Workspace not found',
+        });
+      }
+
+      return workspace;
+    }),
 });
