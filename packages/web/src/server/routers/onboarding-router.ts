@@ -105,6 +105,14 @@ export const onboardingRouter = router({
       const userId = ctx.user.id;
       const { primarySafeAddress } = input;
       const userEmail = ctx.user.email?.address;
+      const workspaceId = ctx.workspaceId;
+
+      if (!workspaceId) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Workspace context is unavailable.',
+        });
+      }
 
       try {
         // Upsert into `users` table first
@@ -113,35 +121,41 @@ export const onboardingRouter = router({
           .values({ privyDid: userId })
           .onConflictDoNothing();
 
-        // Upsert into `user_profiles` table
+        // Upsert into `user_profiles` table (with workspace)
         await db
           .insert(userProfilesTable)
           .values({
             privyDid: userId,
             email: userEmail,
+            workspaceId: workspaceId,
             primarySafeAddress: primarySafeAddress,
             skippedOrCompletedOnboardingStepper: true,
           })
           .onConflictDoUpdate({
             target: userProfilesTable.privyDid,
             set: {
+              workspaceId: workspaceId,
               primarySafeAddress: primarySafeAddress,
               skippedOrCompletedOnboardingStepper: true,
               updatedAt: new Date(),
             },
           });
 
-        // Upsert into `userSafes` table
+        // Upsert into `userSafes` table (with workspace)
         await db
           .insert(userSafes)
           .values({
             userDid: userId,
+            workspaceId: workspaceId,
             safeAddress: primarySafeAddress,
             safeType: 'primary',
           })
           .onConflictDoUpdate({
             target: [userSafes.userDid, userSafes.safeType],
-            set: { safeAddress: primarySafeAddress },
+            set: {
+              safeAddress: primarySafeAddress,
+              workspaceId: workspaceId,
+            },
           });
 
         return { success: true };
