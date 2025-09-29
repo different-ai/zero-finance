@@ -68,8 +68,8 @@ export function RecoveryWalletManager({ primarySafeAddress }: RecoveryWalletMana
   const { ready: isRelayReady, send: sendSponsoredTx } = useSafeRelay(primarySafeAddress ?? undefined);
 
   // Check if current user is owner of this Safe
-  const { data: safes } = api.safe.list.useQuery();
-  const currentSafe = safes?.find(s => s.safeAddress === primarySafeAddress);
+  const { data: safes } = api.settings.userSafes.list.useQuery();
+  const currentSafe = safes?.find((s: { safeAddress: string | null | undefined; isOwner?: boolean }) => s.safeAddress === primarySafeAddress);
   const isOwner = currentSafe?.isOwner ?? true; // Default to true for backward compatibility
 
   const handleAddRecoveryWallet = useCallback(async () => {

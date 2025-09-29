@@ -7,6 +7,7 @@ import {
   workspaceInvites,
   users,
   companies,
+  userSafes,
 } from '@/db/schema';
 import { eq, and, or, desc, isNull } from 'drizzle-orm';
 import crypto from 'crypto';

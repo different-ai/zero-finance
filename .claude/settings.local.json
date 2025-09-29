@@ -1,22 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "Bash(pnpm audit:*)",
-      "Bash(gh auth:*)",
-      "Bash(pnpm typecheck:*)",
-      "Bash(gh issue create:*)",
-      "Bash(mkdir:*)",
-      "Bash(git add:*)",
-      "Bash(git checkout:*)",
-      "Bash(git commit:*)",
-      "Bash(git push:*)",
-      "Bash(pnpm lint:*)",
-      "Bash(pnpm build:*)",
-      "Bash(pnpm dev:*)",
-      "Bash(git restore:*)",
-      "Bash(npx tsc:*)",
-      "Bash(npm run lint:*)"
+      "Bash(pnpm db:generate:*)"
     ],
-    "deny": []
+    "deny": [],
+    "ask": []
   }
 }
