@@ -17,15 +17,24 @@ export const publicProcedure = t.procedure;
 
 // Create protected procedure (requires authentication)
 const isAuthed = middleware(async ({ ctx, next }) => {
-  // The getUser function already handles token verification
-  const user = await getUser();
+  // Use userId and user from context (already verified and fetched in createContext)
+  // This avoids hitting Privy's rate limit by calling getUser() on every request
+  const privyDid = ctx.userId;
 
-  if (!user || !user.id) {
-    // If getUser returns null or no id, authentication failed
+  if (!privyDid) {
+    // If userId is not in context, authentication failed
     throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Not authenticated' });
   }
 
-  const privyDid = user.id;
+  // Use cached user from context (fetched once in createContext)
+  const user = ctx.user;
+
+  if (!user) {
+    throw new TRPCError({
+      code: 'UNAUTHORIZED',
+      message: 'Failed to fetch user details',
+    });
+  }
 
   const database = (ctx as { db?: typeof db } | undefined)?.db ?? db;
 
@@ -71,10 +80,13 @@ export const createContext = async ({ req }: { req: Request }) => {
   try {
     user = await getUser();
   } catch (error) {
-    console.warn('Failed to get user in tRPC context, continuing as unauthenticated', error);
+    console.warn(
+      'Failed to get user in tRPC context, continuing as unauthenticated',
+      error,
+    );
     // Don't throw - just continue with null user
   }
-  
+
   return {
     req,
     user, // Will be null if not authenticated
