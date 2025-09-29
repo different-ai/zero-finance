@@ -27,7 +27,16 @@ const isAuthed = middleware(async ({ ctx, next }) => {
   }
 
   // Use cached user from context (fetched once in createContext)
-  const user = ctx.user;
+  let user = ctx.user;
+
+  // If user is null but we have userId, create minimal user object
+  // This handles rate limiting scenarios
+  if (!user && privyDid) {
+    console.warn(
+      `0xHypr - User object not in context for ${privyDid}, creating minimal user`,
+    );
+    user = { id: privyDid };
+  }
 
   if (!user) {
     throw new TRPCError({

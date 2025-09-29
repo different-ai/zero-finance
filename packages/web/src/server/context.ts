@@ -69,8 +69,17 @@ export const createContext = async ({
       try {
         const { getUser } = await import('@/lib/auth');
         user = await getUser();
-      } catch (userError) {
+        if (!user) {
+          console.warn(`0xHypr - getUser returned null for userId: ${userId}`);
+        }
+      } catch (userError: any) {
         console.error('0xHypr - Error fetching user in context:', userError);
+        // If rate limited, log but don't fail - we still have userId
+        if (userError?.type === 'too_many_requests') {
+          console.warn(
+            '0xHypr - Rate limited by Privy, continuing with userId only',
+          );
+        }
       }
     }
   } catch (error) {
