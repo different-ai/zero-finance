@@ -1114,105 +1114,8 @@ export default function SavingsPageWrapper({
 
   return (
     <div className="space-y-10">
-      {/* Not Initialized State */}
-      {!isEarnModuleInitialized ? (
-        isDemoMode ? (
-          isActivatingDemo ? (
-            <div className="bg-white border border-[#101010]/10 p-12">
-              <div className="max-w-md mx-auto space-y-8">
-                <div className="flex justify-center">
-                  <div className="relative">
-                    <div className="absolute inset-0 bg-[#1B29FF]/20 rounded-full animate-ping" />
-                    <div className="relative bg-[#1B29FF]/10 rounded-full p-4">
-                      <Sparkles className="h-8 w-8 text-[#1B29FF] animate-pulse" />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  <h3 className="font-serif text-[24px] text-center text-[#101010]">
-                    Activating Your Savings
-                  </h3>
-
-                  <div className="space-y-3">
-                    {activationSteps.map((step, index) => (
-                      <div
-                        key={step}
-                        className="flex items-center gap-3 transition-all duration-300"
-                        style={{
-                          opacity: index <= activationStep ? 1 : 0.3,
-                          transform:
-                            index <= activationStep
-                              ? 'translateX(0)'
-                              : 'translateX(-10px)',
-                        }}
-                      >
-                        <div className="flex-shrink-0">
-                          {index < activationStep ? (
-                            <CheckCircle2 className="h-5 w-5 text-green-500" />
-                          ) : index === activationStep ? (
-                            <div className="h-5 w-5 border-2 border-[#1B29FF] rounded-full border-t-transparent animate-spin" />
-                          ) : (
-                            <div className="h-5 w-5 border-2 border-[#101010]/20 rounded-full" />
-                          )}
-                        </div>
-                        <span
-                          className={`text-[14px] ${index <= activationStep ? 'text-[#101010]' : 'text-[#101010]/40'}`}
-                        >
-                          {step}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-
-                  <div className="relative h-2 bg-[#101010]/5 rounded-full overflow-hidden">
-                    <div
-                      className="absolute inset-y-0 left-0 bg-gradient-to-r from-[#1B29FF] to-[#1B29FF]/80 rounded-full transition-all duration-500 ease-out"
-                      style={{
-                        width: `${((activationStep + 1) / activationSteps.length) * 100}%`,
-                      }}
-                    >
-                      <div className="absolute inset-0 bg-white/30 animate-shimmer" />
-                    </div>
-                  </div>
-
-                  <p className="text-center text-[12px] text-[#101010]/50">
-                    Setting up your high-yield savings account...
-                  </p>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className="bg-white border border-[#101010]/10 p-12 text-center">
-              <Wallet className="h-12 w-12 text-[#101010]/40 mx-auto mb-6" />
-              <h2 className="font-serif text-[36px] leading-[1.1] text-[#101010] mb-3">
-                Activate Savings Account
-              </h2>
-              <p className="text-[16px] text-[#101010]/70 mb-8 max-w-[400px] mx-auto">
-                Start earning up to 8% APY on your business funds.
-              </p>
-              <Button
-                onClick={handleDemoActivate}
-                className="bg-[#1B29FF] hover:bg-[#1B29FF]/90 transition-all hover:scale-[1.02]"
-              >
-                Activate Savings
-              </Button>
-            </div>
-          )
-        ) : (
-          <div className="bg-white border border-[#101010]/10 p-12 text-center">
-            <Wallet className="h-12 w-12 text-[#101010]/40 mx-auto mb-6" />
-            <h2 className="font-serif text-[36px] leading-[1.1] text-[#101010] mb-3">
-              Activate Savings Account
-            </h2>
-            <p className="text-[16px] text-[#101010]/70 mb-8 max-w-[400px] mx-auto">
-              Start earning up to 8% APY on your business funds.
-            </p>
-            <OpenSavingsAccountButton safeAddress={safeAddress || undefined} />
-          </div>
-        )
-      ) : (
-        <div className="space-y-12">
+      {/* Always show the full savings interface - auto-earn module is now optional */}
+      <div className="space-y-12">
           {/* Portfolio Overview - Grid Layout */}
           <div className="grid gap-6 lg:grid-cols-[minmax(0,360px)_1fr]">
             <CheckingActionsCard
@@ -1802,9 +1705,8 @@ export default function SavingsPageWrapper({
               </div>
             </div>
           )}
-          
+
         </div>
-      )}
     </div>
   );
 }

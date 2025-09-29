@@ -62,11 +62,6 @@ const INITIAL_PROGRESS: SetupProgressItem[] = [
     label: 'Deploying your primary account',
     status: 'pending',
   },
-  {
-    step: 'savings',
-    label: 'Activating your savings automation',
-    status: 'pending',
-  },
 ];
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -271,6 +266,9 @@ export function usePrimaryAccountSetup() {
     [waitForSmartWalletClient],
   );
 
+  // NOTE: activateSavings is preserved for future use with FluidKey integration
+  // Currently not called during onboarding - users can manually deposit/withdraw
+  // without auto-earn module activation
   const activateSavings = useCallback(
     async (safeAddress: Address) => {
       updateStep('savings', {
@@ -409,7 +407,8 @@ export function usePrimaryAccountSetup() {
       const ownerAddress = await ensureSmartWallet();
       const safeAddress = await ensurePrimarySafe(ownerAddress);
 
-      await activateSavings(safeAddress);
+      // Skip auto-earn module activation for now
+      // await activateSavings(safeAddress);
 
       setResult({ safeAddress });
       return { safeAddress };
@@ -430,7 +429,7 @@ export function usePrimaryAccountSetup() {
     } finally {
       setIsRunning(false);
     }
-  }, [activateSavings, ensurePrimarySafe, ensureSmartWallet]);
+  }, [ensurePrimarySafe, ensureSmartWallet]);
 
   return {
     progress,
