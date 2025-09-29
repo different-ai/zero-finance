@@ -145,33 +145,72 @@ async function getSafeForWorkspace(
   const workspaceId = requireWorkspaceId(ctx.workspaceId);
   const normalizedSafeAddress = getAddress(safeAddress);
 
-  const safeRecord = await db.query.userSafes.findFirst({
+  // First try: exact workspace match
+  let safeRecord = await db.query.userSafes.findFirst({
     where: (tbl, helpers) =>
       helpers.and(
         helpers.eq(tbl.userDid, privyDid),
         helpers.eq(tbl.safeAddress, normalizedSafeAddress as `0x${string}`),
-        helpers.or(
-          helpers.eq(tbl.workspaceId, workspaceId),
-          helpers.isNull(tbl.workspaceId),
-        ),
+        helpers.eq(tbl.workspaceId, workspaceId),
       ),
   });
+
+  // Second try: legacy safe without workspaceId (backfill it)
+  if (!safeRecord) {
+    safeRecord = await db.query.userSafes.findFirst({
+      where: (tbl, helpers) =>
+        helpers.and(
+          helpers.eq(tbl.userDid, privyDid),
+          helpers.eq(tbl.safeAddress, normalizedSafeAddress as `0x${string}`),
+          helpers.isNull(tbl.workspaceId),
+        ),
+    });
+
+    if (safeRecord) {
+      // Backfill the workspace ID for legacy safe
+      await db
+        .update(userSafes)
+        .set({ workspaceId })
+        .where(eq(userSafes.id, safeRecord.id));
+
+      console.log(
+        `Backfilled workspaceId ${workspaceId} for safe ${normalizedSafeAddress}`,
+      );
+    }
+  }
+
+  // Third try: safe exists in a different workspace (shared access scenario)
+  // This handles cases where user is added as co-owner to a team workspace safe
+  if (!safeRecord) {
+    safeRecord = await db.query.userSafes.findFirst({
+      where: (tbl, helpers) =>
+        helpers.and(
+          helpers.eq(tbl.userDid, privyDid),
+          helpers.eq(tbl.safeAddress, normalizedSafeAddress as `0x${string}`),
+        ),
+    });
+
+    if (safeRecord) {
+      console.log(
+        `Safe ${normalizedSafeAddress} found in different workspace (${safeRecord.workspaceId}), allowing cross-workspace access`,
+      );
+      // Don't update workspaceId - keep it in original workspace but allow access
+    }
+  }
 
   if (!safeRecord) {
     throw new TRPCError({
       code: 'NOT_FOUND',
-      message: 'Safe not found for the active workspace.',
+      message: `Safe ${normalizedSafeAddress} not found for user. You may need to register this safe first.`,
     });
   }
 
-  if (!safeRecord.workspaceId) {
-    await db
-      .update(userSafes)
-      .set({ workspaceId })
-      .where(eq(userSafes.id, safeRecord.id));
-  }
-
-  return { ...safeRecord, workspaceId } as SafeWithWorkspace;
+  // Use the safe's actual workspaceId, or current context if null
+  const effectiveWorkspaceId = safeRecord.workspaceId || workspaceId;
+  return {
+    ...safeRecord,
+    workspaceId: effectiveWorkspaceId,
+  } as SafeWithWorkspace;
 }
 
 //   /**
@@ -706,7 +745,8 @@ export const earnRouter = router({
       }>;
 
       for (const deposit of deposits) {
-        const decimals = deposit.assetDecimals ?? resolveVaultDecimals(deposit.vaultAddress);
+        const decimals =
+          deposit.assetDecimals ?? resolveVaultDecimals(deposit.vaultAddress);
         vaultDecimalsCache.set(deposit.vaultAddress.toLowerCase(), decimals);
 
         let apyBasisPoints = deposit.apyBasisPoints ?? null;
@@ -735,7 +775,8 @@ export const earnRouter = router({
       for (const withdrawal of withdrawals) {
         const key = withdrawal.vaultAddress.toLowerCase();
         const decimals =
-          vaultDecimalsCache.get(key) ?? resolveVaultDecimals(withdrawal.vaultAddress);
+          vaultDecimalsCache.get(key) ??
+          resolveVaultDecimals(withdrawal.vaultAddress);
         const apyBasisPoints =
           vaultApyCache.get(key) ??
           (await ensureVaultApy(withdrawal.vaultAddress));
