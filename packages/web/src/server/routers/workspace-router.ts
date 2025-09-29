@@ -97,6 +97,7 @@ export const workspaceRouter = router({
 
   /**
    * Ensure the user has a default workspace, creating one on demand.
+   * Returns the user's primary workspace if set, otherwise their first workspace.
    */
   getOrCreateWorkspace: protectedProcedure.query(async ({ ctx }) => {
     const { userId } = ctx;
@@ -108,6 +109,44 @@ export const workspaceRouter = router({
       });
     }
 
+    // First, check if user has a primary workspace set
+    const [user] = await ctx.db
+      .select()
+      .from(users)
+      .where(eq(users.privyDid, userId))
+      .limit(1);
+
+    // If user has a primary workspace, use that
+    if (user?.primaryWorkspaceId) {
+      const membership = await ctx.db
+        .select()
+        .from(workspaceMembers)
+        .where(
+          and(
+            eq(workspaceMembers.userId, userId),
+            eq(workspaceMembers.workspaceId, user.primaryWorkspaceId),
+          ),
+        )
+        .limit(1);
+
+      if (membership.length > 0) {
+        const workspace = await ctx.db
+          .select()
+          .from(workspaces)
+          .where(eq(workspaces.id, user.primaryWorkspaceId))
+          .limit(1);
+
+        if (workspace.length > 0) {
+          return {
+            workspaceId: user.primaryWorkspaceId,
+            workspace: workspace[0],
+            membership: membership[0],
+          };
+        }
+      }
+    }
+
+    // Otherwise, get any workspace the user is a member of
     const existingMembership = await ctx.db
       .select()
       .from(workspaceMembers)
@@ -121,6 +160,12 @@ export const workspaceRouter = router({
         .where(eq(workspaces.id, existingMembership[0].workspaceId))
         .limit(1);
 
+      // Set this as primary workspace if none was set
+      await ctx.db
+        .update(users)
+        .set({ primaryWorkspaceId: existingMembership[0].workspaceId })
+        .where(eq(users.privyDid, userId));
+
       return {
         workspaceId: existingMembership[0].workspaceId,
         workspace: workspace[0],
@@ -128,6 +173,7 @@ export const workspaceRouter = router({
       };
     }
 
+    // No workspace exists, create a new one
     const newWorkspace = await ctx.db
       .insert(workspaces)
       .values({
@@ -144,6 +190,12 @@ export const workspaceRouter = router({
         role: 'owner',
       })
       .returning();
+
+    // Set as primary workspace
+    await ctx.db
+      .update(users)
+      .set({ primaryWorkspaceId: newWorkspace[0].id })
+      .where(eq(users.privyDid, userId));
 
     return {
       workspaceId: newWorkspace[0].id,

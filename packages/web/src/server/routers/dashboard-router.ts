@@ -2,7 +2,7 @@ import { protectedProcedure, router } from '../create-router';
 import { getSafeBalance } from '@/server/services/safe.service';
 import { USDC_ADDRESS } from '@/lib/constants';
 import { userSafes, type UserSafe } from '@/db/schema';
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import { TRPCError } from '@trpc/server';
 // import { AlignService } from '../services/align-service'; // This service does not exist
 
@@ -31,9 +31,20 @@ export const dashboardRouter = router({
     //   }
     // }
 
-    // 2. Get user safes
+    // 2. Get user safes (filtered by workspace)
+    const workspaceId = ctx.workspaceId;
+    if (!workspaceId) {
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Workspace context is unavailable.',
+      });
+    }
+
     const userSafeRecords = await db.query.userSafes.findMany({
-      where: eq(userSafes.userDid, userId),
+      where: and(
+        eq(userSafes.userDid, userId),
+        eq(userSafes.workspaceId, workspaceId),
+      ),
     });
 
     // 3. Get crypto balances
@@ -42,7 +53,7 @@ export const dashboardRouter = router({
         getSafeBalance({
           safeAddress: safe.safeAddress,
           tokenAddress: USDC_ADDRESS, // Hardcoded USDC
-        }).catch(e => {
+        }).catch((e) => {
           log.error(e, `Failed to get balance for safe ${safe.safeAddress}`);
           return null;
         }),
@@ -58,11 +69,13 @@ export const dashboardRouter = router({
 
     // 4. Aggregate balances
     const totalBalance = virtualBalance + totalCryptoBalance;
-    const primarySafe = userSafeRecords.find((s: UserSafe) => s.safeType === 'primary');
+    const primarySafe = userSafeRecords.find(
+      (s: UserSafe) => s.safeType === 'primary',
+    );
 
     return {
       totalBalance,
       primarySafeAddress: primarySafe?.safeAddress as `0x${string}` | undefined,
     };
   }),
-}); 
+});

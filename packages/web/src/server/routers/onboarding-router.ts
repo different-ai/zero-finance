@@ -17,11 +17,17 @@ export const onboardingRouter = router({
    */
   getOnboardingStatus: protectedProcedure.query(async ({ ctx }) => {
     const userId = ctx.user.id;
+    const workspaceId = ctx.workspaceId;
+
     try {
-      // 1. Check for a primary safe in the new userSafes table
+      // 1. Check for a primary safe in the new userSafes table (workspace-scoped)
       const primarySafe = await db.query.userSafes.findFirst({
         where: (table) =>
-          eq(table.userDid, userId) && eq(table.safeType, 'primary'),
+          workspaceId
+            ? eq(table.userDid, userId) &&
+              eq(table.safeType, 'primary') &&
+              eq(table.workspaceId, workspaceId)
+            : eq(table.userDid, userId) && eq(table.safeType, 'primary'),
       });
 
       const profile = await db.query.userProfilesTable.findFirst({
@@ -155,22 +161,22 @@ export const onboardingRouter = router({
     const userId = ctx.user.id;
     const userEmail = ctx.user.email?.address;
 
-      try {
-        // Upsert user profile with skipped flag
-        await db
-          .insert(userProfilesTable)
-          .values({
-            privyDid: userId,
-            email: userEmail,
+    try {
+      // Upsert user profile with skipped flag
+      await db
+        .insert(userProfilesTable)
+        .values({
+          privyDid: userId,
+          email: userEmail,
+          skippedOrCompletedOnboardingStepper: true,
+        })
+        .onConflictDoUpdate({
+          target: userProfilesTable.privyDid,
+          set: {
             skippedOrCompletedOnboardingStepper: true,
-          })
-          .onConflictDoUpdate({
-            target: userProfilesTable.privyDid,
-            set: {
-              skippedOrCompletedOnboardingStepper: true,
-              updatedAt: new Date(),
-            },
-          });
+            updatedAt: new Date(),
+          },
+        });
 
       return {
         success: true,

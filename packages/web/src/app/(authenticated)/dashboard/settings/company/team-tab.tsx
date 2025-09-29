@@ -246,7 +246,7 @@ export function TeamTab({ companyId }: TeamTabProps) {
         </Card>
       )}
 
-      {/* Warning Box */}
+      {/* Workspace Info */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -258,58 +258,16 @@ export function TeamTab({ companyId }: TeamTabProps) {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg mb-6">
-            <h4 className="font-medium text-amber-900 mb-2 flex items-center gap-2">
+          <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <h4 className="font-medium text-blue-900 mb-2 flex items-center gap-2">
               <AlertCircle className="h-4 w-4" />
-              Important: Team vs Contractors
+              About Team Members
             </h4>
-            <div className="space-y-2 text-sm text-amber-800">
-              <p>
-                <strong>Team members</strong> can see ALL your inbox items,
-                expenses, and company data. Use this for business partners and
-                trusted internal team.
-              </p>
-              <p>
-                <strong>Contractors</strong> can only see company profile data
-                needed to create invoices. Use this for external vendors and
-                clients.
-              </p>
-            </div>
-          </div>
-
-          {/* Workspace Settings */}
-          <div className="space-y-4 mb-6">
-            <div className="flex items-center justify-between p-3 border rounded-lg">
-              <div>
-                <Label className="text-base">Share Inbox & Expenses</Label>
-                <p className="text-sm text-muted-foreground">
-                  Team members can view and manage all uploaded documents
-                </p>
-              </div>
-              <Switch
-                checked={false} // TODO: Implement workspace settings storage
-                onCheckedChange={(checked) =>
-                  handleToggleChange('shareInbox', checked)
-                }
-                disabled={!canManageTeam || updateSettings.isPending}
-              />
-            </div>
-
-            <div className="flex items-center justify-between p-3 border rounded-lg">
-              <div>
-                <Label className="text-base">Share Company Profile</Label>
-                <p className="text-sm text-muted-foreground">
-                  Team members can view company settings
-                </p>
-              </div>
-              <Switch
-                checked={false} // TODO: Implement workspace settings storage
-                onCheckedChange={(checked) =>
-                  handleToggleChange('shareCompanyData', checked)
-                }
-                disabled={!canManageTeam || updateSettings.isPending}
-              />
-            </div>
+            <p className="text-sm text-blue-800">
+              Team members share access to this workspace including safes,
+              transactions, and company data. Only invite people you trust with
+              full access to your workspace.
+            </p>
           </div>
         </CardContent>
       </Card>
