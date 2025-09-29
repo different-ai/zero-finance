@@ -1,7 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "Bash(pnpm db:generate:*)"
+      "Bash(pnpm db:generate:*)",
+      "Read(//var/folders/d9/xqhkvsp94rg0n0n523snqztm0000gn/T/TemporaryItems/NSIRD_screencaptureui_de8GN8/**)",
+      "Bash(grep:*)"
     ],
     "deny": [],
     "ask": []

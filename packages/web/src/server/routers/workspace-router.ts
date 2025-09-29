@@ -8,6 +8,7 @@ import {
   users,
   companies,
   userSafes,
+  userProfilesTable,
 } from '@/db/schema';
 import { eq, and, or, desc, isNull } from 'drizzle-orm';
 import crypto from 'crypto';
@@ -422,6 +423,21 @@ export const workspaceRouter = router({
           usedBy: userId,
         })
         .where(eq(workspaceInvites.id, inviteData.id));
+
+      // Mark onboarding as complete for team members joining existing workspace
+      // They don't need to go through personal Safe setup
+      await ctx.db
+        .insert(userProfilesTable)
+        .values({
+          privyDid: userId,
+          skippedOrCompletedOnboardingStepper: true,
+        })
+        .onConflictDoUpdate({
+          target: userProfilesTable.privyDid,
+          set: {
+            skippedOrCompletedOnboardingStepper: true,
+          },
+        });
 
       // Check if invite includes Safe ownership
       let pendingSafeOwnership = null;
