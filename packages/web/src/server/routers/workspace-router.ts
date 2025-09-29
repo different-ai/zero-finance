@@ -515,6 +515,31 @@ export const workspaceRouter = router({
               inviterUserId: inviteData.createdBy,
             };
           }
+
+          // IMPORTANT: Create a userSafes record for the new member
+          // This allows them to access the shared safe when they switch to this workspace
+          try {
+            await ctx.db
+              .insert(userSafes)
+              .values({
+                userDid: userId,
+                workspaceId: inviteData.workspaceId,
+                safeAddress: primarySafe.safeAddress,
+                safeType: 'primary',
+                isEarnModuleEnabled: primarySafe.isEarnModuleEnabled,
+              })
+              .onConflictDoNothing();
+
+            console.log(
+              `Created userSafes record for ${userId} to access shared safe ${primarySafe.safeAddress} in workspace ${inviteData.workspaceId}`,
+            );
+          } catch (error) {
+            console.error(
+              'Failed to create userSafes record for team member:',
+              error,
+            );
+            // Don't fail the invite if this fails - user can still be added as co-owner manually
+          }
         }
       }
 
