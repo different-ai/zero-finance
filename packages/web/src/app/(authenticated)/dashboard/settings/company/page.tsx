@@ -325,11 +325,9 @@ export default function CompanySettingsPage() {
         <div className="h-[48px] flex items-center px-4 sm:px-6 max-w-[1400px] mx-auto">
           <div className="flex gap-1">
             {[
-              { value: 'info', label: 'Company Info' },
+              { value: 'info', label: 'Workspace & Company' },
               { value: 'shared', label: 'Shared Data' },
-              { value: 'contractors', label: 'Contractors' },
               { value: 'team', label: 'Team' },
-              { value: 'invites', label: 'Invite Links' },
             ].map((item) => (
               <button
                 key={item.value}

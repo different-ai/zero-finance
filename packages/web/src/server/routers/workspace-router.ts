@@ -190,20 +190,21 @@ export const workspaceRouter = router({
         });
       }
 
-      // Get all members with user details - joining with companies for business info
+      // Get all members with user details from profiles table
       const members = await ctx.db
         .select({
           id: workspaceMembers.id,
           userId: workspaceMembers.userId,
           role: workspaceMembers.role,
           joinedAt: workspaceMembers.joinedAt,
-          // TODO: Fix these fields once user.email is available
-          // email: users.email,
-          // name: users.businessName,
+          email: userProfilesTable.email,
+          name: userProfilesTable.businessName,
         })
         .from(workspaceMembers)
-        // TODO: Add proper joins once user table has email field
-        // .leftJoin(users, eq(workspaceMembers.userId, users.privyDid))
+        .leftJoin(
+          userProfilesTable,
+          eq(workspaceMembers.userId, userProfilesTable.privyDid),
+        )
         .where(eq(workspaceMembers.workspaceId, input.workspaceId));
 
       return members;
