@@ -23,12 +23,16 @@ import { useRouter } from 'next/navigation';
 export function WorkspaceSwitcher() {
   const [open, setOpen] = useState(false);
   const router = useRouter();
+  const utils = api.useUtils();
 
   const { data: workspaces } = api.workspace.getUserWorkspaces.useQuery();
-  const { data: currentWorkspace } = api.workspace.getOrCreateWorkspace.useQuery();
+  const { data: currentWorkspace } =
+    api.workspace.getOrCreateWorkspace.useQuery();
   const switchWorkspace = api.workspace.setActiveWorkspace.useMutation({
-    onSuccess: () => {
+    onSuccess: async () => {
       toast.success('Workspace switched');
+      // Invalidate all queries to force refetch with new workspace context
+      await utils.invalidate();
       router.refresh();
     },
     onError: (error) => {
@@ -37,9 +41,9 @@ export function WorkspaceSwitcher() {
   });
 
   const currentWorkspaceId = currentWorkspace?.workspaceId;
-  const currentWorkspaceName = workspaces?.find(
-    (ws) => ws.workspaceId === currentWorkspaceId
-  )?.workspaceName || 'Select workspace';
+  const currentWorkspaceName =
+    workspaces?.find((ws) => ws.workspaceId === currentWorkspaceId)
+      ?.workspaceName || 'Select workspace';
 
   if (!workspaces || workspaces.length <= 1) {
     // Don't show switcher if user only has one workspace
@@ -71,7 +75,9 @@ export function WorkspaceSwitcher() {
                 value={workspace.workspaceId}
                 onSelect={() => {
                   if (workspace.workspaceId !== currentWorkspaceId) {
-                    switchWorkspace.mutate({ workspaceId: workspace.workspaceId });
+                    switchWorkspace.mutate({
+                      workspaceId: workspace.workspaceId,
+                    });
                   }
                   setOpen(false);
                 }}
@@ -81,7 +87,7 @@ export function WorkspaceSwitcher() {
                     'mr-2 h-4 w-4',
                     currentWorkspaceId === workspace.workspaceId
                       ? 'opacity-100'
-                      : 'opacity-0'
+                      : 'opacity-0',
                   )}
                 />
                 <div className="flex-1">

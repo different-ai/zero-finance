@@ -145,17 +145,16 @@ async function getSafeForWorkspace(
   const workspaceId = requireWorkspaceId(ctx.workspaceId);
   const normalizedSafeAddress = getAddress(safeAddress);
 
-  // First try: exact workspace match
+  // First: Check if Safe exists in current workspace (regardless of owner)
   let safeRecord = await db.query.userSafes.findFirst({
     where: (tbl, helpers) =>
       helpers.and(
-        helpers.eq(tbl.userDid, privyDid),
         helpers.eq(tbl.safeAddress, normalizedSafeAddress as `0x${string}`),
         helpers.eq(tbl.workspaceId, workspaceId),
       ),
   });
 
-  // Second try: legacy safe without workspaceId (backfill it)
+  // Second: Legacy safe without workspaceId owned by current user (backfill it)
   if (!safeRecord) {
     safeRecord = await db.query.userSafes.findFirst({
       where: (tbl, helpers) =>
@@ -179,8 +178,7 @@ async function getSafeForWorkspace(
     }
   }
 
-  // Third try: safe exists in a different workspace (shared access scenario)
-  // This handles cases where user is added as co-owner to a team workspace safe
+  // Third: Safe exists in a different workspace that user has access to
   if (!safeRecord) {
     safeRecord = await db.query.userSafes.findFirst({
       where: (tbl, helpers) =>
@@ -194,14 +192,13 @@ async function getSafeForWorkspace(
       console.log(
         `Safe ${normalizedSafeAddress} found in different workspace (${safeRecord.workspaceId}), allowing cross-workspace access`,
       );
-      // Don't update workspaceId - keep it in original workspace but allow access
     }
   }
 
   if (!safeRecord) {
     throw new TRPCError({
       code: 'NOT_FOUND',
-      message: `Safe ${normalizedSafeAddress} not found for user. You may need to register this safe first.`,
+      message: `Safe ${normalizedSafeAddress} not found in workspace ${workspaceId}. You may need to register this safe first.`,
     });
   }
 

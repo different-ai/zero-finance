@@ -31,7 +31,7 @@ export const dashboardRouter = router({
     //   }
     // }
 
-    // 2. Get user safes (filtered by workspace)
+    // 2. Get workspace safes (all safes in the workspace, not just user's own)
     const workspaceId = ctx.workspaceId;
     if (!workspaceId) {
       throw new TRPCError({
@@ -41,10 +41,7 @@ export const dashboardRouter = router({
     }
 
     const userSafeRecords = await db.query.userSafes.findMany({
-      where: and(
-        eq(userSafes.userDid, userId),
-        eq(userSafes.workspaceId, workspaceId),
-      ),
+      where: eq(userSafes.workspaceId, workspaceId),
     });
 
     // 3. Get crypto balances
