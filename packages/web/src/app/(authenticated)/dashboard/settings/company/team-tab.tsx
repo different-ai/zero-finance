@@ -31,6 +31,7 @@ import {
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -49,6 +50,7 @@ interface TeamTabProps {
 export function TeamTab({ companyId }: TeamTabProps) {
   const [copiedLink, setCopiedLink] = useState<string | null>(null);
   const [memberToRemove, setMemberToRemove] = useState<any>(null);
+  const [addAsSafeOwner, setAddAsSafeOwner] = useState<boolean>(false);
 
   // Fetch workspace data
   const {
@@ -59,23 +61,23 @@ export function TeamTab({ companyId }: TeamTabProps) {
   } = api.workspace.getOrCreateWorkspace.useQuery();
 
   // Fetch team members
-  const { 
-    data: teamMembers, 
+  const {
+    data: teamMembers,
     isLoading: isLoadingMembers,
-    refetch: refetchMembers 
+    refetch: refetchMembers,
   } = api.workspace.getTeamMembers.useQuery(
     { workspaceId: workspace?.workspaceId || '' },
-    { enabled: !!workspace?.workspaceId }
+    { enabled: !!workspace?.workspaceId },
   );
 
   // Fetch team invites
-  const { 
+  const {
     data: teamInvites,
     isLoading: isLoadingInvites,
-    refetch: refetchInvites 
+    refetch: refetchInvites,
   } = api.workspace.getWorkspaceInvites.useQuery(
     { workspaceId: workspace?.workspaceId || '' },
-    { enabled: !!workspace?.workspaceId }
+    { enabled: !!workspace?.workspaceId },
   );
 
   // Fetch user's workspaces
@@ -151,6 +153,7 @@ export function TeamTab({ companyId }: TeamTabProps) {
       createInvite.mutate({
         workspaceId: workspace.workspaceId,
         role: 'member' as const,
+        addAsSafeOwner: addAsSafeOwner,
       });
     }
   };
@@ -162,7 +165,10 @@ export function TeamTab({ companyId }: TeamTabProps) {
     setTimeout(() => setCopiedLink(null), 2000);
   };
 
-  const handleToggleChange = (setting: 'shareInbox' | 'shareCompanyData', value: boolean) => {
+  const handleToggleChange = (
+    setting: 'shareInbox' | 'shareCompanyData',
+    value: boolean,
+  ) => {
     if (!workspace?.workspaceId) {
       toast.error('Workspace not found');
       return;
@@ -180,7 +186,7 @@ export function TeamTab({ companyId }: TeamTabProps) {
 
   const confirmRemoveMember = () => {
     if (!memberToRemove || !workspace?.workspaceId) return;
-    
+
     removeMember.mutate({
       workspaceId: workspace.workspaceId,
       memberId: memberToRemove.id,
@@ -189,7 +195,8 @@ export function TeamTab({ companyId }: TeamTabProps) {
 
   // Get current user's role in workspace
   const currentUserRole = workspace?.membership?.role || 'member';
-  const canManageTeam = currentUserRole === 'owner' || currentUserRole === 'admin';
+  const canManageTeam =
+    currentUserRole === 'owner' || currentUserRole === 'admin';
 
   return (
     <div className="space-y-6">
@@ -205,14 +212,28 @@ export function TeamTab({ companyId }: TeamTabProps) {
           <CardContent>
             <div className="space-y-3">
               {userWorkspaces.map((ws: any) => (
-                <div key={ws.workspaceId} className="flex items-center justify-between p-3 border rounded-lg">
+                <div
+                  key={ws.workspaceId}
+                  className="flex items-center justify-between p-3 border rounded-lg"
+                >
                   <div>
-                    <span className="font-medium">{ws.workspaceName || 'Personal Workspace'}</span>
-                    <Badge variant={ws.workspaceId === workspace?.workspaceId ? 'default' : 'outline'} className="ml-2">
+                    <span className="font-medium">
+                      {ws.workspaceName || 'Personal Workspace'}
+                    </span>
+                    <Badge
+                      variant={
+                        ws.workspaceId === workspace?.workspaceId
+                          ? 'default'
+                          : 'outline'
+                      }
+                      className="ml-2"
+                    >
                       {ws.role}
                     </Badge>
                     {ws.workspaceId === workspace?.workspaceId && (
-                      <Badge variant="secondary" className="ml-2">Current</Badge>
+                      <Badge variant="secondary" className="ml-2">
+                        Current
+                      </Badge>
                     )}
                   </div>
                   <div className="text-sm text-muted-foreground">
@@ -225,7 +246,7 @@ export function TeamTab({ companyId }: TeamTabProps) {
         </Card>
       )}
 
-      {/* Warning Box */}
+      {/* Workspace Info */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -237,54 +258,16 @@ export function TeamTab({ companyId }: TeamTabProps) {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg mb-6">
-            <h4 className="font-medium text-amber-900 mb-2 flex items-center gap-2">
+          <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <h4 className="font-medium text-blue-900 mb-2 flex items-center gap-2">
               <AlertCircle className="h-4 w-4" />
-              Important: Team vs Contractors
+              About Team Members
             </h4>
-            <div className="space-y-2 text-sm text-amber-800">
-              <p>
-                <strong>Team members</strong> can see ALL your inbox items,
-                expenses, and company data. Use this for business partners and
-                trusted internal team.
-              </p>
-              <p>
-                <strong>Contractors</strong> can only see company profile data
-                needed to create invoices. Use this for external vendors and
-                clients.
-              </p>
-            </div>
-          </div>
-
-          {/* Workspace Settings */}
-          <div className="space-y-4 mb-6">
-            <div className="flex items-center justify-between p-3 border rounded-lg">
-              <div>
-                <Label className="text-base">Share Inbox & Expenses</Label>
-                <p className="text-sm text-muted-foreground">
-                  Team members can view and manage all uploaded documents
-                </p>
-              </div>
-              <Switch
-                checked={false} // TODO: Implement workspace settings storage
-                onCheckedChange={(checked) => handleToggleChange('shareInbox', checked)}
-                disabled={!canManageTeam || updateSettings.isPending}
-              />
-            </div>
-
-            <div className="flex items-center justify-between p-3 border rounded-lg">
-              <div>
-                <Label className="text-base">Share Company Profile</Label>
-                <p className="text-sm text-muted-foreground">
-                  Team members can view company settings
-                </p>
-              </div>
-              <Switch
-                checked={false} // TODO: Implement workspace settings storage
-                onCheckedChange={(checked) => handleToggleChange('shareCompanyData', checked)}
-                disabled={!canManageTeam || updateSettings.isPending}
-              />
-            </div>
+            <p className="text-sm text-blue-800">
+              Team members share access to this workspace including safes,
+              transactions, and company data. Only invite people you trust with
+              full access to your workspace.
+            </p>
           </div>
         </CardContent>
       </Card>
@@ -320,9 +303,12 @@ export function TeamTab({ companyId }: TeamTabProps) {
                     <div className="flex items-center gap-2">
                       <div>
                         <div className="font-medium">
-                          {member.name || member.email || 'Unknown User'}
+                          {member.name ||
+                            member.email ||
+                            member.userId ||
+                            'Unknown User'}
                         </div>
-                        {member.email && member.name && (
+                        {member.email && (
                           <div className="text-sm text-muted-foreground">
                             {member.email}
                           </div>
@@ -336,8 +322,8 @@ export function TeamTab({ companyId }: TeamTabProps) {
                           member.role === 'owner'
                             ? 'default'
                             : member.role === 'admin'
-                            ? 'secondary'
-                            : 'outline'
+                              ? 'secondary'
+                              : 'outline'
                         }
                       >
                         {member.role}
@@ -385,28 +371,51 @@ export function TeamTab({ companyId }: TeamTabProps) {
         </CardHeader>
         <CardContent>
           {canManageTeam && (
-            <Button
-              onClick={handleCreateTeamInvite}
-              className="w-full mb-4"
-              disabled={isLoadingWorkspace || createInvite.isPending}
-            >
-              {isLoadingWorkspace ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Loading workspace...
-                </>
-              ) : createInvite.isPending ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Creating invite...
-                </>
-              ) : (
-                <>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create Team Invite Link
-                </>
-              )}
-            </Button>
+            <div className="space-y-4 mb-4">
+              <div className="flex items-center space-x-2 p-3 border rounded-lg">
+                <Checkbox
+                  id="add-safe-owner"
+                  checked={addAsSafeOwner}
+                  onCheckedChange={(checked) =>
+                    setAddAsSafeOwner(checked as boolean)
+                  }
+                />
+                <div className="flex-1">
+                  <Label
+                    htmlFor="add-safe-owner"
+                    className="text-sm font-medium cursor-pointer"
+                  >
+                    Add invitee as co-owner of primary Safe
+                  </Label>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    The invited user will be added as an owner to your primary
+                    Safe wallet (requires manual confirmation)
+                  </p>
+                </div>
+              </div>
+              <Button
+                onClick={handleCreateTeamInvite}
+                className="w-full"
+                disabled={isLoadingWorkspace || createInvite.isPending}
+              >
+                {isLoadingWorkspace ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Loading workspace...
+                  </>
+                ) : createInvite.isPending ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Creating invite...
+                  </>
+                ) : (
+                  <>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Create Team Invite Link
+                  </>
+                )}
+              </Button>
+            </div>
           )}
 
           {isLoadingInvites ? (
@@ -432,15 +441,19 @@ export function TeamTab({ companyId }: TeamTabProps) {
                         {invite.usedAt && (
                           <Badge variant="secondary">Used</Badge>
                         )}
-                        <Badge variant="outline">{invite.role || 'member'}</Badge>
+                        <Badge variant="outline">
+                          {invite.role || 'member'}
+                        </Badge>
                         <span className="text-xs text-muted-foreground">
-                          Created {new Date(invite.createdAt).toLocaleDateString()}
+                          Created{' '}
+                          {new Date(invite.createdAt).toLocaleDateString()}
                         </span>
                       </div>
 
                       <div className="bg-gray-50 p-2 rounded border">
                         <p className="text-xs font-mono break-all">
-                          {window.location.origin}/join-team?token={invite.token}
+                          {window.location.origin}/join-team?token=
+                          {invite.token}
                         </p>
                       </div>
 
@@ -448,7 +461,8 @@ export function TeamTab({ companyId }: TeamTabProps) {
                         {invite.expiresAt && (
                           <span className="flex items-center gap-1">
                             <Calendar className="h-3 w-3" />
-                            Expires {new Date(invite.expiresAt).toLocaleDateString()}
+                            Expires{' '}
+                            {new Date(invite.expiresAt).toLocaleDateString()}
                           </span>
                         )}
                         {invite.email && (
@@ -482,7 +496,9 @@ export function TeamTab({ companyId }: TeamTabProps) {
                         <Button
                           variant="destructive"
                           size="sm"
-                          onClick={() => deleteInvite.mutate({ inviteId: invite.id })}
+                          onClick={() =>
+                            deleteInvite.mutate({ inviteId: invite.id })
+                          }
                           disabled={deleteInvite.isPending}
                         >
                           <Trash2 className="h-4 w-4" />
@@ -502,14 +518,17 @@ export function TeamTab({ companyId }: TeamTabProps) {
       </Card>
 
       {/* Remove Member Confirmation Dialog */}
-      <AlertDialog open={!!memberToRemove} onOpenChange={() => setMemberToRemove(null)}>
+      <AlertDialog
+        open={!!memberToRemove}
+        onOpenChange={() => setMemberToRemove(null)}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Remove Team Member</AlertDialogTitle>
             <AlertDialogDescription>
               Are you sure you want to remove{' '}
-              <strong>{memberToRemove?.name || memberToRemove?.email}</strong> from the team?
-              They will lose access to all shared resources.
+              <strong>{memberToRemove?.name || memberToRemove?.email}</strong>{' '}
+              from the team? They will lose access to all shared resources.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

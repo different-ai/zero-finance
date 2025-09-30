@@ -1932,18 +1932,27 @@ export const alignRouter = router({
       });
     }
 
-    // Get primary safe
+    // Get primary safe (workspace-scoped)
+    const workspaceId = ctx.workspaceId;
+    if (!workspaceId) {
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Workspace context is unavailable.',
+      });
+    }
+
     const primarySafe = await db.query.userSafes.findFirst({
       where: and(
         eq(userSafes.userDid, userFromPrivy.id),
         eq(userSafes.safeType, 'primary'),
+        eq(userSafes.workspaceId, workspaceId),
       ),
     });
 
     if (!primarySafe?.safeAddress) {
       throw new TRPCError({
         code: 'PRECONDITION_FAILED',
-        message: 'No primary safe address found',
+        message: 'No primary safe address found for current workspace',
       });
     }
 

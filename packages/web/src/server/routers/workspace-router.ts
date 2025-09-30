@@ -7,6 +7,8 @@ import {
   workspaceInvites,
   users,
   companies,
+  userSafes,
+  userProfilesTable,
 } from '@/db/schema';
 import { eq, and, or, desc, isNull } from 'drizzle-orm';
 import crypto from 'crypto';
@@ -95,6 +97,7 @@ export const workspaceRouter = router({
 
   /**
    * Ensure the user has a default workspace, creating one on demand.
+   * Returns the user's primary workspace if set, otherwise their first workspace.
    */
   getOrCreateWorkspace: protectedProcedure.query(async ({ ctx }) => {
     const { userId } = ctx;
@@ -106,6 +109,44 @@ export const workspaceRouter = router({
       });
     }
 
+    // First, check if user has a primary workspace set
+    const [user] = await ctx.db
+      .select()
+      .from(users)
+      .where(eq(users.privyDid, userId))
+      .limit(1);
+
+    // If user has a primary workspace, use that
+    if (user?.primaryWorkspaceId) {
+      const membership = await ctx.db
+        .select()
+        .from(workspaceMembers)
+        .where(
+          and(
+            eq(workspaceMembers.userId, userId),
+            eq(workspaceMembers.workspaceId, user.primaryWorkspaceId),
+          ),
+        )
+        .limit(1);
+
+      if (membership.length > 0) {
+        const workspace = await ctx.db
+          .select()
+          .from(workspaces)
+          .where(eq(workspaces.id, user.primaryWorkspaceId))
+          .limit(1);
+
+        if (workspace.length > 0) {
+          return {
+            workspaceId: user.primaryWorkspaceId,
+            workspace: workspace[0],
+            membership: membership[0],
+          };
+        }
+      }
+    }
+
+    // Otherwise, get any workspace the user is a member of
     const existingMembership = await ctx.db
       .select()
       .from(workspaceMembers)
@@ -119,6 +160,12 @@ export const workspaceRouter = router({
         .where(eq(workspaces.id, existingMembership[0].workspaceId))
         .limit(1);
 
+      // Set this as primary workspace if none was set
+      await ctx.db
+        .update(users)
+        .set({ primaryWorkspaceId: existingMembership[0].workspaceId })
+        .where(eq(users.privyDid, userId));
+
       return {
         workspaceId: existingMembership[0].workspaceId,
         workspace: workspace[0],
@@ -126,6 +173,7 @@ export const workspaceRouter = router({
       };
     }
 
+    // No workspace exists, create a new one
     const newWorkspace = await ctx.db
       .insert(workspaces)
       .values({
@@ -142,6 +190,12 @@ export const workspaceRouter = router({
         role: 'owner',
       })
       .returning();
+
+    // Set as primary workspace
+    await ctx.db
+      .update(users)
+      .set({ primaryWorkspaceId: newWorkspace[0].id })
+      .where(eq(users.privyDid, userId));
 
     return {
       workspaceId: newWorkspace[0].id,
@@ -188,20 +242,21 @@ export const workspaceRouter = router({
         });
       }
 
-      // Get all members with user details - joining with companies for business info
+      // Get all members with user details from profiles table
       const members = await ctx.db
         .select({
           id: workspaceMembers.id,
           userId: workspaceMembers.userId,
           role: workspaceMembers.role,
           joinedAt: workspaceMembers.joinedAt,
-          // TODO: Fix these fields once user.email is available
-          // email: users.email,
-          // name: users.businessName,
+          email: userProfilesTable.email,
+          name: userProfilesTable.businessName,
         })
         .from(workspaceMembers)
-        // TODO: Add proper joins once user table has email field
-        // .leftJoin(users, eq(workspaceMembers.userId, users.privyDid))
+        .leftJoin(
+          userProfilesTable,
+          eq(workspaceMembers.userId, userProfilesTable.privyDid),
+        )
         .where(eq(workspaceMembers.workspaceId, input.workspaceId));
 
       return members;
@@ -422,9 +477,76 @@ export const workspaceRouter = router({
         })
         .where(eq(workspaceInvites.id, inviteData.id));
 
+      // Mark onboarding as complete for team members joining existing workspace
+      // They don't need to go through personal Safe setup
+      await ctx.db
+        .insert(userProfilesTable)
+        .values({
+          privyDid: userId,
+          skippedOrCompletedOnboardingStepper: true,
+        })
+        .onConflictDoUpdate({
+          target: userProfilesTable.privyDid,
+          set: {
+            skippedOrCompletedOnboardingStepper: true,
+          },
+        });
+
+      // Check if invite includes Safe ownership
+      let pendingSafeOwnership = null;
+      if (inviteData.addAsSafeOwner) {
+        // Get inviter's primary Safe
+        const primarySafe = await ctx.db.query.userSafes.findFirst({
+          where: and(
+            eq(userSafes.userDid, inviteData.createdBy),
+            eq(userSafes.safeType, 'primary'),
+            eq(userSafes.workspaceId, inviteData.workspaceId),
+          ),
+        });
+
+        if (primarySafe) {
+          // Get invitee's wallet address from context
+          const inviteeWallet = ctx.user?.wallet?.address;
+
+          if (inviteeWallet) {
+            pendingSafeOwnership = {
+              safeAddress: primarySafe.safeAddress,
+              newOwner: inviteeWallet,
+              inviterUserId: inviteData.createdBy,
+            };
+          }
+
+          // IMPORTANT: Create a userSafes record for the new member
+          // This allows them to access the shared safe when they switch to this workspace
+          try {
+            await ctx.db
+              .insert(userSafes)
+              .values({
+                userDid: userId,
+                workspaceId: inviteData.workspaceId,
+                safeAddress: primarySafe.safeAddress,
+                safeType: 'primary',
+                isEarnModuleEnabled: primarySafe.isEarnModuleEnabled,
+              })
+              .onConflictDoNothing();
+
+            console.log(
+              `Created userSafes record for ${userId} to access shared safe ${primarySafe.safeAddress} in workspace ${inviteData.workspaceId}`,
+            );
+          } catch (error) {
+            console.error(
+              'Failed to create userSafes record for team member:',
+              error,
+            );
+            // Don't fail the invite if this fails - user can still be added as co-owner manually
+          }
+        }
+      }
+
       return {
         success: true,
         workspaceId: inviteData.workspaceId,
+        pendingSafeOwnership,
       };
     }),
 
@@ -501,6 +623,7 @@ export const workspaceRouter = router({
       z.object({
         workspaceId: z.string().uuid(),
         role: z.enum(['admin', 'member', 'viewer']).default('member'),
+        addAsSafeOwner: z.boolean().optional().default(false),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -549,6 +672,7 @@ export const workspaceRouter = router({
           role: input.role,
           shareInbox: true,
           shareCompanyData: true,
+          addAsSafeOwner: input.addAsSafeOwner,
           expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
         })
         .returning();
@@ -757,4 +881,162 @@ export const workspaceRouter = router({
 
     return memberships;
   }),
+
+  /**
+   * Set active workspace for the user
+   */
+  setActiveWorkspace: protectedProcedure
+    .input(
+      z.object({
+        workspaceId: z.string().uuid(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const { userId } = ctx;
+
+      if (!userId) {
+        throw new TRPCError({
+          code: 'UNAUTHORIZED',
+          message: 'User not authenticated',
+        });
+      }
+
+      // Verify user is a member of this workspace
+      const membership = await ctx.db
+        .select()
+        .from(workspaceMembers)
+        .where(
+          and(
+            eq(workspaceMembers.workspaceId, input.workspaceId),
+            eq(workspaceMembers.userId, userId),
+          ),
+        )
+        .limit(1);
+
+      if (!membership.length) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'Not a member of this workspace',
+        });
+      }
+
+      // Update user's primary workspace
+      await ctx.db
+        .update(users)
+        .set({ primaryWorkspaceId: input.workspaceId })
+        .where(eq(users.privyDid, userId));
+
+      return { success: true, workspaceId: input.workspaceId };
+    }),
+
+  /**
+   * Rename workspace
+   */
+  renameWorkspace: protectedProcedure
+    .input(
+      z.object({
+        workspaceId: z.string().uuid(),
+        name: z.string().min(1).max(100),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const { userId } = ctx;
+
+      if (!userId) {
+        throw new TRPCError({
+          code: 'UNAUTHORIZED',
+          message: 'User not authenticated',
+        });
+      }
+
+      // Verify user is admin/owner of workspace
+      const membership = await ctx.db
+        .select()
+        .from(workspaceMembers)
+        .where(
+          and(
+            eq(workspaceMembers.workspaceId, input.workspaceId),
+            eq(workspaceMembers.userId, userId),
+            or(
+              eq(workspaceMembers.role, 'owner'),
+              eq(workspaceMembers.role, 'admin'),
+            ),
+          ),
+        )
+        .limit(1);
+
+      if (!membership.length) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'Only workspace owners and admins can rename workspace',
+        });
+      }
+
+      // Update workspace name
+      const [updated] = await ctx.db
+        .update(workspaces)
+        .set({
+          name: input.name,
+          updatedAt: new Date(),
+        })
+        .where(eq(workspaces.id, input.workspaceId))
+        .returning();
+
+      return updated;
+    }),
+
+  /**
+   * Get workspace details
+   */
+  getWorkspace: protectedProcedure
+    .input(
+      z.object({
+        workspaceId: z.string().uuid(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const { userId } = ctx;
+
+      if (!userId) {
+        throw new TRPCError({
+          code: 'UNAUTHORIZED',
+          message: 'User not authenticated',
+        });
+      }
+
+      // Verify user is member of workspace
+      const membership = await ctx.db
+        .select()
+        .from(workspaceMembers)
+        .where(
+          and(
+            eq(workspaceMembers.workspaceId, input.workspaceId),
+            eq(workspaceMembers.userId, userId),
+          ),
+        )
+        .limit(1);
+
+      if (!membership.length) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'Not a member of this workspace',
+        });
+      }
+
+      // Get workspace
+      const [workspace] = await ctx.db
+        .select()
+        .from(workspaces)
+        .where(eq(workspaces.id, input.workspaceId))
+        .limit(1);
+
+      if (!workspace) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Workspace not found',
+        });
+      }
+
+      return workspace;
+    }),
 });

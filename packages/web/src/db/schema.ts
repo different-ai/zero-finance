@@ -1450,6 +1450,7 @@ export const workspaceInvites = pgTable(
     role: varchar('role', { length: 50 }).default('member'),
     shareInbox: boolean('share_inbox').default(true),
     shareCompanyData: boolean('share_company_data').default(true),
+    addAsSafeOwner: boolean('add_as_safe_owner').default(false),
     expiresAt: timestamp('expires_at', { withTimezone: true }),
     usedAt: timestamp('used_at', { withTimezone: true }),
     usedBy: varchar('used_by', { length: 255 }).references(

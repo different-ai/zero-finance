@@ -28,7 +28,7 @@ const safeAbiIsOwner = [
 // Use the exported 'router' function to create the sub-router
 export const userSafesRouter = router({
   /**
-   * Fetches all safes associated with the authenticated user.
+   * Fetches all safes in the workspace (shared access for team members).
    */
   list: protectedProcedure.query(async ({ ctx }) => {
     const privyDid = ctx.user.id; // Use ctx.user.id from isAuthed middleware
@@ -39,25 +39,30 @@ export const userSafesRouter = router({
         message: 'Workspace context is unavailable.',
       });
     }
-    console.log(`Fetching safes for user DID: ${privyDid}`);
+    console.log(`Fetching safes for workspace: ${workspaceId}, user: ${privyDid}`);
 
     try {
-      // Use the imported 'db' directly
+      // Get ALL Safes in workspace (not just user's)
       const safes = await db.query.userSafes.findMany({
-        where: and(
-          eq(userSafes.userDid, privyDid),
-          eq(userSafes.workspaceId, workspaceId),
-        ),
+        where: eq(userSafes.workspaceId, workspaceId),
         // Let drizzle-orm infer types for orderBy parameters
         orderBy: (safes, { asc }) => [asc(safes.createdAt)],
       });
-      console.log(`Found ${safes.length} safes for user DID: ${privyDid}`);
-      return safes;
+
+      // Add ownership metadata
+      const safesWithOwnership = safes.map(safe => ({
+        ...safe,
+        isOwner: safe.userDid === privyDid,
+        createdBy: safe.userDid,
+      }));
+
+      console.log(`Found ${safes.length} safes in workspace ${workspaceId}`);
+      return safesWithOwnership;
     } catch (error) {
-      console.error(`Error fetching safes for user ${privyDid}:`, error);
+      console.error(`Error fetching safes for workspace ${workspaceId}:`, error);
       throw new TRPCError({
         code: 'INTERNAL_SERVER_ERROR',
-        message: 'Failed to fetch user safes.',
+        message: 'Failed to fetch workspace safes.',
         cause: error,
       });
     }

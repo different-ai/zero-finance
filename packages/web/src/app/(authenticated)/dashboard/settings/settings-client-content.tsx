@@ -39,20 +39,17 @@ export function SettingsClientContent() {
     },
     {
       id: 'company',
-      title: 'Company Management',
+      title: 'Workspace & Company',
       description:
-        'Manage your company profile and invite contractors to your network',
+        'Manage your workspace settings, team members, and company profile for invoicing',
       icon: Users,
-      features: ['Company profile', 'Contractor invites', 'Shared data'],
+      features: [
+        'Workspace name',
+        'Team members',
+        'Company profile',
+        'Contractors',
+      ],
       path: '/dashboard/settings/company',
-    },
-    {
-      id: 'companies',
-      title: 'My Companies',
-      description: 'View all companies you own or are a member of',
-      icon: Building2,
-      features: ['Company overview', 'Membership status', 'Quick actions'],
-      path: '/dashboard/settings/companies',
     },
   ];
 

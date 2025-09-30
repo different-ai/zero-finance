@@ -62,7 +62,7 @@ type DashboardSearchParams = {
 export default async function DashboardPage({
   searchParams,
 }: {
-  searchParams?: DashboardSearchParams;
+  searchParams?: Promise<DashboardSearchParams>;
 }) {
   const userId = await getUserId();
 
@@ -71,7 +71,8 @@ export default async function DashboardPage({
     redirect('/signin');
   }
 
-  const inviteToken = searchParams?.invite || searchParams?.token;
+  const params = await searchParams;
+  const inviteToken = params?.invite || params?.token;
 
   if (!inviteToken) {
     const primarySafe = await db.query.userSafes.findFirst({

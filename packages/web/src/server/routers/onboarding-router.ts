@@ -17,11 +17,17 @@ export const onboardingRouter = router({
    */
   getOnboardingStatus: protectedProcedure.query(async ({ ctx }) => {
     const userId = ctx.user.id;
+    const workspaceId = ctx.workspaceId;
+
     try {
-      // 1. Check for a primary safe in the new userSafes table
+      // 1. Check for a primary safe in the new userSafes table (workspace-scoped)
       const primarySafe = await db.query.userSafes.findFirst({
         where: (table) =>
-          eq(table.userDid, userId) && eq(table.safeType, 'primary'),
+          workspaceId
+            ? eq(table.userDid, userId) &&
+              eq(table.safeType, 'primary') &&
+              eq(table.workspaceId, workspaceId)
+            : eq(table.userDid, userId) && eq(table.safeType, 'primary'),
       });
 
       const profile = await db.query.userProfilesTable.findFirst({
@@ -99,6 +105,14 @@ export const onboardingRouter = router({
       const userId = ctx.user.id;
       const { primarySafeAddress } = input;
       const userEmail = ctx.user.email?.address;
+      const workspaceId = ctx.workspaceId;
+
+      if (!workspaceId) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Workspace context is unavailable.',
+        });
+      }
 
       try {
         // Upsert into `users` table first
@@ -107,35 +121,41 @@ export const onboardingRouter = router({
           .values({ privyDid: userId })
           .onConflictDoNothing();
 
-        // Upsert into `user_profiles` table
+        // Upsert into `user_profiles` table (with workspace)
         await db
           .insert(userProfilesTable)
           .values({
             privyDid: userId,
             email: userEmail,
+            workspaceId: workspaceId,
             primarySafeAddress: primarySafeAddress,
             skippedOrCompletedOnboardingStepper: true,
           })
           .onConflictDoUpdate({
             target: userProfilesTable.privyDid,
             set: {
+              workspaceId: workspaceId,
               primarySafeAddress: primarySafeAddress,
               skippedOrCompletedOnboardingStepper: true,
               updatedAt: new Date(),
             },
           });
 
-        // Upsert into `userSafes` table
+        // Upsert into `userSafes` table (with workspace)
         await db
           .insert(userSafes)
           .values({
             userDid: userId,
+            workspaceId: workspaceId,
             safeAddress: primarySafeAddress,
             safeType: 'primary',
           })
           .onConflictDoUpdate({
             target: [userSafes.userDid, userSafes.safeType],
-            set: { safeAddress: primarySafeAddress },
+            set: {
+              safeAddress: primarySafeAddress,
+              workspaceId: workspaceId,
+            },
           });
 
         return { success: true };
@@ -155,22 +175,22 @@ export const onboardingRouter = router({
     const userId = ctx.user.id;
     const userEmail = ctx.user.email?.address;
 
-      try {
-        // Upsert user profile with skipped flag
-        await db
-          .insert(userProfilesTable)
-          .values({
-            privyDid: userId,
-            email: userEmail,
+    try {
+      // Upsert user profile with skipped flag
+      await db
+        .insert(userProfilesTable)
+        .values({
+          privyDid: userId,
+          email: userEmail,
+          skippedOrCompletedOnboardingStepper: true,
+        })
+        .onConflictDoUpdate({
+          target: userProfilesTable.privyDid,
+          set: {
             skippedOrCompletedOnboardingStepper: true,
-          })
-          .onConflictDoUpdate({
-            target: userProfilesTable.privyDid,
-            set: {
-              skippedOrCompletedOnboardingStepper: true,
-              updatedAt: new Date(),
-            },
-          });
+            updatedAt: new Date(),
+          },
+        });
 
       return {
         success: true,
