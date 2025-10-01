@@ -79,9 +79,15 @@ export function KybAiAssistant() {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [controller, setController] = useState<AbortController | null>(null);
 
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;
+
+    // Abort any in-flight request to avoid server ECONNRESET noise
+    controller?.abort();
+    const abortController = new AbortController();
+    setController(abortController);
 
     const userMessage: ChatMessage = {
       id: Date.now().toString(),
@@ -114,6 +120,8 @@ export function KybAiAssistant() {
           })),
           context: KYB_CONTEXT,
         }),
+        signal: abortController.signal,
+        cache: 'no-store',
       });
 
       if (!response.ok) throw new Error('Failed to get response');
@@ -141,23 +149,27 @@ export function KybAiAssistant() {
           ),
         );
       }
-    } catch (error) {
-      console.error('Error:', error);
-      setMessages((prev) =>
-        prev.map((msg) =>
-          msg.id === assistantMessageId
-            ? {
-                ...msg,
-                parts: [
-                  {
-                    type: 'text',
-                    text: "I'm sorry, I encountered an error. Please try again.",
-                  },
-                ],
-              }
-            : msg,
-        ),
-      );
+    } catch (error: any) {
+      if (error?.name === 'AbortError') {
+        // Silently ignore aborted requests
+      } else {
+        console.error('Error:', error);
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg.id === assistantMessageId
+              ? {
+                  ...msg,
+                  parts: [
+                    {
+                      type: 'text',
+                      text: "I'm sorry, I encountered an error. Please try again.",
+                    },
+                  ],
+                }
+              : msg,
+          ),
+        );
+      }
     } finally {
       setIsLoading(false);
     }
