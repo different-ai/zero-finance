@@ -11,7 +11,7 @@ export function FinalCTASection() {
         <div className="mx-auto max-w-[1200px] px-4 sm:px-6 lg:px-8">
           <div className="max-w-[800px]">
             <h2 className="font-serif text-[28px] sm:text-[36px] lg:text-[48px] leading-[1.1] tracking-[-0.01em] text-[#101010]">
-              Ready to earn 8% on your startup&apos;s fund?
+              Ready to earn 8% on your startup&apos;s funds?
             </h2>
             <p className="mt-3 sm:mt-4 text-[15px] sm:text-[16px] lg:text-[18px] text-[#101010]/70">
               Join startups securing their future with insured yield

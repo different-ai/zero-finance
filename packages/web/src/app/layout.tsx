@@ -12,7 +12,7 @@ const inter = Inter({ subsets: ['latin'] });
 export const metadata: Metadata = {
   title: '0 Finance - Turn idle cash into headcount',
   description:
-    'Your idle cash could hire your next engineer. Get 8% APY on treasury funds without leaving your current bank. Open US or EU account numbers, wire USD EUR or USDC.',
+    'Your idle cash could hire your next engineer. Open US or EU account numbers, earn 8% APY on treasury funds with vetted yield strategies and insurance coverage.',
   keywords: [
     'idle cash',
     'treasury funds',
@@ -52,7 +52,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: '0 Finance - Your idle cash could hire your next engineer',
     description:
-      'Get 8% APY on treasury funds without leaving your current bank. Open US or EU account numbers, wire USD EUR or USDC, we place funds into vetted yield with defined insurance coverage, you withdraw any time.',
+      'Open US or EU account numbers, earn 8% APY on treasury funds. We place funds into vetted yield strategies with defined insurance coverage, you withdraw any time.',
     url: 'https://0.finance',
     siteName: '0 Finance',
     images: [
@@ -70,7 +70,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: '0 Finance - Turn idle cash into headcount',
     description:
-      'Your idle cash could hire your next engineer. Get 8% APY on treasury funds without leaving your current bank.',
+      'Your idle cash could hire your next engineer. Open US or EU account numbers, earn 8% APY on treasury funds with vetted yield strategies.',
     site: '@0finance',
     creator: '@0finance',
     images: ['https://0.finance/opengraph-image.png'],
