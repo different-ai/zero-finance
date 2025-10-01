@@ -40,11 +40,7 @@ export function VirtualAccountOnboardingLayer({ initialData }: Props) {
   const isFullyCompleted = useMemo(() => {
     if (!initialData) return false;
     const s = initialData.steps;
-    return Boolean(
-      s?.createSafe?.isCompleted &&
-        s?.verifyIdentity?.isCompleted &&
-        s?.setupBankAccount?.isCompleted,
-    );
+    return Boolean(s?.verifyIdentity?.isCompleted);
   }, [initialData]);
 
   if (isFullyCompleted) return null;
@@ -54,34 +50,34 @@ export function VirtualAccountOnboardingLayer({ initialData }: Props) {
       <Card className="w-full">
         <CardHeader className="pb-3 sm:pb-4">
           <CardTitle className="text-base sm:text-lg">
-            Earn 8-10% on your business savings
+            Unlock Bank Deposits & ACH Transfers
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4 sm:space-y-5">
           <div className="space-y-2">
             <p className="text-sm text-gray-700">
-              Get insured high-yield accounts for your business savings with
-              just a single ACH transfer.
+              Complete identity verification to unlock full banking features and
+              earn 8-10% on your business savings.
             </p>
             <ul className="space-y-2 text-sm text-gray-600">
               <li className="flex items-start gap-2">
-                <CheckCircle className="h-4 w-4 text-[#0040FF] mt-0.5" /> Earn
-                8-10% annually on your business savings, fully insured
+                <CheckCircle className="h-4 w-4 text-[#0040FF] mt-0.5" />
+                ACH transfers to and from your bank account
               </li>
               <li className="flex items-start gap-2">
-                <CheckCircle className="h-4 w-4 text-[#0040FF] mt-0.5" /> Simple
-                ACH transfers - works like your regular bank account
+                <CheckCircle className="h-4 w-4 text-[#0040FF] mt-0.5" />
+                Earn 8-10% annually on your business savings, fully insured
               </li>
               <li className="flex items-start gap-2">
-                <CheckCircle className="h-4 w-4 text-[#0040FF] mt-0.5" /> No
-                lock-ups - access your funds whenever you need them
+                <CheckCircle className="h-4 w-4 text-[#0040FF] mt-0.5" />
+                No lock-ups - access your funds whenever you need them
               </li>
             </ul>
           </div>
 
           <div>
             <Button onClick={() => setShowTasks(true)} className="gap-2">
-              Start
+              Get Started
               <ArrowRight className="h-4 w-4" />
             </Button>
           </div>

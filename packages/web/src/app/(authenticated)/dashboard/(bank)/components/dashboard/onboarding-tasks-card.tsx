@@ -6,7 +6,6 @@ import { CheckCircle, Circle, Loader2, AlertTriangle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { api } from '@/trpc/react';
-import { OpenSavingsAccountButton } from '@/components/savings/components/open-savings-account-button';
 
 type OnboardingStepStatus =
   | 'not_started'
@@ -44,8 +43,6 @@ export function OnboardingTasksCard({ initialData }: OnboardingTasksProps) {
       refetchOnWindowFocus: false,
     });
 
-  const { data: primarySafeData } = api.user.getPrimarySafeAddress.useQuery();
-
   if (isLoading) {
     return (
       <Card className="w-full">
@@ -61,98 +58,32 @@ export function OnboardingTasksCard({ initialData }: OnboardingTasksProps) {
 
   const kycStep = onboardingStatus?.steps?.verifyIdentity;
   const safeStep = onboardingStatus?.steps?.createSafe;
-  const savingsStep = onboardingStatus?.steps?.openSavings;
 
   if (!onboardingStatus) {
     return null;
   }
 
-  const isSafeComplete = safeStep?.isCompleted ?? false;
   const isKycComplete = kycStep?.isCompleted ?? false;
-  const isSavingsComplete = savingsStep?.isCompleted ?? false;
   const kycStatus = kycStep?.status;
   const kycMarkedDone = kycStep?.kycMarkedDone ?? false;
 
-  // Check if all steps are complete
-  const isAllComplete = isSafeComplete && isKycComplete && isSavingsComplete;
-
-  // If onboarding is complete, don't show the card
-  if (isAllComplete) return null;
-
-  // Step 1: Activate Primary Account
-  const safeContent = {
-    icon: isSafeComplete ? (
-      <CheckCircle className="h-6 w-6 text-green-500" />
-    ) : (
-      <Circle className="h-6 w-6 text-gray-400" />
-    ),
-    title: 'Activate Primary Account',
-    description: isSafeComplete
-      ? 'Your primary account is activated and ready.'
-      : 'Set up your secure smart account to get started.',
-    button: !isSafeComplete ? (
-      <Button asChild size="sm" className="w-full sm:w-auto">
-        <Link href="/onboarding/create-safe">Get Started</Link>
-      </Button>
-    ) : null,
-  };
-
-  // Step 2: Activate Savings (now comes before KYC)
-  const savingsContent = {
-    disabled: !isSafeComplete,
-    icon: isSavingsComplete ? (
-      <CheckCircle className="h-6 w-6 text-green-500" />
-    ) : !isSafeComplete ? (
-      <Circle className="h-6 w-6 text-gray-400" />
-    ) : (
-      <Circle className="h-6 w-6 text-gray-400" />
-    ),
-    title: 'Activate Savings',
-    description: !isSafeComplete
-      ? 'Complete account setup first.'
-      : isSavingsComplete
-        ? 'Your savings account is active - earning 8% APY'
-        : 'Activate automatic savings to earn 8% APY on idle funds',
-    button:
-      isSafeComplete &&
-      !isSavingsComplete &&
-      primarySafeData?.primarySafeAddress ? (
-        <div className="w-full sm:w-auto">
-          <OpenSavingsAccountButton
-            safeAddress={primarySafeData.primarySafeAddress as `0x${string}`}
-            onSuccess={() => {
-              // Refetch onboarding status after successful savings activation
-              window.location.reload();
-            }}
-          />
-        </div>
-      ) : null,
-  };
-
-  // Step 3: KYC (moved to step 3)
+  // If KYC is complete, don't show the card
+  if (isKycComplete) return null;
   let kycContent: {
-    disabled?: boolean;
     icon: React.ReactNode;
     title: string;
     description: string;
     button: React.ReactNode | null;
   };
 
-  if (isKycComplete) {
-    kycContent = {
-      icon: <CheckCircle className="h-6 w-6 text-green-500" />,
-      title: 'Identity Verified',
-      description: 'Your identity has been successfully verified.',
-      button: null,
-    };
-  } else if (kycStatus === 'rejected') {
+  if (kycStatus === 'rejected') {
     kycContent = {
       icon: <AlertTriangle className="h-6 w-6 text-red-500" />,
       title: 'Verification Failed',
       description: 'Please review and resubmit your information.',
       button: (
-        <Button asChild size="sm" className="w-full sm:w-auto">
-          <Link href="/onboarding/kyc">Retry</Link>
+        <Button asChild className="w-full">
+          <Link href="/onboarding/kyc">Retry Verification</Link>
         </Button>
       ),
     };
@@ -164,22 +95,21 @@ export function OnboardingTasksCard({ initialData }: OnboardingTasksProps) {
     kycContent = {
       icon: <Loader2 className="h-6 w-6 animate-spin text-[#0050ff]" />,
       title: 'Verification Pending',
-      description: 'Your verification is being reviewed.',
+      description:
+        'Your verification is being reviewed. This usually takes a few minutes.',
       button: null,
     };
   } else {
     kycContent = {
-      disabled: !isSavingsComplete,
       icon: <Circle className="h-6 w-6 text-gray-400" />,
-      title: 'KYC',
-      description: !isSavingsComplete
-        ? 'Activate savings first.'
-        : 'Crypto transfers are available. Complete KYC to unlock bank deposits.',
-      button: isSavingsComplete ? (
-        <Button asChild size="sm" className="w-full sm:w-auto">
-          <Link href="/onboarding/kyc">Start KYC</Link>
+      title: 'Complete Identity Verification',
+      description:
+        'Verify your identity to unlock bank deposits and ACH transfers.',
+      button: (
+        <Button asChild className="w-full">
+          <Link href="/onboarding/kyc">Start Verification</Link>
         </Button>
-      ) : null,
+      ),
     };
   }
 
@@ -187,87 +117,17 @@ export function OnboardingTasksCard({ initialData }: OnboardingTasksProps) {
     <Card className="w-full">
       <CardHeader className="pb-4 sm:pb-6">
         <CardTitle className="text-base sm:text-lg">
-          Complete Your Account Setup
+          {kycContent.title}
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-6 px-4 sm:px-6">
-        <div className="space-y-4 sm:space-y-6">
-          {/* Step 1: Activate Primary Account */}
-          <div className="flex flex-col sm:flex-row items-start gap-3 sm:gap-4">
-            <div className="flex items-start gap-3 flex-1 w-full">
-              <div className="flex-shrink-0 mt-0.5">{safeContent.icon}</div>
-              <div className="flex-1 min-w-0">
-                <p className="font-semibold text-gray-800 text-sm sm:text-base">
-                  <span className="text-[#101010]/40 mr-2">1.</span>
-                  {safeContent.title}
-                </p>
-                <p className="text-xs sm:text-sm text-gray-600 mt-1">
-                  {safeContent.description}
-                </p>
-              </div>
-            </div>
-            {safeContent.button && (
-              <div className="flex-shrink-0 w-full sm:w-auto sm:ml-9">
-                {safeContent.button}
-              </div>
-            )}
-          </div>
-
-          {/* Step 2: Activate Savings */}
-          <div
-            className={`flex flex-col sm:flex-row items-start gap-3 sm:gap-4 ${savingsContent.disabled ? 'opacity-50' : ''}`}
-          >
-            <div className="flex items-start gap-3 flex-1 w-full">
-              <div className="flex-shrink-0 mt-0.5">{savingsContent.icon}</div>
-              <div className="flex-1 min-w-0">
-                <p className="font-semibold text-gray-800 text-sm sm:text-base">
-                  <span className="text-[#101010]/40 mr-2">2.</span>
-                  {savingsContent.title}
-                </p>
-                <p className="text-xs sm:text-sm text-gray-600 mt-1">
-                  {savingsContent.description}
-                </p>
-              </div>
-            </div>
-            {savingsContent.button && (
-              <div className="flex-shrink-0 w-full sm:w-auto sm:ml-9">
-                {savingsContent.button}
-              </div>
-            )}
-          </div>
-
-          {/* Step 3: KYC */}
-          <div
-            className={`flex flex-col sm:flex-row items-start gap-3 sm:gap-4 ${kycContent.disabled ? 'opacity-50' : ''}`}
-          >
-            <div className="flex items-start gap-3 flex-1 w-full">
-              <div className="flex-shrink-0 mt-0.5">{kycContent.icon}</div>
-              <div className="flex-1 min-w-0">
-                <p className="font-semibold text-gray-800 text-sm sm:text-base">
-                  <span className="text-[#101010]/40 mr-2">3.</span>
-                  {kycContent.title}
-                </p>
-                <p className="text-xs sm:text-sm text-gray-600 mt-1">
-                  {kycContent.description}
-                </p>
-              </div>
-            </div>
-            {kycContent.button && (
-              <div className="flex-shrink-0 w-full sm:w-auto sm:ml-9">
-                {kycContent.button}
-              </div>
-            )}
+      <CardContent className="space-y-4">
+        <div className="flex items-start gap-3">
+          <div className="flex-shrink-0 mt-0.5">{kycContent.icon}</div>
+          <div className="flex-1">
+            <p className="text-sm text-gray-600">{kycContent.description}</p>
           </div>
         </div>
-
-        {/* Continue Button */}
-        {!isSafeComplete && (
-          <div className="pt-2">
-            <Button asChild className="w-full">
-              <Link href="/onboarding/create-safe">Continue Setup →</Link>
-            </Button>
-          </div>
-        )}
+        {kycContent.button && <div className="pt-2">{kycContent.button}</div>}
       </CardContent>
     </Card>
   );
