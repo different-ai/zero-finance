@@ -1,12 +1,13 @@
-import { streamText } from 'ai';
+import { streamText, convertToModelMessages, UIMessage } from 'ai';
 import { openai } from '@ai-sdk/openai';
 
 export const runtime = 'edge';
 export const maxDuration = 30;
 
-export async function POST(request: Request) {
+export async function POST(req: Request) {
   try {
-    const { messages, context } = await request.json();
+    const { messages, context }: { messages: UIMessage[]; context: string } =
+      await req.json();
 
     if (!messages || !Array.isArray(messages)) {
       return new Response(
@@ -21,12 +22,7 @@ export async function POST(request: Request) {
     const result = streamText({
       model: openai('gpt-5'),
       system: context,
-      messages: messages.map(
-        (m: { role: 'user' | 'assistant'; content: string }) => ({
-          role: m.role,
-          content: m.content,
-        }),
-      ),
+      messages: convertToModelMessages(messages),
       tools: {
         web_search: openai.tools.webSearch({
           searchContextSize: 'high',
@@ -35,7 +31,7 @@ export async function POST(request: Request) {
       temperature: 0.7,
     });
 
-    return result.toTextStreamResponse();
+    return result.toUIMessageStreamResponse();
   } catch (error) {
     console.error('KYB Assistant error:', error);
     return new Response(
