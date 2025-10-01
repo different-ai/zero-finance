@@ -1,22 +1,26 @@
-"use client";
+'use client';
 
-import { cn } from "@/lib/utils";
-import { type ComponentProps, memo } from "react";
-import { Streamdown } from "streamdown";
+import { cn } from '@/lib/utils';
+import { memo } from 'react';
+import ReactMarkdown from 'react-markdown';
 
-type ResponseProps = ComponentProps<typeof Streamdown>;
+interface ResponseProps {
+  children: string;
+  className?: string;
+}
 
 export const Response = memo(
-  ({ className, ...props }: ResponseProps) => (
-    <Streamdown
+  ({ className, children }: ResponseProps) => (
+    <div
       className={cn(
-        "size-full [&>*:first-child]:mt-0 [&>*:last-child]:mb-0",
-        className
+        'size-full prose prose-sm max-w-none [&>*:first-child]:mt-0 [&>*:last-child]:mb-0',
+        className,
       )}
-      {...props}
-    />
+    >
+      <ReactMarkdown>{children}</ReactMarkdown>
+    </div>
   ),
-  (prevProps, nextProps) => prevProps.children === nextProps.children
+  (prevProps, nextProps) => prevProps.children === nextProps.children,
 );
 
-Response.displayName = "Response";
+Response.displayName = 'Response';
