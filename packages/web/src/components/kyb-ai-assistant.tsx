@@ -10,6 +10,7 @@ interface Message {
   role: 'user' | 'assistant';
   content: string;
   sources?: Array<{ url: string; title?: string }>;
+  toolResults?: Array<{ tool: string; result: any }>;
 }
 
 const KYB_CONTEXT = `You are an expert KYB (Know Your Business) assistant helping businesses complete their verification for Delaware C-Corps or LLCs.
@@ -90,6 +91,7 @@ export function KybAiAssistant() {
           role: 'assistant',
           content: data.content,
           sources: data.sources,
+          toolResults: data.toolResults,
         },
       ]);
     } catch (error) {
@@ -182,7 +184,7 @@ export function KybAiAssistant() {
             />
             {message.sources && message.sources.length > 0 && (
               <div className="mt-2 pt-2 border-t border-border/50">
-                <p className="text-[10px] opacity-70 mb-1">Sources:</p>
+                <p className="text-[10px] opacity-70 mb-1">🔍 Web Sources:</p>
                 {message.sources.map((source, idx) => (
                   <a
                     key={idx}
@@ -193,6 +195,16 @@ export function KybAiAssistant() {
                   >
                     {source.title || source.url}
                   </a>
+                ))}
+              </div>
+            )}
+            {message.toolResults && message.toolResults.length > 0 && (
+              <div className="mt-2 pt-2 border-t border-border/50">
+                <p className="text-[10px] opacity-70 mb-1">🛠️ Tools Used:</p>
+                {message.toolResults.map((tool, idx) => (
+                  <p key={idx} className="text-[10px] opacity-70">
+                    {tool.tool}
+                  </p>
                 ))}
               </div>
             )}

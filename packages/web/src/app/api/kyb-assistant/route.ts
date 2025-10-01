@@ -18,7 +18,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     }
 
     const result = await generateText({
-      model: openai('gpt-5'),
+      model: openai('gpt-4o'),
       system: context,
       messages: messages.map(
         (m: { role: 'user' | 'assistant'; content: string }) => ({
@@ -30,12 +30,12 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         searchDelaware: tool({
           description:
             'Search for Delaware business entity information, file numbers, and incorporation details',
-          parameters: z.object({
+          inputSchema: z.object({
             query: z
               .string()
               .describe('Search query for Delaware business records'),
           }),
-          execute: async ({ query }) => {
+          execute: async ({ query }: { query: string }) => {
             return {
               info: `For Delaware entity searches, users can visit: https://icis.corp.delaware.gov/Ecorp/EntitySearch/NameSearch.aspx. The File Number is found on the Certificate of Incorporation (top-left stamp) or Good Standing certificate.`,
               tip: `If using Stripe Atlas or Clerky, the File Number is in the incorporation documents package. For First Base, check the Delaware formation documents section.`,
@@ -45,12 +45,12 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         getEINInfo: tool({
           description:
             'Get information about EIN (Employer Identification Number) and how to find or retrieve it',
-          parameters: z.object({
+          inputSchema: z.object({
             situation: z
               .string()
               .describe('User situation: lost EIN, first time, etc'),
           }),
-          execute: async ({ situation }) => {
+          execute: async ({ situation }: { situation: string }) => {
             return {
               info: `EIN (Employer Identification Number) is a 9-digit number from the IRS. Format: 12-3456789 or 123456789.`,
               howToFind: `Check: IRS CP-575 letter, SS-4 confirmation, prior tax returns, payroll systems, or bank account documents.`,
@@ -62,7 +62,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         findDocument: tool({
           description:
             'Help users locate specific KYB documents based on their incorporation service or situation',
-          parameters: z.object({
+          inputSchema: z.object({
             documentType: z.enum([
               'certificate',
               'goodstanding',
@@ -76,7 +76,13 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
                 'Service used: Clerky, Carta, Stripe Atlas, First Base, etc',
               ),
           }),
-          execute: async ({ documentType, incorporationService }) => {
+          execute: async ({
+            documentType,
+            incorporationService,
+          }: {
+            documentType: string;
+            incorporationService?: string;
+          }) => {
             const guides: Record<string, Record<string, string>> = {
               certificate: {
                 'stripe-atlas':
@@ -124,7 +130,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     return NextResponse.json({
       content: result.text,
-      sources:
+      sources: [],
+      toolResults:
         result.toolResults?.map((tr: any) => ({
           tool: tr.toolName,
           result: tr.result,
