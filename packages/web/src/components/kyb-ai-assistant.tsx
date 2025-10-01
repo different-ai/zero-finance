@@ -4,9 +4,14 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Loader2, Send, FileText } from 'lucide-react';
-import { useChat } from '@ai-sdk/react';
 import { Message, MessageContent } from '@/components/ai-elements/message';
 import { Response } from '@/components/ai-elements/response';
+
+interface ChatMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  parts: Array<{ type: string; text: string }>;
+}
 
 const KYB_CONTEXT = `You are an expert KYB (Know Your Business) assistant helping businesses complete their verification for Delaware C-Corps or LLCs.
 
@@ -59,15 +64,103 @@ Use web search proactively when users need current information about:
 Remember: Use web search to provide the most current, accurate information. Always cite your sources!`;
 
 export function KybAiAssistant() {
-  const { messages, sendMessage } = useChat();
-
+  const [messages, setMessages] = useState<ChatMessage[]>([
+    {
+      id: '1',
+      role: 'assistant',
+      parts: [
+        {
+          type: 'text',
+          text: "👋 Hi! I'm here to help you complete KYB verification faster.\n\n**To get started, tell me about your company:**\n\n• Company name and entity type (C-Corp or LLC)\n• Co-founder names, emails, and ownership %\n• Registered address\n• Are you using Clerky, Carta, First Base, or Stripe Atlas?\n\nOnce I have this info, I can help you fill out the KYB form and generate your shareholder registry automatically.",
+        },
+      ],
+    },
+  ]);
   const [input, setInput] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
 
-  const handleSend = () => {
-    if (!input.trim()) return;
-    sendMessage({ text: input });
+  const handleSend = async () => {
+    if (!input.trim() || isLoading) return;
+
+    const userMessage: ChatMessage = {
+      id: Date.now().toString(),
+      role: 'user',
+      parts: [{ type: 'text', text: input }],
+    };
+
+    setMessages((prev) => [...prev, userMessage]);
     setInput('');
+    setIsLoading(true);
+
+    const assistantMessageId = (Date.now() + 1).toString();
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: assistantMessageId,
+        role: 'assistant',
+        parts: [{ type: 'text', text: '' }],
+      },
+    ]);
+
+    try {
+      const response = await fetch('/api/kyb-assistant', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messages: [...messages, userMessage].map((m) => ({
+            role: m.role,
+            content: m.parts[0]?.text || '',
+          })),
+          context: KYB_CONTEXT,
+        }),
+      });
+
+      if (!response.ok) throw new Error('Failed to get response');
+      if (!response.body) throw new Error('No response body');
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let accumulatedText = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value, { stream: true });
+        accumulatedText += chunk;
+
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg.id === assistantMessageId
+              ? {
+                  ...msg,
+                  parts: [{ type: 'text', text: accumulatedText }],
+                }
+              : msg,
+          ),
+        );
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === assistantMessageId
+            ? {
+                ...msg,
+                parts: [
+                  {
+                    type: 'text',
+                    text: "I'm sorry, I encountered an error. Please try again.",
+                  },
+                ],
+              }
+            : msg,
+        ),
+      );
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleGeneratePdf = async () => {
@@ -95,14 +188,34 @@ export function KybAiAssistant() {
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
 
-      sendMessage({
-        text: "✓ Document generated! I've downloaded the shareholder registry as an HTML file. You can open it in your browser, print it to PDF, or upload it directly for KYB verification.",
-      });
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: Date.now().toString(),
+          role: 'assistant',
+          parts: [
+            {
+              type: 'text',
+              text: "✓ Document generated! I've downloaded the shareholder registry as an HTML file. You can open it in your browser, print it to PDF, or upload it directly for KYB verification.",
+            },
+          ],
+        },
+      ]);
     } catch (error) {
       console.error('Error generating document:', error);
-      sendMessage({
-        text: "I couldn't generate the document. Please make sure you've provided information about your shareholders in our conversation first. Try telling me about your company structure and ownership.",
-      });
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: Date.now().toString(),
+          role: 'assistant',
+          parts: [
+            {
+              type: 'text',
+              text: "I couldn't generate the document. Please make sure you've provided information about your shareholders in our conversation first. Try telling me about your company structure and ownership.",
+            },
+          ],
+        },
+      ]);
     } finally {
       setIsGeneratingPdf(false);
     }
