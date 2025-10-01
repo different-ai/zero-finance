@@ -82,6 +82,17 @@ export function KybAiAssistant() {
     setInput('');
     setIsLoading(true);
 
+    // Add placeholder for assistant message
+    const assistantMessageIndex = messages.length + 1;
+    setMessages((prev) => [
+      ...prev,
+      {
+        role: 'assistant',
+        content: '',
+        sources: [],
+      },
+    ]);
+
     try {
       const response = await fetch('/api/kyb-assistant', {
         method: 'POST',
@@ -93,26 +104,49 @@ export function KybAiAssistant() {
       });
 
       if (!response.ok) throw new Error('Failed to get response');
+      if (!response.body) throw new Error('No response body');
 
-      const data = await response.json();
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: 'assistant',
-          content: data.content,
-          sources: data.sources,
-        },
-      ]);
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let accumulatedContent = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value, { stream: true });
+        const lines = chunk.split('\n');
+
+        for (const line of lines) {
+          if (line.startsWith('0:')) {
+            // Text chunk
+            const text = line.slice(2).replace(/^"(.+)"$/, '$1');
+            if (text) {
+              accumulatedContent += text;
+              setMessages((prev) => {
+                const newMessages = [...prev];
+                newMessages[assistantMessageIndex] = {
+                  role: 'assistant',
+                  content: accumulatedContent,
+                  sources: [],
+                };
+                return newMessages;
+              });
+            }
+          }
+        }
+      }
     } catch (error) {
       console.error('Error:', error);
-      setMessages((prev) => [
-        ...prev,
-        {
+      setMessages((prev) => {
+        const newMessages = [...prev];
+        newMessages[assistantMessageIndex] = {
           role: 'assistant',
           content:
             "I'm sorry, I encountered an error. Please try again or contact support if the issue persists.",
-        },
-      ]);
+        };
+        return newMessages;
+      });
     } finally {
       setIsLoading(false);
     }

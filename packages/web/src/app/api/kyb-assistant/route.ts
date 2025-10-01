@@ -1,22 +1,24 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { generateText } from 'ai';
+import { streamText } from 'ai';
 import { openai } from '@ai-sdk/openai';
 
 export const runtime = 'edge';
 export const maxDuration = 30;
 
-export async function POST(request: NextRequest): Promise<NextResponse> {
+export async function POST(request: Request) {
   try {
     const { messages, context } = await request.json();
 
     if (!messages || !Array.isArray(messages)) {
-      return NextResponse.json(
-        { error: 'Invalid messages format' },
-        { status: 400 },
+      return new Response(
+        JSON.stringify({ error: 'Invalid messages format' }),
+        {
+          status: 400,
+          headers: { 'Content-Type': 'application/json' },
+        },
       );
     }
 
-    const result = await generateText({
+    const result = streamText({
       model: openai('gpt-5'),
       system: context,
       messages: messages.map(
@@ -33,15 +35,15 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       temperature: 0.7,
     });
 
-    return NextResponse.json({
-      content: result.text,
-      sources: result.sources || [],
-    });
+    return result.toTextStreamResponse();
   } catch (error) {
     console.error('KYB Assistant error:', error);
-    return NextResponse.json(
-      { error: 'Failed to process request' },
-      { status: 500 },
+    return new Response(
+      JSON.stringify({ error: 'Failed to process request' }),
+      {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' },
+      },
     );
   }
 }
