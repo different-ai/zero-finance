@@ -10,15 +10,24 @@ interface Message {
   role: 'user' | 'assistant';
   content: string;
   sources?: Array<{ url: string; title?: string }>;
-  toolResults?: Array<{ tool: string; result: any }>;
 }
 
 const KYB_CONTEXT = `You are an expert KYB (Know Your Business) assistant helping businesses complete their verification for Delaware C-Corps or LLCs.
 
-**Available Tools - Use These Actively:**
-- searchDelaware: When users need help finding their Delaware File Number or entity information
-- getEINInfo: When users ask about EIN or can't find their Tax ID
-- findDocument: When users need help locating specific documents (Certificate, Good Standing, Proof of Address, EIN)
+**Web Search Tool Available:**
+You have access to real-time web search to help users find:
+- Delaware business entity information and file numbers
+- IRS EIN lookup and recovery information
+- Specific incorporation service documentation (Stripe Atlas, Clerky, First Base, Carta)
+- Current KYB requirements and regulations
+- Document templates and examples
+
+Use web search proactively when users need current information about:
+- Where to find specific documents
+- How to request replacements for lost documents
+- Service-specific instructions for their incorporation platform
+- Current Delaware Division of Corporations procedures
+- IRS contact information and procedures
 
 **Your Approach:**
 1. **First Message** - Collect essentials:
@@ -27,10 +36,11 @@ const KYB_CONTEXT = `You are an expert KYB (Know Your Business) assistant helpin
    • Company address
    • Incorporation service (Clerky/Carta/Stripe Atlas/First Base) - CRITICAL for finding documents
 
-2. **As They Ask Questions** - Use tools proactively:
-   • If they mention "File Number" or "Delaware ID" → use searchDelaware
-   • If they mention "EIN" or "Tax ID" → use getEINInfo
-   • If they ask "where to find [document]" → use findDocument with their incorporation service
+2. **As They Ask Questions** - Use web search when helpful:
+   • Search for current Delaware entity lookup procedures
+   • Find service-specific document locations
+   • Get latest IRS guidance on EIN recovery
+   • Look up incorporation service help documentation
 
 3. **Throughout Conversation** - Track what they share:
    • Store company details, ownership info, addresses
@@ -39,9 +49,9 @@ const KYB_CONTEXT = `You are an expert KYB (Know Your Business) assistant helpin
 **Communication Style:**
 - Conversational and helpful, never robotic
 - Use **bold** for emphasis, • for bullets
-- Give specific, actionable steps
+- Give specific, actionable steps with current URLs when available
+- Cite sources when providing information from web search
 - Reference their incorporation service by name when giving guidance
-- Proactively use tools when users are stuck
 
 **Documents Needed:**
 - Business Entity ID (Delaware File Number - digits only, e.g., 7286832)
@@ -50,7 +60,7 @@ const KYB_CONTEXT = `You are an expert KYB (Know Your Business) assistant helpin
 - Certificate of Incorporation or Good Standing
 - Proof of Address (within 3 months)
 
-Remember: Users chose their incorporation service for a reason - knowing if they used Stripe Atlas vs Clerky vs First Base changes WHERE they find documents. Always ask and use that info!`;
+Remember: Use web search to provide the most current, accurate information. Always cite your sources!`;
 
 export function KybAiAssistant() {
   const [messages, setMessages] = useState<Message[]>([
@@ -91,7 +101,6 @@ export function KybAiAssistant() {
           role: 'assistant',
           content: data.content,
           sources: data.sources,
-          toolResults: data.toolResults,
         },
       ]);
     } catch (error) {
@@ -184,7 +193,7 @@ export function KybAiAssistant() {
             />
             {message.sources && message.sources.length > 0 && (
               <div className="mt-2 pt-2 border-t border-border/50">
-                <p className="text-[10px] opacity-70 mb-1">🔍 Web Sources:</p>
+                <p className="text-[10px] opacity-70 mb-1">🔍 Sources:</p>
                 {message.sources.map((source, idx) => (
                   <a
                     key={idx}
@@ -195,16 +204,6 @@ export function KybAiAssistant() {
                   >
                     {source.title || source.url}
                   </a>
-                ))}
-              </div>
-            )}
-            {message.toolResults && message.toolResults.length > 0 && (
-              <div className="mt-2 pt-2 border-t border-border/50">
-                <p className="text-[10px] opacity-70 mb-1">🛠️ Tools Used:</p>
-                {message.toolResults.map((tool, idx) => (
-                  <p key={idx} className="text-[10px] opacity-70">
-                    {tool.tool}
-                  </p>
                 ))}
               </div>
             )}
