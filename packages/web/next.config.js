@@ -1,8 +1,5 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Output standalone for smaller deployments
-  output: 'standalone',
-
   // SEO and Performance Optimizations
   poweredByHeader: false,
   compress: true,
@@ -67,11 +64,6 @@ const nextConfig = {
   },
   // Reduce build time and memory usage
   swcMinify: true,
-  modularizeImports: {
-    'lucide-react': {
-      transform: 'lucide-react/dist/esm/icons/{{kebabCase member}}',
-    },
-  },
   webpack: (config, { webpack, isServer }) => {
     config.resolve.fallback = {
       ...config.resolve.fallback,
@@ -126,39 +118,6 @@ const nextConfig = {
       // Reduce memory footprint during build
       moduleIds: 'deterministic',
     };
-
-    // Further reduce memory usage during build
-    if (process.env.VERCEL) {
-      config.cache = {
-        type: 'filesystem',
-        maxMemoryGenerations: 1,
-      };
-
-      // Aggressive memory optimizations for Vercel
-      config.optimization.splitChunks = {
-        ...config.optimization.splitChunks,
-        chunks: 'all',
-        maxInitialRequests: 25,
-        maxAsyncRequests: 25,
-        minSize: 20000,
-        cacheGroups: {
-          ...config.optimization.splitChunks?.cacheGroups,
-          default: false,
-          vendors: false,
-          // Group large vendor chunks
-          lib: {
-            test: /[\\/]node_modules[\\/]/,
-            name(module) {
-              const packageName = module.context.match(
-                /[\\/]node_modules[\\/](.*?)([\\/]|$)/,
-              )?.[1];
-              return `npm.${packageName?.replace('@', '')}`;
-            },
-            priority: 10,
-          },
-        },
-      };
-    }
 
     return config;
   },
