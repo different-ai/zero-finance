@@ -64,6 +64,13 @@ const nextConfig = {
   experimental: {
     webpackMemoryOptimizations: true,
   },
+  // Reduce build time and memory usage
+  swcMinify: true,
+  modularizeImports: {
+    'lucide-react': {
+      transform: 'lucide-react/dist/esm/icons/{{kebabCase member}}',
+    },
+  },
   webpack: (config, { webpack, isServer }) => {
     config.resolve.fallback = {
       ...config.resolve.fallback,
@@ -115,7 +122,17 @@ const nextConfig = {
     config.optimization = {
       ...config.optimization,
       minimize: process.env.NODE_ENV === 'production',
+      // Reduce memory footprint during build
+      moduleIds: 'deterministic',
     };
+
+    // Further reduce memory usage during build
+    if (process.env.VERCEL) {
+      config.cache = {
+        type: 'filesystem',
+        maxMemoryGenerations: 1,
+      };
+    }
 
     return config;
   },

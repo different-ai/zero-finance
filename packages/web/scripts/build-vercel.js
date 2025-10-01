@@ -1,12 +1,27 @@
 #!/usr/bin/env node
 
 // Vercel build script with memory optimizations
-process.env.NODE_OPTIONS = '--max-old-space-size=4096';
+// Vercel limits: Hobby=3GB, Pro=8GB, Enterprise=12GB
+// Use conservative limits to avoid OOM while maximizing available memory
+
+const TIER_LIMITS = {
+  hobby: 2560, // 2.5GB for Hobby tier (3GB total)
+  pro: 7168, // 7GB for Pro tier (8GB total)
+  enterprise: 10240, // 10GB for Enterprise tier (12GB total)
+};
+
+// Detect tier from environment or default to Pro for production
+const isProduction = process.env.VERCEL_ENV === 'production';
+const tier = process.env.VERCEL_TIER || (isProduction ? 'pro' : 'hobby');
+const MEMORY_LIMIT = TIER_LIMITS[tier] || TIER_LIMITS.pro;
+
+process.env.NODE_OPTIONS = `--max-old-space-size=${MEMORY_LIMIT}`;
 
 const { spawn } = require('child_process');
 
 console.log('Starting Vercel-optimized build process...');
-console.log('Node memory limit set to 4GB');
+console.log(`Detected tier: ${tier}`);
+console.log(`Node memory limit set to ${MEMORY_LIMIT}MB`);
 
 // First try migrations with timeout
 console.log('Running database migrations...');
@@ -14,8 +29,8 @@ const migrateProcess = spawn('pnpm', ['db:migrate'], {
   stdio: 'inherit',
   env: {
     ...process.env,
-    NODE_OPTIONS: '--max-old-space-size=2048', // Lower memory for migrations
-  }
+    NODE_OPTIONS: '--max-old-space-size=1536', // 1.5GB for migrations
+  },
 });
 
 let migrationCompleted = false;
@@ -32,7 +47,7 @@ const migrationTimeout = setTimeout(() => {
 migrateProcess.on('close', (code) => {
   migrationCompleted = true;
   clearTimeout(migrationTimeout);
-  
+
   if (code === 0) {
     console.log('Migrations completed successfully');
   } else {
@@ -55,8 +70,8 @@ function startBuild() {
     stdio: 'inherit',
     env: {
       ...process.env,
-      NODE_OPTIONS: '--max-old-space-size=4096',
-    }
+      NODE_OPTIONS: `--max-old-space-size=${MEMORY_LIMIT}`,
+    },
   });
 
   buildProcess.on('close', (code) => {
@@ -73,4 +88,4 @@ function startBuild() {
     console.error('Build error:', err.message);
     process.exit(1);
   });
-} 
+}
