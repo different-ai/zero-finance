@@ -2,7 +2,7 @@
   "$schema": "https://vercel.com/schemas/project.json",
   "ignoreCommand": "npx turbo-ignore --fallback=HEAD~1",
   "buildCommand": "pnpm build:vercel",
-  "installCommand": "cd ../.. && pnpm install",
+  "installCommand": "cd ../.. && pnpm install --filter=@zero-finance/web --frozen-lockfile --ignore-scripts",
   "framework": "nextjs",
   "crons": [
     {
