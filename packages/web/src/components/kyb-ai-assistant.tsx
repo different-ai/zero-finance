@@ -95,13 +95,17 @@ export function KybAiAssistant() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          messages: messages.filter((m) => m.role === 'user'),
+          messages: messages,
         }),
       });
 
-      if (!response.ok) throw new Error('Failed to generate PDF');
+      if (!response.ok) throw new Error('Failed to generate document');
 
-      const blob = await response.blob();
+      const data = await response.json();
+
+      // Create a proper HTML file with complete structure
+      const htmlContent = data.html;
+      const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -110,14 +114,23 @@ export function KybAiAssistant() {
       a.click();
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
-    } catch (error) {
-      console.error('Error generating PDF:', error);
+
       setMessages((prev) => [
         ...prev,
         {
           role: 'assistant',
           content:
-            "I couldn't generate the PDF. Please make sure you've provided all the necessary information about your shareholders.",
+            "✓ Document generated! I've downloaded the shareholder registry as an HTML file. You can open it in your browser, print it to PDF, or upload it directly for KYB verification.",
+        },
+      ]);
+    } catch (error) {
+      console.error('Error generating document:', error);
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: 'assistant',
+          content:
+            "I couldn't generate the document. Please make sure you've provided information about your shareholders in our conversation first. Try telling me about your company structure and ownership.",
         },
       ]);
     } finally {
