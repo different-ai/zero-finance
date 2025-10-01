@@ -1,7 +1,5 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  transpilePackages: ['three', '@react-three/fiber', '@react-three/drei'],
-
   // Output standalone for smaller deployments
   output: 'standalone',
 
@@ -66,11 +64,6 @@ const nextConfig = {
   // Optimize for Vercel build memory limits
   experimental: {
     webpackMemoryOptimizations: true,
-    serverComponentsExternalPackages: [
-      'three',
-      '@react-three/fiber',
-      '@react-three/drei',
-    ],
   },
   // Reduce build time and memory usage
   swcMinify: true,
