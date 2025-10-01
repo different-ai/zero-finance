@@ -200,46 +200,6 @@ export default function OnboardingLayout({
         {/* Sidebar Stepper & Help - hidden on mobile, shown on desktop */}
         <aside className="hidden lg:flex w-full lg:w-72 flex-col gap-4 sticky top-24 self-start order-1 lg:order-2">
           {/* Stepper */}
-          <div className="bg-white border border-[#101010]/10 rounded-[12px] shadow-[0_2px_8px_rgba(16,16,16,0.04)] p-4 flex flex-col gap-1">
-            <ol className="flex flex-col gap-3">
-              {steps.map((step, index) => {
-                const isCompleted = currentStepIndex > index;
-                const isCurrent = currentStepIndex === index;
-                return (
-                  <li
-                    key={step.path}
-                    className="flex items-center gap-2 min-h-[32px]"
-                  >
-                    <div
-                      className={cn(
-                        'w-6 h-6 rounded-full flex items-center justify-center border text-xs font-semibold transition-colors',
-                        isCompleted
-                          ? 'bg-primary text-primary-foreground border-primary'
-                          : isCurrent
-                            ? 'bg-background text-primary border-primary ring-2 ring-primary/30'
-                            : 'bg-muted text-muted-foreground border-border',
-                      )}
-                    >
-                      {isCompleted ? (
-                        <Check className="h-3.5 w-3.5" />
-                      ) : (
-                        <span>{index + 1}</span>
-                      )}
-                    </div>
-                    <span
-                      className={cn(
-                        'text-xs font-medium truncate',
-                        isCurrent ? 'text-foreground' : 'text-muted-foreground',
-                      )}
-                    >
-                      {step.name}
-                    </span>
-                  </li>
-                );
-              })}
-            </ol>
-          </div>
-
           {/* KYB FAQ - Only show on KYC page */}
           {pathname === '/onboarding/kyc' && (
             <div className="bg-white border border-[#101010]/10 rounded-[12px] shadow-[0_2px_8px_rgba(16,16,16,0.04)] p-4">
@@ -248,9 +208,25 @@ export default function OnboardingLayout({
                 Help for Delaware C-Corp verification
               </p>
               <Accordion type="single" collapsible className="w-full">
+                <AccordionItem value="business-name" className="border-b-0">
+                  <AccordionTrigger className="text-xs font-medium py-2 hover:no-underline">
+                    Business Name
+                  </AccordionTrigger>
+                  <AccordionContent className="text-xs text-muted-foreground space-y-2 pb-3">
+                    <p className="font-medium text-foreground">What it is</p>
+                    <p>Your legal company name as registered with Delaware.</p>
+                    <p className="font-medium text-foreground mt-2">
+                      Where to find it
+                    </p>
+                    <p>
+                      Certificate of Incorporation or Good Standing certificate.
+                    </p>
+                  </AccordionContent>
+                </AccordionItem>
+
                 <AccordionItem value="entity-id" className="border-b-0">
                   <AccordionTrigger className="text-xs font-medium py-2 hover:no-underline">
-                    Business Entity ID
+                    Business Entity ID (State Registration Number)
                   </AccordionTrigger>
                   <AccordionContent className="text-xs text-muted-foreground space-y-2 pb-3">
                     <p className="font-medium text-foreground">What it is</p>
@@ -268,13 +244,22 @@ export default function OnboardingLayout({
                     <p className="font-medium text-foreground mt-2">
                       What to paste
                     </p>
-                    <p>Digits only. Example: 7286832</p>
+                    <p>
+                      Digits only. Example: 7286832. Ignore &quot;SR …&quot;
+                      numbers.
+                    </p>
+                    <p className="font-medium text-foreground mt-2">
+                      Common mistakes
+                    </p>
+                    <p>
+                      Using your EIN here, or pasting the SR receipt number.
+                    </p>
                   </AccordionContent>
                 </AccordionItem>
 
                 <AccordionItem value="ein" className="border-b-0">
                   <AccordionTrigger className="text-xs font-medium py-2 hover:no-underline">
-                    EIN
+                    Tax ID (EIN Number)
                   </AccordionTrigger>
                   <AccordionContent className="text-xs text-muted-foreground space-y-2 pb-3">
                     <p className="font-medium text-foreground">What it is</p>
@@ -285,68 +270,185 @@ export default function OnboardingLayout({
                       Where to find it
                     </p>
                     <p>
-                      IRS CP-575 letter, payroll filings, or bank dashboards.
+                      IRS CP-575 or SS-4 approval letter, prior returns, payroll
+                      filings, bank or payroll dashboards. If you lost it,
+                      request an IRS 147C letter.
                     </p>
-                  </AccordionContent>
-                </AccordionItem>
-
-                <AccordionItem value="address" className="border-b-0">
-                  <AccordionTrigger className="text-xs font-medium py-2 hover:no-underline">
-                    Address
-                  </AccordionTrigger>
-                  <AccordionContent className="text-xs text-muted-foreground space-y-2 pb-3">
+                    <p className="font-medium text-foreground mt-2">
+                      What to paste
+                    </p>
                     <p>
-                      Your operating or HQ street address. Use the same address
-                      for Proof of Address documents.
+                      9 digits. Use the field&apos;s format hint (12-3456789 or
+                      123456789).
                     </p>
                   </AccordionContent>
                 </AccordionItem>
 
                 <AccordionItem value="ubos" className="border-b-0">
                   <AccordionTrigger className="text-xs font-medium py-2 hover:no-underline">
-                    Beneficial Owners
+                    Ultimate Beneficial Owners (UBOs) & Founders
                   </AccordionTrigger>
                   <AccordionContent className="text-xs text-muted-foreground space-y-2 pb-3">
+                    <p className="font-medium text-foreground">What we need</p>
                     <p>
-                      List all beneficial owners and founders. Each will receive
-                      an email to complete KYC (ID, selfie, details).
+                      List all beneficial owners and all founders. Do not submit
+                      a single contact only.
                     </p>
+                    <p className="font-medium text-foreground mt-2">Why</p>
+                    <p>
+                      Regulations require KYB on the people who own or control
+                      the company.
+                    </p>
+                    <p className="font-medium text-foreground mt-2">
+                      How it works
+                    </p>
+                    <ul className="list-disc pl-4 space-y-1">
+                      <li>You provide names and emails for each UBO/founder</li>
+                      <li>
+                        Each person will receive an email with a secure link to
+                        complete KYC (ID, selfie, and basic details)
+                      </li>
+                      <li>
+                        We cannot proceed until everyone on the list has
+                        completed their KYC
+                      </li>
+                    </ul>
                   </AccordionContent>
                 </AccordionItem>
 
                 <AccordionItem value="cap-table" className="border-b-0">
                   <AccordionTrigger className="text-xs font-medium py-2 hover:no-underline">
-                    Cap Table
+                    Shareholders Registry (Required)
                   </AccordionTrigger>
                   <AccordionContent className="text-xs text-muted-foreground space-y-2 pb-3">
-                    <p>
-                      Export from Carta or create a simple one-page ownership
-                      table as PDF.
+                    <p className="font-medium text-foreground">What it is</p>
+                    <p>A simple document showing who owns what.</p>
+                    <p className="font-medium text-foreground mt-2">
+                      Easy options
                     </p>
+                    <ul className="list-disc pl-4 space-y-1">
+                      <li>If you use Carta, export a current cap table PDF</li>
+                      <li>
+                        If you do not, generate a one-pager and upload it as PDF
+                      </li>
+                    </ul>
                   </AccordionContent>
                 </AccordionItem>
 
                 <AccordionItem value="registration" className="border-b-0">
                   <AccordionTrigger className="text-xs font-medium py-2 hover:no-underline">
-                    Registration Doc
+                    Business Registration Document (Required)
+                  </AccordionTrigger>
+                  <AccordionContent className="text-xs text-muted-foreground space-y-2 pb-3">
+                    <p className="font-medium text-foreground">What it is</p>
+                    <p>A document that proves your company exists.</p>
+                    <p className="font-medium text-foreground mt-2">
+                      Accepted for Delaware C-Corp
+                    </p>
+                    <ul className="list-disc pl-4 space-y-1">
+                      <li>Certificate of Incorporation (stamped)</li>
+                      <li>Certificate of Good Standing (recent)</li>
+                      <li>
+                        A certified copy from the Delaware Division of
+                        Corporations
+                      </li>
+                    </ul>
+                    <p className="font-medium text-foreground mt-2">
+                      Where to get it
+                    </p>
+                    <p>
+                      From your registered agent portal or the Delaware Division
+                      of Corporations. Stripe Atlas/Clerky usually provide the
+                      PDFs.
+                    </p>
+                  </AccordionContent>
+                </AccordionItem>
+
+                <AccordionItem value="source-of-funds" className="border-b-0">
+                  <AccordionTrigger className="text-xs font-medium py-2 hover:no-underline">
+                    Source of Funds (Optional)
+                  </AccordionTrigger>
+                  <AccordionContent className="text-xs text-muted-foreground space-y-2 pb-3">
+                    <p className="font-medium text-foreground">What it is</p>
+                    <p>
+                      A short note or document showing where the initial money
+                      comes from.
+                    </p>
+                    <p className="font-medium text-foreground mt-2">
+                      Examples we accept
+                    </p>
+                    <ul className="list-disc pl-4 space-y-1">
+                      <li>
+                        Investment docs: SAFE or priced round closing notice
+                      </li>
+                      <li>
+                        Bank statement or wire receipt showing founder deposit
+                        or investor funds
+                      </li>
+                      <li>
+                        Revenue evidence: Stripe or PayPal dashboard screenshot
+                        with recent payouts
+                      </li>
+                      <li>Grant or accelerator award letter</li>
+                    </ul>
+                    <p className="font-medium text-foreground mt-2">Tips</p>
+                    <p>
+                      Mask full account numbers. Make sure the company name
+                      matches your entity.
+                    </p>
+                  </AccordionContent>
+                </AccordionItem>
+
+                <AccordionItem value="dba" className="border-b-0">
+                  <AccordionTrigger className="text-xs font-medium py-2 hover:no-underline">
+                    Doing Business As Document (Optional)
                   </AccordionTrigger>
                   <AccordionContent className="text-xs text-muted-foreground space-y-2 pb-3">
                     <p>
-                      Certificate of Incorporation or Good Standing from
-                      Delaware.
+                      If your company operates under a different name than your
+                      legal entity name, provide a DBA certificate or fictitious
+                      business name filing.
                     </p>
                   </AccordionContent>
                 </AccordionItem>
 
                 <AccordionItem value="proof-address" className="border-b-0">
                   <AccordionTrigger className="text-xs font-medium py-2 hover:no-underline">
-                    Proof of Address
+                    Proof of Address (within 3 months, Required)
                   </AccordionTrigger>
                   <AccordionContent className="text-xs text-muted-foreground space-y-2 pb-3">
-                    <p>
-                      Recent (3 months) utility bill, bank statement, or lease
-                      showing company name and address.
+                    <p className="font-medium text-foreground">
+                      What it must do
                     </p>
+                    <p>
+                      Confirm your current operating address and be addressed to
+                      the applying entity.
+                    </p>
+                    <p className="font-medium text-foreground mt-2">
+                      Commonly accepted documents
+                    </p>
+                    <ul className="list-disc pl-4 space-y-1">
+                      <li>Lease or utility bill</li>
+                      <li>Bank statement or merchant account statement</li>
+                      <li>Business insurance policy or premium notice</li>
+                      <li>Recent government or tax notice to the company</li>
+                    </ul>
+                    <p className="font-medium text-foreground mt-2">
+                      Requirements
+                    </p>
+                    <ul className="list-disc pl-4 space-y-1">
+                      <li>
+                        Shows the legal company name and the same address you
+                        entered
+                      </li>
+                      <li>
+                        Clearly dated and recent (within the last 3 months)
+                      </li>
+                      <li>
+                        Street address preferred. P.O. Boxes are usually not
+                        accepted for operating address.
+                      </li>
+                    </ul>
                   </AccordionContent>
                 </AccordionItem>
               </Accordion>
