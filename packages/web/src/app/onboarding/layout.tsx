@@ -329,9 +329,47 @@ export default function OnboardingLayout({
                     <ul className="list-disc pl-4 space-y-1">
                       <li>If you use Carta, export a current cap table PDF</li>
                       <li>
-                        If you do not, generate a one-pager and upload it as PDF
+                        If you do not, use the ChatGPT prompts below to generate
+                        one
                       </li>
                     </ul>
+                    <p className="font-medium text-foreground mt-2">
+                      ChatGPT Prompt for Delaware C-Corp
+                    </p>
+                    <div className="text-xs bg-[#F7F7F2] p-2 rounded mt-1 font-mono">
+                      <p className="mb-1 font-sans font-medium text-foreground">
+                        Copy and paste this into ChatGPT:
+                      </p>
+                      <p className="whitespace-pre-wrap">
+                        Create a simple shareholder registry for a Delaware
+                        C-Corp as a one-page table. Columns: Shareholder name,
+                        Email, Role (founder/investor/employee), Security type
+                        (common/preferred/SAFE/option), Shares or % ownership
+                        (both if known), Fully diluted %, Vesting (start date,
+                        cliff, schedule), Notes. Include a footer line:
+                        &quot;Informational cap table snapshot for KYB. Not a
+                        legal certificate.&quot; Fill it with placeholders I can
+                        edit.
+                      </p>
+                    </div>
+                    <p className="font-medium text-foreground mt-2">
+                      ChatGPT Prompt for LLC
+                    </p>
+                    <div className="text-xs bg-[#F7F7F2] p-2 rounded mt-1 font-mono">
+                      <p className="mb-1 font-sans font-medium text-foreground">
+                        Copy and paste this into ChatGPT:
+                      </p>
+                      <p className="whitespace-pre-wrap">
+                        Create a simple member registry for an LLC as a one-page
+                        table. Columns: Member name, Email, Role
+                        (manager/member), Membership units or % ownership,
+                        Capital contribution amount, Capital contribution date,
+                        Voting rights (yes/no), Profit/loss allocation %, Notes.
+                        Include a footer line: &quot;Informational member
+                        registry snapshot for KYB. Not a legal
+                        certificate.&quot; Fill it with placeholders I can edit.
+                      </p>
+                    </div>
                   </AccordionContent>
                 </AccordionItem>
 
