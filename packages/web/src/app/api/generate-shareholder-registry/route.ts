@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { generateText } from 'ai';
 import { openai } from '@ai-sdk/openai';
 
-export const runtime = 'edge';
 export const maxDuration = 30;
 
 const SHAREHOLDER_REGISTRY_PROMPT = `You are generating a professional shareholder registry document for KYB (Know Your Business) verification.
