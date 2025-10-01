@@ -14,30 +14,41 @@ interface Message {
 
 const KYB_CONTEXT = `You are helping a business complete their KYB (Know Your Business) verification for a Delaware C-Corp or LLC.
 
-Key documents and information needed:
-- Business Name: Legal company name as registered
-- Business Entity ID: Delaware File Number (digits only, e.g., 7286832)
-- Tax ID (EIN): 9-digit Federal Employer Identification Number
-- Ultimate Beneficial Owners (UBOs) & Founders: All people who own or control the company
-- Shareholders Registry: Cap table showing ownership (can be generated with ChatGPT)
+Your goal is to:
+1. Collect company and founder information upfront (name, structure, ownership, addresses)
+2. Ask about their incorporation tools (Clerky, Carta, First Base, Stripe Atlas) to give specific guidance
+3. Help them understand and complete each KYB field
+4. Generate a shareholder registry from the information they provide
+
+Key information you collect:
+- Company name, entity type (C-Corp/LLC), and Delaware File Number
+- All founders/owners: names, emails, ownership %, roles
+- Company address (operating/HQ)
+- Tax ID (EIN)
+- Incorporation service used (helps locate documents)
+
+Key documents needed for KYB:
+- Business Entity ID: Delaware File Number (digits only)
+- Tax ID (EIN): 9-digit Federal Employer Identification Number  
+- Shareholders Registry: Generated from ownership info
 - Business Registration Document: Certificate of Incorporation or Good Standing
-- Source of Funds: Documentation showing where initial capital came from
-- Proof of Address: Recent document (within 3 months) showing business address
+- Proof of Address: Recent utility bill, lease, or bank statement (within 3 months)
 
-Help users:
-1. Understand what each field requires
-2. Find documents they need
-3. Generate shareholder registries using ChatGPT prompts
-4. Answer specific questions about their situation
+Communication style:
+- Be friendly and conversational
+- Use markdown formatting: **bold** for emphasis, • for bullets
+- Ask clarifying questions when needed
+- Give specific, actionable advice based on their incorporation service
+- Keep responses concise but helpful
 
-Be concise, helpful, and focus on actionable guidance.`;
+When they have provided company details, offer to generate their shareholder registry document.`;
 
 export function KybAiAssistant() {
   const [messages, setMessages] = useState<Message[]>([
     {
       role: 'assistant',
       content:
-        "Hi! I'm here to help you complete your KYB verification. I can answer questions about required documents, help you generate a shareholder registry, or clarify any field requirements. What would you like help with?",
+        "👋 Hi! I'm here to help you complete KYB verification faster.\n\n**To get started, tell me about your company:**\n\n• Company name and entity type (C-Corp or LLC)\n• Co-founder names, emails, and ownership %\n• Registered address\n• Are you using Clerky, Carta, First Base, or Stripe Atlas?\n\nOnce I have this info, I can help you fill out the KYB form and generate your shareholder registry automatically.",
     },
   ]);
   const [input, setInput] = useState('');
@@ -151,7 +162,16 @@ export function KybAiAssistant() {
                 : 'bg-muted mr-4',
             )}
           >
-            <p className="whitespace-pre-wrap">{message.content}</p>
+            <div
+              className="whitespace-pre-wrap prose prose-xs max-w-none"
+              dangerouslySetInnerHTML={{
+                __html: message.content
+                  .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                  .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                  .replace(/•/g, '•')
+                  .replace(/\n/g, '<br />'),
+              }}
+            />
             {message.sources && message.sources.length > 0 && (
               <div className="mt-2 pt-2 border-t border-border/50">
                 <p className="text-[10px] opacity-70 mb-1">Sources:</p>

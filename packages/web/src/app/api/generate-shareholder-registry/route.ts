@@ -144,7 +144,6 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   ${result.text}
   
   <div class="footer">
-    <p><strong>Note:</strong> This is an informational registry snapshot for KYB (Know Your Business) verification purposes. This document is not a legal certificate or official corporate record.</p>
     <p>Generated on ${today} using Zero Finance KYB Assistant.</p>
   </div>
 </body>
