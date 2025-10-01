@@ -16,6 +16,12 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Progress } from '@/components/ui/progress';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
 import { api } from '@/trpc/react';
 import { cn } from '@/lib/utils';
 import { steps } from './constants';
@@ -233,6 +239,119 @@ export default function OnboardingLayout({
               })}
             </ol>
           </div>
+
+          {/* KYB FAQ - Only show on KYC page */}
+          {pathname === '/onboarding/kyc' && (
+            <div className="bg-white border border-[#101010]/10 rounded-[12px] shadow-[0_2px_8px_rgba(16,16,16,0.04)] p-4">
+              <h3 className="text-sm font-semibold mb-1">KYB FAQ</h3>
+              <p className="text-xs text-muted-foreground mb-3">
+                Help for Delaware C-Corp verification
+              </p>
+              <Accordion type="single" collapsible className="w-full">
+                <AccordionItem value="entity-id" className="border-b-0">
+                  <AccordionTrigger className="text-xs font-medium py-2 hover:no-underline">
+                    Business Entity ID
+                  </AccordionTrigger>
+                  <AccordionContent className="text-xs text-muted-foreground space-y-2 pb-3">
+                    <p className="font-medium text-foreground">What it is</p>
+                    <p>Your Delaware File Number.</p>
+                    <p className="font-medium text-foreground mt-2">
+                      Where to find it
+                    </p>
+                    <ul className="list-disc pl-4 space-y-1">
+                      <li>Certificate of Incorporation: top-left stamp</li>
+                      <li>
+                        Delaware business search or Good Standing certificate
+                      </li>
+                      <li>Emails from your registered agent</li>
+                    </ul>
+                    <p className="font-medium text-foreground mt-2">
+                      What to paste
+                    </p>
+                    <p>Digits only. Example: 7286832</p>
+                  </AccordionContent>
+                </AccordionItem>
+
+                <AccordionItem value="ein" className="border-b-0">
+                  <AccordionTrigger className="text-xs font-medium py-2 hover:no-underline">
+                    EIN
+                  </AccordionTrigger>
+                  <AccordionContent className="text-xs text-muted-foreground space-y-2 pb-3">
+                    <p className="font-medium text-foreground">What it is</p>
+                    <p>
+                      Your Federal Employer Identification Number from the IRS.
+                    </p>
+                    <p className="font-medium text-foreground mt-2">
+                      Where to find it
+                    </p>
+                    <p>
+                      IRS CP-575 letter, payroll filings, or bank dashboards.
+                    </p>
+                  </AccordionContent>
+                </AccordionItem>
+
+                <AccordionItem value="address" className="border-b-0">
+                  <AccordionTrigger className="text-xs font-medium py-2 hover:no-underline">
+                    Address
+                  </AccordionTrigger>
+                  <AccordionContent className="text-xs text-muted-foreground space-y-2 pb-3">
+                    <p>
+                      Your operating or HQ street address. Use the same address
+                      for Proof of Address documents.
+                    </p>
+                  </AccordionContent>
+                </AccordionItem>
+
+                <AccordionItem value="ubos" className="border-b-0">
+                  <AccordionTrigger className="text-xs font-medium py-2 hover:no-underline">
+                    Beneficial Owners
+                  </AccordionTrigger>
+                  <AccordionContent className="text-xs text-muted-foreground space-y-2 pb-3">
+                    <p>
+                      List all beneficial owners and founders. Each will receive
+                      an email to complete KYC (ID, selfie, details).
+                    </p>
+                  </AccordionContent>
+                </AccordionItem>
+
+                <AccordionItem value="cap-table" className="border-b-0">
+                  <AccordionTrigger className="text-xs font-medium py-2 hover:no-underline">
+                    Cap Table
+                  </AccordionTrigger>
+                  <AccordionContent className="text-xs text-muted-foreground space-y-2 pb-3">
+                    <p>
+                      Export from Carta or create a simple one-page ownership
+                      table as PDF.
+                    </p>
+                  </AccordionContent>
+                </AccordionItem>
+
+                <AccordionItem value="registration" className="border-b-0">
+                  <AccordionTrigger className="text-xs font-medium py-2 hover:no-underline">
+                    Registration Doc
+                  </AccordionTrigger>
+                  <AccordionContent className="text-xs text-muted-foreground space-y-2 pb-3">
+                    <p>
+                      Certificate of Incorporation or Good Standing from
+                      Delaware.
+                    </p>
+                  </AccordionContent>
+                </AccordionItem>
+
+                <AccordionItem value="proof-address" className="border-b-0">
+                  <AccordionTrigger className="text-xs font-medium py-2 hover:no-underline">
+                    Proof of Address
+                  </AccordionTrigger>
+                  <AccordionContent className="text-xs text-muted-foreground space-y-2 pb-3">
+                    <p>
+                      Recent (3 months) utility bill, bank statement, or lease
+                      showing company name and address.
+                    </p>
+                  </AccordionContent>
+                </AccordionItem>
+              </Accordion>
+            </div>
+          )}
 
           {/* Help/Support Section */}
           <div className="bg-white border border-[#101010]/10 rounded-[12px] shadow-[0_2px_8px_rgba(16,16,16,0.04)] p-4 flex flex-col items-center text-center mt-auto">
