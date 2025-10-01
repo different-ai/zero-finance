@@ -18,7 +18,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     }
 
     const result = await generateText({
-      model: openai('gpt-4o'),
+      model: openai('gpt-5'),
       system: context,
       messages: messages.map(
         (m: { role: 'user' | 'assistant'; content: string }) => ({
