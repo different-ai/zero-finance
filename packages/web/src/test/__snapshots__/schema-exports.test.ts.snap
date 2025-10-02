@@ -1,0 +1,63 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Schema exports snapshot > exports all expected tables 1`] = `
+[
+  "allocationStrategies",
+  "autoEarnConfigs",
+  "chatMessages",
+  "chats",
+  "companies",
+  "companyClients",
+  "companyInviteLinks",
+  "companyMembers",
+  "earnDeposits",
+  "earnVaultApySnapshots",
+  "earnWithdrawals",
+  "incomingDeposits",
+  "invoiceTemplates",
+  "offrampTransfers",
+  "onrampTransfers",
+  "platformTotals",
+  "sharedCompanyData",
+  "userClassificationSettings",
+  "userDestinationBankAccounts",
+  "userFeatures",
+  "userFundingSources",
+  "userInvoicePreferences",
+  "userProfilesTable",
+  "userRequestsTable",
+  "userSafes",
+  "userWalletsTable",
+  "users",
+  "workspaceInvites",
+  "workspaceMembers",
+  "workspaceMembersExtended",
+  "workspaces",
+]
+`;
+
+exports[`Schema exports snapshot > exports all expected types and enums 1`] = `[]`;
+
+exports[`Schema exports snapshot > exports all relations 1`] = `
+[
+  "allocationStrategiesRelations",
+  "chatMessagesRelations",
+  "chatsRelations",
+  "companiesRelations",
+  "companyInviteLinksRelations",
+  "companyMembersRelations",
+  "offrampTransfersRelations",
+  "onrampTransfersRelations",
+  "sharedCompanyDataRelations",
+  "userClassificationSettingsRelations",
+  "userDestinationBankAccountsRelations",
+  "userFundingSourcesRelations",
+  "userProfilesRelations",
+  "userSafesRelations",
+  "userWalletsRelations",
+  "usersRelations",
+  "workspaceInvitesRelations",
+  "workspaceMembersRelations",
+  "workspacesRelations",
+]
+`;
