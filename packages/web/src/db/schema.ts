@@ -16,6 +16,30 @@ import {
 import { relations } from 'drizzle-orm';
 import crypto from 'crypto';
 
+// Import and re-export users and workspaces from modular schema
+export { users, type User, type NewUser } from './schema/users';
+export {
+  workspaces,
+  workspaceMembers,
+  workspaceInvites,
+  workspaceMembersExtended,
+  workspacesRelations,
+  workspaceMembersRelations,
+  workspaceInvitesRelations,
+  type Workspace,
+  type NewWorkspace,
+  type WorkspaceMember,
+  type NewWorkspaceMember,
+  type WorkspaceInvite,
+  type NewWorkspaceInvite,
+  type WorkspaceMemberExtended,
+  type NewWorkspaceMemberExtended,
+} from './schema/workspaces';
+
+// Import for internal use within this file
+import { users } from './schema/users';
+import { workspaces, workspaceMembers } from './schema/workspaces';
+
 // Define specific types for role and status for better type safety
 export type InvoiceRole = 'seller' | 'buyer';
 export type InvoiceStatus =
@@ -149,57 +173,7 @@ export type NewUserRequest = typeof userRequestsTable.$inferInsert;
 
 // --- IMPORTED FROM BANK ---
 
-// Users table - Storing basic user info, identified by Privy DID
-export const users = pgTable(
-  'users',
-  {
-    privyDid: text('privy_did').primaryKey(), // Privy Decentralized ID
-    createdAt: timestamp('created_at', { withTimezone: true })
-      .defaultNow()
-      .notNull(),
-  // User identity fields
-  firstName: text('first_name'),
-  lastName: text('last_name'),
-  companyName: text('company_name'),
-  beneficiaryType: text('beneficiary_type', {
-    enum: ['individual', 'business'],
-  }),
-  // Align-specific fields
-  alignCustomerId: text('align_customer_id').unique(), // Customer ID from Align API
-  kycProvider: text('kyc_provider', { enum: ['align', 'other'] }), // KYC provider
-  kycStatus: text('kyc_status', {
-    enum: ['none', 'pending', 'approved', 'rejected'],
-  }).default('none'), // KYC status
-  kycFlowLink: text('kyc_flow_link'), // Link to KYC flow
-  alignVirtualAccountId: text('align_virtual_account_id'), // Virtual account ID from Align
-  // User indicated they finished the KYC flow
-  kycMarkedDone: boolean('kyc_marked_done').default(false).notNull(),
-  kycSubStatus: text('kyc_sub_status'),
-  // KYC notification tracking
-  kycNotificationSent: timestamp('kyc_notification_sent', {
-    withTimezone: true,
-  }), // When KYC approved email was sent
-  kycNotificationStatus: text('kyc_notification_status', {
-    enum: ['pending', 'sent', 'failed'],
-  }), // Status of notification
-  // Flag to track if contact has been sent to Loops
-  loopsContactSynced: boolean('loops_contact_synced').default(false).notNull(),
-  // User role to differentiate between startups and contractors
-  userRole: text('user_role', {
-    enum: ['startup', 'contractor'],
-  })
-    .default('startup')
-    .notNull(),
-  // Invite code used for contractor onboarding
-  contractorInviteCode: text('contractor_invite_code'),
-    primaryWorkspaceId: uuid('primary_workspace_id'),
-  },
-  (table) => ({
-    primaryWorkspaceIdx: index('users_primary_workspace_idx').on(
-      table.primaryWorkspaceId,
-    ),
-  }),
-);
+// Users table - imported from schema/users.ts (see top of file)
 
 // UserSafes table - Linking users to their various Safe addresses
 export const userSafes = pgTable(
@@ -583,8 +557,7 @@ export const onrampTransfersRelations = relations(
 // --- TYPE INFERENCE ---
 
 // Type inference for bank tables
-export type User = typeof users.$inferSelect;
-export type NewUser = typeof users.$inferInsert;
+// User and NewUser types imported from schema/users.ts (see top of file)
 
 export type UserSafe = typeof userSafes.$inferSelect;
 export type NewUserSafe = typeof userSafes.$inferInsert;
@@ -676,7 +649,9 @@ export const earnWithdrawals = pgTable(
         table.vaultAddress,
       ),
       userDidIdx: index('earn_withdrawals_user_did_idx').on(table.userDid),
-      workspaceIdx: index('earn_withdrawals_workspace_idx').on(table.workspaceId),
+      workspaceIdx: index('earn_withdrawals_workspace_idx').on(
+        table.workspaceId,
+      ),
       statusIdx: index('earn_withdrawals_status_idx').on(table.status),
     };
   },
@@ -795,7 +770,6 @@ export const autoEarnConfigs = pgTable(
   },
 );
 
-
 // --- CHAT TABLES -------------------------------------------------------------
 
 // Chats table - Storing overall chat sessions
@@ -900,7 +874,6 @@ export type NewChatMessageDB = typeof chatMessages.$inferInsert;
 // export type ChatStreamDB = typeof chatStreams.$inferSelect;
 // export type NewChatStreamDB = typeof chatStreams.$inferInsert;
 
-
 // --- USER CLASSIFICATION SETTINGS -------------------------------------------
 export const userClassificationSettings = pgTable(
   'user_classification_settings',
@@ -951,74 +924,7 @@ export const userClassificationSettingsRelations = relations(
   }),
 );
 
-// Workspace tables for partner expense tracking
-export const workspaces = pgTable('workspaces', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  name: varchar('name', { length: 255 }).notNull(),
-  createdBy: varchar('created_by', { length: 255 })
-    .notNull()
-    .references(() => users.privyDid, { onDelete: 'cascade' }),
-  createdAt: timestamp('created_at', { withTimezone: true })
-    .defaultNow()
-    .notNull(),
-  updatedAt: timestamp('updated_at', { withTimezone: true })
-    .defaultNow()
-    .notNull()
-    .$onUpdate(() => new Date()),
-});
-
-export const workspaceMembers = pgTable(
-  'workspace_members',
-  {
-    id: uuid('id').primaryKey().defaultRandom(),
-    workspaceId: uuid('workspace_id')
-      .notNull()
-      .references(() => workspaces.id, { onDelete: 'cascade' }),
-    userId: varchar('user_id', { length: 255 })
-      .notNull()
-      .references(() => users.privyDid, { onDelete: 'cascade' }),
-    role: varchar('role', { length: 50 }).notNull().default('member'), // 'owner', 'admin', 'member'
-    joinedAt: timestamp('joined_at', { withTimezone: true })
-      .defaultNow()
-      .notNull(),
-    isPrimary: boolean('is_primary').default(false).notNull(),
-  },
-  (table) => {
-    return {
-      workspaceUserIdx: uniqueIndex('workspace_members_workspace_user_idx').on(
-        table.workspaceId,
-        table.userId,
-      ),
-      workspaceIdIdx: index('workspace_members_workspace_id_idx').on(
-        table.workspaceId,
-      ),
-      userIdIdx: index('workspace_members_user_id_idx').on(table.userId),
-    };
-  },
-);
-
-// Relations for workspace tables
-export const workspacesRelations = relations(workspaces, ({ many, one }) => ({
-  members: many(workspaceMembers),
-  creator: one(users, {
-    fields: [workspaces.createdBy],
-    references: [users.privyDid],
-  }),
-}));
-
-export const workspaceMembersRelations = relations(
-  workspaceMembers,
-  ({ one }) => ({
-    workspace: one(workspaces, {
-      fields: [workspaceMembers.workspaceId],
-      references: [workspaces.id],
-    }),
-    user: one(users, {
-      fields: [workspaceMembers.userId],
-      references: [users.privyDid],
-    }),
-  }),
-);
+// Workspace tables for partner expense tracking - imported from schema/workspaces.ts (see top of file)
 
 // Define relations for users once workspaces are declared
 export const usersRelations = relations(users, ({ one, many }) => ({
@@ -1036,11 +942,7 @@ export const usersRelations = relations(users, ({ one, many }) => ({
   classificationSettings: many(userClassificationSettings),
 }));
 
-// Type inference for workspace tables
-export type Workspace = typeof workspaces.$inferSelect;
-export type NewWorkspace = typeof workspaces.$inferInsert;
-export type WorkspaceMember = typeof workspaceMembers.$inferSelect;
-export type NewWorkspaceMember = typeof workspaceMembers.$inferInsert;
+// Type inference for workspace tables - imported from schema/workspaces.ts (see top of file)
 
 // Type inference for classification settings
 export type UserClassificationSetting =
@@ -1090,7 +992,12 @@ export const userFeatures = pgTable(
       .references(() => users.privyDid, { onDelete: 'cascade' }),
     workspaceId: uuid('workspace_id'),
     featureName: text('feature_name', {
-      enum: ['workspace_automation', 'savings', 'advanced_analytics', 'auto_categorization'],
+      enum: [
+        'workspace_automation',
+        'savings',
+        'advanced_analytics',
+        'auto_categorization',
+      ],
     }).notNull(),
     isActive: boolean('is_active').default(true).notNull(),
     purchaseSource: text('purchase_source', {
@@ -1433,84 +1340,4 @@ export type UserInvoicePreferences = typeof userInvoicePreferences.$inferSelect;
 export type NewUserInvoicePreferences =
   typeof userInvoicePreferences.$inferInsert;
 
-// Workspace invite system for team collaboration
-export const workspaceInvites = pgTable(
-  'workspace_invites',
-  {
-    id: uuid('id').primaryKey().defaultRandom(),
-    workspaceId: uuid('workspace_id')
-      .notNull()
-      .references(() => workspaces.id, { onDelete: 'cascade' }),
-    companyId: uuid('company_id').references(() => companies.id),
-    token: varchar('token', { length: 255 }).unique().notNull(),
-    createdBy: varchar('created_by', { length: 255 })
-      .notNull()
-      .references(() => users.privyDid),
-    email: varchar('email', { length: 255 }),
-    role: varchar('role', { length: 50 }).default('member'),
-    shareInbox: boolean('share_inbox').default(true),
-    shareCompanyData: boolean('share_company_data').default(true),
-    addAsSafeOwner: boolean('add_as_safe_owner').default(false),
-    expiresAt: timestamp('expires_at', { withTimezone: true }),
-    usedAt: timestamp('used_at', { withTimezone: true }),
-    usedBy: varchar('used_by', { length: 255 }).references(
-      () => users.privyDid,
-    ),
-    createdAt: timestamp('created_at', { withTimezone: true })
-      .defaultNow()
-      .notNull(),
-  },
-  (table) => {
-    return {
-      tokenIdx: uniqueIndex('workspace_invites_token_idx').on(table.token),
-      workspaceIdx: index('workspace_invites_workspace_idx').on(
-        table.workspaceId,
-      ),
-      createdByIdx: index('workspace_invites_created_by_idx').on(
-        table.createdBy,
-      ),
-    };
-  },
-);
-
-// Update workspace members to include permissions
-export const workspaceMembersExtended = pgTable('workspace_members_extended', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  memberId: uuid('member_id')
-    .notNull()
-    .references(() => workspaceMembers.id, { onDelete: 'cascade' }),
-  canViewInbox: boolean('can_view_inbox').default(true),
-  canEditExpenses: boolean('can_edit_expenses').default(false),
-  canViewCompanyData: boolean('can_view_company_data').default(true),
-});
-
-// Relations for workspace invites
-export const workspaceInvitesRelations = relations(
-  workspaceInvites,
-  ({ one }) => ({
-    workspace: one(workspaces, {
-      fields: [workspaceInvites.workspaceId],
-      references: [workspaces.id],
-    }),
-    company: one(companies, {
-      fields: [workspaceInvites.companyId],
-      references: [companies.id],
-    }),
-    createdByUser: one(users, {
-      fields: [workspaceInvites.createdBy],
-      references: [users.privyDid],
-    }),
-    usedByUser: one(users, {
-      fields: [workspaceInvites.usedBy],
-      references: [users.privyDid],
-    }),
-  }),
-);
-
-// Type inference for workspace invites
-export type WorkspaceInvite = typeof workspaceInvites.$inferSelect;
-export type NewWorkspaceInvite = typeof workspaceInvites.$inferInsert;
-export type WorkspaceMemberExtended =
-  typeof workspaceMembersExtended.$inferSelect;
-export type NewWorkspaceMemberExtended =
-  typeof workspaceMembersExtended.$inferInsert;
+// Workspace invite system and extensions - imported from schema/workspaces.ts (see top of file)
