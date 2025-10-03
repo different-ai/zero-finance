@@ -1,17 +1,16 @@
 /** @type {import('next').NextConfig} */
+const path = require('path');
+
 const nextConfig = {
-  // SEO and Performance Optimizations
   poweredByHeader: false,
   compress: true,
 
-  // Image optimization for better Core Web Vitals
   images: {
     formats: ['image/avif', 'image/webp'],
     domains: ['0.finance'],
     minimumCacheTTL: 60,
   },
 
-  // Security headers
   async headers() {
     return [
       {
@@ -58,25 +57,27 @@ const nextConfig = {
   typescript: {
     tsconfigPath: './tsconfig.next.json',
   },
-  // Optimize for Vercel build memory limits
   experimental: {
     webpackMemoryOptimizations: true,
+    optimizePackageImports: ['lucide-react', '@radix-ui/react-icons'],
   },
-  // Reduce build time and memory usage
-  swcMinify: true,
+  outputFileTracingRoot: path.join(__dirname, '../../'),
+  staticPageGenerationTimeout: 180,
   webpack: (config, { webpack, isServer }) => {
-    config.resolve.fallback = {
-      ...config.resolve.fallback,
-      fs: false,
-      net: false,
-      tls: false,
-      crypto: require.resolve('crypto-browserify'),
-      stream: require.resolve('stream-browserify'),
-      path: require.resolve('path-browserify'),
-      os: require.resolve('os-browserify/browser'),
-    };
+    if (!isServer) {
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        fs: false,
+        net: false,
+        tls: false,
+        crypto: require.resolve('crypto-browserify'),
+        stream: require.resolve('stream-browserify'),
+        path: require.resolve('path-browserify'),
+        os: require.resolve('os-browserify/browser'),
+        '@react-native-async-storage/async-storage': false,
+      };
+    }
 
-    // Suppress the critical dependency warning from web-worker
     config.plugins.push(
       new webpack.ContextReplacementPlugin(/web-worker/, (data) => {
         delete data.dependencies[0].critical;
@@ -84,16 +85,13 @@ const nextConfig = {
       }),
     );
 
-    // Memory optimizations for Vercel
     if (!isServer) {
-      // Reduce bundle size and memory usage
       config.optimization = {
         ...config.optimization,
         splitChunks: {
           ...config.optimization.splitChunks,
           cacheGroups: {
             ...config.optimization.splitChunks.cacheGroups,
-            // Split large dependencies into separate chunks
             circomlibjs: {
               test: /[\\/]node_modules[\\/]circomlibjs.*[\\/]/,
               name: 'circomlibjs',
@@ -111,17 +109,19 @@ const nextConfig = {
       };
     }
 
-    // Limit memory usage during webpack compilation
     config.optimization = {
       ...config.optimization,
       minimize: process.env.NODE_ENV === 'production',
-      // Reduce memory footprint during build
       moduleIds: 'deterministic',
     };
 
     return config;
   },
-  serverExternalPackages: ['require-in-the-middle'],
+  serverExternalPackages: [
+    'require-in-the-middle',
+    '@metamask/sdk',
+    '@wagmi/connectors',
+  ],
 };
 
 module.exports = nextConfig;

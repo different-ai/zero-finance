@@ -2,8 +2,16 @@
   "$schema": "https://vercel.com/schemas/project.json",
   "ignoreCommand": "npx turbo-ignore --fallback=HEAD~1",
   "buildCommand": "pnpm build:vercel",
-  "installCommand": "cd ../.. && pnpm install --filter=@zero-finance/web --frozen-lockfile --ignore-scripts",
+  "installCommand": "cd ../.. && pnpm install --filter=@zero-finance/web --frozen-lockfile --ignore-scripts --shamefully-hoist",
   "framework": "nextjs",
+  "functions": {
+    "app/**/*.ts": {
+      "maxDuration": 60
+    },
+    "app/api/**/*.ts": {
+      "maxDuration": 60
+    }
+  },
   "crons": [
     {
       "path": "/api/cron/auto-earn",

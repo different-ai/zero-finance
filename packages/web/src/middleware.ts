@@ -1,24 +1,21 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { PrivyClient } from '@privy-io/server-auth';
 
-// Check for required environment variables
-const privyAppId = process.env.NEXT_PUBLIC_PRIVY_APP_ID;
-const privyAppSecret = process.env.PRIVY_APP_SECRET;
-
-// Initialize the client only if both environment variables are present
-let privyClient: PrivyClient | null = null;
-try {
-  if (privyAppId && privyAppSecret) {
-    privyClient = new PrivyClient(privyAppId, privyAppSecret);
-  } else {
-    console.warn(
-      'Middleware: Privy environment variables are missing. Authentication middleware will be disabled.',
-    );
-  }
-} catch (error) {
-  console.error('Middleware: Failed to initialize Privy client:', error);
-}
+// Force Node.js runtime to support Privy server-auth crypto module
+export const config = {
+  runtime: 'nodejs',
+  matcher: [
+    /*
+     * Match all request paths except for the ones starting with:
+     * - api (API routes)
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     * - login (if you had a dedicated login page)
+     */
+    '/((?!api|_next/static|_next/image|favicon.ico|login).*)',
+  ],
+};
 
 // This function can be marked `async` if using `await` inside
 export async function middleware(request: NextRequest) {
@@ -29,17 +26,24 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // If Privy client is not initialized, just continue
-  if (!privyClient) {
-    return NextResponse.next();
-  }
-
   // Only apply logic to the root path
   if (pathname === '/') {
     const authToken = request.cookies.get('privy-token')?.value;
 
     if (authToken) {
       try {
+        // Lazy load Privy client to avoid Edge Runtime issues
+        const { PrivyClient } = await import('@privy-io/server-auth');
+        const privyAppId = process.env.NEXT_PUBLIC_PRIVY_APP_ID;
+        const privyAppSecret = process.env.PRIVY_APP_SECRET;
+
+        if (!privyAppId || !privyAppSecret) {
+          console.warn('Middleware: Privy environment variables are missing');
+          return NextResponse.next();
+        }
+
+        const privyClient = new PrivyClient(privyAppId, privyAppSecret);
+
         // Verify the token
         await privyClient.verifyAuthToken(authToken);
         // Token is valid, redirect to dashboard
@@ -59,18 +63,3 @@ export async function middleware(request: NextRequest) {
   // For all other paths, continue as normal
   return NextResponse.next();
 }
-
-// See "Matching Paths" below to learn more
-export const config = {
-  matcher: [
-    /*
-     * Match all request paths except for the ones starting with:
-     * - api (API routes)
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * - login (if you had a dedicated login page)
-     */
-    '/((?!api|_next/static|_next/image|favicon.ico|login).*)', // Apply middleware to most paths, but logic inside only targets '/' explicitly
-  ],
-};

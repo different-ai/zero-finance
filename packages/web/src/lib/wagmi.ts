@@ -1,3 +1,4 @@
+'use client'
 import { createConfig } from '@privy-io/wagmi';
 import { http } from 'wagmi'
 import { base, mainnet } from 'wagmi/chains' // Add other chains if needed
