@@ -3,7 +3,16 @@ import { router, protectedProcedure } from '../create-router';
 import { userService } from '@/lib/user-service';
 import { TRPCError } from '@trpc/server';
 import { db } from '../../db';
-import { users, userFundingSources, userProfilesTable, userSafes, platformTotals, userFeatures } from '../../db/schema';
+import {
+  users,
+  userFundingSources,
+  userProfilesTable,
+  userSafes,
+  platformTotals,
+  userFeatures,
+  workspaces,
+  workspaceMembers,
+} from '../../db/schema';
 import { eq, and } from 'drizzle-orm';
 import { customAlphabet } from 'nanoid';
 import { alignApi, AlignCustomer } from '@/server/services/align-api';
@@ -34,10 +43,12 @@ function validateAdminToken(token: string): boolean {
 const alignCustomerDirectDetailsSchema = z.object({
   customer_id: z.string(),
   email: z.string().email(),
-  kycs: z.object({
-    status: z.enum(['pending', 'approved', 'rejected']).nullable(), // Adjusted enum
-    kyc_flow_link: z.string().url().nullable(),
-  }).nullable(),
+  kycs: z
+    .object({
+      status: z.enum(['pending', 'approved', 'rejected']).nullable(), // Adjusted enum
+      kyc_flow_link: z.string().url().nullable(),
+    })
+    .nullable(),
 });
 
 /**
@@ -85,10 +96,14 @@ export const adminRouter = router({
       }
 
       // 1. Fetch all distinct safe addresses stored in DB
-      const safes = await db.select({ safeAddress: userSafes.safeAddress }).from(userSafes);
+      const safes = await db
+        .select({ safeAddress: userSafes.safeAddress })
+        .from(userSafes);
 
       // Deduplicate addresses and filter invalid ones
-      const uniqueAddresses = Array.from(new Set(safes.map((s) => s.safeAddress).filter(Boolean)));
+      const uniqueAddresses = Array.from(
+        new Set(safes.map((s) => s.safeAddress).filter(Boolean)),
+      );
 
       // 2. Query on-chain balances concurrently
       const balanceResults = await Promise.all(
@@ -97,7 +112,11 @@ export const adminRouter = router({
             const bal = await getSafeBalance({ safeAddress: addr });
             return bal?.raw ?? 0n;
           } catch (err) {
-            console.error('admin.getTotalDeposited: failed to fetch balance for', addr, err);
+            console.error(
+              'admin.getTotalDeposited: failed to fetch balance for',
+              addr,
+              err,
+            );
             return 0n;
           }
         }),
@@ -116,7 +135,10 @@ export const adminRouter = router({
           updatedAt: new Date(),
         });
       } catch (persistErr) {
-        console.error('admin.getTotalDeposited: failed to persist totalDeposited', persistErr);
+        console.error(
+          'admin.getTotalDeposited: failed to persist totalDeposited',
+          persistErr,
+        );
       }
 
       return {
@@ -134,7 +156,7 @@ export const adminRouter = router({
         privyDid: z.string().min(1, 'Privy DID is required'),
       }),
     )
-    .output(alignCustomerDirectDetailsSchema.nullable()) 
+    .output(alignCustomerDirectDetailsSchema.nullable())
     .query(async ({ ctx, input }) => {
       if (!validateAdminToken(input.adminToken)) {
         throw new TRPCError({
@@ -144,8 +166,15 @@ export const adminRouter = router({
       }
 
       const { privyDid } = input;
-      const logPayload = { procedure: 'getAlignCustomerDirectDetails', targetUserDid: privyDid, adminUserDid: ctx.userId };
-      ctx.log.info(logPayload, 'Attempting to get direct Align customer details...');
+      const logPayload = {
+        procedure: 'getAlignCustomerDirectDetails',
+        targetUserDid: privyDid,
+        adminUserDid: ctx.userId,
+      };
+      ctx.log.info(
+        logPayload,
+        'Attempting to get direct Align customer details...',
+      );
 
       const user = await db.query.users.findFirst({
         where: eq(users.privyDid, privyDid),
@@ -157,42 +186,80 @@ export const adminRouter = router({
       }
 
       if (!user.alignCustomerId) {
-        ctx.log.info({ ...logPayload }, 'User does not have an Align Customer ID.');
-        return null; 
+        ctx.log.info(
+          { ...logPayload },
+          'User does not have an Align Customer ID.',
+        );
+        return null;
       }
 
       try {
-        const alignDetails: AlignCustomer = await alignApi.getCustomer(user.alignCustomerId);
-        
+        const alignDetails: AlignCustomer = await alignApi.getCustomer(
+          user.alignCustomerId,
+        );
+
         if (!alignDetails) {
-            ctx.log.warn({ ...logPayload, alignCustomerId: user.alignCustomerId }, 'No details returned from Align API.');
-            return null;
+          ctx.log.warn(
+            { ...logPayload, alignCustomerId: user.alignCustomerId },
+            'No details returned from Align API.',
+          );
+          return null;
         }
 
         // Map AlignCustomer to alignCustomerDirectDetailsSchema structure
-        const firstKyc = alignDetails.kycs && alignDetails.kycs.length > 0 ? alignDetails.kycs[0] : null;
+        const firstKyc =
+          alignDetails.kycs && alignDetails.kycs.length > 0
+            ? alignDetails.kycs[0]
+            : null;
 
         const result = {
           customer_id: alignDetails.customer_id,
           email: alignDetails.email,
-          kycs: firstKyc ? {
-            status: firstKyc.status as 'pending' | 'approved' | 'rejected' | null, // Cast to ensure compatibility with schema
-            kyc_flow_link: firstKyc.kyc_flow_link || null,
-          } : null,
+          kycs: firstKyc
+            ? {
+                status: firstKyc.status as
+                  | 'pending'
+                  | 'approved'
+                  | 'rejected'
+                  | null, // Cast to ensure compatibility with schema
+                kyc_flow_link: firstKyc.kyc_flow_link || null,
+              }
+            : null,
         };
-        
+
         // Validate with Zod before returning, primarily for development reassurance
-        const parsedResult = alignCustomerDirectDetailsSchema.nullable().safeParse(result);
+        const parsedResult = alignCustomerDirectDetailsSchema
+          .nullable()
+          .safeParse(result);
         if (!parsedResult.success) {
-            ctx.log.error({ ...logPayload, alignCustomerId: user.alignCustomerId, error: parsedResult.error.flatten() }, 'Failed to parse mapped Align data against schema.');
-            throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Could not process Align data.'});
+          ctx.log.error(
+            {
+              ...logPayload,
+              alignCustomerId: user.alignCustomerId,
+              error: parsedResult.error.flatten(),
+            },
+            'Failed to parse mapped Align data against schema.',
+          );
+          throw new TRPCError({
+            code: 'INTERNAL_SERVER_ERROR',
+            message: 'Could not process Align data.',
+          });
         }
 
-        ctx.log.info({ ...logPayload, alignCustomerId: user.alignCustomerId }, 'Successfully fetched and mapped direct Align customer details.');
+        ctx.log.info(
+          { ...logPayload, alignCustomerId: user.alignCustomerId },
+          'Successfully fetched and mapped direct Align customer details.',
+        );
         return parsedResult.data;
-
       } catch (error) {
-        ctx.log.error({ ...logPayload, alignCustomerId: user.alignCustomerId, error: (error as Error).message }, 'Failed to fetch/process direct Align customer details.');
+        ctx.log.error(
+          {
+            ...logPayload,
+            alignCustomerId: user.alignCustomerId,
+            error: (error as Error).message,
+          },
+          'Failed to fetch/process direct Align customer details.',
+        );
         if (error instanceof TRPCError) throw error;
         // Consider if AlignApiError should be handled specifically to return different TRPC codes
         throw new TRPCError({
@@ -253,11 +320,11 @@ export const adminRouter = router({
             alignCustomerId: null,
             kycStatus: 'none',
             kycFlowLink: null,
-            kycProvider: null, 
+            kycProvider: null,
             alignVirtualAccountId: null,
           })
           .where(eq(users.privyDid, input.privyDid))
-          .returning({ privyDid: users.privyDid }); 
+          .returning({ privyDid: users.privyDid });
         if (updatedUser.length === 0) {
           throw new TRPCError({
             code: 'NOT_FOUND',
@@ -283,7 +350,7 @@ export const adminRouter = router({
           error,
         );
         if (error instanceof TRPCError) {
-          throw error; 
+          throw error;
         }
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
@@ -312,8 +379,15 @@ export const adminRouter = router({
       }
 
       const { privyDid } = input;
-      const logPayload = { procedure: 'overrideKycStatusFromAlign', targetUserDid: privyDid, adminUserDid: ctx.userId };
-      ctx.log.info(logPayload, 'Attempting to override KYC status from Align...');
+      const logPayload = {
+        procedure: 'overrideKycStatusFromAlign',
+        targetUserDid: privyDid,
+        adminUserDid: ctx.userId,
+      };
+      ctx.log.info(
+        logPayload,
+        'Attempting to override KYC status from Align...',
+      );
 
       try {
         // Get user from DB
@@ -323,37 +397,53 @@ export const adminRouter = router({
 
         if (!user) {
           ctx.log.warn({ ...logPayload }, 'User not found in DB.');
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'User not found.' });
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'User not found.',
+          });
         }
 
         if (!user.alignCustomerId) {
-          ctx.log.info({ ...logPayload }, 'User does not have an Align Customer ID.');
-          throw new TRPCError({ 
-            code: 'BAD_REQUEST', 
-            message: 'User does not have an Align Customer ID. Cannot fetch KYC status.' 
+          ctx.log.info(
+            { ...logPayload },
+            'User does not have an Align Customer ID.',
+          );
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message:
+              'User does not have an Align Customer ID. Cannot fetch KYC status.',
           });
         }
 
         // Fetch customer details from Align
         const alignCustomer = await alignApi.getCustomer(user.alignCustomerId);
-        const latestKyc = alignCustomer.kycs && alignCustomer.kycs.length > 0 ? alignCustomer.kycs[0] : null;
+        const latestKyc =
+          alignCustomer.kycs && alignCustomer.kycs.length > 0
+            ? alignCustomer.kycs[0]
+            : null;
 
         if (!latestKyc) {
-          ctx.log.warn({ ...logPayload, alignCustomerId: user.alignCustomerId }, 'No KYC information found in Align.');
-          throw new TRPCError({ 
-            code: 'NOT_FOUND', 
-            message: 'No KYC information found in Align for this user.' 
+          ctx.log.warn(
+            { ...logPayload, alignCustomerId: user.alignCustomerId },
+            'No KYC information found in Align.',
+          );
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'No KYC information found in Align for this user.',
           });
         }
 
         const alignKycStatus = latestKyc.status;
         const currentDbStatus = user.kycStatus;
 
-        ctx.log.info({ 
-          ...logPayload, 
-          alignKycStatus, 
-          currentDbStatus 
-        }, 'Comparing KYC statuses...');
+        ctx.log.info(
+          {
+            ...logPayload,
+            alignKycStatus,
+            currentDbStatus,
+          },
+          'Comparing KYC statuses...',
+        );
 
         // Map Align status to our DB status format
         let newKycStatus: 'none' | 'pending' | 'approved' | 'rejected' = 'none';
@@ -375,24 +465,30 @@ export const adminRouter = router({
           })
           .where(eq(users.privyDid, privyDid));
 
-        ctx.log.info({ 
-          ...logPayload, 
-          result: { 
-            previousStatus: currentDbStatus, 
-            newStatus: newKycStatus,
-            alignStatus: alignKycStatus
-          } 
-        }, 'Successfully overrode KYC status from Align.');
+        ctx.log.info(
+          {
+            ...logPayload,
+            result: {
+              previousStatus: currentDbStatus,
+              newStatus: newKycStatus,
+              alignStatus: alignKycStatus,
+            },
+          },
+          'Successfully overrode KYC status from Align.',
+        );
 
-        return { 
-          success: true, 
+        return {
+          success: true,
           message: `KYC status updated from '${currentDbStatus}' to '${newKycStatus}' based on Align status: '${alignKycStatus}'`,
           previousStatus: currentDbStatus,
           newStatus: newKycStatus,
-          alignStatus: alignKycStatus
+          alignStatus: alignKycStatus,
         };
       } catch (error) {
-        ctx.log.error({ ...logPayload, error: (error as Error).message }, 'Failed to override KYC status from Align.');
+        ctx.log.error(
+          { ...logPayload, error: (error as Error).message },
+          'Failed to override KYC status from Align.',
+        );
         if (error instanceof TRPCError) {
           throw error;
         }
@@ -407,32 +503,48 @@ export const adminRouter = router({
    * Simulates KYC approval for a user.
    * WARNING: This should be protected by admin-only access control.
    */
-  simulateKycApproval: protectedProcedure 
-    .input(z.object({ privyDid: z.string().min(1, "Privy DID is required") }))
+  simulateKycApproval: protectedProcedure
+    .input(z.object({ privyDid: z.string().min(1, 'Privy DID is required') }))
     .mutation(async ({ ctx, input }) => {
       const { privyDid } = input;
-      const logPayload = { procedure: 'simulateKycApproval', targetUserDid: privyDid, adminUserDid: ctx.userId }; 
+      const logPayload = {
+        procedure: 'simulateKycApproval',
+        targetUserDid: privyDid,
+        adminUserDid: ctx.userId,
+      };
       ctx.log.info(logPayload, 'Attempting to simulate KYC approval...');
       const targetUser = await db.query.users.findFirst({
         where: eq(users.privyDid, privyDid),
       });
       if (!targetUser) {
         ctx.log.error({ ...logPayload }, 'Target user not found.');
-        throw new TRPCError({ code: 'NOT_FOUND', message: 'Target user not found.' });
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Target user not found.',
+        });
       }
       try {
         await db
           .update(users)
           .set({
             kycStatus: 'approved',
-            kycProvider: 'other', 
-            kycFlowLink: null, 
+            kycProvider: 'other',
+            kycFlowLink: null,
           })
           .where(eq(users.privyDid, privyDid));
-        ctx.log.info({ ...logPayload, result: { kycStatus: 'approved' } }, 'Successfully simulated KYC approval.');
-        return { success: true, message: `KYC status for user ${privyDid} set to approved.` };
+        ctx.log.info(
+          { ...logPayload, result: { kycStatus: 'approved' } },
+          'Successfully simulated KYC approval.',
+        );
+        return {
+          success: true,
+          message: `KYC status for user ${privyDid} set to approved.`,
+        };
       } catch (error) {
-        ctx.log.error({ ...logPayload, error: (error as Error).message }, 'Failed to simulate KYC approval.');
+        ctx.log.error(
+          { ...logPayload, error: (error as Error).message },
+          'Failed to simulate KYC approval.',
+        );
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
           message: `Failed to simulate KYC approval: ${(error as Error).message}`,
@@ -459,7 +571,11 @@ export const adminRouter = router({
       }
 
       const { privyDid } = input;
-      const logPayload = { procedure: 'createKycSession', targetUserDid: privyDid, adminUserDid: ctx.userId };
+      const logPayload = {
+        procedure: 'createKycSession',
+        targetUserDid: privyDid,
+        adminUserDid: ctx.userId,
+      };
       ctx.log.info(logPayload, 'Attempting to create KYC session...');
 
       try {
@@ -470,46 +586,62 @@ export const adminRouter = router({
 
         if (!user) {
           ctx.log.warn({ ...logPayload }, 'User not found in DB.');
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'User not found.' });
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'User not found.',
+          });
         }
 
         if (!user.alignCustomerId) {
-          ctx.log.info({ ...logPayload }, 'User does not have an Align Customer ID.');
-          throw new TRPCError({ 
-            code: 'BAD_REQUEST', 
-            message: 'User does not have an Align Customer ID. Cannot create KYC session.' 
+          ctx.log.info(
+            { ...logPayload },
+            'User does not have an Align Customer ID.',
+          );
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message:
+              'User does not have an Align Customer ID. Cannot create KYC session.',
           });
         }
 
         // Create KYC session in Align
-        const kycSession = await alignApi.createKycSession(user.alignCustomerId);
+        const kycSession = await alignApi.createKycSession(
+          user.alignCustomerId,
+        );
 
         // Update user's KYC status and flow link in DB
         await db
           .update(users)
           .set({
-            kycStatus: kycSession.status === 'pending' ? 'pending' : kycSession.status,
+            kycStatus:
+              kycSession.status === 'pending' ? 'pending' : kycSession.status,
             kycProvider: 'align',
             kycFlowLink: kycSession.kyc_flow_link || null,
           })
           .where(eq(users.privyDid, privyDid));
 
-        ctx.log.info({ 
-          ...logPayload, 
-          result: { 
-            kycStatus: kycSession.status,
-            hasFlowLink: !!kycSession.kyc_flow_link
-          } 
-        }, 'Successfully created KYC session.');
+        ctx.log.info(
+          {
+            ...logPayload,
+            result: {
+              kycStatus: kycSession.status,
+              hasFlowLink: !!kycSession.kyc_flow_link,
+            },
+          },
+          'Successfully created KYC session.',
+        );
 
-        return { 
-          success: true, 
+        return {
+          success: true,
           message: `KYC session created successfully. Status: ${kycSession.status}`,
           kycStatus: kycSession.status,
-          kycFlowLink: kycSession.kyc_flow_link
+          kycFlowLink: kycSession.kyc_flow_link,
         };
       } catch (error) {
-        ctx.log.error({ ...logPayload, error: (error as Error).message }, 'Failed to create KYC session.');
+        ctx.log.error(
+          { ...logPayload, error: (error as Error).message },
+          'Failed to create KYC session.',
+        );
         if (error instanceof TRPCError) {
           throw error;
         }
@@ -530,7 +662,9 @@ export const adminRouter = router({
         privyDid: z.string().min(1, 'Privy DID is required'),
         firstName: z.string().min(1, 'First name is required'),
         lastName: z.string().min(1, 'Last name is required'),
-        beneficiaryType: z.enum(['individual', 'corporate']).default('individual'),
+        beneficiaryType: z
+          .enum(['individual', 'corporate'])
+          .default('individual'),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -542,7 +676,11 @@ export const adminRouter = router({
       }
 
       const { privyDid } = input;
-      const logPayload = { procedure: 'createAlignCustomer', targetUserDid: privyDid, adminUserDid: ctx.userId };
+      const logPayload = {
+        procedure: 'createAlignCustomer',
+        targetUserDid: privyDid,
+        adminUserDid: ctx.userId,
+      };
       ctx.log.info(logPayload, 'Attempting to create Align customer...');
 
       try {
@@ -553,14 +691,20 @@ export const adminRouter = router({
 
         if (!user) {
           ctx.log.warn({ ...logPayload }, 'User not found in DB.');
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'User not found.' });
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'User not found.',
+          });
         }
 
         if (user.alignCustomerId) {
-          ctx.log.info({ ...logPayload, alignCustomerId: user.alignCustomerId }, 'User already has an Align Customer ID.');
-          throw new TRPCError({ 
-            code: 'BAD_REQUEST', 
-            message: 'User already has an Align Customer ID.' 
+          ctx.log.info(
+            { ...logPayload, alignCustomerId: user.alignCustomerId },
+            'User already has an Align Customer ID.',
+          );
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'User already has an Align Customer ID.',
           });
         }
 
@@ -570,10 +714,14 @@ export const adminRouter = router({
         });
 
         if (!userProfile?.email) {
-          ctx.log.warn({ ...logPayload }, 'User does not have an email address in their profile.');
-          throw new TRPCError({ 
-            code: 'BAD_REQUEST', 
-            message: 'User must have an email address in their profile to create Align customer.' 
+          ctx.log.warn(
+            { ...logPayload },
+            'User does not have an email address in their profile.',
+          );
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message:
+              'User must have an email address in their profile to create Align customer.',
           });
         }
 
@@ -583,7 +731,7 @@ export const adminRouter = router({
           input.firstName,
           input.lastName,
           userProfile.businessName || undefined,
-          input.beneficiaryType
+          input.beneficiaryType,
         );
 
         // Update user's Align customer ID in DB
@@ -594,22 +742,28 @@ export const adminRouter = router({
           })
           .where(eq(users.privyDid, privyDid));
 
-        ctx.log.info({ 
-          ...logPayload, 
-          result: { 
-            alignCustomerId: alignCustomer.customer_id,
-            email: alignCustomer.email
-          } 
-        }, 'Successfully created Align customer.');
+        ctx.log.info(
+          {
+            ...logPayload,
+            result: {
+              alignCustomerId: alignCustomer.customer_id,
+              email: alignCustomer.email,
+            },
+          },
+          'Successfully created Align customer.',
+        );
 
-        return { 
-          success: true, 
+        return {
+          success: true,
           message: `Align customer created successfully. Customer ID: ${alignCustomer.customer_id}`,
           alignCustomerId: alignCustomer.customer_id,
-          email: alignCustomer.email
+          email: alignCustomer.email,
         };
       } catch (error) {
-        ctx.log.error({ ...logPayload, error: (error as Error).message }, 'Failed to create Align customer.');
+        ctx.log.error(
+          { ...logPayload, error: (error as Error).message },
+          'Failed to create Align customer.',
+        );
         if (error instanceof TRPCError) {
           throw error;
         }
@@ -639,7 +793,11 @@ export const adminRouter = router({
       }
 
       const { privyDid } = input;
-      const logPayload = { procedure: 'syncAlignCustomer', targetUserDid: privyDid, adminUserDid: ctx.userId };
+      const logPayload = {
+        procedure: 'syncAlignCustomer',
+        targetUserDid: privyDid,
+        adminUserDid: ctx.userId,
+      };
       ctx.log.info(logPayload, 'Attempting to sync user with Align...');
 
       try {
@@ -650,7 +808,10 @@ export const adminRouter = router({
 
         if (!user) {
           ctx.log.warn({ ...logPayload }, 'User not found in DB.');
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'User not found.' });
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'User not found.',
+          });
         }
 
         // Get user profile to access email
@@ -659,10 +820,14 @@ export const adminRouter = router({
         });
 
         if (!userProfile?.email) {
-          ctx.log.warn({ ...logPayload }, 'User does not have an email address in their profile.');
-          throw new TRPCError({ 
-            code: 'BAD_REQUEST', 
-            message: 'User must have an email address in their profile to sync with Align.' 
+          ctx.log.warn(
+            { ...logPayload },
+            'User does not have an email address in their profile.',
+          );
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message:
+              'User must have an email address in their profile to sync with Align.',
           });
         }
 
@@ -675,28 +840,40 @@ export const adminRouter = router({
             alignCustomer = await alignApi.getCustomer(user.alignCustomerId);
             wasCustomerFound = true;
           } catch (error) {
-            ctx.log.warn({ ...logPayload, error: (error as Error).message }, 'Failed to fetch customer by ID, will try searching by email.');
+            ctx.log.warn(
+              { ...logPayload, error: (error as Error).message },
+              'Failed to fetch customer by ID, will try searching by email.',
+            );
           }
         }
 
         // If no customer ID or fetch failed, search by email
         if (!alignCustomer) {
-          alignCustomer = await alignApi.searchCustomerByEmail(userProfile.email);
+          alignCustomer = await alignApi.searchCustomerByEmail(
+            userProfile.email,
+          );
           if (alignCustomer) {
             wasCustomerFound = true;
           }
         }
 
         if (!alignCustomer) {
-          ctx.log.info({ ...logPayload }, 'No Align customer found for this user.');
-          throw new TRPCError({ 
-            code: 'NOT_FOUND', 
-            message: 'No Align customer found for this user. Please create an Align customer first.' 
+          ctx.log.info(
+            { ...logPayload },
+            'No Align customer found for this user.',
+          );
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message:
+              'No Align customer found for this user. Please create an Align customer first.',
           });
         }
 
         // Extract KYC status from Align customer
-        const latestKyc = alignCustomer.kycs && alignCustomer.kycs.length > 0 ? alignCustomer.kycs[0] : null;
+        const latestKyc =
+          alignCustomer.kycs && alignCustomer.kycs.length > 0
+            ? alignCustomer.kycs[0]
+            : null;
         let newKycStatus: 'none' | 'pending' | 'approved' | 'rejected' = 'none';
         let kycFlowLink = null;
 
@@ -734,18 +911,24 @@ export const adminRouter = router({
           wasFoundByEmail: !user.alignCustomerId && wasCustomerFound,
         };
 
-        ctx.log.info({ 
-          ...logPayload, 
-          result: syncResults 
-        }, 'Successfully synced user with Align.');
+        ctx.log.info(
+          {
+            ...logPayload,
+            result: syncResults,
+          },
+          'Successfully synced user with Align.',
+        );
 
-        return { 
-          success: true, 
+        return {
+          success: true,
           message: `Successfully synced with Align. Customer ID: ${alignCustomer.customer_id}, KYC Status: ${newKycStatus}`,
-          ...syncResults
+          ...syncResults,
         };
       } catch (error) {
-        ctx.log.error({ ...logPayload, error: (error as Error).message }, 'Failed to sync with Align.');
+        ctx.log.error(
+          { ...logPayload, error: (error as Error).message },
+          'Failed to sync with Align.',
+        );
         if (error instanceof TRPCError) {
           throw error;
         }
@@ -764,11 +947,16 @@ export const adminRouter = router({
       z.object({
         adminToken: adminTokenSchema,
         userPrivyDid: z.string().min(1, 'User Privy DID is required'),
-        featureName: z.enum(['workspace_automation', 'savings', 'advanced_analytics', 'auto_categorization']),
+        featureName: z.enum([
+          'workspace_automation',
+          'savings',
+          'advanced_analytics',
+          'auto_categorization',
+        ]),
         purchaseSource: z.enum(['polar', 'manual', 'promo']).default('polar'),
         purchaseReference: z.string().optional(),
         expiresAt: z.date().optional(),
-      })
+      }),
     )
     .mutation(async ({ ctx, input }) => {
       if (!validateAdminToken(input.adminToken)) {
@@ -778,15 +966,21 @@ export const adminRouter = router({
         });
       }
 
-      const { userPrivyDid, featureName, purchaseSource, purchaseReference, expiresAt } = input;
-      const logPayload = { 
-        procedure: 'grantFeature', 
-        targetUserDid: userPrivyDid, 
-        featureName, 
+      const {
+        userPrivyDid,
+        featureName,
         purchaseSource,
-        adminUserDid: ctx.userId 
+        purchaseReference,
+        expiresAt,
+      } = input;
+      const logPayload = {
+        procedure: 'grantFeature',
+        targetUserDid: userPrivyDid,
+        featureName,
+        purchaseSource,
+        adminUserDid: ctx.userId,
       };
-      
+
       ctx.log.info(logPayload, 'Attempting to grant feature to user...');
 
       try {
@@ -797,8 +991,8 @@ export const adminRouter = router({
           .where(
             and(
               eq(userFeatures.userPrivyDid, userPrivyDid),
-              eq(userFeatures.featureName, featureName)
-            )
+              eq(userFeatures.featureName, featureName),
+            ),
           )
           .limit(1);
 
@@ -815,7 +1009,10 @@ export const adminRouter = router({
             })
             .where(eq(userFeatures.id, existingFeature[0].id));
 
-          ctx.log.info({ ...logPayload, result: 'updated' }, 'Successfully updated existing feature.');
+          ctx.log.info(
+            { ...logPayload, result: 'updated' },
+            'Successfully updated existing feature.',
+          );
           return { success: true, updated: true };
         } else {
           // Create new feature
@@ -829,14 +1026,145 @@ export const adminRouter = router({
             activatedAt: new Date(),
           });
 
-          ctx.log.info({ ...logPayload, result: 'created' }, 'Successfully created new feature.');
+          ctx.log.info(
+            { ...logPayload, result: 'created' },
+            'Successfully created new feature.',
+          );
           return { success: true, created: true };
         }
       } catch (error) {
-        ctx.log.error({ ...logPayload, error: (error as Error).message }, 'Failed to grant feature.');
+        ctx.log.error(
+          { ...logPayload, error: (error as Error).message },
+          'Failed to grant feature.',
+        );
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
           message: `Failed to grant feature: ${(error as Error).message}`,
+        });
+      }
+    }),
+
+  getUserDetails: protectedProcedure
+    .input(
+      z.object({
+        adminToken: adminTokenSchema,
+        privyDid: z.string().min(1, 'Privy DID is required'),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      if (!validateAdminToken(input.adminToken)) {
+        throw new TRPCError({
+          code: 'UNAUTHORIZED',
+          message: 'Invalid admin token',
+        });
+      }
+
+      const { privyDid } = input;
+      const logPayload = {
+        procedure: 'getUserDetails',
+        targetUserDid: privyDid,
+        adminUserDid: ctx.userId,
+      };
+      ctx.log.info(logPayload, 'Fetching detailed user information...');
+
+      try {
+        const user = await db.query.users.findFirst({
+          where: eq(users.privyDid, privyDid),
+        });
+
+        if (!user) {
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'User not found.',
+          });
+        }
+
+        const features = await db
+          .select()
+          .from(userFeatures)
+          .where(eq(userFeatures.userPrivyDid, privyDid));
+
+        const primaryWorkspace = user.primaryWorkspaceId
+          ? await db.query.workspaces.findFirst({
+              where: eq(workspaces.id, user.primaryWorkspaceId),
+            })
+          : null;
+
+        const memberships = await db
+          .select({
+            workspaceId: workspaceMembers.workspaceId,
+            role: workspaceMembers.role,
+            isPrimary: workspaceMembers.isPrimary,
+            joinedAt: workspaceMembers.joinedAt,
+            workspaceName: workspaces.name,
+          })
+          .from(workspaceMembers)
+          .leftJoin(workspaces, eq(workspaceMembers.workspaceId, workspaces.id))
+          .where(eq(workspaceMembers.userId, privyDid));
+
+        const hasSavings = features.some(
+          (f) => f.featureName === 'savings' && f.isActive,
+        );
+
+        ctx.log.info(
+          { ...logPayload, result: 'success' },
+          'Successfully fetched user details.',
+        );
+
+        return {
+          user: {
+            privyDid: user.privyDid,
+            createdAt: user.createdAt,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            companyName: user.companyName,
+            beneficiaryType: user.beneficiaryType,
+            alignCustomerId: user.alignCustomerId,
+            kycProvider: user.kycProvider,
+            kycStatus: user.kycStatus,
+            kycFlowLink: user.kycFlowLink,
+            alignVirtualAccountId: user.alignVirtualAccountId,
+            kycMarkedDone: user.kycMarkedDone,
+            kycSubStatus: user.kycSubStatus,
+            loopsContactSynced: user.loopsContactSynced,
+            userRole: user.userRole,
+            contractorInviteCode: user.contractorInviteCode,
+            primaryWorkspaceId: user.primaryWorkspaceId,
+          },
+          features: features.map((f) => ({
+            featureName: f.featureName,
+            isActive: f.isActive,
+            purchaseSource: f.purchaseSource,
+            activatedAt: f.activatedAt,
+            expiresAt: f.expiresAt,
+          })),
+          hasSavings,
+          primaryWorkspace: primaryWorkspace
+            ? {
+                id: primaryWorkspace.id,
+                name: primaryWorkspace.name,
+                createdAt: primaryWorkspace.createdAt,
+              }
+            : null,
+          workspaceMemberships: memberships.map((m) => ({
+            workspaceId: m.workspaceId,
+            workspaceName: m.workspaceName || 'Unknown',
+            role: m.role,
+            isPrimary: m.isPrimary,
+            joinedAt: m.joinedAt,
+          })),
+        };
+      } catch (error) {
+        ctx.log.error(
+          { ...logPayload, error: (error as Error).message },
+          'Failed to fetch user details.',
+        );
+        if (error instanceof TRPCError) {
+          throw error;
+        }
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: `Failed to fetch user details: ${(error as Error).message}`,
         });
       }
     }),
