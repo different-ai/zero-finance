@@ -16,6 +16,7 @@ import { ArrowLeft } from 'lucide-react';
 import { AlignKycStatus } from '@/components/settings/align-integration';
 import { steps as onboardingSteps } from '../constants';
 import { useSkipOnboarding } from '@/hooks/use-skip-onboarding';
+import { usePrivy } from '@privy-io/react-auth';
 
 const completeOnboardingStep = (step: string) => {
   if (typeof window !== 'undefined') {
@@ -25,8 +26,15 @@ const completeOnboardingStep = (step: string) => {
 
 export default function KycOnboardingPage() {
   const router = useRouter();
+  const { ready, authenticated } = usePrivy();
   const { skipOnboarding, isSkipping } = useSkipOnboarding();
   const [kycApproved, setKycApproved] = React.useState(false);
+
+  React.useEffect(() => {
+    if (ready && !authenticated) {
+      router.push('/signin');
+    }
+  }, [ready, authenticated, router]);
 
   const handleKycApproved = () => {
     console.log('KYC Approved! User can now continue manually.');
