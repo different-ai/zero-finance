@@ -66,6 +66,7 @@ export function OnboardingTasksCard({ initialData }: OnboardingTasksProps) {
   const isKycComplete = kycStep?.isCompleted ?? false;
   const kycStatus = kycStep?.status;
   const kycMarkedDone = kycStep?.kycMarkedDone ?? false;
+  const kycSubStatus = kycStep?.kycSubStatus;
 
   // If KYC is complete, don't show the card
   if (isKycComplete) return null;
@@ -88,9 +89,8 @@ export function OnboardingTasksCard({ initialData }: OnboardingTasksProps) {
       ),
     };
   } else if (
-    kycStatus === 'pending' ||
-    kycStep?.kycSubStatus === 'kyc_form_submission_accepted' ||
-    kycMarkedDone
+    kycStatus === 'pending' &&
+    (kycMarkedDone || kycSubStatus === 'kyc_form_submission_accepted')
   ) {
     kycContent = {
       icon: <Loader2 className="h-6 w-6 animate-spin text-[#0050ff]" />,
@@ -98,6 +98,18 @@ export function OnboardingTasksCard({ initialData }: OnboardingTasksProps) {
       description:
         'Your verification is being reviewed. This usually takes a few minutes.',
       button: null,
+    };
+  } else if (kycStatus === 'pending') {
+    kycContent = {
+      icon: <Circle className="h-6 w-6 text-[#0050ff]" />,
+      title: 'Continue Identity Verification',
+      description:
+        "You started verification but haven't finished. Continue where you left off.",
+      button: (
+        <Button asChild className="w-full">
+          <Link href="/onboarding/kyc">Continue Verification</Link>
+        </Button>
+      ),
     };
   } else {
     kycContent = {
