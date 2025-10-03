@@ -16,6 +16,13 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { TableIcon, LayoutGrid, RefreshCw } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 
 export default function AdminPage() {
   const [adminToken, setAdminToken] = useState('');
@@ -56,11 +63,27 @@ export default function AdminPage() {
     setIsTokenValid(true);
   };
 
+  const [selectedUser, setSelectedUser] = useState<any | null>(null);
+  const [isUserDetailsOpen, setIsUserDetailsOpen] = useState(false);
+
+  const {
+    data: userDetails,
+    isLoading: isLoadingDetails,
+    refetch: refetchUserDetails,
+  } = api.admin.getUserDetails.useQuery(
+    {
+      adminToken,
+      privyDid: selectedUser?.privyDid || '',
+    },
+    {
+      enabled: !!selectedUser && isUserDetailsOpen && isTokenValid,
+      retry: false,
+    },
+  );
+
   const handleUserClick = (user: any) => {
-    // You can add logic here to show user details in a modal
-    // or navigate to a user detail page
-    console.log('User clicked:', user);
-    toast.info(`Selected user: ${user.email}`);
+    setSelectedUser(user);
+    setIsUserDetailsOpen(true);
   };
 
   const handleSyncKyc = async () => {
@@ -186,6 +209,191 @@ export default function AdminPage() {
           />
         </TabsContent>
       </Tabs>
+
+      <Dialog open={isUserDetailsOpen} onOpenChange={setIsUserDetailsOpen}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>User Details</DialogTitle>
+            <DialogDescription>
+              Detailed information about {selectedUser?.email}
+            </DialogDescription>
+          </DialogHeader>
+
+          {isLoadingDetails ? (
+            <div className="py-8 text-center">Loading user details...</div>
+          ) : userDetails ? (
+            <div className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Basic Information</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2 text-sm">
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <strong>Email:</strong> {selectedUser?.email}
+                    </div>
+                    <div>
+                      <strong>User Role:</strong>{' '}
+                      {userDetails.user.userRole || 'N/A'}
+                    </div>
+                    <div>
+                      <strong>First Name:</strong>{' '}
+                      {userDetails.user.firstName || 'N/A'}
+                    </div>
+                    <div>
+                      <strong>Last Name:</strong>{' '}
+                      {userDetails.user.lastName || 'N/A'}
+                    </div>
+                    <div>
+                      <strong>Company:</strong>{' '}
+                      {userDetails.user.companyName || 'N/A'}
+                    </div>
+                    <div>
+                      <strong>Beneficiary Type:</strong>{' '}
+                      {userDetails.user.beneficiaryType || 'N/A'}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Workspace</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2 text-sm">
+                  {userDetails.primaryWorkspace ? (
+                    <>
+                      <div>
+                        <strong>Primary Workspace:</strong>{' '}
+                        {userDetails.primaryWorkspace.name}
+                      </div>
+                      <div>
+                        <strong>Workspace ID:</strong>{' '}
+                        {userDetails.primaryWorkspace.id}
+                      </div>
+                    </>
+                  ) : (
+                    <div className="text-muted-foreground">
+                      No primary workspace
+                    </div>
+                  )}
+
+                  {userDetails.workspaceMemberships.length > 0 && (
+                    <div className="mt-4">
+                      <strong>All Workspaces:</strong>
+                      <ul className="list-disc list-inside mt-2 space-y-1">
+                        {userDetails.workspaceMemberships.map((wm: any) => (
+                          <li key={wm.workspaceId}>
+                            {wm.workspaceName} ({wm.role})
+                            {wm.isPrimary && ' - Primary'}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Features</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2 text-sm">
+                  <div>
+                    <strong>Savings Enabled:</strong>{' '}
+                    <span
+                      className={
+                        userDetails.hasSavings
+                          ? 'text-green-600'
+                          : 'text-red-600'
+                      }
+                    >
+                      {userDetails.hasSavings ? 'Yes' : 'No'}
+                    </span>
+                  </div>
+
+                  {userDetails.features.length > 0 ? (
+                    <div className="mt-4">
+                      <strong>All Features:</strong>
+                      <ul className="list-disc list-inside mt-2 space-y-1">
+                        {userDetails.features.map((f: any) => (
+                          <li key={f.featureName}>
+                            {f.featureName} -{' '}
+                            {f.isActive ? 'Active' : 'Inactive'}
+                            {f.purchaseSource && ` (${f.purchaseSource})`}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : (
+                    <div className="mt-2 text-muted-foreground">
+                      No features enabled
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Account Status</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2 text-sm">
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <strong>KYC Status:</strong>{' '}
+                      <span
+                        className={
+                          userDetails.user.kycStatus === 'approved'
+                            ? 'text-green-600'
+                            : userDetails.user.kycStatus === 'rejected'
+                              ? 'text-red-600'
+                              : userDetails.user.kycStatus === 'pending'
+                                ? 'text-yellow-600'
+                                : ''
+                        }
+                      >
+                        {userDetails.user.kycStatus || 'N/A'}
+                      </span>
+                    </div>
+                    <div>
+                      <strong>KYC Provider:</strong>{' '}
+                      {userDetails.user.kycProvider || 'N/A'}
+                    </div>
+                    <div>
+                      <strong>Align Customer ID:</strong>{' '}
+                      {userDetails.user.alignCustomerId || 'N/A'}
+                    </div>
+                    <div>
+                      <strong>Virtual Account:</strong>{' '}
+                      {userDetails.user.alignVirtualAccountId || 'N/A'}
+                    </div>
+                    <div>
+                      <strong>Loops Synced:</strong>{' '}
+                      {userDetails.user.loopsContactSynced ? 'Yes' : 'No'}
+                    </div>
+                    <div>
+                      <strong>Created At:</strong>{' '}
+                      {new Date(
+                        userDetails.user.createdAt,
+                      ).toLocaleDateString()}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <div className="flex justify-end">
+                <Button onClick={() => refetchUserDetails()} size="sm">
+                  Refresh Details
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="py-8 text-center text-muted-foreground">
+              No details available
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
