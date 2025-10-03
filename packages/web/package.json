@@ -8,6 +8,7 @@
     "build:prod": "BUILD_DIR=build-prod next build",
     "build:remote": "pnpm db:migrate && pnpm next build",
     "build:safe": "pnpm db:migrate:safe && pnpm next build",
+    "build:vercel": "pnpm build:remote",
     "clean": "git clean -xdf .cache .next .turbo node_modules",
     "dev": "pnpm dev:local",
     "dev:lite": "dotenv -e .env.lite -- next dev --turbo --port 3055",
