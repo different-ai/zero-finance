@@ -98,18 +98,6 @@ export default function InfoPage() {
                 <CheckCircle className="h-4 w-4 text-[#0050ff] mt-0.5 flex-shrink-0" />
                 <span>ACH transfers and wire transfers</span>
               </li>
-              <li className="flex items-start gap-2">
-                <CheckCircle className="h-4 w-4 text-[#0050ff] mt-0.5 flex-shrink-0" />
-                <span>Direct deposits to your personal IBAN</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <CheckCircle className="h-4 w-4 text-[#0050ff] mt-0.5 flex-shrink-0" />
-                <span>Higher transaction limits</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <CheckCircle className="h-4 w-4 text-[#0050ff] mt-0.5 flex-shrink-0" />
-                <span>Automated yield optimization on idle funds</span>
-              </li>
             </ul>
           </div>
 
