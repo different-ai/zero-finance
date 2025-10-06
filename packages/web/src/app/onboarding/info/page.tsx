@@ -223,13 +223,13 @@ export default function InfoPage() {
               </div>
               <div className="flex-1">
                 <h3 className="text-[13px] font-semibold text-[#101010] mb-1">
-                  About Our Verification Partners
+                  About Our Partners
                 </h3>
                 <p className="text-[12px] text-[#101010]/70 leading-[1.5] mb-2">
-                  Your documents will be verified by{' '}
-                  <span className="font-semibold">Align</span> (business) and{' '}
-                  <span className="font-semibold">AiPrise</span> (individual
-                  identity).
+                  <span className="font-semibold">AiPrise</span> handles your
+                  business and identity verification.{' '}
+                  <span className="font-semibold">Align</span> is our financial
+                  services provider for deposits and transfers.
                 </p>
                 <p className="text-[11px] text-[#101010]/60 leading-[1.4]">
                   Both are regulated providers with strict security and

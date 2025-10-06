@@ -132,14 +132,14 @@ export default function KycOnboardingPage() {
           </div>
           <div className="flex-1">
             <h3 className="text-[13px] font-semibold text-[#101010] mb-1">
-              About Our Verification Partners
+              About Our Partners
             </h3>
             <p className="text-[12px] text-[#101010]/70 leading-[1.5]">
-              Your documents will be verified by{' '}
-              <span className="font-semibold">Align</span> (business documents)
-              and <span className="font-semibold">AiPrise</span> (individual
-              identity). Both are regulated providers with strict security
-              standards.
+              <span className="font-semibold">AiPrise</span> handles your
+              business and identity verification.{' '}
+              <span className="font-semibold">Align</span> is our financial
+              services provider for deposits and transfers. Both are regulated
+              providers with strict security standards.
             </p>
           </div>
         </div>

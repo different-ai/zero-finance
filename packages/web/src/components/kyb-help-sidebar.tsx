@@ -40,27 +40,37 @@ export function KybHelpSidebar() {
                   Who are your verification partners?
                 </AccordionTrigger>
                 <AccordionContent className="text-xs text-muted-foreground space-y-2 pb-3">
-                  <p className="font-medium text-foreground">Align</p>
+                  <p className="font-medium text-foreground">AiPrise</p>
                   <p>
-                    Handles business (KYB) verification and document uploads.
-                    Align is a regulated compliance provider that securely
-                    verifies business documents and entity information.
+                    Handles all identity verification (KYB) for your business.
+                    AiPrise is a regulated compliance provider that verifies
+                    business documents, entity information, and individual
+                    identities (ID + selfie) for beneficial owners and founders.
                   </p>
-                  <p className="font-medium text-foreground mt-2">AiPrise</p>
+                  <p className="font-medium text-foreground mt-2">
+                    What to expect
+                  </p>
                   <p>
-                    Handles individual identity (KYC) verification. When you add
-                    beneficial owners or founders, each person receives a secure
-                    email from AiPrise to complete their personal identity
-                    verification (ID + selfie).
+                    You&apos;ll complete the business verification directly
+                    through AiPrise. When you add beneficial owners or founders,
+                    each person receives a secure email from AiPrise to complete
+                    their personal verification.
+                  </p>
+                  <p className="font-medium text-foreground mt-2">Align</p>
+                  <p>
+                    Our financial services provider that enables deposits and
+                    transfers. Align will ask you some additional questions
+                    during the onboarding process to set up your banking
+                    features.
                   </p>
                   <p className="font-medium text-foreground mt-2">
                     Why we use partners
                   </p>
                   <p>
                     These specialized providers ensure fast, secure, and
-                    compliant verification that meets financial regulations.
-                    Your data is encrypted and handled according to strict
-                    security standards.
+                    compliant verification and banking services. Your data is
+                    encrypted and handled according to strict security
+                    standards.
                   </p>
                 </AccordionContent>
               </AccordionItem>
@@ -170,12 +180,13 @@ export function KybHelpSidebar() {
                     <li>
                       Each person will receive an email from{' '}
                       <span className="font-semibold">AiPrise</span> (our
-                      identity verification partner) with a secure link to
-                      complete KYC (ID, selfie, and basic details)
+                      verification provider) with a secure link to complete
+                      their identity verification (ID, selfie, and basic
+                      details)
                     </li>
                     <li>
                       We cannot proceed until everyone on the list has completed
-                      their KYC
+                      their verification
                     </li>
                   </ul>
                   <p className="font-medium text-foreground mt-2">
@@ -183,8 +194,7 @@ export function KybHelpSidebar() {
                   </p>
                   <p>
                     After you assign roles, each person receives an automated
-                    email from AiPrise. This is our trusted partner for
-                    individual identity verification. The process takes 2-3
+                    email from AiPrise. The verification process takes 2-3
                     minutes per person.
                   </p>
                 </AccordionContent>
