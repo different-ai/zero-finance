@@ -164,38 +164,58 @@ export function KybHelpSidebar() {
                 <AccordionContent className="text-xs text-muted-foreground space-y-2 pb-3">
                   <p className="font-medium text-foreground">What we need</p>
                   <p>
-                    List all beneficial owners and all founders. Do not submit a
-                    single contact only.
-                  </p>
-                  <p className="font-medium text-foreground mt-2">Why</p>
-                  <p>
-                    Regulations require KYB on the people who own or control the
-                    company.
+                    You must add ALL beneficial owners (25%+ ownership) and ALL
+                    founders. This is required by financial regulations - you
+                    cannot skip anyone.
                   </p>
                   <p className="font-medium text-foreground mt-2">
                     How it works
                   </p>
                   <ul className="list-disc pl-4 space-y-1">
-                    <li>You provide names and emails for each UBO/founder</li>
+                    <li>Provide names and emails for each person</li>
                     <li>
-                      Each person will receive an email from{' '}
-                      <span className="font-semibold">AiPrise</span> (our
-                      verification provider) with a secure link to complete
-                      their identity verification (ID, selfie, and basic
-                      details)
+                      Each receives an email from{' '}
+                      <span className="font-semibold">AiPrise</span> to complete
+                      identity verification (ID + selfie, 2-3 minutes)
                     </li>
                     <li>
-                      We cannot proceed until everyone on the list has completed
-                      their verification
+                      We cannot proceed until everyone completes their
+                      verification
                     </li>
                   </ul>
-                  <p className="font-medium text-foreground mt-2">
-                    What to expect
+                </AccordionContent>
+              </AccordionItem>
+
+              <AccordionItem value="role-assignments" className="border-b-0">
+                <AccordionTrigger className="text-xs font-medium py-2 hover:no-underline">
+                  Role Assignments (Beneficial Owner, Controlling Person, etc.)
+                </AccordionTrigger>
+                <AccordionContent className="text-xs text-muted-foreground space-y-2 pb-3">
+                  <p className="font-medium text-foreground">
+                    The three role types
                   </p>
+                  <ul className="list-disc pl-4 space-y-1">
+                    <li>
+                      <span className="font-semibold">Beneficial Owner:</span>{' '}
+                      Anyone with 25%+ ownership (required by regulations)
+                    </li>
+                    <li>
+                      <span className="font-semibold">Controlling Person:</span>{' '}
+                      Executives, directors, or key decision-makers
+                    </li>
+                    <li>
+                      <span className="font-semibold">
+                        Authorized Representative:
+                      </span>{' '}
+                      Someone authorized to sign documents for the company
+                    </li>
+                  </ul>
+                  <p className="font-medium text-foreground mt-2">Important</p>
                   <p>
-                    After you assign roles, each person receives an automated
-                    email from AiPrise. The verification process takes 2-3
-                    minutes per person.
+                    One person can have multiple roles if they apply (e.g.,
+                    founder-CEO with 40% = all three). Only select roles that
+                    actually describe each person. Everyone you add receives a
+                    verification email from AiPrise regardless of role.
                   </p>
                 </AccordionContent>
               </AccordionItem>
