@@ -54,12 +54,12 @@ interface SetupResult {
 const INITIAL_PROGRESS: SetupProgressItem[] = [
   {
     step: 'smartWallet',
-    label: 'Ensuring your Privy smart wallet is ready',
+    label: 'Setting up secure authentication',
     status: 'pending',
   },
   {
     step: 'primarySafe',
-    label: 'Deploying your primary account',
+    label: 'Creating your primary account',
     status: 'pending',
   },
 ];
@@ -155,7 +155,7 @@ export function usePrimaryAccountSetup() {
       await sleep(intervalMs);
     }
 
-    throw new Error('Timed out while creating Privy smart wallet.');
+    throw new Error('Timed out while setting up authentication.');
   }, [createSmartWallet, hasSmartWallet, updateStep]);
 
   const ensurePrimarySafe = useCallback(
@@ -174,7 +174,7 @@ export function usePrimaryAccountSetup() {
       }
 
       if (!smartWalletClient) {
-        throw new Error('Smart wallet client unavailable for Safe deployment.');
+        throw new Error('Unable to create your account at this time.');
       }
 
       const safeAccountConfig: SafeAccountConfig = {
@@ -250,7 +250,7 @@ export function usePrimaryAccountSetup() {
       await sleep(intervalMs);
     }
 
-    throw new Error('Smart wallet session not ready to relay transactions.');
+    throw new Error('Authentication session not ready.');
   }, [smartWalletClient]);
 
   const sendViaRelay = useCallback(

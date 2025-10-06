@@ -84,7 +84,7 @@ export function OnboardingTasksCard({ initialData }: OnboardingTasksProps) {
       description: 'Please review and resubmit your information.',
       button: (
         <Button asChild className="w-full">
-          <Link href="/onboarding/kyc">Retry Verification</Link>
+          <Link href="/onboarding/info">Retry Verification</Link>
         </Button>
       ),
     };
@@ -107,7 +107,7 @@ export function OnboardingTasksCard({ initialData }: OnboardingTasksProps) {
         "You started verification but haven't finished. Continue where you left off.",
       button: (
         <Button asChild className="w-full">
-          <Link href="/onboarding/kyc">Continue Verification</Link>
+          <Link href="/onboarding/info">Continue Verification</Link>
         </Button>
       ),
     };
@@ -119,7 +119,7 @@ export function OnboardingTasksCard({ initialData }: OnboardingTasksProps) {
         'Verify your identity to unlock bank deposits and ACH transfers.',
       button: (
         <Button asChild className="w-full">
-          <Link href="/onboarding/kyc">Start Verification</Link>
+          <Link href="/onboarding/info">Start Verification</Link>
         </Button>
       ),
     };

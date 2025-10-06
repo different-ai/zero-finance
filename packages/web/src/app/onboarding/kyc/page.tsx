@@ -12,7 +12,7 @@ import {
   CardTitle,
   CardFooter,
 } from '@/components/ui/card';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Sparkles } from 'lucide-react';
 import { AlignKycStatus } from '@/components/settings/align-integration';
 import { steps as onboardingSteps } from '../constants';
 import { useSkipOnboarding } from '@/hooks/use-skip-onboarding';
@@ -89,16 +89,72 @@ export default function KycOnboardingPage() {
   };
 
   return (
-    <div className="w-full">
+    <div className="w-full space-y-4">
+      {/* Sidebar callout - highly visible */}
+      <div className="bg-gradient-to-r from-[#0050ff] to-[#0040dd] text-white rounded-[12px] p-4 shadow-[0_2px_8px_rgba(0,80,255,0.15)]">
+        <div className="flex items-start gap-3">
+          <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
+            <ArrowRight className="h-5 w-5 text-white" />
+          </div>
+          <div className="flex-1">
+            <div className="flex items-center gap-2 mb-1">
+              <Sparkles className="h-4 w-4" />
+              <h3 className="text-[14px] font-semibold">
+                Need Help? Check the Sidebar
+              </h3>
+            </div>
+            <p className="text-[13px] text-white/90 leading-[1.5]">
+              Look to the right for detailed FAQs, an AI assistant to answer
+              questions, and a cap table converter tool. All your resources are
+              there to help you through each step.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Verification partners info */}
+      <div className="bg-white border border-[#101010]/10 rounded-[12px] p-4 shadow-[0_2px_8px_rgba(16,16,16,0.04)]">
+        <div className="flex items-start gap-3">
+          <div className="w-8 h-8 rounded-full bg-[#0050ff]/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+            <svg
+              className="h-4 w-4 text-[#0050ff]"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+              />
+            </svg>
+          </div>
+          <div className="flex-1">
+            <h3 className="text-[13px] font-semibold text-[#101010] mb-1">
+              About Our Verification Partners
+            </h3>
+            <p className="text-[12px] text-[#101010]/70 leading-[1.5]">
+              Your documents will be verified by{' '}
+              <span className="font-semibold">Align</span> (business documents)
+              and <span className="font-semibold">AiPrise</span> (individual
+              identity). Both are regulated providers with strict security
+              standards.
+            </p>
+          </div>
+        </div>
+      </div>
+
       <Card className="w-full bg-white border border-[#101010]/10 rounded-[12px] shadow-[0_2px_8px_rgba(16,16,16,0.04)] overflow-hidden">
         <CardHeader className="p-5 sm:p-6 border-b border-[#101010]/10">
+          <p className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60 mb-2">
+            VERIFICATION
+          </p>
           <CardTitle className="font-serif text-[28px] sm:text-[32px] leading-[1.1] tracking-[-0.01em] text-[#101010]">
             Verify Your Identity
           </CardTitle>
-          <CardDescription className="text-[14px] text-[#101010]/70 mt-2">
-            To ensure the security of your account and comply with regulations,
-            we need to verify your identity. This process is handled by our
-            trusted partner, Align.
+          <CardDescription className="text-[14px] text-[#101010]/70 mt-3">
+            Complete the verification process to unlock all banking features.
           </CardDescription>
         </CardHeader>
         <CardContent className="p-5 sm:p-6">

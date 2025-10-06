@@ -4,7 +4,10 @@ import { featureConfig } from '@/lib/feature-config';
 export const steps = [
   { name: 'Activate Primary Account', path: '/onboarding/create-safe' },
   ...(featureConfig.kyc.required
-    ? [{ name: 'Verify Identity', path: '/onboarding/kyc' }]
+    ? [
+        { name: 'Prepare Verification', path: '/onboarding/info' },
+        { name: 'Verify Identity', path: '/onboarding/kyc' },
+      ]
     : []),
   { name: 'Complete', path: '/onboarding/complete' },
 ];
