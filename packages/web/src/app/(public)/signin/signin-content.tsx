@@ -291,7 +291,7 @@ export default function SignInContent() {
                             setEmailError('');
                           }}
                           placeholder="you@company.com"
-                          className="h-12 text-[15px] border-[#101010]/20 focus:border-[#1B29FF] focus:ring-[#1B29FF]/20"
+                          className="h-12 text-[15px] bg-white border-[#101010]/20 focus:border-[#1B29FF] focus:ring-[#1B29FF]/20"
                           disabled={state.status === 'sending-code'}
                         />
                         {emailError && (
@@ -368,7 +368,7 @@ export default function SignInContent() {
                             }
                           }}
                           placeholder="000000"
-                          className="h-12 text-[20px] tracking-[0.3em] text-center font-mono border-[#101010]/20 focus:border-[#1B29FF] focus:ring-[#1B29FF]/20"
+                          className="h-12 text-[20px] tracking-[0.3em] text-center font-mono bg-white border-[#101010]/20 focus:border-[#1B29FF] focus:ring-[#1B29FF]/20"
                         />
                       </form>
 
