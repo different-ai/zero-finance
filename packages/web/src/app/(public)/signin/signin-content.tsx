@@ -5,7 +5,11 @@ import { usePrivy, useLoginWithEmail } from '@privy-io/react-auth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
-  LogIn,
+  InputOTP,
+  InputOTPGroup,
+  InputOTPSlot,
+} from '@/components/ui/input-otp';
+import {
   Check,
   Building2,
   Mail,
@@ -20,6 +24,7 @@ import { useSearchParams } from 'next/navigation';
 import { usePostHog } from 'posthog-js/react';
 import { api } from '@/trpc/react';
 import { OrangeDAOLogo } from '@/components/orange-dao-logo';
+import GeneratedComponent from '@/app/(landing)/welcome-gradient';
 
 export type SourceType = 'adhd' | 'e-commerce' | 'solo' | null;
 
@@ -150,9 +155,12 @@ export default function SignInContent() {
     setEmailError('');
   };
   return (
-    <div className="min-h-screen bg-[#F7F7F2]">
+    <section className="relative min-h-screen border-y border-[#101010]/10 bg-white/90 overflow-hidden">
+      {/* Gradient Background */}
+      <GeneratedComponent className="z-0 bg-[#F6F5EF]" />
+
       {/* Header */}
-      <div className="border-b border-[#101010]/10 bg-white">
+      <div className="relative z-10 border-b border-[#101010]/10 bg-white/80 backdrop-blur-sm">
         <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <Link href="/" className="flex items-center">
             <Image
@@ -169,16 +177,16 @@ export default function SignInContent() {
         </div>
       </div>
 
-      <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 lg:py-20">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-px bg-[#101010]/10 max-w-5xl mx-auto">
+      <div className="relative z-10 max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 lg:py-20">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-0 max-w-5xl mx-auto rounded-xl overflow-hidden border border-[#101010]/10 shadow-[0_2px_8px_rgba(16,16,16,0.04)]">
           {/* Left side - Value Proposition */}
-          <div className="bg-white p-8 lg:p-12">
+          <div className="bg-white/95 backdrop-blur-sm p-8 lg:p-12">
             <div className="mb-8">
               <p className="uppercase tracking-[0.14em] text-[12px] text-[#101010]/60 mb-3">
                 Business Savings Account
               </p>
-              <h1 className="font-serif text-[36px] sm:text-[48px] lg:text-[56px] leading-[0.96] tracking-[-0.015em] text-[#101010] mb-6">
-                Earn <span className="text-[#0050ff]">8% APY</span>
+              <h1 className="font-serif text-[56px] sm:text-[64px] lg:text-[72px] leading-[0.96] tracking-[-0.015em] text-[#101010] mb-6">
+                Earn <span className="text-[#1B29FF]">8% APY</span>
               </h1>
               <p className="text-[16px] leading-[1.5] text-[#101010]/80 max-w-[400px]">
                 High-yield savings for startups. No minimums, no lock-ups, full
@@ -186,16 +194,16 @@ export default function SignInContent() {
               </p>
             </div>
 
-            <div className="space-y-4 mb-12">
+            <div className="space-y-4 mb-8">
               {[
-                'DeFi-powered high yields',
+                'Institutional-grade yield strategies',
                 'Same-day ACH transfers',
                 'Works like your existing bank',
                 'Start earning in 2 minutes',
               ].map((item, index) => (
                 <div key={index} className="flex items-start gap-3">
                   <div className="h-5 w-5 rounded-full bg-[#1B29FF]/10 flex items-center justify-center flex-shrink-0 mt-0.5">
-                    <Check className="h-3 w-3 text-[#0050ff]" />
+                    <Check className="h-3 w-3 text-[#1B29FF]" />
                   </div>
                   <span className="text-[14px] text-[#101010]/70">{item}</span>
                 </div>
@@ -224,17 +232,17 @@ export default function SignInContent() {
           </div>
 
           {/* Right side - Sign In */}
-          <div className="bg-[#F6F5EF] p-8 lg:p-12 flex flex-col justify-center">
+          <div className="bg-white/90 backdrop-blur-sm border-t lg:border-t-0 lg:border-l border-[#101010]/10 p-8 lg:p-12 flex flex-col justify-center">
             {/* Invite Section */}
             {inviteToken && inviteCompany && (
-              <div className="mb-8 p-4 bg-white border border-[#101010]/10 rounded-md">
+              <div className="mb-8 p-4 bg-[#EAF0FF] border border-[#1B29FF]/20 rounded-md">
                 <div className="flex items-start gap-3">
-                  <Building2 className="h-5 w-5 text-[#0050ff] mt-0.5" />
+                  <Building2 className="h-5 w-5 text-[#1B29FF] mt-0.5" />
                   <div className="flex-1">
                     <p className="text-[14px] font-medium text-[#101010] mb-1">
                       Company Invitation
                     </p>
-                    <p className="text-[14px] text-[#101010]/70">
+                    <p className="text-[14px] text-[#101010]/80">
                       {inviteCompany.name}
                     </p>
                     <p className="text-[13px] text-[#101010]/60 flex items-center gap-1 mt-1">
@@ -248,7 +256,7 @@ export default function SignInContent() {
 
             <div className="space-y-6">
               <div className="text-center">
-                <h2 className="text-[24px] font-medium text-[#101010] mb-2">
+                <h2 className="text-[24px] font-semibold tracking-[-0.01em] text-[#101010] mb-2">
                   {inviteToken ? 'Accept Invitation' : 'Get Started'}
                 </h2>
                 <p className="text-[14px] text-[#101010]/70">
@@ -345,31 +353,34 @@ export default function SignInContent() {
                       >
                         <label
                           htmlFor="code"
-                          className="text-[13px] font-medium text-[#101010]"
+                          className="text-[13px] font-medium text-[#101010] block mb-3"
                         >
                           Verification Code
                         </label>
-                        <Input
-                          ref={codeInputRef}
-                          id="code"
-                          type="text"
-                          inputMode="numeric"
-                          pattern="[0-9]*"
-                          maxLength={6}
-                          value={code}
-                          onChange={(e) => {
-                            const value = e.target.value.replace(/\D/g, '');
-                            setCode(value);
-                            // Auto-submit when 6 digits entered
-                            if (value.length === 6) {
-                              setTimeout(() => {
-                                loginWithCode({ code: value.trim() });
-                              }, 100);
-                            }
-                          }}
-                          placeholder="000000"
-                          className="h-12 text-[20px] tracking-[0.3em] text-center font-mono bg-white border-[#101010]/20 focus:border-[#1B29FF] focus:ring-[#1B29FF]/20"
-                        />
+                        <div className="flex justify-center">
+                          <InputOTP
+                            maxLength={6}
+                            value={code}
+                            onChange={(value) => {
+                              setCode(value);
+                              // Auto-submit when 6 digits entered
+                              if (value.length === 6) {
+                                setTimeout(() => {
+                                  loginWithCode({ code: value.trim() });
+                                }, 100);
+                              }
+                            }}
+                          >
+                            <InputOTPGroup>
+                              <InputOTPSlot index={0} />
+                              <InputOTPSlot index={1} />
+                              <InputOTPSlot index={2} />
+                              <InputOTPSlot index={3} />
+                              <InputOTPSlot index={4} />
+                              <InputOTPSlot index={5} />
+                            </InputOTPGroup>
+                          </InputOTP>
+                        </div>
                       </form>
 
                       <div className="flex items-center justify-between pt-2">
@@ -423,39 +434,39 @@ export default function SignInContent() {
                 </>
               )}
 
-              <div className="space-y-3">
+              <div className="pt-6 border-t border-[#101010]/10 space-y-3">
                 <p className="text-[12px] text-[#101010]/60 text-center">
                   Secure authentication powered by{' '}
                   <img
                     src="/Privy_Brandmark_Black.svg"
                     alt="Privy"
-                    className="inline-block h-4 "
+                    className="inline-block h-4"
                   />
                 </p>
 
                 <div className="text-center">
                   <Link
                     href={source ? `/${source}` : '/'}
-                    className="text-[14px] text-[#101010]/70 hover:text-[#0050ff] transition-colors"
+                    className="text-[13px] text-[#101010]/70 hover:text-[#1B29FF] underline underline-offset-4 transition-colors"
                   >
-                    ← Back to {'Landing'}
+                    ← Back to Landing
                   </Link>
                 </div>
               </div>
             </div>
 
             {/* Backed by Orange DAO */}
-            <div className="mt-8 pt-8 border-t border-[#101010]/10">
-              <p className="text-[11px] uppercase tracking-[0.14em] text-[#101010]/60 mb-4 text-center">
+            <div className="mt-8 pt-6 border-t border-[#101010]/10">
+              <p className="text-[11px] uppercase tracking-[0.14em] text-[#101010]/60 mb-3 text-center">
                 Backed By
               </p>
               <div className="flex items-center justify-center">
-                <OrangeDAOLogo className="h-8 w-auto opacity-70" />
+                <OrangeDAOLogo className="h-7 w-auto opacity-60" />
               </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
+    </section>
   );
 }
