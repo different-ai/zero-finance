@@ -19,6 +19,7 @@ You have access to the **Exa MCP tool** for web searches, which is particularly 
 - Researching financial APIs and integrations
 - Looking up current best practices and patterns
 - Gathering visual assets and examples
+- Save  sensitive info  under './.docs' (dotfile)
 
 Use `exa_web_search_exa` for general searches and `exa_get_code_context_exa` for programming-specific context.
 
