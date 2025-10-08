@@ -34,10 +34,19 @@ const safeAbiIsOwner = [
   },
 ] as const;
 
-// Use the exported 'router' function to create the sub-router
+/**
+ * Workspace Safes Router
+ *
+ * All procedures in this router are workspace-centric - they operate within
+ * the context of the current workspace (ctx.workspaceId).
+ *
+ * Legacy naming: The router is called "userSafesRouter" for backwards compatibility,
+ * but all operations are workspace-scoped.
+ */
 export const userSafesRouter = router({
   /**
-   * Fetches all safes in the workspace (shared access for team members).
+   * Fetches all safes in the current workspace (shared access for team members).
+   * Workspace-centric: Returns all safes belonging to the workspace.
    */
   list: protectedProcedure.query(async ({ ctx }) => {
     const privyDid = ctx.user.id; // Use ctx.user.id from isAuthed middleware
