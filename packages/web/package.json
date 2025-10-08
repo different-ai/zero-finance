@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "build:vercel": "pnpm db:migrate && next build",
     "start": "next start",
     "lint": "next lint",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
