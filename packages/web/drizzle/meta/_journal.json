@@ -750,6 +750,27 @@
       "when": 1759174509117,
       "tag": "0106_legal_outlaw_kid",
       "breakpoints": true
+    },
+    {
+      "idx": 107,
+      "version": "7",
+      "when": 1759949346922,
+      "tag": "0107_create_admins_table",
+      "breakpoints": true
+    },
+    {
+      "idx": 108,
+      "version": "7",
+      "when": 1759950297663,
+      "tag": "0108_add_workspace_financial_context",
+      "breakpoints": true
+    },
+    {
+      "idx": 109,
+      "version": "7",
+      "when": 1759950534304,
+      "tag": "0109_migrate_kyc_data_to_workspaces",
+      "breakpoints": true
     }
   ]
 }

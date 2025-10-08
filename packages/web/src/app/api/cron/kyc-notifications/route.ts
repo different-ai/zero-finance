@@ -5,6 +5,7 @@ import {
   userProfilesTable,
   userFundingSources,
   userSafes,
+  workspaces,
 } from '@/db/schema';
 import { eq, and, isNull, isNotNull, ne } from 'drizzle-orm';
 import { loopsApi, LoopsEvent } from '@/server/services/loops-service';
@@ -86,6 +87,7 @@ async function getUserEmail(userId: string): Promise<string | null> {
 async function checkAndUpdateKycStatus(
   alignCustomerId: string,
   userId: string,
+  workspaceId: string,
   currentStatus: string,
   currentSubStatus?: string | null,
 ): Promise<{
@@ -133,6 +135,17 @@ async function checkAndUpdateKycStatus(
     }
 
     // Update DB with latest status - handle nulls gracefully
+    await db
+      .update(workspaces)
+      .set({
+        kycStatus: latestKyc.status,
+        kycFlowLink: latestKyc.kyc_flow_link || null,
+        kycSubStatus: latestKyc.sub_status || null,
+        kycProvider: 'align',
+      })
+      .where(eq(workspaces.id, workspaceId));
+
+    // Optional: keep legacy user column in sync while it still exists
     await db
       .update(users)
       .set({
@@ -282,6 +295,7 @@ async function createVirtualAccountsForUser(
 
       await db.insert(userFundingSources).values({
         userPrivyDid: userId,
+        workspaceId: user.primaryWorkspaceId,
         sourceProvider: 'align',
         alignVirtualAccountIdRef: usdAccount.id,
         sourceAccountType: 'us_ach',
@@ -328,6 +342,7 @@ async function createVirtualAccountsForUser(
 
       await db.insert(userFundingSources).values({
         userPrivyDid: userId,
+        workspaceId: user.primaryWorkspaceId,
         sourceProvider: 'align',
         alignVirtualAccountIdRef: eurAccount.id,
         sourceAccountType: 'iban',
@@ -360,8 +375,16 @@ async function createVirtualAccountsForUser(
       });
     }
 
-    // Update user with first account ID if any were created
-    if (results.length > 0) {
+    // Update workspace with first account ID if any were created
+    if (results.length > 0 && user.primaryWorkspaceId) {
+      await db
+        .update(workspaces)
+        .set({
+          alignVirtualAccountId: results[0].id,
+        })
+        .where(eq(workspaces.id, user.primaryWorkspaceId));
+
+      // Optional: keep legacy user column in sync while it still exists
       await db
         .update(users)
         .set({
@@ -432,6 +455,33 @@ async function processKycUpdatesAndNotifications(): Promise<
       if (!user.alignCustomerId) continue;
 
       try {
+        // Get workspace for this user
+        if (!user.primaryWorkspaceId) {
+          results.push({
+            userId: user.privyDid,
+            email: 'no-workspace',
+            action: 'error',
+            success: false,
+            error: 'User has no primary workspace',
+          });
+          continue;
+        }
+
+        const workspace = await db.query.workspaces.findFirst({
+          where: eq(workspaces.id, user.primaryWorkspaceId),
+        });
+
+        if (!workspace) {
+          results.push({
+            userId: user.privyDid,
+            email: 'no-workspace',
+            action: 'error',
+            success: false,
+            error: 'Workspace not found',
+          });
+          continue;
+        }
+
         const email = await getUserEmail(user.privyDid);
         if (!email) {
           results.push({
@@ -447,8 +497,9 @@ async function processKycUpdatesAndNotifications(): Promise<
         const statusUpdate = await checkAndUpdateKycStatus(
           user.alignCustomerId,
           user.privyDid,
-          user.kycStatus || 'none',
-          user.kycSubStatus,
+          workspace.id,
+          workspace.kycStatus || user.kycStatus || 'none',
+          workspace.kycSubStatus || user.kycSubStatus,
         );
 
         if (statusUpdate.statusChanged || statusUpdate.subStatusChanged) {

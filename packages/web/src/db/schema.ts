@@ -35,6 +35,7 @@ export {
   type WorkspaceMemberExtended,
   type NewWorkspaceMemberExtended,
 } from './schema/workspaces';
+export { admins, type Admin, type NewAdmin } from './schema/admins';
 
 // Import for internal use within this file
 import { users } from './schema/users';

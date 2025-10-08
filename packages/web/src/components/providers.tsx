@@ -86,9 +86,7 @@ export function Providers({ children }: { children: ReactNode }) {
           logo: 'https://zerofinance.ai/new-logo-bluer.png',
         },
         externalWallets: {
-          coinbaseWallet: {
-            connectionOptions: 'smartWalletOnly',
-          },
+          coinbaseWallet: {},
         },
         supportedChains: [base],
         defaultChain: base,

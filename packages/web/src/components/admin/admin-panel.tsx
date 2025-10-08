@@ -142,7 +142,7 @@ export default function AdminPanel() {
     error: usersError,
     refetch: refetchUsers,
   } = api.admin.listUsers.useQuery(
-    { adminToken },
+    undefined,
     {
       enabled: isTokenValid,
       retry: false,
@@ -155,7 +155,7 @@ export default function AdminPanel() {
     error: totalDepositsError,
     refetch: refetchTotalDeposits,
   } = api.admin.getTotalDeposited.useQuery(
-    { adminToken },
+    undefined,
     {
       enabled: isTokenValid,
       retry: false,
@@ -180,7 +180,7 @@ export default function AdminPanel() {
     refetch: fetchAlignDirectDetailsQuery,
   } = api.admin.getAlignCustomerDirectDetails.useQuery(
     {
-      adminToken,
+      
       privyDid: userForAlignDirectDetails?.privyDid ?? '',
     },
     {
@@ -330,18 +330,18 @@ export default function AdminPanel() {
 
   const handleDeleteUser = () => {
     if (!userToDelete) return;
-    deleteMutation.mutate({ adminToken, privyDid: userToDelete.privyDid });
+    deleteMutation.mutate({ privyDid: userToDelete.privyDid });
   };
 
   const handleResetAlignData = () => {
     if (!userToReset) return;
-    resetAlignMutation.mutate({ adminToken, privyDid: userToReset.privyDid });
+    resetAlignMutation.mutate({ privyDid: userToReset.privyDid });
   };
 
   const handleOverrideKycStatus = () => {
     if (!userToOverrideKyc) return;
     overrideKycMutation.mutate({
-      adminToken,
+      
       privyDid: userToOverrideKyc.privyDid,
     });
   };
@@ -349,7 +349,7 @@ export default function AdminPanel() {
   const handleCreateKycSession = () => {
     if (!userToCreateKyc) return;
     createKycMutation.mutate({
-      adminToken,
+      
       privyDid: userToCreateKyc.privyDid,
     });
   };
@@ -368,7 +368,7 @@ export default function AdminPanel() {
     }
 
     createAlignCustomerMutation.mutate({
-      adminToken,
+      
       privyDid: userToCreateAlignCustomer.privyDid,
       firstName: alignCustomerForm.firstName.trim(),
       lastName: alignCustomerForm.lastName.trim(),
@@ -379,7 +379,7 @@ export default function AdminPanel() {
   const handleSyncAlign = () => {
     if (!userToSyncAlign) return;
     syncAlignMutation.mutate({
-      adminToken,
+      
       privyDid: userToSyncAlign.privyDid,
     });
   };

@@ -1,7 +1,7 @@
 import { z } from 'zod';
 // import { createTRPCRouter, protectedProcedure } from '@/server/trpc';
 import { db } from '@/db';
-import { users, userProfilesTable, userSafes } from '@/db/schema';
+import { users, userProfilesTable, userSafes, workspaces } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
 import type { Context } from '@/server/context';
 import { protectedProcedure, router, publicProcedure } from '../create-router';
@@ -225,13 +225,23 @@ export const userRouter = router({
     if (!privyDid) {
       throw new TRPCError({ code: 'UNAUTHORIZED' });
     }
-    const user = await db.query.users.findFirst({
-      where: eq((users as any).privyDid, privyDid),
+
+    const workspaceId = ctx.workspaceId;
+    if (!workspaceId) {
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Workspace context is unavailable.',
+      });
+    }
+
+    const workspace = await db.query.workspaces.findFirst({
+      where: eq(workspaces.id, workspaceId),
       columns: {
         kycStatus: true,
       },
     });
-    return { status: (user as any)?.kycStatus || null };
+
+    return { status: workspace?.kycStatus || null };
   }),
 
   // Example: Check if user exists (publicly accessible)

@@ -6,25 +6,68 @@ import {
   boolean,
   uniqueIndex,
   index,
+  text,
 } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 import { users } from './users';
 import { companies } from './companies';
 
-export const workspaces = pgTable('workspaces', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  name: varchar('name', { length: 255 }).notNull(),
-  createdBy: varchar('created_by', { length: 255 })
-    .notNull()
-    .references(() => users.privyDid, { onDelete: 'cascade' }),
-  createdAt: timestamp('created_at', { withTimezone: true })
-    .defaultNow()
-    .notNull(),
-  updatedAt: timestamp('updated_at', { withTimezone: true })
-    .defaultNow()
-    .notNull()
-    .$onUpdate(() => new Date()),
-});
+export const workspaces = pgTable(
+  'workspaces',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    name: varchar('name', { length: 255 }).notNull(),
+    createdBy: varchar('created_by', { length: 255 })
+      .notNull()
+      .references(() => users.privyDid, { onDelete: 'cascade' }),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date()),
+
+    // KYC and Banking Fields - copied from users table for workspace-level KYC
+    alignCustomerId: text('align_customer_id'),
+    kycProvider: text('kyc_provider', { enum: ['align', 'other'] }),
+    kycStatus: text('kyc_status', {
+      enum: ['none', 'pending', 'approved', 'rejected'],
+    }).default('none'),
+    kycFlowLink: text('kyc_flow_link'),
+    kycSubStatus: text('kyc_sub_status'),
+    kycMarkedDone: boolean('kyc_marked_done').default(false).notNull(),
+    kycNotificationSent: timestamp('kyc_notification_sent', {
+      withTimezone: true,
+    }),
+    kycNotificationStatus: text('kyc_notification_status', {
+      enum: ['pending', 'sent', 'failed'],
+    }),
+    alignVirtualAccountId: text('align_virtual_account_id'),
+
+    // Entity Information - who the workspace represents
+    beneficiaryType: text('beneficiary_type', {
+      enum: ['individual', 'business'],
+    }),
+    companyName: text('company_name'),
+    firstName: text('first_name'),
+    lastName: text('last_name'),
+
+    // Workspace Type - personal or business workspace
+    workspaceType: text('workspace_type', {
+      enum: ['personal', 'business'],
+    }).default('business'),
+  },
+  (table) => ({
+    alignCustomerIdx: uniqueIndex('workspaces_align_customer_id_idx').on(
+      table.alignCustomerId,
+    ),
+    kycStatusIdx: index('workspaces_kyc_status_idx').on(table.kycStatus),
+    alignVirtualAccountIdx: index('workspaces_align_virtual_account_idx').on(
+      table.alignVirtualAccountId,
+    ),
+  }),
+);
 
 export const workspaceMembers = pgTable(
   'workspace_members',

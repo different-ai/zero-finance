@@ -4,6 +4,7 @@ import { router, protectedProcedure, publicProcedure } from '../create-router';
 import { db } from '../../db';
 import {
   users,
+  workspaces,
   userSafes,
   userFundingSources,
   userDestinationBankAccounts,
@@ -25,7 +26,8 @@ import type { Address } from 'viem';
 import { featureConfig } from '@/lib/feature-config';
 
 /**
- * Helper function to fetch fresh KYC status from Align API and update DB
+ * Helper function to fetch fresh KYC status from Align API and update user DB
+ * DEPRECATED: Use fetchAndUpdateWorkspaceKycStatus for new code
  * @param alignCustomerId - The Align customer ID
  * @param userId - The user's Privy DID
  * @returns The latest KYC information or null if not found
@@ -42,17 +44,62 @@ async function fetchAndUpdateKycStatus(
   );
   try {
     const customer = await alignApi.getCustomer(alignCustomerId);
+    const latestKyc =
+      customer.kycs && customer.kycs.length > 0 ? customer.kycs[0] : null;
+
+    if (latestKyc) {
+      // Update user DB with latest status (legacy behavior)
+      await db
+        .update(users)
+        .set({
+          kycStatus: latestKyc.status,
+          kycFlowLink: latestKyc.kyc_flow_link,
+          kycSubStatus: latestKyc.sub_status,
+          kycProvider: 'align',
+          firstName: customer.first_name || null,
+          lastName: customer.last_name || null,
+          companyName: customer.company_name || null,
+          beneficiaryType: customer.beneficiary_type || null,
+        })
+        .where(eq(users.privyDid, userId));
+    }
+
+    return latestKyc;
+  } catch (error) {
+    console.error('[fetchAndUpdateKycStatus] Error:', error);
+    throw error;
+  }
+}
+
+/**
+ * Helper function to fetch fresh KYC status from Align API and update workspace DB
+ * @param alignCustomerId - The Align customer ID
+ * @param workspaceId - The workspace UUID
+ * @returns The latest KYC information or null if not found
+ */
+async function fetchAndUpdateWorkspaceKycStatus(
+  alignCustomerId: string,
+  workspaceId: string,
+) {
+  console.log(
+    '[fetchAndUpdateWorkspaceKycStatus] Starting for customerId:',
+    alignCustomerId,
+    'workspaceId:',
+    workspaceId,
+  );
+  try {
+    const customer = await alignApi.getCustomer(alignCustomerId);
     console.log(
-      '[fetchAndUpdateKycStatus] Customer data received:',
+      '[fetchAndUpdateWorkspaceKycStatus] Customer data received:',
       JSON.stringify(customer, null, 2),
     );
     const latestKyc =
       customer.kycs && customer.kycs.length > 0 ? customer.kycs[0] : null;
 
     if (latestKyc) {
-      // Update DB with latest status and customer details
+      // Update WORKSPACE with latest status and customer details
       await db
-        .update(users)
+        .update(workspaces)
         .set({
           kycStatus: latestKyc.status,
           kycFlowLink: latestKyc.kyc_flow_link,
@@ -64,23 +111,29 @@ async function fetchAndUpdateKycStatus(
           companyName: customer.company_name || null,
           beneficiaryType: customer.beneficiary_type || null,
         })
-        .where(eq(users.privyDid, userId));
+        .where(eq(workspaces.id, workspaceId));
 
       console.log(
-        `[fetchAndUpdateKycStatus] Updated KYC status for user ${userId}: status=${latestKyc.status}, sub_status=${latestKyc.sub_status}`,
+        `[fetchAndUpdateWorkspaceKycStatus] Updated KYC status for workspace ${workspaceId}: status=${latestKyc.status}, sub_status=${latestKyc.sub_status}`,
       );
     }
 
     console.log(
-      '[fetchAndUpdateKycStatus] Returning KYC data:',
+      '[fetchAndUpdateWorkspaceKycStatus] Returning KYC data:',
       JSON.stringify(latestKyc, null, 2),
     );
     return latestKyc;
   } catch (error) {
-    console.error('[fetchAndUpdateKycStatus] Error:', error);
+    console.error('[fetchAndUpdateWorkspaceKycStatus] Error:', error);
     if (error instanceof Error) {
-      console.error('[fetchAndUpdateKycStatus] Error message:', error.message);
-      console.error('[fetchAndUpdateKycStatus] Error stack:', error.stack);
+      console.error(
+        '[fetchAndUpdateWorkspaceKycStatus] Error message:',
+        error.message,
+      );
+      console.error(
+        '[fetchAndUpdateWorkspaceKycStatus] Error stack:',
+        error.stack,
+      );
     }
     throw error;
   }
@@ -165,8 +218,8 @@ export const alignRouter = router({
   }),
 
   /**
-   * Get customer status from DB and refresh from Align API
-   * Always fetches the latest status from Align and updates DB
+   * Get customer status from WORKSPACE and refresh from Align API
+   * Always fetches the latest status from Align and updates workspace DB
    */
   getCustomerStatus: protectedProcedure.query(async ({ ctx }) => {
     // Return Lite mode response if Align not configured
@@ -194,7 +247,7 @@ export const alignRouter = router({
       });
     }
 
-    // Get user from DB
+    // Get user with primary workspace
     const user = await db.query.users.findFirst({
       where: eq(users.privyDid, userFromPrivy.id),
     });
@@ -206,23 +259,42 @@ export const alignRouter = router({
       });
     }
 
-    // If user has alignCustomerId, fetch latest status from Align API
-    if (user.alignCustomerId) {
+    if (!user.primaryWorkspaceId) {
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'User has no workspace - data integrity issue',
+      });
+    }
+
+    // Get WORKSPACE KYC status - this is the key change
+    const workspace = await db.query.workspaces.findFirst({
+      where: eq(workspaces.id, user.primaryWorkspaceId),
+    });
+
+    if (!workspace) {
+      throw new TRPCError({
+        code: 'NOT_FOUND',
+        message: 'Workspace not found',
+      });
+    }
+
+    // If workspace has alignCustomerId, fetch latest status from Align API
+    if (workspace.alignCustomerId) {
       try {
-        const latestKyc = await fetchAndUpdateKycStatus(
-          user.alignCustomerId,
-          userFromPrivy.id,
+        const latestKyc = await fetchAndUpdateWorkspaceKycStatus(
+          workspace.alignCustomerId,
+          workspace.id,
         );
 
         if (latestKyc) {
           // Return the fresh data from Align
           return {
-            alignCustomerId: user.alignCustomerId,
+            alignCustomerId: workspace.alignCustomerId,
             kycStatus: latestKyc.status,
             kycFlowLink: latestKyc.kyc_flow_link,
             kycSubStatus: latestKyc.sub_status,
-            alignVirtualAccountId: user.alignVirtualAccountId,
-            kycMarkedDone: user.kycMarkedDone,
+            alignVirtualAccountId: workspace.alignVirtualAccountId,
+            kycMarkedDone: workspace.kycMarkedDone,
           };
         }
       } catch (error) {
@@ -231,7 +303,8 @@ export const alignRouter = router({
           {
             procedure: 'getCustomerStatus',
             userId: userFromPrivy.id,
-            alignCustomerId: user.alignCustomerId,
+            workspaceId: workspace.id,
+            alignCustomerId: workspace.alignCustomerId,
             error: (error as Error).message,
           },
           'Failed to fetch latest KYC status from Align API, returning cached data',
@@ -239,14 +312,14 @@ export const alignRouter = router({
       }
     }
 
-    // Return DB data if no alignCustomerId or if Align API call failed
+    // Return WORKSPACE DB data if no alignCustomerId or if Align API call failed
     return {
-      alignCustomerId: user.alignCustomerId,
-      kycStatus: user.kycStatus,
-      kycFlowLink: user.kycFlowLink,
-      kycSubStatus: user.kycSubStatus,
-      alignVirtualAccountId: user.alignVirtualAccountId,
-      kycMarkedDone: user.kycMarkedDone,
+      alignCustomerId: workspace.alignCustomerId,
+      kycStatus: workspace.kycStatus,
+      kycFlowLink: workspace.kycFlowLink,
+      kycSubStatus: workspace.kycSubStatus,
+      alignVirtualAccountId: workspace.alignVirtualAccountId,
+      kycMarkedDone: workspace.kycMarkedDone,
     };
   }),
 
@@ -282,48 +355,7 @@ export const alignRouter = router({
         });
       }
 
-      // --- TEST‑KYC SHORT‑CIRCUIT via env var ------------------------------------
-      if (process.env.ALIGN_KYC_TEST_MODE === 'true') {
-        // Also update the DB for test mode so getCustomerStatus reflects the test link
-        try {
-          await db
-            .update(users)
-            .set({
-              alignCustomerId: 'test-customer-id',
-              kycStatus: 'pending',
-              kycFlowLink: 'https://example.com/test-kyc',
-              kycProvider: 'align',
-            })
-            .where(eq(users.privyDid, userId));
-          ctx.log?.info(
-            { procedure: 'initiateKyc', userId, testMode: true },
-            'Updated DB with test KYC data.',
-          );
-        } catch (dbError) {
-          ctx.log?.error(
-            {
-              procedure: 'initiateKyc',
-              userId,
-              testMode: true,
-              error: (dbError as Error).message,
-            },
-            'Failed to update DB with test KYC data.',
-          );
-          // Don't throw here, still return test data to allow frontend testing if DB fails for some reason in test
-        }
-        return {
-          alignCustomerId: 'test-customer-id',
-          kycStatus: 'pending' as const, // Ensure type is literal
-          kycFlowLink: 'https://example.com/test-kyc',
-        };
-      }
-      // ---------------------------------------------------------------------------
-
-      // Add logging
-      const logPayload = { procedure: 'initiateKyc', userId, input };
-      ctx.log?.info(logPayload, 'Initiating KYC process...');
-
-      // Get user from DB
+      // Get user with workspace
       const user = await db.query.users.findFirst({
         where: eq(users.privyDid, userId),
       });
@@ -335,29 +367,98 @@ export const alignRouter = router({
         });
       }
 
+      if (!user.primaryWorkspaceId) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'User has no workspace - data integrity issue',
+        });
+      }
+
+      // Get workspace
+      const workspace = await db.query.workspaces.findFirst({
+        where: eq(workspaces.id, user.primaryWorkspaceId),
+      });
+
+      if (!workspace) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Workspace not found',
+        });
+      }
+
+      // --- TEST‑KYC SHORT‑CIRCUIT via env var ------------------------------------
+      if (process.env.ALIGN_KYC_TEST_MODE === 'true') {
+        // Update WORKSPACE for test mode
+        try {
+          await db
+            .update(workspaces)
+            .set({
+              alignCustomerId: 'test-customer-id',
+              kycStatus: 'pending',
+              kycFlowLink: 'https://example.com/test-kyc',
+              kycProvider: 'align',
+            })
+            .where(eq(workspaces.id, workspace.id));
+          ctx.log?.info(
+            {
+              procedure: 'initiateKyc',
+              userId,
+              workspaceId: workspace.id,
+              testMode: true,
+            },
+            'Updated workspace with test KYC data.',
+          );
+        } catch (dbError) {
+          ctx.log?.error(
+            {
+              procedure: 'initiateKyc',
+              userId,
+              workspaceId: workspace.id,
+              testMode: true,
+              error: (dbError as Error).message,
+            },
+            'Failed to update workspace with test KYC data.',
+          );
+        }
+        return {
+          alignCustomerId: 'test-customer-id',
+          kycStatus: 'pending' as const,
+          kycFlowLink: 'https://example.com/test-kyc',
+        };
+      }
+      // ---------------------------------------------------------------------------
+
+      // Add logging
+      const logPayload = {
+        procedure: 'initiateKyc',
+        userId,
+        workspaceId: workspace.id,
+        input,
+      };
+      ctx.log?.info(logPayload, 'Initiating KYC process...');
+
       try {
-        // If already has an Align customer ID, refresh status
-        if (user.alignCustomerId) {
-          const latestKyc = await fetchAndUpdateKycStatus(
-            user.alignCustomerId,
-            userId,
+        // If workspace already has an Align customer ID, refresh status
+        if (workspace.alignCustomerId) {
+          const latestKyc = await fetchAndUpdateWorkspaceKycStatus(
+            workspace.alignCustomerId,
+            workspace.id,
           );
 
           if (latestKyc) {
-            // Add success logging
             ctx.log?.info(
               {
                 ...logPayload,
                 result: {
-                  alignCustomerId: user.alignCustomerId,
+                  alignCustomerId: workspace.alignCustomerId,
                   status: latestKyc.status,
                 },
               },
-              'KYC initiation successful.',
+              'KYC initiation successful (existing customer).',
             );
 
             return {
-              alignCustomerId: user.alignCustomerId,
+              alignCustomerId: workspace.alignCustomerId,
               kycStatus: latestKyc.status,
               kycFlowLink: latestKyc.kyc_flow_link,
               kycSubStatus: latestKyc.sub_status,
@@ -378,7 +479,7 @@ export const alignRouter = router({
           email,
           input.firstName,
           input.lastName,
-          input.businessName, // Pass business name if provided
+          input.businessName,
           beneficiaryType,
         );
 
@@ -392,7 +493,6 @@ export const alignRouter = router({
           const newSession = await alignApi.createKycSession(
             customer.customer_id,
           );
-          // Convert the session to match the expected type
           kycSession = {
             status: newSession.status,
             kyc_flow_link: newSession.kyc_flow_link || null,
@@ -403,24 +503,22 @@ export const alignRouter = router({
         const kycStatusToSet = kycSession?.status ?? 'pending';
         const kycFlowLinkToSet = kycSession?.kyc_flow_link || null;
 
-        // Update user with new customer ID, KYC status, and name details
+        // Update WORKSPACE with new customer ID, KYC status, and name details
         await db
-          .update(users)
+          .update(workspaces)
           .set({
             alignCustomerId: customer.customer_id,
             kycStatus: kycStatusToSet,
             kycFlowLink: kycFlowLinkToSet,
             kycProvider: 'align',
-            // Store the provided name details
             firstName: input.firstName,
             lastName: input.lastName,
             companyName: input.businessName || null,
             beneficiaryType:
               beneficiaryType === 'corporate' ? 'business' : beneficiaryType,
           })
-          .where(eq(users.privyDid, userId));
+          .where(eq(workspaces.id, workspace.id));
 
-        // Add success logging
         ctx.log?.info(
           {
             ...logPayload,
@@ -429,7 +527,7 @@ export const alignRouter = router({
               status: kycStatusToSet,
             },
           },
-          'KYC initiation successful.',
+          'KYC initiation successful (new customer).',
         );
 
         return {
@@ -440,7 +538,6 @@ export const alignRouter = router({
         };
       } catch (error) {
         console.error('Error initiating KYC:', error);
-        // Add error logging
         ctx.log?.error(
           { ...logPayload, error: (error as Error).message },
           'KYC initiation failed.',
@@ -454,7 +551,7 @@ export const alignRouter = router({
 
   /**
    * Refresh KYC status
-   * Polls Align API for the latest KYC status
+   * Polls Align API for the latest KYC status from WORKSPACE
    */
   refreshKycStatus: protectedProcedure.mutation(async ({ ctx }) => {
     const userFromPrivy = await getUser();
@@ -466,11 +563,7 @@ export const alignRouter = router({
       });
     }
 
-    // Add logging
-    const logPayload = { procedure: 'refreshKycStatus', userId };
-    ctx.log?.info(logPayload, 'Refreshing KYC status...');
-
-    // Get user from DB
+    // Get user with workspace
     const user = await db.query.users.findFirst({
       where: eq(users.privyDid, userId),
     });
@@ -482,26 +575,52 @@ export const alignRouter = router({
       });
     }
 
-    if (!user.alignCustomerId) {
+    if (!user.primaryWorkspaceId) {
       throw new TRPCError({
-        code: 'PRECONDITION_FAILED',
-        message: 'User does not have an Align customer ID',
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'User has no workspace - data integrity issue',
       });
     }
 
+    // Get workspace
+    const workspace = await db.query.workspaces.findFirst({
+      where: eq(workspaces.id, user.primaryWorkspaceId),
+    });
+
+    if (!workspace) {
+      throw new TRPCError({
+        code: 'NOT_FOUND',
+        message: 'Workspace not found',
+      });
+    }
+
+    if (!workspace.alignCustomerId) {
+      throw new TRPCError({
+        code: 'PRECONDITION_FAILED',
+        message: 'Workspace does not have an Align customer ID',
+      });
+    }
+
+    // Add logging
+    const logPayload = {
+      procedure: 'refreshKycStatus',
+      userId,
+      workspaceId: workspace.id,
+    };
+    ctx.log?.info(logPayload, 'Refreshing KYC status...');
+
     try {
-      const latestKyc = await fetchAndUpdateKycStatus(
-        user.alignCustomerId,
-        userId,
+      const latestKyc = await fetchAndUpdateWorkspaceKycStatus(
+        workspace.alignCustomerId,
+        workspace.id,
       );
 
       if (latestKyc) {
-        // Add success logging
         ctx.log?.info(
           {
             ...logPayload,
             result: {
-              alignCustomerId: user.alignCustomerId,
+              alignCustomerId: workspace.alignCustomerId,
               status: latestKyc.status,
             },
           },
@@ -509,7 +628,7 @@ export const alignRouter = router({
         );
 
         return {
-          alignCustomerId: user.alignCustomerId,
+          alignCustomerId: workspace.alignCustomerId,
           kycStatus: latestKyc.status,
           kycFlowLink: latestKyc.kyc_flow_link,
           kycSubStatus: latestKyc.sub_status,
@@ -517,13 +636,12 @@ export const alignRouter = router({
       }
 
       return {
-        alignCustomerId: user.alignCustomerId,
-        kycStatus: user.kycStatus,
-        kycFlowLink: user.kycFlowLink,
+        alignCustomerId: workspace.alignCustomerId,
+        kycStatus: workspace.kycStatus,
+        kycFlowLink: workspace.kycFlowLink,
       };
     } catch (error) {
       console.error('Error refreshing KYC status:', error);
-      // Add error logging
       ctx.log?.error(
         { ...logPayload, error: (error as Error).message },
         'KYC status refresh failed.',
@@ -575,18 +693,37 @@ export const alignRouter = router({
         });
       }
 
-      if (!user.alignCustomerId) {
+      if (!user.primaryWorkspaceId) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'User has no workspace - data integrity issue',
+        });
+      }
+
+      // Get workspace
+      const workspace = await db.query.workspaces.findFirst({
+        where: eq(workspaces.id, user.primaryWorkspaceId),
+      });
+
+      if (!workspace) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Workspace not found',
+        });
+      }
+
+      if (!workspace.alignCustomerId) {
         throw new TRPCError({
           code: 'PRECONDITION_FAILED',
-          message: 'User does not have an Align customer ID',
+          message: 'Workspace does not have an Align customer ID',
         });
       }
 
       // Fetch fresh KYC status from Align API before checking
       try {
-        const latestKyc = await fetchAndUpdateKycStatus(
-          user.alignCustomerId,
-          userFromPrivy.id,
+        const latestKyc = await fetchAndUpdateWorkspaceKycStatus(
+          workspace.alignCustomerId,
+          workspace.id,
         );
 
         if (latestKyc) {
@@ -594,7 +731,7 @@ export const alignRouter = router({
           if (latestKyc.status !== 'approved') {
             throw new TRPCError({
               code: 'PRECONDITION_FAILED',
-              message: 'User KYC is not approved',
+              message: 'Workspace KYC is not approved',
             });
           }
         } else {
@@ -621,7 +758,7 @@ export const alignRouter = router({
           input.destinationAddress,
         );
         const virtualAccount = await alignApi.createVirtualAccount(
-          user.alignCustomerId,
+          workspace.alignCustomerId,
           {
             source_currency: input.sourceCurrency,
             destination_token: input.destinationToken,
@@ -641,6 +778,7 @@ export const alignRouter = router({
           .insert(userFundingSources)
           .values({
             userPrivyDid: userFromPrivy.id,
+            workspaceId: workspace.id,
             sourceProvider: 'align',
             alignVirtualAccountIdRef: virtualAccount.id,
 
@@ -682,12 +820,18 @@ export const alignRouter = router({
           })
           .returning();
 
-        // Update user with virtual account ID
+        // Update workspace with virtual account ID
         await db
-          .update(users)
+          .update(workspaces)
           .set({
             alignVirtualAccountId: virtualAccount.id,
           })
+          .where(eq(workspaces.id, workspace.id));
+
+        // Optional: keep legacy user column in sync while it still exists
+        await db
+          .update(users)
+          .set({ alignVirtualAccountId: virtualAccount.id })
           .where(eq(users.privyDid, userFromPrivy.id));
 
         return {
@@ -762,13 +906,24 @@ export const alignRouter = router({
       where: eq(users.privyDid, userFromPrivy.id),
     });
 
-    if (!user?.alignCustomerId) {
+    if (!user?.primaryWorkspaceId) {
+      return [];
+    }
+
+    // Get workspace
+    const workspace = await db.query.workspaces.findFirst({
+      where: eq(workspaces.id, user.primaryWorkspaceId),
+    });
+
+    if (!workspace?.alignCustomerId) {
       return [];
     }
 
     try {
       // Fetch virtual accounts from Align API
-      const response = await alignApi.listVirtualAccounts(user.alignCustomerId);
+      const response = await alignApi.listVirtualAccounts(
+        workspace.alignCustomerId,
+      );
 
       // Return the items array from the response
       return response.items || [];
@@ -784,6 +939,7 @@ export const alignRouter = router({
   /**
    * Recover customer from Align when they exist in Align but not in our database
    * This is useful when a user has started KYC in Align but the data wasn't saved in our db
+   * Updates WORKSPACE with recovered data
    */
   recoverCustomer: protectedProcedure.mutation(async ({ ctx }) => {
     const userFromPrivy = await getUser();
@@ -794,10 +950,6 @@ export const alignRouter = router({
         message: 'User not found',
       });
     }
-
-    // Add logging
-    const logPayload = { procedure: 'recoverCustomer', userId };
-    ctx.log?.info(logPayload, 'Attempting Align customer recovery...');
 
     // Get user from DB
     const user = await db.query.users.findFirst({
@@ -811,23 +963,49 @@ export const alignRouter = router({
       });
     }
 
-    // If already has alignCustomerId, nothing to recover
-    if (user.alignCustomerId) {
+    if (!user.primaryWorkspaceId) {
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'User has no workspace - data integrity issue',
+      });
+    }
+
+    // Get workspace
+    const workspace = await db.query.workspaces.findFirst({
+      where: eq(workspaces.id, user.primaryWorkspaceId),
+    });
+
+    if (!workspace) {
+      throw new TRPCError({
+        code: 'NOT_FOUND',
+        message: 'Workspace not found',
+      });
+    }
+
+    // Add logging
+    const logPayload = {
+      procedure: 'recoverCustomer',
+      userId,
+      workspaceId: workspace.id,
+    };
+    ctx.log?.info(logPayload, 'Attempting Align customer recovery...');
+
+    // If workspace already has alignCustomerId, nothing to recover
+    if (workspace.alignCustomerId) {
       // Just refresh the status and return
       try {
-        const latestKyc = await fetchAndUpdateKycStatus(
-          user.alignCustomerId,
-          userId,
+        const latestKyc = await fetchAndUpdateWorkspaceKycStatus(
+          workspace.alignCustomerId,
+          workspace.id,
         );
 
         if (latestKyc) {
-          // Add success logging
           ctx.log?.info(
             {
               ...logPayload,
               result: {
                 recovered: false,
-                alignCustomerId: user.alignCustomerId,
+                alignCustomerId: workspace.alignCustomerId,
                 status: latestKyc.status,
               },
             },
@@ -836,7 +1014,7 @@ export const alignRouter = router({
 
           return {
             recovered: false, // No recovery needed
-            alignCustomerId: user.alignCustomerId,
+            alignCustomerId: workspace.alignCustomerId,
             kycStatus: latestKyc.status,
             kycFlowLink: latestKyc.kyc_flow_link,
             kycSubStatus: latestKyc.sub_status,
@@ -848,9 +1026,9 @@ export const alignRouter = router({
 
       return {
         recovered: false,
-        alignCustomerId: user.alignCustomerId,
-        kycStatus: user.kycStatus,
-        kycFlowLink: user.kycFlowLink,
+        alignCustomerId: workspace.alignCustomerId,
+        kycStatus: workspace.kycStatus,
+        kycFlowLink: workspace.kycFlowLink,
       };
     }
 
@@ -887,16 +1065,16 @@ export const alignRouter = router({
         ? customerDetails.kycs[0]
         : null;
 
-    // Update user with recovered customer ID and KYC status
+    // Update WORKSPACE with recovered customer ID and KYC status
     await db
-      .update(users)
+      .update(workspaces)
       .set({
         alignCustomerId: customer.customer_id,
         kycStatus: latestKyc ? latestKyc.status : 'pending',
         kycFlowLink: latestKyc ? latestKyc.kyc_flow_link : null,
         kycProvider: 'align',
       })
-      .where(eq(users.privyDid, userId));
+      .where(eq(workspaces.id, workspace.id));
 
     // Add success logging
     ctx.log?.info(
@@ -923,6 +1101,7 @@ export const alignRouter = router({
   /**
    * Create a new KYC session
    * This is used when a customer exists but doesn't have an active KYC flow
+   * Updates WORKSPACE with new session details
    */
   createKycSession: protectedProcedure.mutation(async ({ ctx }) => {
     const userFromPrivy = await getUser();
@@ -933,10 +1112,6 @@ export const alignRouter = router({
         message: 'User not found',
       });
     }
-
-    // Add logging
-    const logPayload = { procedure: 'createKycSession', userId };
-    ctx.log?.info(logPayload, 'Creating new KYC session...');
 
     // Get user from DB
     const user = await db.query.users.findFirst({
@@ -950,20 +1125,49 @@ export const alignRouter = router({
       });
     }
 
-    if (!user.alignCustomerId) {
+    if (!user.primaryWorkspaceId) {
       throw new TRPCError({
-        code: 'PRECONDITION_FAILED',
-        message: 'User does not have an Align customer ID',
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'User has no workspace - data integrity issue',
       });
     }
 
+    // Get workspace
+    const workspace = await db.query.workspaces.findFirst({
+      where: eq(workspaces.id, user.primaryWorkspaceId),
+    });
+
+    if (!workspace) {
+      throw new TRPCError({
+        code: 'NOT_FOUND',
+        message: 'Workspace not found',
+      });
+    }
+
+    if (!workspace.alignCustomerId) {
+      throw new TRPCError({
+        code: 'PRECONDITION_FAILED',
+        message: 'Workspace does not have an Align customer ID',
+      });
+    }
+
+    // Add logging
+    const logPayload = {
+      procedure: 'createKycSession',
+      userId,
+      workspaceId: workspace.id,
+    };
+    ctx.log?.info(logPayload, 'Creating new KYC session...');
+
     try {
       // Create a new KYC session in Align
-      const kycSession = await alignApi.createKycSession(user.alignCustomerId);
+      const kycSession = await alignApi.createKycSession(
+        workspace.alignCustomerId,
+      );
 
-      // Update user with new KYC status and flow link
+      // Update WORKSPACE with new KYC status and flow link
       await db
-        .update(users)
+        .update(workspaces)
         .set({
           kycStatus: kycSession.status as
             | 'pending'
@@ -973,9 +1177,8 @@ export const alignRouter = router({
           kycFlowLink: kycSession.kyc_flow_link,
           kycSubStatus: kycSession.sub_status,
         })
-        .where(eq(users.privyDid, userId));
+        .where(eq(workspaces.id, workspace.id));
 
-      // Add success logging
       ctx.log?.info(
         { ...logPayload, result: { status: kycSession.status } },
         'New KYC session creation successful.',
@@ -988,7 +1191,6 @@ export const alignRouter = router({
       };
     } catch (error) {
       console.error('Error creating KYC session:', error);
-      // Add error logging
       ctx.log?.error(
         { ...logPayload, error: (error as Error).message },
         'New KYC session creation failed.',
@@ -1002,6 +1204,7 @@ export const alignRouter = router({
 
   /**
    * Mark that the user has finished their KYC submission steps
+   * Updates WORKSPACE kycMarkedDone flag
    */
   markKycDone: protectedProcedure.mutation(async ({ ctx }) => {
     const userFromPrivy = await getUser();
@@ -1010,10 +1213,21 @@ export const alignRouter = router({
       throw new TRPCError({ code: 'UNAUTHORIZED', message: 'User not found' });
     }
 
+    const user = await db.query.users.findFirst({
+      where: eq(users.privyDid, userId),
+    });
+
+    if (!user?.primaryWorkspaceId) {
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'User has no workspace',
+      });
+    }
+
     await db
-      .update(users)
+      .update(workspaces)
       .set({ kycMarkedDone: true })
-      .where(eq(users.privyDid, userId));
+      .where(eq(workspaces.id, user.primaryWorkspaceId));
 
     // Send email notification that KYC is pending review
     const email = userFromPrivy.email?.address;
@@ -1031,6 +1245,7 @@ export const alignRouter = router({
 
   /**
    * Unmark the KYC done state (if user clicked by mistake)
+   * Updates WORKSPACE kycMarkedDone flag
    */
   unmarkKycDone: protectedProcedure.mutation(async ({ ctx }) => {
     const userFromPrivy = await getUser();
@@ -1039,10 +1254,21 @@ export const alignRouter = router({
       throw new TRPCError({ code: 'UNAUTHORIZED', message: 'User not found' });
     }
 
+    const user = await db.query.users.findFirst({
+      where: eq(users.privyDid, userId),
+    });
+
+    if (!user?.primaryWorkspaceId) {
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'User has no workspace',
+      });
+    }
+
     await db
-      .update(users)
+      .update(workspaces)
       .set({ kycMarkedDone: false })
-      .where(eq(users.privyDid, userId));
+      .where(eq(workspaces.id, user.primaryWorkspaceId));
 
     return { success: true };
   }),
@@ -1153,10 +1379,22 @@ export const alignRouter = router({
       const user = await db.query.users.findFirst({
         where: eq(users.privyDid, userId),
       });
-      if (!user?.alignCustomerId) {
+
+      if (!user?.primaryWorkspaceId) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'User has no workspace',
+        });
+      }
+
+      const workspace = await db.query.workspaces.findFirst({
+        where: eq(workspaces.id, user.primaryWorkspaceId),
+      });
+
+      if (!workspace?.alignCustomerId) {
         throw new TRPCError({
           code: 'PRECONDITION_FAILED',
-          message: 'User Align Customer ID not found.',
+          message: 'Workspace Align Customer ID not found.',
         });
       }
 
@@ -1164,13 +1402,15 @@ export const alignRouter = router({
       console.log(
         '[createOfframpTransfer] Fetching KYC status for user:',
         userId,
+        'workspaceId:',
+        workspace.id,
         'alignCustomerId:',
-        user.alignCustomerId,
+        workspace.alignCustomerId,
       );
       try {
-        const latestKyc = await fetchAndUpdateKycStatus(
-          user.alignCustomerId,
-          userId,
+        const latestKyc = await fetchAndUpdateWorkspaceKycStatus(
+          workspace.alignCustomerId,
+          workspace.id,
         );
         console.log(
           '[createOfframpTransfer] KYC status fetched:',
@@ -1178,21 +1418,11 @@ export const alignRouter = router({
         );
 
         if (latestKyc) {
-          // Update DB with latest status
-          await db
-            .update(users)
-            .set({
-              kycStatus: latestKyc.status,
-              kycFlowLink: latestKyc.kyc_flow_link,
-              kycSubStatus: latestKyc.sub_status,
-            })
-            .where(eq(users.privyDid, userId));
-
           // Check if KYC is approved
           if (latestKyc.status !== 'approved') {
             throw new TRPCError({
               code: 'PRECONDITION_FAILED',
-              message: 'User KYC must be approved.',
+              message: 'Workspace KYC must be approved.',
             });
           }
         } else {
@@ -1530,7 +1760,7 @@ export const alignRouter = router({
           if (validationError instanceof z.ZodError) {
             throw new TRPCError({
               code: 'INTERNAL_SERVER_ERROR',
-              message: `Internal Error: Bank account data failed validation: ${validationError.errors.map((e) => `${e.path.join('.')}: ${e.message}`).join(', ')}`,
+              message: `Internal Error: Bank account data failed validation: ${validationError.issues.map((e: z.ZodIssue) => `${e.path.join('.')}: ${e.message}`).join(', ')}`,
               cause: validationError,
             });
           } else {
@@ -1564,7 +1794,7 @@ export const alignRouter = router({
 
         // Create offramp transfer in Align
         const alignTransfer = await alignApi.createOfframpTransfer(
-          user.alignCustomerId,
+          workspace.alignCustomerId,
           alignParams,
         );
 
@@ -1572,6 +1802,7 @@ export const alignRouter = router({
         // Use destructured common fields for DB insert as well
         await db.insert(offrampTransfers).values({
           userId: userId,
+          workspaceId: workspace.id,
           alignTransferId: alignTransfer.id,
           status: alignTransfer.status as any,
           amountToSend: amount,
@@ -1637,10 +1868,22 @@ export const alignRouter = router({
       const user = await db.query.users.findFirst({
         where: eq(users.privyDid, userId),
       });
-      if (!user?.alignCustomerId) {
+
+      if (!user?.primaryWorkspaceId) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'User has no workspace',
+        });
+      }
+
+      const workspace = await db.query.workspaces.findFirst({
+        where: eq(workspaces.id, user.primaryWorkspaceId),
+      });
+
+      if (!workspace?.alignCustomerId) {
         throw new TRPCError({
           code: 'PRECONDITION_FAILED',
-          message: 'User Align Customer ID not found.',
+          message: 'Workspace Align Customer ID not found.',
         });
       }
 
@@ -1665,7 +1908,7 @@ export const alignRouter = router({
       try {
         // Complete offramp transfer in Align
         const alignTransfer = await alignApi.completeOfframpTransfer(
-          user.alignCustomerId,
+          workspace.alignCustomerId,
           input.alignTransferId,
           input.depositTransactionHash,
         );
@@ -1711,11 +1954,23 @@ export const alignRouter = router({
       const userId = ctx.user.id;
       const user = await db.query.users.findFirst({
         where: eq(users.privyDid, userId),
-      }); // Fetch user
-      if (!user?.alignCustomerId) {
+      });
+
+      if (!user?.primaryWorkspaceId) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'User has no workspace',
+        });
+      }
+
+      const workspace = await db.query.workspaces.findFirst({
+        where: eq(workspaces.id, user.primaryWorkspaceId),
+      });
+
+      if (!workspace?.alignCustomerId) {
         throw new TRPCError({
           code: 'PRECONDITION_FAILED',
-          message: 'User Align Customer ID not found.',
+          message: 'Workspace Align Customer ID not found.',
         });
       }
 
@@ -1738,7 +1993,7 @@ export const alignRouter = router({
       // 2. Fetch latest details from Align API
       try {
         const alignTransfer = await alignApi.getOfframpTransfer(
-          user.alignCustomerId,
+          workspace.alignCustomerId,
           input.alignTransferId,
         );
 
@@ -1895,7 +2150,26 @@ export const alignRouter = router({
       });
     }
 
-    if (!user.alignCustomerId) {
+    if (!user.primaryWorkspaceId) {
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'User has no workspace - data integrity issue',
+      });
+    }
+
+    // Get workspace
+    const workspace = await db.query.workspaces.findFirst({
+      where: eq(workspaces.id, user.primaryWorkspaceId),
+    });
+
+    if (!workspace) {
+      throw new TRPCError({
+        code: 'NOT_FOUND',
+        message: 'Workspace not found',
+      });
+    }
+
+    if (!workspace.alignCustomerId) {
       throw new TRPCError({
         code: 'PRECONDITION_FAILED',
         message: 'Please complete KYC verification first',
@@ -1904,9 +2178,9 @@ export const alignRouter = router({
 
     // Fetch fresh KYC status from Align API before checking
     try {
-      const latestKyc = await fetchAndUpdateKycStatus(
-        user.alignCustomerId,
-        userFromPrivy.id,
+      const latestKyc = await fetchAndUpdateWorkspaceKycStatus(
+        workspace.alignCustomerId,
+        workspace.id,
       );
 
       if (latestKyc) {
@@ -1963,7 +2237,7 @@ export const alignRouter = router({
     // Create USD (ACH) account
     try {
       const usdAccount = await alignApi.createVirtualAccount(
-        user.alignCustomerId,
+        workspace.alignCustomerId,
         {
           source_currency: 'usd',
           destination_token: 'usdc',
@@ -1975,6 +2249,7 @@ export const alignRouter = router({
       // Store USD account
       await db.insert(userFundingSources).values({
         userPrivyDid: userFromPrivy.id,
+        workspaceId: workspace.id,
         sourceProvider: 'align',
         alignVirtualAccountIdRef: usdAccount.id,
         sourceAccountType: 'us_ach',
@@ -2008,7 +2283,7 @@ export const alignRouter = router({
     // Create EUR (IBAN) account
     try {
       const eurAccount = await alignApi.createVirtualAccount(
-        user.alignCustomerId,
+        workspace.alignCustomerId,
         {
           source_currency: 'eur',
           destination_token: 'usdc',
@@ -2020,6 +2295,7 @@ export const alignRouter = router({
       // Store EUR account
       await db.insert(userFundingSources).values({
         userPrivyDid: userFromPrivy.id,
+        workspaceId: workspace.id,
         sourceProvider: 'align',
         alignVirtualAccountIdRef: eurAccount.id,
         sourceAccountType: 'iban',
@@ -2153,20 +2429,35 @@ export const alignRouter = router({
 
     const userRecord = await db.query.users.findFirst({
       where: eq(users.privyDid, userId),
+      columns: { primaryWorkspaceId: true, alignCustomerId: true },
+    });
+
+    if (!userRecord?.primaryWorkspaceId) {
+      throw new TRPCError({
+        code: 'PRECONDITION_FAILED',
+        message: 'User has no primary workspace',
+      });
+    }
+
+    const primaryWorkspace = await db.query.workspaces.findFirst({
+      where: eq(workspaces.id, userRecord.primaryWorkspaceId),
       columns: { alignCustomerId: true },
     });
 
-    if (!userRecord?.alignCustomerId) {
+    const alignCustomerId =
+      primaryWorkspace?.alignCustomerId ?? userRecord.alignCustomerId;
+
+    if (!alignCustomerId) {
       throw new TRPCError({
         code: 'PRECONDITION_FAILED',
-        message: 'User does not have an Align customer ID',
+        message: 'No Align customer ID found for user or workspace',
       });
     }
 
     try {
       // Fetch all transfers from Align API
       const transfers = await alignApi.getAllOnrampTransfers(
-        userRecord.alignCustomerId,
+        alignCustomerId as string,
         { limit: 100, skip: 0 },
       );
 
@@ -2176,6 +2467,7 @@ export const alignRouter = router({
           .insert(onrampTransfers)
           .values({
             userId,
+            workspaceId: userRecord.primaryWorkspaceId,
             alignTransferId: transfer.id,
             status: transfer.status,
             amount: transfer.amount,
@@ -2215,20 +2507,35 @@ export const alignRouter = router({
 
     const userRecord = await db.query.users.findFirst({
       where: eq(users.privyDid, userId),
+      columns: { primaryWorkspaceId: true, alignCustomerId: true },
+    });
+
+    if (!userRecord?.primaryWorkspaceId) {
+      throw new TRPCError({
+        code: 'PRECONDITION_FAILED',
+        message: 'User has no primary workspace',
+      });
+    }
+
+    const primaryWorkspace = await db.query.workspaces.findFirst({
+      where: eq(workspaces.id, userRecord.primaryWorkspaceId),
       columns: { alignCustomerId: true },
     });
 
-    if (!userRecord?.alignCustomerId) {
+    const alignCustomerId =
+      primaryWorkspace?.alignCustomerId ?? userRecord.alignCustomerId;
+
+    if (!alignCustomerId) {
       throw new TRPCError({
         code: 'PRECONDITION_FAILED',
-        message: 'User does not have an Align customer ID',
+        message: 'No Align customer ID found for user or workspace',
       });
     }
 
     try {
       // Fetch all transfers from Align API
       const transfers = await alignApi.getAllOfframpTransfers(
-        userRecord.alignCustomerId,
+        alignCustomerId as string,
         { limit: 100, skip: 0 },
       );
 
@@ -2291,7 +2598,18 @@ export const alignRouter = router({
         where: eq(users.privyDid, userFromPrivy.id),
       });
 
-      if (!user?.alignCustomerId) {
+      if (!user?.primaryWorkspaceId) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'User has no workspace',
+        });
+      }
+
+      const workspace = await db.query.workspaces.findFirst({
+        where: eq(workspaces.id, user.primaryWorkspaceId),
+      });
+
+      if (!workspace?.alignCustomerId) {
         throw new TRPCError({
           code: 'PRECONDITION_FAILED',
           message: 'Please complete KYC verification first',
@@ -2300,7 +2618,7 @@ export const alignRouter = router({
 
       try {
         const virtualAccount = await alignApi.createVirtualAccount(
-          user.alignCustomerId,
+          workspace.alignCustomerId,
           input,
         );
 
@@ -2345,7 +2663,18 @@ export const alignRouter = router({
         where: eq(users.privyDid, userFromPrivy.id),
       });
 
-      if (!user?.alignCustomerId) {
+      if (!user?.primaryWorkspaceId) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'User has no workspace',
+        });
+      }
+
+      const workspace = await db.query.workspaces.findFirst({
+        where: eq(workspaces.id, user.primaryWorkspaceId),
+      });
+
+      if (!workspace?.alignCustomerId) {
         throw new TRPCError({
           code: 'PRECONDITION_FAILED',
           message: 'Please complete KYC verification first',
@@ -2354,13 +2683,14 @@ export const alignRouter = router({
 
       try {
         const onrampTransfer = await alignApi.createOnrampTransfer(
-          user.alignCustomerId,
+          workspace.alignCustomerId,
           input,
         );
 
         // Store the transfer in our database
         await db.insert(onrampTransfers).values({
           userId: userFromPrivy.id,
+          workspaceId: workspace.id,
           alignTransferId: onrampTransfer.id,
           status: onrampTransfer.status,
           amount: onrampTransfer.amount,
