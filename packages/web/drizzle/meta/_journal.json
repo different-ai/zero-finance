@@ -750,6 +750,13 @@
       "when": 1759174509117,
       "tag": "0106_legal_outlaw_kid",
       "breakpoints": true
+    },
+    {
+      "idx": 107,
+      "version": "7",
+      "when": 1759949346922,
+      "tag": "0107_create_admins_table",
+      "breakpoints": true
     }
   ]
 }

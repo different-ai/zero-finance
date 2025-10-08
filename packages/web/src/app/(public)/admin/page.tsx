@@ -1,13 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { usePrivy } from '@privy-io/react-auth';
 import AdminPanel from '@/components/admin/admin-panel';
 import KycKanbanBoard from '@/components/admin/kyc-kanban-board';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { api } from '@/trpc/react';
 import { toast } from 'sonner';
-import { Input } from '@/components/ui/input';
 import {
   Card,
   CardContent,
@@ -15,7 +15,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { TableIcon, LayoutGrid, RefreshCw } from 'lucide-react';
+import { TableIcon, LayoutGrid, RefreshCw, ShieldAlert } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -25,43 +25,30 @@ import {
 } from '@/components/ui/dialog';
 
 export default function AdminPage() {
-  const [adminToken, setAdminToken] = useState('');
-  const [isTokenValid, setIsTokenValid] = useState(false);
+  const { user, authenticated, login } = usePrivy();
   const [activeView, setActiveView] = useState<'table' | 'kanban'>('table');
   const [isSyncing, setIsSyncing] = useState(false);
 
-  // Load admin token from session storage on mount
-  useEffect(() => {
-    const storedToken = sessionStorage.getItem('adminToken');
-    if (storedToken) {
-      setAdminToken(storedToken);
-      setIsTokenValid(true);
-    }
-  }, []);
+  // Check if user is admin
+  const {
+    data: isAdminData,
+    isLoading: isCheckingAdmin,
+    error: adminCheckError,
+  } = api.admin.checkIsAdmin.useQuery(undefined, {
+    enabled: authenticated && !!user?.id,
+    retry: false,
+  });
+
+  const isAdmin = isAdminData?.isAdmin ?? false;
 
   const {
     data: usersData,
     isLoading: isLoadingUsers,
-    error: usersError,
     refetch: refetchUsers,
-  } = api.admin.listUsers.useQuery(
-    { adminToken },
-    {
-      enabled: isTokenValid,
-      retry: false,
-    },
-  );
-
-  const handleTokenSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (adminToken.trim() === '') {
-      toast.error('Please enter an admin token');
-      return;
-    }
-    // Store admin token in session storage
-    sessionStorage.setItem('adminToken', adminToken);
-    setIsTokenValid(true);
-  };
+  } = api.admin.listUsers.useQuery(undefined, {
+    enabled: isAdmin,
+    retry: false,
+  });
 
   const [selectedUser, setSelectedUser] = useState<any | null>(null);
   const [isUserDetailsOpen, setIsUserDetailsOpen] = useState(false);
@@ -72,11 +59,10 @@ export default function AdminPage() {
     refetch: refetchUserDetails,
   } = api.admin.getUserDetails.useQuery(
     {
-      adminToken,
       privyDid: selectedUser?.privyDid || '',
     },
     {
-      enabled: !!selectedUser && isUserDetailsOpen && isTokenValid,
+      enabled: !!selectedUser && isUserDetailsOpen && isAdmin,
       retry: false,
     },
   );
@@ -94,7 +80,6 @@ export default function AdminPage() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ adminToken }),
       });
 
       const data = await response.json();
@@ -103,7 +88,6 @@ export default function AdminPage() {
         toast.success(
           `KYC sync completed: ${data.summary.updated} updated, ${data.summary.unchanged} unchanged, ${data.summary.errors} errors`,
         );
-        // Refresh the users list
         refetchUsers();
       } else {
         toast.error(`Sync failed: ${data.error}`);
@@ -116,35 +100,59 @@ export default function AdminPage() {
     }
   };
 
-  if (!isTokenValid) {
+  // Show loading state while checking admin status
+  if (!authenticated || isCheckingAdmin) {
     return (
       <div className="container mx-auto px-4 py-8 max-w-md">
         <Card>
           <CardHeader>
-            <CardTitle>Admin Authentication</CardTitle>
+            <CardTitle>Admin Panel</CardTitle>
             <CardDescription>
-              Please enter your admin token to access the admin panel
+              {!authenticated
+                ? 'Please authenticate to access the admin panel'
+                : 'Checking admin privileges...'}
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleTokenSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <label htmlFor="adminToken" className="text-sm font-medium">
-                  Admin Token
-                </label>
-                <Input
-                  id="adminToken"
-                  type="password"
-                  value={adminToken}
-                  onChange={(e) => setAdminToken(e.target.value)}
-                  placeholder="Enter admin token"
-                  className="w-full"
-                />
-              </div>
-              <Button type="submit" className="w-full">
-                Authenticate
+            {!authenticated ? (
+              <Button onClick={login} className="w-full">
+                Sign In
               </Button>
-            </form>
+            ) : (
+              <div className="text-center py-4">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto" />
+                <p className="mt-4 text-sm text-muted-foreground">
+                  Verifying admin access...
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Show access denied if not admin
+  if (!isAdmin) {
+    return (
+      <div className="container mx-auto px-4 py-8 max-w-md">
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <ShieldAlert className="h-5 w-5 text-destructive" />
+              <CardTitle>Access Denied</CardTitle>
+            </div>
+            <CardDescription>
+              You do not have permission to access the admin panel
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground mb-4">
+              Admin access is restricted to authorized personnel only.
+            </p>
+            <p className="text-xs text-muted-foreground">
+              User ID: {user?.id?.substring(0, 20)}...
+            </p>
           </CardContent>
         </Card>
       </div>
@@ -154,7 +162,12 @@ export default function AdminPage() {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">Admin Panel</h1>
+        <div>
+          <h1 className="text-3xl font-bold">Admin Panel</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Logged in as admin
+          </p>
+        </div>
         <div className="flex gap-2">
           <Button
             variant="outline"
@@ -166,17 +179,6 @@ export default function AdminPage() {
               className={`h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`}
             />
             {isSyncing ? 'Syncing...' : 'Sync All KYC'}
-          </Button>
-          <Button
-            variant="outline"
-            onClick={() => {
-              sessionStorage.removeItem('adminToken');
-              setIsTokenValid(false);
-              setAdminToken('');
-              toast.success('Logged out successfully');
-            }}
-          >
-            Log Out
           </Button>
         </div>
       </div>

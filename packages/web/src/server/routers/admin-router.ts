@@ -12,31 +12,28 @@ import {
   userFeatures,
   workspaces,
   workspaceMembers,
+  admins,
 } from '../../db/schema';
 import { eq, and } from 'drizzle-orm';
-import { customAlphabet } from 'nanoid';
 import { alignApi, AlignCustomer } from '@/server/services/align-api';
 import { getSafeBalance } from '@/server/services/safe.service';
-
-// Create a validation schema for the admin token
-const adminTokenSchema = z.string().min(1);
-
-// Custom ID generator
-const generateId = customAlphabet('1234567890abcdefghijklmnopqrstuvwxyz', 10);
+import { getUser } from '@/lib/auth';
 
 /**
- * Validates if the given token matches the admin token from environment
- * @param token Token to validate
+ * Check if a user is an admin by looking up their Privy DID in the admins table
+ * @param privyDid The user's Privy DID
+ * @returns true if user is admin, false otherwise
  */
-function validateAdminToken(token: string): boolean {
-  const adminToken = process.env.ADMIN_SECRET_TOKEN;
-
-  if (!adminToken) {
-    console.error('ADMIN_SECRET_TOKEN not set in environment variables');
+async function isUserAdmin(privyDid: string): Promise<boolean> {
+  try {
+    const admin = await db.query.admins.findFirst({
+      where: eq(admins.privyDid, privyDid),
+    });
+    return !!admin;
+  } catch (error) {
+    console.error('Error checking admin status:', error);
     return false;
   }
-
-  return token === adminToken;
 }
 
 // Zod schema for the direct Align customer details - updated to match Align API more closely
