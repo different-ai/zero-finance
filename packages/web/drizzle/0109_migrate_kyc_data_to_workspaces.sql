@@ -146,7 +146,7 @@ WHERE udba.user_id = u.privy_did
 UPDATE "offramp_transfers" ot
 SET workspace_id = u.primary_workspace_id
 FROM "users" u
-WHERE ot.user_privy_did = u.privy_did
+WHERE ot.user_id = u.privy_did
   AND ot.workspace_id IS NULL
   AND u.primary_workspace_id IS NOT NULL;
 
@@ -154,7 +154,7 @@ WHERE ot.user_privy_did = u.privy_did
 UPDATE "onramp_transfers" ont
 SET workspace_id = u.primary_workspace_id
 FROM "users" u
-WHERE ont.user_privy_did = u.privy_did
+WHERE ont.user_id = u.privy_did
   AND ont.workspace_id IS NULL
   AND u.primary_workspace_id IS NOT NULL;
 
