@@ -137,7 +137,9 @@ export default function EarnModulePage() {
         </p>
       </header>
 
-      <EnableEarnCard safeAddress={primarySafeAddress || undefined} />
+      <EnableEarnCard
+        safeAddress={primarySafeAddress as `0x${string}` | undefined}
+      />
 
       {/* Only show the deposit/withdraw cards if module is fully set up */}
       {isEarnFullySetUpOnChain && primarySafeAddress && (
@@ -149,29 +151,31 @@ export default function EarnModulePage() {
           </TabsList>
           <TabsContent value="deposit" className="mt-4">
             <DepositEarnCard
-              safeAddress={primarySafeAddress}
-              vaultAddress={vaultAddress}
+              safeAddress={primarySafeAddress as `0x${string}`}
+              vaultAddress={vaultAddress as `0x${string}`}
               onDepositSuccess={handleTransactionSuccess}
             />
           </TabsContent>
           <TabsContent value="withdraw" className="mt-4">
             <WithdrawEarnCard
-              safeAddress={primarySafeAddress}
-              vaultAddress={vaultAddress}
+              safeAddress={primarySafeAddress as `0x${string}`}
+              vaultAddress={vaultAddress as `0x${string}`}
               onWithdrawSuccess={handleTransactionSuccess}
             />
           </TabsContent>
           <TabsContent value="advanced" className="mt-4">
             <WithdrawEarnCardAdvanced
-              safeAddress={primarySafeAddress}
-              vaultAddress={vaultAddress}
+              safeAddress={primarySafeAddress as `0x${string}`}
+              vaultAddress={vaultAddress as `0x${string}`}
             />
           </TabsContent>
         </Tabs>
       )}
 
       {/* Display StatsCard if primarySafeAddress is available */}
-      {primarySafeAddress && <StatsCard safeAddress={primarySafeAddress} />}
+      {primarySafeAddress && (
+        <StatsCard safeAddress={primarySafeAddress as `0x${string}`} />
+      )}
 
       {primarySafeAddress && showOnChainStatusErrors && (
         <Alert variant="default">
@@ -193,7 +197,7 @@ export default function EarnModulePage() {
 
       {primarySafeAddress && (
         <AutoEarnListener
-          safeAddress={primarySafeAddress}
+          safeAddress={primarySafeAddress as `0x${string}`}
           // Pass the comprehensive on-chain status for enabling the trigger
           isEarnModuleFullyActive={isEarnFullySetUpOnChain}
           // The DB flag can be used for supplementary UI text if needed, e.g. "user has gone through setup"

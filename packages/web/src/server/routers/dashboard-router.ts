@@ -48,7 +48,7 @@ export const dashboardRouter = router({
     const safeBalances = await Promise.all(
       userSafeRecords.map((safe: UserSafe) =>
         getSafeBalance({
-          safeAddress: safe.safeAddress,
+          safeAddress: safe.safeAddress as `0x${string}`,
           tokenAddress: USDC_ADDRESS, // Hardcoded USDC
         }).catch((e) => {
           log.error(e, `Failed to get balance for safe ${safe.safeAddress}`);

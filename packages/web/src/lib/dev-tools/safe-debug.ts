@@ -11,17 +11,20 @@ export async function debugSafeSig(
 ) {
   console.log('debugging safe sig');
   const publicClient = createPublicClient({ chain: base, transport: http() });
-  const sdk = await Safe.init({ safeAddress, provider: process.env.NEXT_PUBLIC_BASE_RPC_URL!! });
+  const sdk = await Safe.init({
+    safeAddress,
+    provider: process.env.NEXT_PUBLIC_BASE_RPC_URL!!,
+  });
   console.log('sdk initialized');
   const txHash = await sdk.getTransactionHash(safeTx);
   const preSig = buildPrevalidatedSig(signer as `0x${string}`);
   console.log('preSig built');
 
   const res = await publicClient.readContract({
-    address: safeAddress as `0x${string}`,
+    address: safeAddress,
     abi: SAFE_ABI,
     functionName: 'isValidSignature',
-    args: [txHash, preSig],
+    args: [txHash as `0x${string}`, preSig],
   });
   console.log('res', res);
   console.log('debugSignature:', {
