@@ -4,6 +4,7 @@ import { router, protectedProcedure, publicProcedure } from '../create-router';
 import { db } from '../../db';
 import {
   users,
+  workspaces,
   userSafes,
   userFundingSources,
   userDestinationBankAccounts,
@@ -25,34 +26,34 @@ import type { Address } from 'viem';
 import { featureConfig } from '@/lib/feature-config';
 
 /**
- * Helper function to fetch fresh KYC status from Align API and update DB
+ * Helper function to fetch fresh KYC status from Align API and update workspace DB
  * @param alignCustomerId - The Align customer ID
- * @param userId - The user's Privy DID
+ * @param workspaceId - The workspace UUID
  * @returns The latest KYC information or null if not found
  */
-async function fetchAndUpdateKycStatus(
+async function fetchAndUpdateWorkspaceKycStatus(
   alignCustomerId: string,
-  userId: string,
+  workspaceId: string,
 ) {
   console.log(
-    '[fetchAndUpdateKycStatus] Starting for customerId:',
+    '[fetchAndUpdateWorkspaceKycStatus] Starting for customerId:',
     alignCustomerId,
-    'userId:',
-    userId,
+    'workspaceId:',
+    workspaceId,
   );
   try {
     const customer = await alignApi.getCustomer(alignCustomerId);
     console.log(
-      '[fetchAndUpdateKycStatus] Customer data received:',
+      '[fetchAndUpdateWorkspaceKycStatus] Customer data received:',
       JSON.stringify(customer, null, 2),
     );
     const latestKyc =
       customer.kycs && customer.kycs.length > 0 ? customer.kycs[0] : null;
 
     if (latestKyc) {
-      // Update DB with latest status and customer details
+      // Update WORKSPACE with latest status and customer details
       await db
-        .update(users)
+        .update(workspaces)
         .set({
           kycStatus: latestKyc.status,
           kycFlowLink: latestKyc.kyc_flow_link,
@@ -64,23 +65,29 @@ async function fetchAndUpdateKycStatus(
           companyName: customer.company_name || null,
           beneficiaryType: customer.beneficiary_type || null,
         })
-        .where(eq(users.privyDid, userId));
+        .where(eq(workspaces.id, workspaceId));
 
       console.log(
-        `[fetchAndUpdateKycStatus] Updated KYC status for user ${userId}: status=${latestKyc.status}, sub_status=${latestKyc.sub_status}`,
+        `[fetchAndUpdateWorkspaceKycStatus] Updated KYC status for workspace ${workspaceId}: status=${latestKyc.status}, sub_status=${latestKyc.sub_status}`,
       );
     }
 
     console.log(
-      '[fetchAndUpdateKycStatus] Returning KYC data:',
+      '[fetchAndUpdateWorkspaceKycStatus] Returning KYC data:',
       JSON.stringify(latestKyc, null, 2),
     );
     return latestKyc;
   } catch (error) {
-    console.error('[fetchAndUpdateKycStatus] Error:', error);
+    console.error('[fetchAndUpdateWorkspaceKycStatus] Error:', error);
     if (error instanceof Error) {
-      console.error('[fetchAndUpdateKycStatus] Error message:', error.message);
-      console.error('[fetchAndUpdateKycStatus] Error stack:', error.stack);
+      console.error(
+        '[fetchAndUpdateWorkspaceKycStatus] Error message:',
+        error.message,
+      );
+      console.error(
+        '[fetchAndUpdateWorkspaceKycStatus] Error stack:',
+        error.stack,
+      );
     }
     throw error;
   }
@@ -165,8 +172,8 @@ export const alignRouter = router({
   }),
 
   /**
-   * Get customer status from DB and refresh from Align API
-   * Always fetches the latest status from Align and updates DB
+   * Get customer status from WORKSPACE and refresh from Align API
+   * Always fetches the latest status from Align and updates workspace DB
    */
   getCustomerStatus: protectedProcedure.query(async ({ ctx }) => {
     // Return Lite mode response if Align not configured
@@ -194,7 +201,7 @@ export const alignRouter = router({
       });
     }
 
-    // Get user from DB
+    // Get user with primary workspace
     const user = await db.query.users.findFirst({
       where: eq(users.privyDid, userFromPrivy.id),
     });
@@ -206,23 +213,42 @@ export const alignRouter = router({
       });
     }
 
-    // If user has alignCustomerId, fetch latest status from Align API
-    if (user.alignCustomerId) {
+    if (!user.primaryWorkspaceId) {
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'User has no workspace - data integrity issue',
+      });
+    }
+
+    // Get WORKSPACE KYC status - this is the key change
+    const workspace = await db.query.workspaces.findFirst({
+      where: eq(workspaces.id, user.primaryWorkspaceId),
+    });
+
+    if (!workspace) {
+      throw new TRPCError({
+        code: 'NOT_FOUND',
+        message: 'Workspace not found',
+      });
+    }
+
+    // If workspace has alignCustomerId, fetch latest status from Align API
+    if (workspace.alignCustomerId) {
       try {
-        const latestKyc = await fetchAndUpdateKycStatus(
-          user.alignCustomerId,
-          userFromPrivy.id,
+        const latestKyc = await fetchAndUpdateWorkspaceKycStatus(
+          workspace.alignCustomerId,
+          workspace.id,
         );
 
         if (latestKyc) {
           // Return the fresh data from Align
           return {
-            alignCustomerId: user.alignCustomerId,
+            alignCustomerId: workspace.alignCustomerId,
             kycStatus: latestKyc.status,
             kycFlowLink: latestKyc.kyc_flow_link,
             kycSubStatus: latestKyc.sub_status,
-            alignVirtualAccountId: user.alignVirtualAccountId,
-            kycMarkedDone: user.kycMarkedDone,
+            alignVirtualAccountId: workspace.alignVirtualAccountId,
+            kycMarkedDone: workspace.kycMarkedDone,
           };
         }
       } catch (error) {
@@ -231,7 +257,8 @@ export const alignRouter = router({
           {
             procedure: 'getCustomerStatus',
             userId: userFromPrivy.id,
-            alignCustomerId: user.alignCustomerId,
+            workspaceId: workspace.id,
+            alignCustomerId: workspace.alignCustomerId,
             error: (error as Error).message,
           },
           'Failed to fetch latest KYC status from Align API, returning cached data',
@@ -239,14 +266,14 @@ export const alignRouter = router({
       }
     }
 
-    // Return DB data if no alignCustomerId or if Align API call failed
+    // Return WORKSPACE DB data if no alignCustomerId or if Align API call failed
     return {
-      alignCustomerId: user.alignCustomerId,
-      kycStatus: user.kycStatus,
-      kycFlowLink: user.kycFlowLink,
-      kycSubStatus: user.kycSubStatus,
-      alignVirtualAccountId: user.alignVirtualAccountId,
-      kycMarkedDone: user.kycMarkedDone,
+      alignCustomerId: workspace.alignCustomerId,
+      kycStatus: workspace.kycStatus,
+      kycFlowLink: workspace.kycFlowLink,
+      kycSubStatus: workspace.kycSubStatus,
+      alignVirtualAccountId: workspace.alignVirtualAccountId,
+      kycMarkedDone: workspace.kycMarkedDone,
     };
   }),
 
