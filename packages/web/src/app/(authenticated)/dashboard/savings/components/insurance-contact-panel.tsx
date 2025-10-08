@@ -44,8 +44,8 @@ export function InsuranceContactPanel() {
       <div className="border border-dashed border-[#1B29FF]/30 rounded-lg p-4 bg-[#1B29FF]/5">
         <p className="text-[13px] text-[#1B29FF]">
           Coverage is issued through our underwriting partners after a short
-          call. We'll validate treasury size, coverage needs, and onboard you
-          end-to-end.
+          call. We&apos;ll validate treasury size, coverage needs, and onboard
+          you end-to-end.
         </p>
       </div>
     </div>
