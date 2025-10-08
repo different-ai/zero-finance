@@ -47,6 +47,22 @@ Hide complexity. Show clarity.
 
 ## Visual Identity
 
+### Animated Backgrounds
+
+**Mesh Gradient (Onboarding/Auth)**
+
+- Component: `<GeneratedComponent />` from `@/app/(landing)/welcome-gradient`
+- Colors: `['#668fff', '#1B29FF', 'rgba(246, 245, 239, 0)']`
+- Use for: Welcome pages, authentication flows
+- Speed: 0.2 for subtle movement
+
+**Heatmap Gradient (Flyers/Print)**
+
+- Component: `<FlyerGradient />` from `@/app/(landing)/flyer-gradient`
+- Colors: `['#1B29FF', '#668fff', '#F6F5EF', 'rgba(246, 245, 239, 0.3)']`
+- Use for: Flyers, print materials, promotional content
+- Speed: 0.3 with 45° angle for dynamic feel
+
 ### Logo & Branding
 
 **Logo Usage**

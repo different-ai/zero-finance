@@ -46,7 +46,7 @@
     "@hookform/resolvers": "catalog:",
     "@lifi/types": "^17.9.0",
     "@lottiefiles/react-lottie-player": "^3.6.0",
-    "@paper-design/shaders-react": "^0.0.47",
+    "@paper-design/shaders-react": "^0.0.57",
     "@privy-io/react-auth": "^3.0.1",
     "@privy-io/server-auth": "^1.19.3",
     "@privy-io/wagmi": "^2.0.0",
