@@ -210,12 +210,16 @@ function CheckingActionsCard({
       .catch((error) => console.error('Failed to copy address', error));
   };
 
-  const canInitiateMove = (isDemoMode || balanceUsd > 0) && !!safeAddress;
+  const hasOnlyStarterAccounts = !hasCompletedKyc && fundingSources.length > 0;
+  const canInitiateMove =
+    (isDemoMode || balanceUsd > 0) && !!safeAddress && !hasOnlyStarterAccounts;
   const disableReason = !safeAddress
     ? 'Add a treasury safe to move funds'
     : balanceUsd <= 0
       ? 'No withdrawable balance available'
-      : undefined;
+      : hasOnlyStarterAccounts
+        ? 'Complete business verification to enable withdrawals'
+        : undefined;
 
   return (
     <div className="bg-white border border-[#101010]/10 rounded-[12px] p-6 space-y-6">

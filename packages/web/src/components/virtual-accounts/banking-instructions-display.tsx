@@ -85,14 +85,18 @@ export function BankingInstructionsDisplay({
             </div>
             <div className="flex items-start gap-2 rounded-[10px] border border-[#1B29FF]/20 bg-[#1B29FF]/5 px-3 py-2.5">
               <Info className="h-4 w-4 text-[#1B29FF] mt-0.5 flex-shrink-0" />
-              <p className="text-[12px] text-[#101010]/70 leading-relaxed">
-                These accounts accept up to{' '}
-                <span className="font-semibold text-[#101010]">
-                  $10,000 total deposits
-                </span>
-                . To unlock unlimited deposits, complete your business
-                verification.
-              </p>
+              <div className="text-[12px] text-[#101010]/70 leading-relaxed">
+                <p className="mb-1">
+                  <span className="font-semibold text-[#101010]">
+                    Deposits only:
+                  </span>{' '}
+                  Accept up to $10,000 total.
+                </p>
+                <p>
+                  Complete business verification to unlock unlimited deposits
+                  and bank withdrawals.
+                </p>
+              </div>
             </div>
           </div>
 
