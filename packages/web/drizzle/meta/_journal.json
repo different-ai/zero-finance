@@ -757,6 +757,13 @@
       "when": 1759949346922,
       "tag": "0107_create_admins_table",
       "breakpoints": true
+    },
+    {
+      "idx": 108,
+      "version": "7",
+      "when": 1759950297663,
+      "tag": "0108_fantastic_abomination",
+      "breakpoints": true
     }
   ]
 }
