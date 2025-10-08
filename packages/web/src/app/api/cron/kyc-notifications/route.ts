@@ -1,11 +1,17 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { db } from '@/db';
-import { users, userProfilesTable } from '@/db/schema';
+import {
+  users,
+  userProfilesTable,
+  userFundingSources,
+  userSafes,
+} from '@/db/schema';
 import { eq, and, isNull, isNotNull, ne } from 'drizzle-orm';
 import { loopsApi, LoopsEvent } from '@/server/services/loops-service';
 import { alignApi } from '@/server/services/align-api';
 import { getPrivyClient } from '@/lib/auth';
 import { featureConfig } from '@/lib/feature-config';
+import type { Address } from 'viem';
 
 // Helper to validate the cron key (to protect endpoint from unauthorized access)
 function validateCronKey(req: NextRequest): boolean {
@@ -26,11 +32,17 @@ function validateCronKey(req: NextRequest): boolean {
 interface KycProcessingResult {
   userId: string;
   email: string;
-  action: 'status_updated' | 'notification_sent' | 'no_change' | 'error';
+  action:
+    | 'status_updated'
+    | 'notification_sent'
+    | 'virtual_accounts_created'
+    | 'no_change'
+    | 'error';
   oldStatus?: string;
   newStatus?: string;
   success: boolean;
   error?: string;
+  details?: string;
 }
 
 /**
@@ -196,6 +208,197 @@ async function sendKycNotification(
   }
 
   return response;
+}
+
+/**
+ * Create virtual accounts for an approved user
+ * Returns success status and details about created accounts
+ */
+async function createVirtualAccountsForUser(
+  userId: string,
+  alignCustomerId: string,
+): Promise<{ success: boolean; details: string; error?: string }> {
+  try {
+    console.log(`[kyc-processor] Creating virtual accounts for user ${userId}`);
+
+    // Check if user already has virtual accounts
+    const existingAccounts = await db.query.userFundingSources.findMany({
+      where: eq(userFundingSources.userPrivyDid, userId),
+    });
+
+    if (existingAccounts.length > 0) {
+      console.log(
+        `[kyc-processor] User ${userId} already has ${existingAccounts.length} funding source(s)`,
+      );
+      return {
+        success: true,
+        details: `Already has ${existingAccounts.length} funding source(s)`,
+      };
+    }
+
+    // Get user's primary workspace
+    const user = await db.query.users.findFirst({
+      where: eq(users.privyDid, userId),
+    });
+
+    if (!user?.primaryWorkspaceId) {
+      return {
+        success: false,
+        details: 'No primary workspace found',
+        error: 'User has no primary workspace',
+      };
+    }
+
+    // Get primary safe address for the workspace
+    const primarySafe = await db.query.userSafes.findFirst({
+      where: and(
+        eq(userSafes.userDid, userId),
+        eq(userSafes.safeType, 'primary'),
+        eq(userSafes.workspaceId, user.primaryWorkspaceId),
+      ),
+    });
+
+    if (!primarySafe?.safeAddress) {
+      return {
+        success: false,
+        details: 'No primary safe address found',
+        error: 'User has no primary safe address',
+      };
+    }
+
+    const destinationAddress = primarySafe.safeAddress as Address;
+    const results = [];
+    const errors = [];
+
+    // Create USD (ACH) account
+    try {
+      console.log(`[kyc-processor] Creating USD account for ${userId}`);
+      const usdAccount = await alignApi.createVirtualAccount(alignCustomerId, {
+        source_currency: 'usd',
+        destination_token: 'usdc',
+        destination_network: 'base',
+        destination_address: destinationAddress,
+      });
+
+      await db.insert(userFundingSources).values({
+        userPrivyDid: userId,
+        sourceProvider: 'align',
+        alignVirtualAccountIdRef: usdAccount.id,
+        sourceAccountType: 'us_ach',
+        sourceCurrency: 'usd',
+        sourceBankName: usdAccount.deposit_instructions.bank_name,
+        sourceBankAddress: usdAccount.deposit_instructions.bank_address,
+        sourceBankBeneficiaryName:
+          usdAccount.deposit_instructions.beneficiary_name ||
+          usdAccount.deposit_instructions.account_beneficiary_name,
+        sourceBankBeneficiaryAddress:
+          usdAccount.deposit_instructions.beneficiary_address ||
+          usdAccount.deposit_instructions.account_beneficiary_address,
+        sourceAccountNumber:
+          usdAccount.deposit_instructions.us?.account_number ||
+          usdAccount.deposit_instructions.account_number,
+        sourceRoutingNumber:
+          usdAccount.deposit_instructions.us?.routing_number ||
+          usdAccount.deposit_instructions.routing_number,
+        sourcePaymentRails: usdAccount.deposit_instructions.payment_rails,
+        destinationCurrency: 'usdc',
+        destinationPaymentRail: 'base',
+        destinationAddress: destinationAddress,
+      });
+
+      results.push({ currency: 'USD', id: usdAccount.id });
+      console.log(`[kyc-processor] ✅ Created USD account: ${usdAccount.id}`);
+    } catch (error) {
+      console.error(`[kyc-processor] Error creating USD account:`, error);
+      errors.push({
+        currency: 'USD',
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+
+    // Create EUR (IBAN) account
+    try {
+      console.log(`[kyc-processor] Creating EUR account for ${userId}`);
+      const eurAccount = await alignApi.createVirtualAccount(alignCustomerId, {
+        source_currency: 'eur',
+        destination_token: 'usdc',
+        destination_network: 'base',
+        destination_address: destinationAddress,
+      });
+
+      await db.insert(userFundingSources).values({
+        userPrivyDid: userId,
+        sourceProvider: 'align',
+        alignVirtualAccountIdRef: eurAccount.id,
+        sourceAccountType: 'iban',
+        sourceCurrency: 'eur',
+        sourceBankName: eurAccount.deposit_instructions.bank_name,
+        sourceBankAddress: eurAccount.deposit_instructions.bank_address,
+        sourceBankBeneficiaryName:
+          eurAccount.deposit_instructions.beneficiary_name ||
+          eurAccount.deposit_instructions.account_beneficiary_name,
+        sourceBankBeneficiaryAddress:
+          eurAccount.deposit_instructions.beneficiary_address ||
+          eurAccount.deposit_instructions.account_beneficiary_address,
+        sourceIban: eurAccount.deposit_instructions.iban?.iban_number,
+        sourceBicSwift:
+          eurAccount.deposit_instructions.iban?.bic ||
+          eurAccount.deposit_instructions.bic?.bic_code,
+        sourcePaymentRails: eurAccount.deposit_instructions.payment_rails,
+        destinationCurrency: 'usdc',
+        destinationPaymentRail: 'base',
+        destinationAddress: destinationAddress,
+      });
+
+      results.push({ currency: 'EUR', id: eurAccount.id });
+      console.log(`[kyc-processor] ✅ Created EUR account: ${eurAccount.id}`);
+    } catch (error) {
+      console.error(`[kyc-processor] Error creating EUR account:`, error);
+      errors.push({
+        currency: 'EUR',
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+
+    // Update user with first account ID if any were created
+    if (results.length > 0) {
+      await db
+        .update(users)
+        .set({
+          alignVirtualAccountId: results[0].id,
+        })
+        .where(eq(users.privyDid, userId));
+    }
+
+    if (results.length === 2) {
+      return {
+        success: true,
+        details: `Created USD and EUR accounts (${results[0].id}, ${results[1].id})`,
+      };
+    } else if (results.length === 1) {
+      return {
+        success: true,
+        details: `Created ${results[0].currency} account (${results[0].id}), ${errors[0]?.currency} failed`,
+        error: errors[0]?.error,
+      };
+    } else {
+      return {
+        success: false,
+        details: 'Failed to create any accounts',
+        error: errors.map((e) => `${e.currency}: ${e.error}`).join('; '),
+      };
+    }
+  } catch (error) {
+    console.error(
+      `[kyc-processor] Error in createVirtualAccountsForUser for ${userId}:`,
+      error,
+    );
+    return {
+      success: false,
+      details: 'Exception during account creation',
+      error: error instanceof Error ? error.message : String(error),
+    };
+  }
 }
 
 /**
@@ -402,6 +605,86 @@ async function processKycUpdatesAndNotifications(): Promise<
         });
       }
     }
+
+    // PHASE 3: Create virtual accounts for approved users who don't have them
+    console.log(
+      '[kyc-processor] Phase 3: Creating virtual accounts for approved users...',
+    );
+
+    const approvedUsersWithoutAccounts = await db.query.users.findMany({
+      where: and(
+        eq(users.kycStatus, 'approved' as const),
+        isNotNull(users.alignCustomerId),
+        ne(users.alignCustomerId, ''),
+      ),
+      limit: 10, // Process up to 10 account creations per run
+    });
+
+    console.log(
+      `[kyc-processor] Found ${approvedUsersWithoutAccounts.length} approved users to check for virtual accounts`,
+    );
+
+    for (const user of approvedUsersWithoutAccounts) {
+      if (!user.alignCustomerId) continue;
+
+      try {
+        // Check if they already have funding sources
+        const existingAccounts = await db.query.userFundingSources.findMany({
+          where: eq(userFundingSources.userPrivyDid, user.privyDid),
+        });
+
+        if (existingAccounts.length > 0) {
+          // Already has accounts, skip
+          continue;
+        }
+
+        const email = await getUserEmail(user.privyDid);
+        if (!email) {
+          results.push({
+            userId: user.privyDid,
+            email: 'no-email',
+            action: 'error',
+            success: false,
+            error: 'No email address found for virtual account creation',
+          });
+          continue;
+        }
+
+        // Create virtual accounts
+        const accountResult = await createVirtualAccountsForUser(
+          user.privyDid,
+          user.alignCustomerId,
+        );
+
+        results.push({
+          userId: user.privyDid,
+          email,
+          action: accountResult.success ? 'virtual_accounts_created' : 'error',
+          success: accountResult.success,
+          details: accountResult.details,
+          error: accountResult.error,
+        });
+
+        console.log(
+          `[kyc-processor] ${accountResult.success ? '✅' : '❌'} Virtual accounts for ${email}: ${accountResult.details}`,
+        );
+
+        // Rate limiting delay (virtual account creation is API-intensive)
+        await new Promise((resolve) => setTimeout(resolve, 500));
+      } catch (error) {
+        console.error(
+          `[kyc-processor] Error creating virtual accounts for user ${user.privyDid}:`,
+          error,
+        );
+        results.push({
+          userId: user.privyDid,
+          email: 'unknown',
+          action: 'error',
+          success: false,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
   } catch (error) {
     console.error(
       '[kyc-processor] Error in comprehensive KYC processing:',
@@ -445,6 +728,9 @@ export async function GET(req: NextRequest) {
     const notificationsSentCount = results.filter(
       (r: KycProcessingResult) => r.action === 'notification_sent',
     ).length;
+    const virtualAccountsCreatedCount = results.filter(
+      (r: KycProcessingResult) => r.action === 'virtual_accounts_created',
+    ).length;
     const noChangeCount = results.filter(
       (r: KycProcessingResult) => r.action === 'no_change',
     ).length;
@@ -453,7 +739,7 @@ export async function GET(req: NextRequest) {
       `[kyc-processor] KYC processing completed: ${successCount} success, ${failureCount} failures`,
     );
     console.log(
-      `[kyc-processor] Summary: ${statusUpdatesCount} status updates, ${notificationsSentCount} notifications sent, ${noChangeCount} no changes`,
+      `[kyc-processor] Summary: ${statusUpdatesCount} status updates, ${notificationsSentCount} notifications sent, ${virtualAccountsCreatedCount} virtual accounts created, ${noChangeCount} no changes`,
     );
 
     return NextResponse.json({
@@ -465,6 +751,7 @@ export async function GET(req: NextRequest) {
         failureCount,
         statusUpdatesCount,
         notificationsSentCount,
+        virtualAccountsCreatedCount,
         noChangeCount,
       },
       results,
