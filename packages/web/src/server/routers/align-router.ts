@@ -26,6 +26,52 @@ import type { Address } from 'viem';
 import { featureConfig } from '@/lib/feature-config';
 
 /**
+ * Helper function to fetch fresh KYC status from Align API and update user DB
+ * DEPRECATED: Use fetchAndUpdateWorkspaceKycStatus for new code
+ * @param alignCustomerId - The Align customer ID
+ * @param userId - The user's Privy DID
+ * @returns The latest KYC information or null if not found
+ */
+async function fetchAndUpdateKycStatus(
+  alignCustomerId: string,
+  userId: string,
+) {
+  console.log(
+    '[fetchAndUpdateKycStatus] Starting for customerId:',
+    alignCustomerId,
+    'userId:',
+    userId,
+  );
+  try {
+    const customer = await alignApi.getCustomer(alignCustomerId);
+    const latestKyc =
+      customer.kycs && customer.kycs.length > 0 ? customer.kycs[0] : null;
+
+    if (latestKyc) {
+      // Update user DB with latest status (legacy behavior)
+      await db
+        .update(users)
+        .set({
+          kycStatus: latestKyc.status,
+          kycFlowLink: latestKyc.kyc_flow_link,
+          kycSubStatus: latestKyc.sub_status,
+          kycProvider: 'align',
+          firstName: customer.first_name || null,
+          lastName: customer.last_name || null,
+          companyName: customer.company_name || null,
+          beneficiaryType: customer.beneficiary_type || null,
+        })
+        .where(eq(users.privyDid, userId));
+    }
+
+    return latestKyc;
+  } catch (error) {
+    console.error('[fetchAndUpdateKycStatus] Error:', error);
+    throw error;
+  }
+}
+
+/**
  * Helper function to fetch fresh KYC status from Align API and update workspace DB
  * @param alignCustomerId - The Align customer ID
  * @param workspaceId - The workspace UUID
