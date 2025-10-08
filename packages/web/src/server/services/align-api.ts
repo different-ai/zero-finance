@@ -69,8 +69,8 @@ const alignVirtualAccountSchema = z.object({
     // Support both naming conventions for backwards compatibility
     beneficiary_name: z.string(),
     beneficiary_address: z.string().optional(),
-    account_beneficiary_name: z.string().optional(),
-    account_beneficiary_address: z.string().optional(),
+    account_beneficiary_name: z.string().nullable().optional(),
+    account_beneficiary_address: z.string().nullable().optional(),
     // Payment rails
     payment_rails: z.array(z.string()).optional(),
     // US ACH specific fields - both direct and nested
