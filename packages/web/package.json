@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "PORT=3050 next dev",
+    "dev:prod": "PORT=3050 dotenv -e .env.prod.local -- next dev",
     "build": "next build",
     "build:vercel": "pnpm db:migrate && next build",
     "start": "next start",
