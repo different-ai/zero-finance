@@ -870,12 +870,10 @@ export const alignRouter = router({
       });
     }
 
-    // Get workspace funding sources from DB (filtered by workspace)
+    // Get workspace funding sources from DB (filtered by workspace only)
+    // All workspace members should see the same funding sources
     const fundingSources = await db.query.userFundingSources.findMany({
-      where: and(
-        eq(userFundingSources.userPrivyDid, userFromPrivy.id),
-        eq(userFundingSources.workspaceId, workspaceId),
-      ),
+      where: eq(userFundingSources.workspaceId, workspaceId),
     });
 
     // Filter for Align-provided sources
