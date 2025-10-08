@@ -99,7 +99,8 @@ export const userSafesRouter = router({
    * within the current workspace context.
    *
    * Fallback behavior: If no workspace-scoped primary safe exists,
-   * falls back to any primary safe owned by the user for multi-workspace scenarios.
+   * falls back to ANY primary safe owned by the user from other workspaces.
+   * This handles multi-workspace scenarios where users can share safes across workspaces.
    */
   getPrimarySafeAddress: protectedProcedure.query(async ({ ctx }) => {
     const privyDid = ctx.user.id;
@@ -125,10 +126,6 @@ export const userSafesRouter = router({
           where: and(
             eq(userSafes.userDid, privyDid),
             eq(userSafes.safeType, 'primary'),
-            or(
-              eq(userSafes.workspaceId, workspaceId),
-              isNull(userSafes.workspaceId),
-            ),
           ),
           columns: { safeAddress: true },
         });

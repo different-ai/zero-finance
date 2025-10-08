@@ -287,15 +287,12 @@ export async function GET(request: Request) {
         continue;
       }
 
-      // Get workspace's primary safe address
+      // Get workspace's primary safe address (workspace-scoped only)
       const primarySafe = await db.query.userSafes.findFirst({
         where: and(
           eq(userSafes.userDid, workspace.createdBy),
           eq(userSafes.safeType, 'primary'),
-          or(
-            eq(userSafes.workspaceId, workspace.id),
-            isNull(userSafes.workspaceId), // Legacy safes without workspace
-          ),
+          eq(userSafes.workspaceId, workspace.id),
         ),
       });
 
