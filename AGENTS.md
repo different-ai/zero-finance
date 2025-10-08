@@ -10,18 +10,44 @@
 
 This is a Next.js application with smart contract automation for savings management.
 
-## Web Search & External Resources
+## External Resources & Knowledge Bases
 
-You have access to the **Exa MCP tool** for web searches, which is particularly useful for:
+### Notion MCP - Product Context & Messaging
 
-- Finding design inspiration and UI component images
-- Accessing live documentation for libraries and frameworks
-- Researching financial APIs and integrations
-- Looking up current best practices and patterns
-- Gathering visual assets and examples
-- Save  sensitive info  under './.docs' (dotfile)
+Use **Notion MCP tools** to access company documentation for:
 
-Use `exa_web_search_exa` for general searches and `exa_get_code_context_exa` for programming-specific context.
+- **Product copy, phrasing, and messaging** - Search workspace for approved language, tone, and voice guidelines
+- **Value propositions and pitching** - Find product positioning documents, sales decks, and marketing materials
+- **Feature specifications** - Retrieve detailed product requirements and user stories
+- **Brand guidelines** - Access style guides, terminology, and communication standards
+
+Primary tools: `notion_notion_search` for semantic search, `notion_notion_fetch` for specific page/database content.
+
+### Design Language - Visual & UI Standards
+
+**Always reference `packages/web/DESIGN-LANGUAGE.md`** for:
+
+- **Typography scales** - Landing page vs dashboard font sizes, hierarchy, and weights
+- **Color tokens** - Brand colors (`#1B29FF`), text colors, borders, backgrounds
+- **Component patterns** - Buttons, forms, cards, layout templates with exact Tailwind classes
+- **Spacing system** - Gap, padding, margin conventions (8px base unit)
+- **Content guidelines** - Banking terminology, number formatting, voice & tone
+- **Common mistakes** - Anti-patterns to avoid with correct examples
+
+This document is the single source of truth for all UI implementation decisions.
+
+### Exa MCP - Technical Context & Code
+
+Use **Exa MCP tools** for technical implementation when:
+
+- **New libraries or frameworks** - Not yet in the codebase or poorly understood by LLMs
+- **Complex integrations** - Financial APIs, blockchain libraries, or emerging standards
+- **Recent best practices** - Latest patterns, security considerations, or performance optimizations
+- **Visual inspiration** - Design systems, UI patterns, and component examples
+
+Primary tools: `exa_get_code_context_exa` for programming context, `exa_web_search_exa` for general technical research.
+
+**Workflow**: Check DESIGN-LANGUAGE.md first for UI/visual decisions, Notion for product/messaging context, then Exa for technical implementation details not well-covered in existing codebase or documentation.
 
 # Repository Guidelines
 
