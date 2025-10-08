@@ -778,6 +778,7 @@ export const alignRouter = router({
           .insert(userFundingSources)
           .values({
             userPrivyDid: userFromPrivy.id,
+            workspaceId: workspace.id,
             sourceProvider: 'align',
             alignVirtualAccountIdRef: virtualAccount.id,
 
@@ -819,12 +820,18 @@ export const alignRouter = router({
           })
           .returning();
 
-        // Update user with virtual account ID
+        // Update workspace with virtual account ID
         await db
-          .update(users)
+          .update(workspaces)
           .set({
             alignVirtualAccountId: virtualAccount.id,
           })
+          .where(eq(workspaces.id, workspace.id));
+
+        // Optional: keep legacy user column in sync while it still exists
+        await db
+          .update(users)
+          .set({ alignVirtualAccountId: virtualAccount.id })
           .where(eq(users.privyDid, userFromPrivy.id));
 
         return {
@@ -1795,6 +1802,7 @@ export const alignRouter = router({
         // Use destructured common fields for DB insert as well
         await db.insert(offrampTransfers).values({
           userId: userId,
+          workspaceId: workspace.id,
           alignTransferId: alignTransfer.id,
           status: alignTransfer.status as any,
           amountToSend: amount,
@@ -2241,6 +2249,7 @@ export const alignRouter = router({
       // Store USD account
       await db.insert(userFundingSources).values({
         userPrivyDid: userFromPrivy.id,
+        workspaceId: workspace.id,
         sourceProvider: 'align',
         alignVirtualAccountIdRef: usdAccount.id,
         sourceAccountType: 'us_ach',
@@ -2286,6 +2295,7 @@ export const alignRouter = router({
       // Store EUR account
       await db.insert(userFundingSources).values({
         userPrivyDid: userFromPrivy.id,
+        workspaceId: workspace.id,
         sourceProvider: 'align',
         alignVirtualAccountIdRef: eurAccount.id,
         sourceAccountType: 'iban',
@@ -2457,6 +2467,7 @@ export const alignRouter = router({
           .insert(onrampTransfers)
           .values({
             userId,
+            workspaceId: userRecord.primaryWorkspaceId,
             alignTransferId: transfer.id,
             status: transfer.status,
             amount: transfer.amount,
@@ -2679,6 +2690,7 @@ export const alignRouter = router({
         // Store the transfer in our database
         await db.insert(onrampTransfers).values({
           userId: userFromPrivy.id,
+          workspaceId: workspace.id,
           alignTransferId: onrampTransfer.id,
           status: onrampTransfer.status,
           amount: onrampTransfer.amount,
