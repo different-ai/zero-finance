@@ -1,6 +1,13 @@
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { trpc } from '@/utils/trpc';
-import { Loader2, AlertCircle, UploadCloud, Banknote } from 'lucide-react';
+import {
+  Loader2,
+  AlertCircle,
+  UploadCloud,
+  Banknote,
+  RefreshCw,
+} from 'lucide-react';
 import React from 'react';
 
 export function BankTransfersList() {
@@ -22,23 +29,22 @@ export function BankTransfersList() {
 
   const syncOnramp = trpc.align.syncOnrampTransfers.useMutation({
     onSuccess: () => {
-      // Invalidate the list query to refresh the data
       utils.align.listOnrampTransfers.invalidate();
     },
   });
 
   const syncOfframp = trpc.align.syncOfframpTransfers.useMutation({
     onSuccess: () => {
-      // Invalidate the list query to refresh the data
       utils.align.listOfframpTransfers.invalidate();
     },
   });
 
-  // Sync data on mount
-  React.useEffect(() => {
+  const handleRefresh = () => {
     syncOnramp.mutate();
     syncOfframp.mutate();
-  }, []);
+  };
+
+  const isSyncing = syncOnramp.isPending || syncOfframp.isPending;
 
   const isLoading = loadingIncoming || loadingOutgoing;
   const isError = errorIncoming || errorOutgoing;
@@ -55,10 +61,28 @@ export function BankTransfersList() {
   return (
     <Card className="bg-white border-gray-200 rounded-2xl shadow-sm">
       <CardHeader className="pb-4">
-        <h3 className="text-lg font-semibold text-gray-800">Bank Transfers</h3>
-        <p className="text-sm text-gray-500">
-          Recent incoming and outgoing transfers.
-        </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-lg font-semibold text-gray-800">
+              Bank Transfers
+            </h3>
+            <p className="text-sm text-gray-500">
+              Recent incoming and outgoing transfers.
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleRefresh}
+            disabled={isSyncing}
+            className="gap-2"
+          >
+            <RefreshCw
+              className={`h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`}
+            />
+            {isSyncing ? 'Syncing...' : 'Refresh'}
+          </Button>
+        </div>
       </CardHeader>
       <CardContent className="p-0">
         {isLoading ? (
@@ -121,4 +145,4 @@ export function BankTransfersList() {
       </CardContent>
     </Card>
   );
-} 
+}
