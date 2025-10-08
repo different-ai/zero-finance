@@ -851,7 +851,7 @@ export const alignRouter = router({
 
   /**
    * Get virtual account details
-   * Returns the details of the user's virtual account
+   * Returns the details of the workspace's virtual account
    */
   getVirtualAccountDetails: protectedProcedure.query(async ({ ctx }) => {
     const userFromPrivy = await getUser();
@@ -862,9 +862,20 @@ export const alignRouter = router({
       });
     }
 
-    // Get user funding sources from DB
+    const workspaceId = ctx.workspaceId;
+    if (!workspaceId) {
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Workspace context is unavailable.',
+      });
+    }
+
+    // Get workspace funding sources from DB (filtered by workspace)
     const fundingSources = await db.query.userFundingSources.findMany({
-      where: eq(userFundingSources.userPrivyDid, userFromPrivy.id),
+      where: and(
+        eq(userFundingSources.userPrivyDid, userFromPrivy.id),
+        eq(userFundingSources.workspaceId, workspaceId),
+      ),
     });
 
     // Filter for Align-provided sources
@@ -872,9 +883,9 @@ export const alignRouter = router({
       (source) => source.sourceProvider === 'align',
     );
 
-    // Also get user details for recipient name
-    const user = await db.query.users.findFirst({
-      where: eq(users.privyDid, userFromPrivy.id),
+    // Get workspace details for beneficiary information
+    const workspace = await db.query.workspaces.findFirst({
+      where: eq(workspaces.id, workspaceId),
       columns: {
         firstName: true,
         lastName: true,
@@ -885,7 +896,7 @@ export const alignRouter = router({
 
     return {
       fundingSources: alignSources,
-      userData: user,
+      userData: workspace, // Return workspace entity data
     };
   }),
 
