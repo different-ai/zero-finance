@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { router, protectedProcedure } from '../create-router';
 import { TRPCError } from '@trpc/server';
 import { db } from '@/db/index';
-import { userProfilesTable, userSafes, users } from '@/db/schema';
+import { userProfilesTable, userSafes, users, workspaces } from '@/db/schema';
 import { alignRouter } from './align-router';
 import { earnRouter } from './earn-router';
 import { eq, and } from 'drizzle-orm';
@@ -215,8 +215,16 @@ export const onboardingRouter = router({
       throw new TRPCError({ code: 'UNAUTHORIZED' });
     }
 
-    const userPromise = db.query.users.findFirst({
-      where: eq(users.privyDid, privyDid),
+    const workspaceId = ctx.workspaceId;
+    if (!workspaceId) {
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Workspace context is unavailable.',
+      });
+    }
+
+    const workspacePromise = db.query.workspaces.findFirst({
+      where: eq(workspaces.id, workspaceId),
       columns: { kycMarkedDone: true, kycSubStatus: true },
     });
 
@@ -235,8 +243,8 @@ export const onboardingRouter = router({
       alignCustomer = await alignCaller.getCustomerStatus();
     }
 
-    const [user, primarySafe] = await Promise.all([
-      userPromise,
+    const [workspace, primarySafe] = await Promise.all([
+      workspacePromise,
       primarySafePromise,
     ]);
 
@@ -247,7 +255,7 @@ export const onboardingRouter = router({
       : 'not_required';
     const kycSubStatus = alignCustomer?.kycSubStatus;
     const hasBankAccount = !!alignCustomer?.alignVirtualAccountId;
-    const kycMarkedDone = user?.kycMarkedDone ?? false;
+    const kycMarkedDone = workspace?.kycMarkedDone ?? false;
 
     // Check if savings account is enabled
     let hasSavingsAccount = false;
@@ -327,8 +335,16 @@ export const onboardingRouter = router({
     }
 
     // Reuse the logic from getOnboardingSteps
-    const userPromise = db.query.users.findFirst({
-      where: eq(users.privyDid, privyDid),
+    const workspaceId = ctx.workspaceId;
+    if (!workspaceId) {
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Workspace context is unavailable.',
+      });
+    }
+
+    const workspacePromise = db.query.workspaces.findFirst({
+      where: eq(workspaces.id, workspaceId),
       columns: { kycMarkedDone: true, kycSubStatus: true },
     });
 
@@ -347,8 +363,8 @@ export const onboardingRouter = router({
       alignCustomer = await alignCaller.getCustomerStatus();
     }
 
-    const [user, primarySafe] = await Promise.all([
-      userPromise,
+    const [workspace, primarySafe] = await Promise.all([
+      workspacePromise,
       primarySafePromise,
     ]);
 
@@ -358,7 +374,7 @@ export const onboardingRouter = router({
         : 'not_started'
       : 'not_required';
     const kycSubStatus = alignCustomer?.kycSubStatus;
-    const kycMarkedDone = user?.kycMarkedDone ?? false;
+    const kycMarkedDone = workspace?.kycMarkedDone ?? false;
 
     // Check if savings account is enabled
     let hasSavingsAccount = false;
