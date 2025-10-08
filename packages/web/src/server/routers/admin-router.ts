@@ -53,29 +53,39 @@ const alignCustomerDirectDetailsSchema = z.object({
  */
 export const adminRouter = router({
   /**
+   * Check if the current user is an admin
+   */
+  checkIsAdmin: protectedProcedure.query(async () => {
+    const user = await getUser();
+    if (!user?.id) {
+      return { isAdmin: false };
+    }
+    const isAdmin = await isUserAdmin(user.id);
+    return { isAdmin };
+  }),
+
+  /**
    * List all users in the system
    */
-  listUsers: protectedProcedure
-    .input(
-      z.object({
-        adminToken: adminTokenSchema,
-      }),
-    )
-    .query(async ({ input }) => {
-      if (!input.adminToken) {
-        throw new TRPCError({
-          code: 'UNAUTHORIZED',
-          message: 'Invalid admin token',
-        });
-      }
-      if (!validateAdminToken(input.adminToken)) {
-        throw new TRPCError({
-          code: 'UNAUTHORIZED',
-          message: 'Invalid admin token',
-        });
-      }
-      return await userService.listUsers();
-    }),
+  listUsers: protectedProcedure.query(async () => {
+    const user = await getUser();
+    if (!user?.id) {
+      throw new TRPCError({
+        code: 'UNAUTHORIZED',
+        message: 'User not authenticated',
+      });
+    }
+
+    const isAdmin = await isUserAdmin(user.id);
+    if (!isAdmin) {
+      throw new TRPCError({
+        code: 'FORBIDDEN',
+        message: 'User is not an admin',
+      });
+    }
+
+    return await userService.listUsers();
+  }),
 
   // Platform total deposited query (live on-chain)
   getTotalDeposited: protectedProcedure
@@ -294,22 +304,37 @@ export const adminRouter = router({
     }),
 
   /**
-   * Reset Align KYC and Virtual Account data for a specific user
+   * Get detailed user information
    */
-  resetUserAlignData: protectedProcedure
+  getUserDetails: protectedProcedure
     .input(
       z.object({
-        adminToken: adminTokenSchema,
-        privyDid: z.string().min(1, 'Privy DID is required'),
+        privyDid: z.string(),
       }),
     )
-    .mutation(async ({ input }) => {
-      if (!validateAdminToken(input.adminToken)) {
+    .query(async ({ ctx, input }) => {
+      const { privyDid } = input;
+
+      // Check if current user is admin
+      const currentUser = await getUser();
+      if (!currentUser?.id) {
         throw new TRPCError({
           code: 'UNAUTHORIZED',
-          message: 'Invalid admin token',
+          message: 'User not authenticated',
         });
       }
+
+      const isAdmin = await isUserAdmin(currentUser.id);
+      if (!isAdmin) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'User is not an admin',
+        });
+      }
+
+      const logPayload = { procedure: 'getUserDetails', privyDid };
+      ctx.log.info(logPayload, 'Fetching detailed user information.');
+
       try {
         const updatedUser = await db
           .update(users)
