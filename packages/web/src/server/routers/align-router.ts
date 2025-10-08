@@ -881,7 +881,7 @@ export const alignRouter = router({
       (source) => source.sourceProvider === 'align',
     );
 
-    // Get workspace details for beneficiary information
+    // Get workspace details for beneficiary information and KYC status
     const workspace = await db.query.workspaces.findFirst({
       where: eq(workspaces.id, workspaceId),
       columns: {
@@ -889,12 +889,23 @@ export const alignRouter = router({
         lastName: true,
         companyName: true,
         beneficiaryType: true,
+        kycStatus: true,
       },
     });
 
+    const hasCompletedKyc = workspace?.kycStatus === 'approved';
+
+    // Filter accounts based on KYC status
+    // If no KYC, show only starter accounts
+    // If KYC approved, show all accounts (starter + full)
+    const filteredSources = hasCompletedKyc
+      ? alignSources
+      : alignSources.filter((source) => source.accountTier === 'starter');
+
     return {
-      fundingSources: alignSources,
-      userData: workspace, // Return workspace entity data
+      fundingSources: filteredSources,
+      userData: workspace,
+      hasCompletedKyc,
     };
   }),
 
