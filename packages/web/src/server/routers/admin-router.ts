@@ -12,31 +12,40 @@ import {
   userFeatures,
   workspaces,
   workspaceMembers,
+  admins,
 } from '../../db/schema';
 import { eq, and } from 'drizzle-orm';
 import { customAlphabet } from 'nanoid';
 import { alignApi, AlignCustomer } from '@/server/services/align-api';
 import { getSafeBalance } from '@/server/services/safe.service';
 
-// Create a validation schema for the admin token
-const adminTokenSchema = z.string().min(1);
-
 // Custom ID generator
 const generateId = customAlphabet('1234567890abcdefghijklmnopqrstuvwxyz', 10);
 
 /**
- * Validates if the given token matches the admin token from environment
- * @param token Token to validate
+ * Helper to verify if a user is an admin
+ * @param privyDid Privy DID of the user to check
+ * @returns true if user is an admin, false otherwise
  */
-function validateAdminToken(token: string): boolean {
-  const adminToken = process.env.ADMIN_SECRET_TOKEN;
+async function checkIsUserAdmin(privyDid: string): Promise<boolean> {
+  const admin = await db.query.admins.findFirst({
+    where: eq(admins.privyDid, privyDid),
+  });
+  return !!admin;
+}
 
-  if (!adminToken) {
-    console.error('ADMIN_SECRET_TOKEN not set in environment variables');
-    return false;
+/**
+ * Helper to verify admin status and throw if not admin
+ * @param privyDid Privy DID of the user to check
+ */
+async function requireAdmin(privyDid: string): Promise<void> {
+  const isAdmin = await checkIsUserAdmin(privyDid);
+  if (!isAdmin) {
+    throw new TRPCError({
+      code: 'UNAUTHORIZED',
+      message: 'Admin privileges required',
+    });
   }
-
-  return token === adminToken;
 }
 
 // Zod schema for the direct Align customer details - updated to match Align API more closely
@@ -56,95 +65,92 @@ const alignCustomerDirectDetailsSchema = z.object({
  */
 export const adminRouter = router({
   /**
+   * Check if the current user is an admin
+   */
+  checkIsAdmin: protectedProcedure.query(async ({ ctx }) => {
+    if (!ctx.userId) {
+      return { isAdmin: false };
+    }
+    const isAdmin = await checkIsUserAdmin(ctx.userId);
+    return { isAdmin };
+  }),
+
+  /**
    * List all users in the system
    */
-  listUsers: protectedProcedure
-    .input(
-      z.object({
-        adminToken: adminTokenSchema,
-      }),
-    )
-    .query(async ({ input }) => {
-      if (!input.adminToken) {
-        throw new TRPCError({
-          code: 'UNAUTHORIZED',
-          message: 'Invalid admin token',
-        });
-      }
-      if (!validateAdminToken(input.adminToken)) {
-        throw new TRPCError({
-          code: 'UNAUTHORIZED',
-          message: 'Invalid admin token',
-        });
-      }
-      return await userService.listUsers();
-    }),
+  listUsers: protectedProcedure.query(async ({ ctx }) => {
+    if (!ctx.userId) {
+      throw new TRPCError({
+        code: 'UNAUTHORIZED',
+        message: 'User ID not found',
+      });
+    }
+    await requireAdmin(ctx.userId);
+    return await userService.listUsers();
+  }),
 
   // Platform total deposited query (live on-chain)
-  getTotalDeposited: protectedProcedure
-    .input(
-      z.object({
-        adminToken: adminTokenSchema,
+  getTotalDeposited: protectedProcedure.query(async ({ ctx }) => {
+    if (!ctx.userId) {
+      throw new TRPCError({
+        code: 'UNAUTHORIZED',
+        message: 'User ID not found',
+      });
+    }
+    await requireAdmin(ctx.userId);
+
+    // 1. Fetch all distinct safe addresses stored in DB
+    const safes = await db
+      .select({ safeAddress: userSafes.safeAddress })
+      .from(userSafes);
+
+    // Deduplicate addresses and filter invalid ones
+    const uniqueAddresses = Array.from(
+      new Set(safes.map((s) => s.safeAddress).filter(Boolean)),
+    );
+
+    // 2. Query on-chain balances concurrently
+    const balanceResults = await Promise.all(
+      uniqueAddresses.map(async (addr) => {
+        try {
+          const bal = await getSafeBalance({
+            safeAddress: addr as `0x${string}`,
+          });
+          return bal?.raw ?? 0n;
+        } catch (err) {
+          console.error(
+            'admin.getTotalDeposited: failed to fetch balance for',
+            addr,
+            err,
+          );
+          return 0n;
+        }
       }),
-    )
-    .query(async ({ input }) => {
-      if (!validateAdminToken(input.adminToken)) {
-        throw new TRPCError({
-          code: 'UNAUTHORIZED',
-          message: 'Invalid admin token',
-        });
-      }
+    );
 
-      // 1. Fetch all distinct safe addresses stored in DB
-      const safes = await db
-        .select({ safeAddress: userSafes.safeAddress })
-        .from(userSafes);
+    // 3. Sum BigInt balances
+    const grandTotal = balanceResults.reduce((acc, b) => acc + b, 0n);
 
-      // Deduplicate addresses and filter invalid ones
-      const uniqueAddresses = Array.from(
-        new Set(safes.map((s) => s.safeAddress).filter(Boolean)),
+    // 4. Persist the latest total into platform_totals table
+    try {
+      // Upsert by deleting any existing row for this token then inserting the new value
+      await db.delete(platformTotals).where(eq(platformTotals.token, 'USDC'));
+      await db.insert(platformTotals).values({
+        token: 'USDC',
+        totalDeposited: grandTotal,
+        updatedAt: new Date(),
+      });
+    } catch (persistErr) {
+      console.error(
+        'admin.getTotalDeposited: failed to persist totalDeposited',
+        persistErr,
       );
+    }
 
-      // 2. Query on-chain balances concurrently
-      const balanceResults = await Promise.all(
-        uniqueAddresses.map(async (addr) => {
-          try {
-            const bal = await getSafeBalance({ safeAddress: addr });
-            return bal?.raw ?? 0n;
-          } catch (err) {
-            console.error(
-              'admin.getTotalDeposited: failed to fetch balance for',
-              addr,
-              err,
-            );
-            return 0n;
-          }
-        }),
-      );
-
-      // 3. Sum BigInt balances
-      const grandTotal = balanceResults.reduce((acc, b) => acc + b, 0n);
-
-      // 4. Persist the latest total into platform_totals table
-      try {
-        // Upsert by deleting any existing row for this token then inserting the new value
-        await db.delete(platformTotals).where(eq(platformTotals.token, 'USDC'));
-        await db.insert(platformTotals).values({
-          token: 'USDC',
-          totalDeposited: grandTotal,
-          updatedAt: new Date(),
-        });
-      } catch (persistErr) {
-        console.error(
-          'admin.getTotalDeposited: failed to persist totalDeposited',
-          persistErr,
-        );
-      }
-
-      return {
-        totalDeposited: grandTotal.toString(), // in smallest unit (assumes USDC 6 decimals)
-      };
-    }),
+    return {
+      totalDeposited: grandTotal.toString(), // in smallest unit (assumes USDC 6 decimals)
+    };
+  }),
 
   /**
    * Get Align Customer details directly from Align
@@ -152,18 +158,18 @@ export const adminRouter = router({
   getAlignCustomerDirectDetails: protectedProcedure
     .input(
       z.object({
-        adminToken: adminTokenSchema,
         privyDid: z.string().min(1, 'Privy DID is required'),
       }),
     )
     .output(alignCustomerDirectDetailsSchema.nullable())
     .query(async ({ ctx, input }) => {
-      if (!validateAdminToken(input.adminToken)) {
+      if (!ctx.userId) {
         throw new TRPCError({
           code: 'UNAUTHORIZED',
-          message: 'Invalid admin token',
+          message: 'User ID not found',
         });
       }
+      await requireAdmin(ctx.userId);
 
       const { privyDid } = input;
       const logPayload = {
@@ -275,17 +281,18 @@ export const adminRouter = router({
   deleteUser: protectedProcedure
     .input(
       z.object({
-        adminToken: adminTokenSchema,
         privyDid: z.string().min(1),
       }),
     )
-    .mutation(async ({ input }) => {
-      if (!validateAdminToken(input.adminToken)) {
+    .mutation(async ({ ctx, input }) => {
+      if (!ctx.userId) {
         throw new TRPCError({
           code: 'UNAUTHORIZED',
-          message: 'Invalid admin token',
+          message: 'User ID not found',
         });
       }
+      await requireAdmin(ctx.userId);
+
       const result = await userService.deleteUser(input.privyDid);
       if (!result.success) {
         throw new TRPCError({
@@ -302,17 +309,17 @@ export const adminRouter = router({
   resetUserAlignData: protectedProcedure
     .input(
       z.object({
-        adminToken: adminTokenSchema,
         privyDid: z.string().min(1, 'Privy DID is required'),
       }),
     )
-    .mutation(async ({ input }) => {
-      if (!validateAdminToken(input.adminToken)) {
+    .mutation(async ({ ctx, input }) => {
+      if (!ctx.userId) {
         throw new TRPCError({
           code: 'UNAUTHORIZED',
-          message: 'Invalid admin token',
+          message: 'User ID not found',
         });
       }
+      await requireAdmin(ctx.userId);
       try {
         const updatedUser = await db
           .update(users)
@@ -366,17 +373,17 @@ export const adminRouter = router({
   overrideKycStatusFromAlign: protectedProcedure
     .input(
       z.object({
-        adminToken: adminTokenSchema,
         privyDid: z.string().min(1, 'Privy DID is required'),
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      if (!validateAdminToken(input.adminToken)) {
+      if (!ctx.userId) {
         throw new TRPCError({
           code: 'UNAUTHORIZED',
-          message: 'Invalid admin token',
+          message: 'User ID not found',
         });
       }
+      await requireAdmin(ctx.userId);
 
       const { privyDid } = input;
       const logPayload = {
@@ -558,17 +565,17 @@ export const adminRouter = router({
   createKycSession: protectedProcedure
     .input(
       z.object({
-        adminToken: adminTokenSchema,
         privyDid: z.string().min(1, 'Privy DID is required'),
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      if (!validateAdminToken(input.adminToken)) {
+      if (!ctx.userId) {
         throw new TRPCError({
           code: 'UNAUTHORIZED',
-          message: 'Invalid admin token',
+          message: 'User ID not found',
         });
       }
+      await requireAdmin(ctx.userId);
 
       const { privyDid } = input;
       const logPayload = {
@@ -658,7 +665,6 @@ export const adminRouter = router({
   createAlignCustomer: protectedProcedure
     .input(
       z.object({
-        adminToken: adminTokenSchema,
         privyDid: z.string().min(1, 'Privy DID is required'),
         firstName: z.string().min(1, 'First name is required'),
         lastName: z.string().min(1, 'Last name is required'),
@@ -668,12 +674,13 @@ export const adminRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      if (!validateAdminToken(input.adminToken)) {
+      if (!ctx.userId) {
         throw new TRPCError({
           code: 'UNAUTHORIZED',
-          message: 'Invalid admin token',
+          message: 'User ID not found',
         });
       }
+      await requireAdmin(ctx.userId);
 
       const { privyDid } = input;
       const logPayload = {
@@ -780,17 +787,17 @@ export const adminRouter = router({
   syncAlignCustomer: protectedProcedure
     .input(
       z.object({
-        adminToken: adminTokenSchema,
         privyDid: z.string().min(1, 'Privy DID is required'),
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      if (!validateAdminToken(input.adminToken)) {
+      if (!ctx.userId) {
         throw new TRPCError({
           code: 'UNAUTHORIZED',
-          message: 'Invalid admin token',
+          message: 'User ID not found',
         });
       }
+      await requireAdmin(ctx.userId);
 
       const { privyDid } = input;
       const logPayload = {
@@ -945,7 +952,6 @@ export const adminRouter = router({
   grantFeature: protectedProcedure
     .input(
       z.object({
-        adminToken: adminTokenSchema,
         userPrivyDid: z.string().min(1, 'User Privy DID is required'),
         featureName: z.enum([
           'workspace_automation',
@@ -959,12 +965,13 @@ export const adminRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      if (!validateAdminToken(input.adminToken)) {
+      if (!ctx.userId) {
         throw new TRPCError({
           code: 'UNAUTHORIZED',
-          message: 'Invalid admin token',
+          message: 'User ID not found',
         });
       }
+      await requireAdmin(ctx.userId);
 
       const {
         userPrivyDid,
@@ -1047,17 +1054,17 @@ export const adminRouter = router({
   getUserDetails: protectedProcedure
     .input(
       z.object({
-        adminToken: adminTokenSchema,
         privyDid: z.string().min(1, 'Privy DID is required'),
       }),
     )
     .query(async ({ ctx, input }) => {
-      if (!validateAdminToken(input.adminToken)) {
+      if (!ctx.userId) {
         throw new TRPCError({
           code: 'UNAUTHORIZED',
-          message: 'Invalid admin token',
+          message: 'User ID not found',
         });
       }
+      await requireAdmin(ctx.userId);
 
       const { privyDid } = input;
       const logPayload = {

@@ -459,10 +459,10 @@ export default function SafeDetailPage() {
         <CardContent className="space-y-6">
           <div className="space-y-2">
             <p className="text-sm font-medium text-gray-600">Current Balance:</p>
-            <SafeBalanceDisplay safeAddress={currentSafe.safeAddress} />
+            <SafeBalanceDisplay safeAddress={currentSafe.safeAddress as `0x${string}`} />
           </div>
           <TransferForm
-            sourceSafeAddress={currentSafe.safeAddress}
+            sourceSafeAddress={currentSafe.safeAddress as `0x${string}`}
             userSafes={allSafes}
             refreshBalances={refreshAllBalances}
           />

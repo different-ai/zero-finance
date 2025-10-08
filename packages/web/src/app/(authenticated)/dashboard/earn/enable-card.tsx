@@ -9,7 +9,7 @@ interface EnableCardProps {
 }
 
 export default function EnableCard({ onNext, isLoading }: EnableCardProps) {
-  const springMotion = { type: 'spring', stiffness: 320, damping: 30 };
+  const springMotion = { type: 'spring' as const, stiffness: 320, damping: 30 };
 
   return (
     <motion.div
@@ -26,7 +26,10 @@ export default function EnableCard({ onNext, isLoading }: EnableCardProps) {
             transition={{ delay: 0.1, ...springMotion }}
             className="mx-auto mb-4 w-16 h-16 flex items-center justify-center bg-primary-500 dark:bg-primary-400 rounded-full shadow-md"
           >
-            <SquirrelIcon size={36} className="text-white dark:text-deep-navy" />
+            <SquirrelIcon
+              size={36}
+              className="text-white dark:text-deep-navy"
+            />
           </motion.div>
           <h2 className="text-center text-2xl font-semibold text-gray-900 dark:text-white">
             Earn on Autopilot
@@ -38,9 +41,9 @@ export default function EnableCard({ onNext, isLoading }: EnableCardProps) {
         <div className="p-6">
           <p className="text-sm text-gray-700 dark:text-gray-300 mb-6">
             By enabling this feature, the Fluidkey Earn Module will
-            automatically sweep a portion of your new deposits into
-            high-yield &apos;earnings accounts&apos;. Your funds always
-            remain in your Safe.
+            automatically sweep a portion of your new deposits into high-yield
+            &apos;earnings accounts&apos;. Your funds always remain in your
+            Safe.
           </p>
           <button
             onClick={onNext}
@@ -51,7 +54,7 @@ export default function EnableCard({ onNext, isLoading }: EnableCardProps) {
               <>
                 <motion.div
                   animate={{ rotate: 360 }}
-                  transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                  transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
                   className="mr-2"
                 >
                   <Zap size={18} />
@@ -74,4 +77,4 @@ export default function EnableCard({ onNext, isLoading }: EnableCardProps) {
       </div>
     </motion.div>
   );
-} 
+}

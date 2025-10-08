@@ -21,7 +21,7 @@ export default function EarnSettingsPage() {
   // Renamed to avoid conflict if exported as EarnSettings
   const router = useRouter();
   const { data } = useUserSafes();
-  const safeAddress = data?.[0]?.safeAddress;
+  const safeAddress = data?.[0]?.safeAddress as `0x${string}` | undefined;
   const safeId = safeAddress?.toString();
 
   const {

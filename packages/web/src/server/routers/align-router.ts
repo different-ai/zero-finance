@@ -2419,20 +2419,35 @@ export const alignRouter = router({
 
     const userRecord = await db.query.users.findFirst({
       where: eq(users.privyDid, userId),
+      columns: { primaryWorkspaceId: true, alignCustomerId: true },
+    });
+
+    if (!userRecord?.primaryWorkspaceId) {
+      throw new TRPCError({
+        code: 'PRECONDITION_FAILED',
+        message: 'User has no primary workspace',
+      });
+    }
+
+    const primaryWorkspace = await db.query.workspaces.findFirst({
+      where: eq(workspaces.id, userRecord.primaryWorkspaceId),
       columns: { alignCustomerId: true },
     });
 
-    if (!userRecord?.alignCustomerId) {
+    const alignCustomerId =
+      primaryWorkspace?.alignCustomerId ?? userRecord.alignCustomerId;
+
+    if (!alignCustomerId) {
       throw new TRPCError({
         code: 'PRECONDITION_FAILED',
-        message: 'User does not have an Align customer ID',
+        message: 'No Align customer ID found for user or workspace',
       });
     }
 
     try {
       // Fetch all transfers from Align API
       const transfers = await alignApi.getAllOnrampTransfers(
-        userRecord.alignCustomerId,
+        alignCustomerId as string,
         { limit: 100, skip: 0 },
       );
 
@@ -2481,20 +2496,35 @@ export const alignRouter = router({
 
     const userRecord = await db.query.users.findFirst({
       where: eq(users.privyDid, userId),
+      columns: { primaryWorkspaceId: true, alignCustomerId: true },
+    });
+
+    if (!userRecord?.primaryWorkspaceId) {
+      throw new TRPCError({
+        code: 'PRECONDITION_FAILED',
+        message: 'User has no primary workspace',
+      });
+    }
+
+    const primaryWorkspace = await db.query.workspaces.findFirst({
+      where: eq(workspaces.id, userRecord.primaryWorkspaceId),
       columns: { alignCustomerId: true },
     });
 
-    if (!userRecord?.alignCustomerId) {
+    const alignCustomerId =
+      primaryWorkspace?.alignCustomerId ?? userRecord.alignCustomerId;
+
+    if (!alignCustomerId) {
       throw new TRPCError({
         code: 'PRECONDITION_FAILED',
-        message: 'User does not have an Align customer ID',
+        message: 'No Align customer ID found for user or workspace',
       });
     }
 
     try {
       // Fetch all transfers from Align API
       const transfers = await alignApi.getAllOfframpTransfers(
-        userRecord.alignCustomerId,
+        alignCustomerId as string,
         { limit: 100, skip: 0 },
       );
 

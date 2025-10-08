@@ -18,7 +18,7 @@ export async function debugSafeSig(
   console.log('preSig built');
 
   const res = await publicClient.readContract({
-    address: safeAddress,
+    address: safeAddress as `0x${string}`,
     abi: SAFE_ABI,
     functionName: 'isValidSignature',
     args: [txHash, preSig],
