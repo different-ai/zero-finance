@@ -24,6 +24,10 @@
     {
       "path": "/api/cron/kyc-notifications",
       "schedule": "*/10 * * * *"
+    },
+    {
+      "path": "/api/cron/virtual-account-sync",
+      "schedule": "*/30 * * * *"
     }
   ]
 }
