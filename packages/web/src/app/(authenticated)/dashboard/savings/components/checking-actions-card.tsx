@@ -1,15 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import {
-  ArrowRightCircle,
-  Info,
-  Building2,
-  DollarSign,
-  Euro,
-  Copy,
-  Check,
-} from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { ArrowRightCircle, Info, Building2, Copy, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -19,15 +11,13 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { SimplifiedOffRamp } from '@/components/transfers/simplified-off-ramp';
+import { BankingInstructionsDisplay } from '@/components/virtual-accounts/banking-instructions-display';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { usePrivy } from '@privy-io/react-auth';
 import { api } from '@/trpc/react';
 import { Skeleton } from '@/components/ui/skeleton';
-import {
-  demoFundingSources,
-  demoUserData,
-  getRecipientName,
-} from '../demo-data';
+import { formatUsd } from '@/lib/utils';
+import { demoFundingSources, demoUserData } from '../demo-data';
 
 type CheckingActionsCardProps = {
   balanceUsd: number;
@@ -54,10 +44,26 @@ export function CheckingActionsCard({
     enabled: !isDemoMode && ready && authenticated && !!user?.id,
   });
 
+  const createStarterAccountsMutation =
+    api.align.createStarterAccountsRetroactively.useMutation({
+      onSuccess: () => {
+        void refetchFundingSources();
+      },
+      onError: (error) => {
+        console.error(
+          '[Banking Instructions] Failed to create starter accounts:',
+          error,
+        );
+      },
+    });
+
   const fundingSources = isDemoMode
     ? demoFundingSources
     : accountData?.fundingSources || [];
   const userData = isDemoMode ? demoUserData : accountData?.userData;
+  const hasCompletedKyc = isDemoMode
+    ? false
+    : accountData?.hasCompletedKyc || false;
 
   const achAccount = fundingSources.find(
     (source) => source.sourceAccountType === 'us_ach',
@@ -67,6 +73,27 @@ export function CheckingActionsCard({
   );
 
   const hasVirtualAccounts = Boolean(achAccount || ibanAccount);
+
+  useEffect(() => {
+    if (
+      !isDemoMode &&
+      !isLoadingFundingSources &&
+      fundingSources.length === 0 &&
+      safeAddress &&
+      !createStarterAccountsMutation.isPending
+    ) {
+      console.log(
+        '[Banking Instructions] No funding sources found - attempting to create starter accounts',
+      );
+      createStarterAccountsMutation.mutate();
+    }
+  }, [
+    isDemoMode,
+    isLoadingFundingSources,
+    fundingSources.length,
+    safeAddress,
+    createStarterAccountsMutation,
+  ]);
 
   const handleCopyAddress = () => {
     if (!safeAddress || typeof navigator === 'undefined') return;
@@ -79,12 +106,16 @@ export function CheckingActionsCard({
       .catch((error) => console.error('Failed to copy address', error));
   };
 
-  const canInitiateMove = (isDemoMode || balanceUsd > 0) && !!safeAddress;
+  const hasOnlyStarterAccounts = !hasCompletedKyc && fundingSources.length > 0;
+  const canInitiateMove =
+    (isDemoMode || balanceUsd > 0) && !!safeAddress && !hasOnlyStarterAccounts;
   const disableReason = !safeAddress
     ? 'Add a treasury safe to move funds'
     : balanceUsd <= 0
       ? 'No withdrawable balance available'
-      : undefined;
+      : hasOnlyStarterAccounts
+        ? 'Complete business verification to enable withdrawals'
+        : undefined;
 
   return (
     <div className="bg-white border border-[#101010]/10 rounded-[12px] p-6 space-y-6">
@@ -97,10 +128,7 @@ export function CheckingActionsCard({
             Withdrawable balance
           </p>
           <p className="mt-2 text-[32px] sm:text-[36px] font-semibold leading-[1.1] tabular-nums text-[#101010]">
-            {new Intl.NumberFormat('en-US', {
-              style: 'currency',
-              currency: 'USD',
-            }).format(balanceUsd)}
+            {formatUsd(balanceUsd)}
           </p>
         </div>
       </div>
@@ -205,121 +233,11 @@ export function CheckingActionsCard({
                 ))}
               </div>
             ) : hasVirtualAccounts ? (
-              <div className="space-y-6 py-6">
-                {achAccount && (
-                  <section className="rounded-[14px] border border-[#101010]/10 bg-[#F7F7F2] p-5 sm:p-6">
-                    <div className="flex items-center gap-3 mb-4 text-[#101010]">
-                      <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white border border-[#101010]/10 text-[#1B29FF]">
-                        <DollarSign className="h-4 w-4" />
-                      </span>
-                      <div>
-                        <p className="text-[15px] font-semibold tracking-[-0.01em]">
-                          US ACH & wire
-                        </p>
-                        <p className="text-[12px] text-[#101010]/60">
-                          Domestic USD transfers
-                        </p>
-                      </div>
-                    </div>
-                    <dl className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-[13px] text-[#101010]/80">
-                      <div>
-                        <dt className="uppercase tracking-[0.16em] text-[10px] text-[#101010]/45">
-                          Bank name
-                        </dt>
-                        <dd className="text-[14px] font-medium text-[#101010]">
-                          {achAccount.sourceBankName}
-                        </dd>
-                      </div>
-                      <div>
-                        <dt className="uppercase tracking-[0.16em] text-[10px] text-[#101010]/45">
-                          Routing number
-                        </dt>
-                        <dd className="text-[14px] font-medium text-[#101010]">
-                          {achAccount.sourceRoutingNumber}
-                        </dd>
-                      </div>
-                      <div>
-                        <dt className="uppercase tracking-[0.16em] text-[10px] text-[#101010]/45">
-                          Account number
-                        </dt>
-                        <dd className="text-[14px] font-medium text-[#101010]">
-                          {achAccount.sourceAccountNumber}
-                        </dd>
-                      </div>
-                      <div>
-                        <dt className="uppercase tracking-[0.16em] text-[10px] text-[#101010]/45">
-                          Beneficiary
-                        </dt>
-                        <dd className="text-[14px] font-medium text-[#101010]">
-                          {getRecipientName(achAccount, userData)}
-                        </dd>
-                      </div>
-                    </dl>
-                  </section>
-                )}
-
-                {ibanAccount && (
-                  <section className="rounded-[14px] border border-[#101010]/10 bg-[#F7F7F2] p-5 sm:p-6">
-                    <div className="flex items-center gap-3 mb-4 text-[#101010]">
-                      <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white border border-[#101010]/10 text-[#1B29FF]">
-                        <Euro className="h-4 w-4" />
-                      </span>
-                      <div>
-                        <p className="text-[15px] font-semibold tracking-[-0.01em]">
-                          SEPA / IBAN
-                        </p>
-                        <p className="text-[12px] text-[#101010]/60">
-                          Eurozone & international wires
-                        </p>
-                      </div>
-                    </div>
-                    <dl className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-[13px] text-[#101010]/80">
-                      <div>
-                        <dt className="uppercase tracking-[0.16em] text-[10px] text-[#101010]/45">
-                          Bank name
-                        </dt>
-                        <dd className="text-[14px] font-medium text-[#101010]">
-                          {ibanAccount.sourceBankName}
-                        </dd>
-                      </div>
-                      <div>
-                        <dt className="uppercase tracking-[0.16em] text-[10px] text-[#101010]/45">
-                          IBAN
-                        </dt>
-                        <dd className="text-[14px] font-medium text-[#101010]">
-                          {ibanAccount.sourceIban}
-                        </dd>
-                      </div>
-                      <div>
-                        <dt className="uppercase tracking-[0.16em] text-[10px] text-[#101010]/45">
-                          BIC / SWIFT
-                        </dt>
-                        <dd className="text-[14px] font-medium text-[#101010]">
-                          {ibanAccount.sourceBicSwift}
-                        </dd>
-                      </div>
-                      <div>
-                        <dt className="uppercase tracking-[0.16em] text-[10px] text-[#101010]/45">
-                          Beneficiary
-                        </dt>
-                        <dd className="text-[14px] font-medium text-[#101010]">
-                          {getRecipientName(ibanAccount, userData)}
-                        </dd>
-                      </div>
-                      {ibanAccount.sourceBankAddress && (
-                        <div className="sm:col-span-2">
-                          <dt className="uppercase tracking-[0.16em] text-[10px] text-[#101010]/45">
-                            Bank address
-                          </dt>
-                          <dd className="text-[14px] font-medium text-[#101010]">
-                            {ibanAccount.sourceBankAddress}
-                          </dd>
-                        </div>
-                      )}
-                    </dl>
-                  </section>
-                )}
-              </div>
+              <BankingInstructionsDisplay
+                accounts={fundingSources}
+                hasCompletedKyc={hasCompletedKyc}
+                userData={userData}
+              />
             ) : (
               <div className="py-6 text-[14px] text-[#101010]/70">
                 No virtual bank accounts are connected yet. Connect an account

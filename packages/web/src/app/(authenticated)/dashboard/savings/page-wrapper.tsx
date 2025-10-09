@@ -13,396 +13,34 @@ import {
 import { trpc, type RouterOutputs } from '@/utils/trpc';
 import { useMemo, useEffect, useState, useRef, useCallback } from 'react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import {
-  Wallet,
-  ExternalLink,
-  AlertCircle,
-  Sparkles,
-  CheckCircle2,
-  Mail,
-  CalendarDays,
-  ArrowRightCircle,
-  Info,
-  Building2,
-  DollarSign,
-  Euro,
-  Copy,
-  Check,
-} from 'lucide-react';
+import { Wallet, ExternalLink, AlertCircle } from 'lucide-react';
 import { WithdrawEarnCard } from '@/app/(authenticated)/dashboard/tools/earn-module/components/withdraw-earn-card';
 import { DepositEarnCard } from '@/app/(authenticated)/dashboard/tools/earn-module/components/deposit-earn-card';
 import { formatUsd, cn } from '@/lib/utils';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { OpenSavingsAccountButton } from '@/components/savings/components/open-savings-account-button';
 import { Address } from 'viem';
 import { BASE_USDC_VAULTS } from '@/server/earn/base-vaults';
 import { AnimatedYieldCounter } from '@/components/animated-yield-counter';
-import { AnimatedTotalEarned } from '@/components/animated-total-earned';
-import { AnimatedTotalEarnedV2 } from '@/components/animated-total-earned-v2';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
-import { SimplifiedOffRamp } from '@/components/transfers/simplified-off-ramp';
-import { BankingInstructionsDisplay } from '@/components/virtual-accounts/banking-instructions-display';
-import { useIsMobile } from '@/hooks/use-mobile';
-import { usePrivy } from '@privy-io/react-auth';
-import { api } from '@/trpc/react';
-import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
 import Image from 'next/image';
 import { USDC_ADDRESS } from '@/lib/constants';
-import { useRouter } from 'next/navigation';
-
-const ZERO_LOGO_SRC = '/images/new-logo-bluer.png';
-const INSURANCE_CONTACT = {
-  email: 'raghav@0.finance',
-  scheduleUrl: 'https://cal.com/team/0finance/30',
-};
-const INSURED_VAULT_IDS = new Set<string>();
-
-const demoFundingSources = [
-  {
-    id: 'demo-ach-1',
-    accountTier: 'starter' as const,
-    sourceAccountType: 'us_ach' as const,
-    sourceBankName: 'JPMorgan Chase',
-    sourceCurrency: 'USD',
-    sourceAccountNumber: '****5678',
-    sourceRoutingNumber: '021000021',
-    sourceBankBeneficiaryName: 'Demo Company Inc.',
-    sourceIban: null,
-    sourceBicSwift: null,
-    destinationCurrency: 'USDC',
-    destinationPaymentRail: 'Base',
-  },
-  {
-    id: 'demo-iban-1',
-    accountTier: 'starter' as const,
-    sourceAccountType: 'iban' as const,
-    sourceBankName: 'Deutsche Bank',
-    sourceCurrency: 'EUR',
-    sourceAccountNumber: null,
-    sourceRoutingNumber: null,
-    sourceIban: 'DE89 3704 0044 0532 0130 00',
-    sourceBicSwift: 'DEUTDEFF',
-    sourceBankBeneficiaryName: 'Bridge Building Sp.z.o.o.',
-    sourceBankAddress: 'Taunusanlage 12, 60325 Frankfurt am Main, Germany',
-    destinationCurrency: 'USDC',
-    destinationPaymentRail: 'Base',
-  },
-];
-
-const demoUserData = {
-  firstName: 'John',
-  lastName: 'Doe',
-  companyName: 'Demo Company Inc.',
-};
-
-const getRecipientName = (source: any, userData: any) => {
-  if (source.sourceAccountType === 'iban') {
-    return 'Bridge Building Sp.z.o.o.';
-  }
-  if (source.sourceAccountType === 'us_ach') {
-    if (userData?.companyName) return userData.companyName;
-    if (userData?.firstName && userData?.lastName) {
-      return `${userData.firstName} ${userData.lastName}`;
-    }
-    if (source.sourceBankBeneficiaryName) {
-      return source.sourceBankBeneficiaryName;
-    }
-    return 'Account Holder';
-  }
-  return source.sourceBankBeneficiaryName || 'Account Holder';
-};
-
-const insuredPillAnimation = `
-  @keyframes insuredShine {
-    0%, 55% {
-      transform: translateX(-160%);
-      opacity: 0;
-    }
-    60% {
-      opacity: 0.85;
-    }
-    64% {
-      transform: translateX(160%);
-      opacity: 0;
-    }
-    100% {
-      opacity: 0;
-    }
-  }
-
-  .insured-pill {
-    position: relative;
-    overflow: hidden;
-    isolation: isolate;
-  }
-
-  .insured-pill::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    transform: translateX(-160%);
-    background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.85) 50%, rgba(255,255,255,0) 100%);
-    mix-blend-mode: screen;
-    opacity: 0;
-    pointer-events: none;
-    animation: insuredShine 6s ease-in-out infinite;
-  }
-`;
-
-type CheckingActionsCardProps = {
-  balanceUsd: number;
-  safeAddress: string | null;
-  isDemoMode: boolean;
-};
-
-function CheckingActionsCard({
-  balanceUsd,
-  safeAddress,
-  isDemoMode,
-}: CheckingActionsCardProps) {
-  const [isMoveModalOpen, setIsMoveModalOpen] = useState(false);
-  const [isAddressCopied, setIsAddressCopied] = useState(false);
-  const [showAdvancedDetails, setShowAdvancedDetails] = useState(false);
-  const isMobile = useIsMobile();
-  const { ready, authenticated, user } = usePrivy();
-
-  const {
-    data: accountData,
-    isLoading: isLoadingFundingSources,
-    refetch: refetchFundingSources,
-  } = api.align.getVirtualAccountDetails.useQuery(undefined, {
-    enabled: !isDemoMode && ready && authenticated && !!user?.id,
-  });
-
-  const createStarterAccountsMutation =
-    api.align.createStarterAccountsRetroactively.useMutation({
-      onSuccess: () => {
-        void refetchFundingSources();
-      },
-      onError: (error) => {
-        console.error(
-          '[Banking Instructions] Failed to create starter accounts:',
-          error,
-        );
-      },
-    });
-
-  const fundingSources = isDemoMode
-    ? demoFundingSources
-    : accountData?.fundingSources || [];
-  const userData = isDemoMode ? demoUserData : accountData?.userData;
-  const hasCompletedKyc = isDemoMode
-    ? false
-    : accountData?.hasCompletedKyc || false;
-
-  const achAccount = fundingSources.find(
-    (source) => source.sourceAccountType === 'us_ach',
-  );
-  const ibanAccount = fundingSources.find(
-    (source) => source.sourceAccountType === 'iban',
-  );
-
-  const hasVirtualAccounts = Boolean(achAccount || ibanAccount);
-
-  useEffect(() => {
-    if (
-      !isDemoMode &&
-      !isLoadingFundingSources &&
-      fundingSources.length === 0 &&
-      safeAddress &&
-      !createStarterAccountsMutation.isPending
-    ) {
-      console.log(
-        '[Banking Instructions] No funding sources found - attempting to create starter accounts',
-      );
-      createStarterAccountsMutation.mutate();
-    }
-  }, [
-    isDemoMode,
-    isLoadingFundingSources,
-    fundingSources.length,
-    safeAddress,
-    createStarterAccountsMutation,
-  ]);
-
-  const handleCopyAddress = () => {
-    if (!safeAddress || typeof navigator === 'undefined') return;
-    navigator.clipboard
-      .writeText(safeAddress)
-      .then(() => {
-        setIsAddressCopied(true);
-        setTimeout(() => setIsAddressCopied(false), 2000);
-      })
-      .catch((error) => console.error('Failed to copy address', error));
-  };
-
-  const hasOnlyStarterAccounts = !hasCompletedKyc && fundingSources.length > 0;
-  const canInitiateMove =
-    (isDemoMode || balanceUsd > 0) && !!safeAddress && !hasOnlyStarterAccounts;
-  const disableReason = !safeAddress
-    ? 'Add a treasury safe to move funds'
-    : balanceUsd <= 0
-      ? 'No withdrawable balance available'
-      : hasOnlyStarterAccounts
-        ? 'Complete business verification to enable withdrawals'
-        : undefined;
-
-  return (
-    <div className="bg-white border border-[#101010]/10 rounded-[12px] p-6 space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <p className="uppercase tracking-[0.12em] text-[11px] text-[#101010]/60 mb-2">
-            Treasury Checking
-          </p>
-          <p className="text-[20px] sm:text-[22px] font-semibold tracking-[-0.01em] text-[#101010]">
-            Withdrawable balance
-          </p>
-          <p className="mt-2 text-[32px] sm:text-[36px] font-semibold leading-[1.1] tabular-nums text-[#101010]">
-            {formatUsd(balanceUsd)}
-          </p>
-        </div>
-      </div>
-
-      <div className="flex flex-col sm:flex-row gap-3">
-        <Dialog open={isMoveModalOpen} onOpenChange={setIsMoveModalOpen}>
-          <DialogTrigger asChild>
-            <Button
-              className="flex-1 inline-flex items-center justify-center gap-2 px-5 py-3 text-[15px] font-semibold text-white bg-[#1B29FF] hover:bg-[#1420CC] transition-colors"
-              disabled={!isDemoMode && !canInitiateMove}
-              title={
-                !isDemoMode && !canInitiateMove ? disableReason : undefined
-              }
-            >
-              <ArrowRightCircle className="h-5 w-5" />
-              Move Funds
-            </Button>
-          </DialogTrigger>
-          <DialogContent
-            className={`p-0 ${isMobile ? 'h-screen max-h-screen w-screen max-w-none m-0' : 'max-w-2xl'}`}
-          >
-            <SimplifiedOffRamp fundingSources={fundingSources} />
-          </DialogContent>
-        </Dialog>
-
-        <Dialog
-          onOpenChange={(open) => {
-            if (open && !isDemoMode) {
-              void refetchFundingSources();
-            }
-          }}
-        >
-          <DialogTrigger asChild>
-            <Button
-              variant="outline"
-              className="flex-1 inline-flex items-center justify-center gap-2 px-5 py-3 text-[15px] font-semibold text-[#101010] border border-[#101010]/10 hover:border-[#1B29FF]/20 hover:text-[#1B29FF] hover:bg-[#F7F7F2] transition-colors"
-            >
-              <Info className="h-5 w-5 text-[#101010]/60" />
-              Details
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="bg-white border-[#101010]/10 max-w-3xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader className="border-b border-[#101010]/10 pb-4">
-              <div>
-                <p className="uppercase tracking-[0.12em] text-[11px] text-[#101010]/60 mb-2">
-                  Banking instructions
-                </p>
-                <DialogTitle className="text-[22px] font-semibold tracking-[-0.01em] text-[#101010] flex items-center gap-2">
-                  <Building2 className="h-5 w-5 text-[#101010]/60" />
-                  Virtual account details
-                </DialogTitle>
-                {safeAddress && (
-                  <div className="mt-6 border-t border-[#101010]/10 pt-4">
-                    <button
-                      type="button"
-                      onClick={() => setShowAdvancedDetails((prev) => !prev)}
-                      className="inline-flex items-center gap-2 text-[12px] font-medium text-[#101010]/70 hover:text-[#1B29FF] transition-colors"
-                    >
-                      {showAdvancedDetails ? 'Hide advanced' : 'Show advanced'}{' '}
-                      details
-                    </button>
-
-                    {showAdvancedDetails && (
-                      <div className="mt-3 rounded-[10px] border border-[#101010]/10 bg-[#F7F7F2] p-3 text-[12px] text-[#101010]/70">
-                        <p className="uppercase tracking-[0.14em] text-[10px] text-[#101010]/50 mb-2">
-                          Treasury safe address
-                        </p>
-                        <div className="flex items-center justify-between gap-3">
-                          <code className="font-mono text-[11px] text-[#101010]">
-                            {safeAddress}
-                          </code>
-                          <button
-                            type="button"
-                            onClick={handleCopyAddress}
-                            className="inline-flex items-center gap-1 rounded-full border border-[#101010]/15 bg-white px-3 py-1 text-[11px] text-[#101010] hover:border-[#1B29FF]/30 hover:text-[#1B29FF] transition-colors"
-                          >
-                            {isAddressCopied ? (
-                              <>
-                                <Check className="h-3 w-3" /> Copied
-                              </>
-                            ) : (
-                              <>
-                                <Copy className="h-3 w-3" /> Copy
-                              </>
-                            )}
-                          </button>
-                        </div>
-                        <p className="mt-2 text-[11px] text-[#101010]/50">
-                          Use this address only for advanced treasury workflows.
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            </DialogHeader>
-
-            {isLoadingFundingSources ? (
-              <div className="space-y-3 py-6">
-                {[1, 2, 3].map((item) => (
-                  <Skeleton key={item} className="h-12 w-full bg-[#101010]/5" />
-                ))}
-              </div>
-            ) : hasVirtualAccounts ? (
-              <BankingInstructionsDisplay
-                accounts={fundingSources}
-                hasCompletedKyc={hasCompletedKyc}
-                userData={userData}
-              />
-            ) : (
-              <div className="py-6 text-[14px] text-[#101010]/70">
-                No virtual bank accounts are connected yet. Connect an account
-                in onboarding to enable transfers.
-              </div>
-            )}
-
-            {isDemoMode && (
-              <div className="mt-4 rounded-[10px] border border-[#101010]/10 bg-[#F7F7F2] p-4 text-[12px] text-[#101010]/70">
-                Demo mode shows sample banking instructions. Sign in to your
-                live workspace to view real account numbers.
-              </div>
-            )}
-          </DialogContent>
-        </Dialog>
-      </div>
-
-      <p className="text-[12px] text-[#101010]/60">
-        {isDemoMode
-          ? 'Use these controls to explore how deposits and withdrawals work in Zero Finance.'
-          : hasVirtualAccounts
-            ? 'Transfers settle directly into your Zero treasury safe.'
-            : 'Once your virtual account is approved, you can pull cash into savings here.'}
-      </p>
-    </div>
-  );
-}
+import { CheckingActionsCard } from './components/checking-actions-card';
+import { InsuranceContactPanel } from './components/insurance-contact-panel';
+import { PortfolioOverview } from './components/portfolio-overview';
+import { AutoSavingsStatus } from './components/auto-savings-status';
+import {
+  ZERO_LOGO_SRC,
+  INSURED_VAULT_IDS,
+  insuredPillAnimation,
+} from './demo-data';
+import {
+  calculateVaultViewModels,
+  calculateTotalSaved,
+  calculateTotalEarned,
+  calculateAverageApy,
+  calculateWeightedInstantApy,
+} from './utils/vault-calculations';
 
 export type SavingsPageWrapperProps = {
   mode?: SavingsExperienceMode;
@@ -416,7 +54,6 @@ export default function SavingsPageWrapper({
   initialCheckingBalance = null,
 }: SavingsPageWrapperProps) {
   const isDemoMode = useIsDemoMode(mode);
-  const router = useRouter();
   const {
     isActivated: isDemoActivated,
     activateSavings: persistDemoActivation,
@@ -698,144 +335,16 @@ export default function SavingsPageWrapper({
     });
   }, [isDemoMode, safeAddress]);
 
-  // Compute vault view models
-  const vaultsVM = useMemo(() => {
-    const toNumberOrFallback = (
-      value: number | string | null | undefined,
-      fallback: number,
-    ) => {
-      const parsed = Number(value);
-      return Number.isFinite(parsed) ? parsed : fallback;
-    };
-
-    return BASE_VAULTS.map((v) => {
-      const stat = vaultStatsMany?.find(
-        (s) => s.vaultAddress.toLowerCase() === v.address.toLowerCase(),
-      );
-      const pos = userPositions?.find(
-        (p) => p.vaultAddress.toLowerCase() === v.address.toLowerCase(),
-      );
-
-      const balanceUsd = pos?.assetsUsd ? Number(pos.assetsUsd) : 0;
-
-      const extendedStat =
-        stat && typeof stat === 'object' && 'principal' in stat
-          ? (stat as {
-              principal: bigint;
-              principalRecorded?: bigint | null;
-              yieldRecorded?: bigint | null;
-              yieldCorrectionApplied?: 'ledger_shortfall' | 'rounding' | null;
-            })
-          : null;
-
-      const principalUsd = extendedStat
-        ? Number(extendedStat.principal) / 1e6
-        : balanceUsd;
-
-      const recordedPrincipalUsd =
-        extendedStat?.principalRecorded !== undefined &&
-        extendedStat?.principalRecorded !== null
-          ? Number(extendedStat.principalRecorded) / 1e6
-          : principalUsd;
-
-      // APY is often returned as a decimal (0.0737 for 7.37%), convert to percentage
-      const statWithApyFields = stat as
-        | {
-            monthlyNetApy?: number | string | null;
-            monthlyApy?: number | string | null;
-            netApy?: number | string | null;
-            apy?: number | string | null;
-          }
-        | undefined;
-
-      const displayApySource = toNumberOrFallback(
-        statWithApyFields?.monthlyNetApy,
-        toNumberOrFallback(
-          statWithApyFields?.monthlyApy,
-          toNumberOrFallback(
-            statWithApyFields?.netApy,
-            toNumberOrFallback(statWithApyFields?.apy, 0.08),
-          ),
-        ),
-      );
-
-      const netApySource = toNumberOrFallback(
-        statWithApyFields?.netApy,
-        toNumberOrFallback(statWithApyFields?.apy, displayApySource),
-      );
-
-      const apyDecimal =
-        displayApySource > 1 ? displayApySource / 100 : displayApySource;
-      const apy = apyDecimal * 100;
-      const instantApy = netApySource > 1 ? netApySource / 100 : netApySource;
-
-      // Try multiple fields for earned amount
-      // Handle BigInt conversion for yield field
-      const rawEarnedUsd =
-        extendedStat?.yieldRecorded !== undefined &&
-        extendedStat?.yieldRecorded !== null
-          ? Number(extendedStat.yieldRecorded) / 1e6
-          : null;
-
-      const correctionReason = extendedStat?.yieldCorrectionApplied ?? null;
-
-      const ledgerEarnedUsd =
-        stat?.yield !== undefined && stat?.yield !== null
-          ? Number(stat.yield) / 1e6
-          : null;
-
-      const fallbackEarnedUsd = balanceUsd - principalUsd;
-
-      let earnedUsd = 0;
-
-      // First priority: Use actual yield from ledger
-      if (
-        ledgerEarnedUsd !== null &&
-        Number.isFinite(ledgerEarnedUsd) &&
-        ledgerEarnedUsd >= 0
-      ) {
-        earnedUsd = ledgerEarnedUsd;
-      }
-      // Second priority: Use the difference between balance and principal if both are available
-      else if (fallbackEarnedUsd > 0 && principalUsd > 0) {
-        earnedUsd = fallbackEarnedUsd;
-      }
-      // Last resort: Estimate based on current balance and APY
-      else if (balanceUsd > 0 && apy > 0) {
-        // Use a more reasonable estimate - 14 days of earnings instead of 1
-        // This prevents the animation from appearing to start from near 0
-        // Most users have funds in the vault for at least 2 weeks
-        earnedUsd = ((balanceUsd * (apy / 100)) / 365) * 14;
-      }
-
-      // Ensure non-negative earnings
-      if (earnedUsd < 0) {
-        earnedUsd = 0;
-      }
-
-      return {
-        id: v.id,
-        name: v.name,
-        risk: v.risk,
-        curator: v.curator,
-        address: v.address,
-        appUrl: v.appUrl,
-        apy,
-        balanceUsd,
-        earnedUsd,
-        principalUsd,
-        recordedPrincipalUsd,
-        rawEarnedUsd,
-        yieldCorrectionReason: correctionReason,
-        isAuto: v.id === 'morphoGauntlet',
-        instantApy,
-        isInsured:
-          INSURED_VAULT_IDS.has(v.id) ||
-          (userIsInsured && v.id === 'morphoGauntlet'),
-        isContactOnly: false,
-      };
-    });
-  }, [BASE_VAULTS, vaultStatsMany, userPositions]);
+  const vaultsVM = useMemo(
+    () =>
+      calculateVaultViewModels(
+        BASE_VAULTS,
+        vaultStatsMany ?? undefined,
+        userPositions ?? undefined,
+        userIsInsured,
+      ),
+    [BASE_VAULTS, vaultStatsMany, userPositions, userIsInsured],
+  );
 
   // Calculate totals
   const insuredVaultEntry = useMemo(
@@ -893,78 +402,10 @@ export default function SavingsPageWrapper({
 
   const showYieldCorrectionBanner = !isDemoMode && hasYieldCorrection;
 
-  const InsuranceContactPanel = () => (
-    <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <Image
-            src={ZERO_LOGO_SRC}
-            alt="0 Finance logo"
-            width={42}
-            height={42}
-            className="h-10 w-10 rounded-md"
-          />
-          <div>
-            <p className="text-[15px] font-medium text-[#101010]">
-              Speak with our coverage team
-            </p>
-            <p className="text-[13px] text-[#101010]/70 max-w-[420px]">
-              We arrange bespoke insurance policies for treasury deposits. Reach
-              out to secure coverage on this 8% vault.
-            </p>
-          </div>
-        </div>
-        <div className="flex flex-col sm:flex-row gap-3">
-          <a
-            href={`mailto:${INSURANCE_CONTACT.email}`}
-            className="inline-flex items-center justify-center gap-2 px-4 py-2 text-[13px] font-medium text-white bg-[#1B29FF] hover:bg-[#1420CC] transition-colors"
-          >
-            <Mail className="h-4 w-4" /> Email {INSURANCE_CONTACT.email}
-          </a>
-          <a
-            href={INSURANCE_CONTACT.scheduleUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center justify-center gap-2 px-4 py-2 text-[13px] font-medium text-[#101010] border border-[#101010]/15 hover:bg-[#F7F7F2] transition-colors"
-          >
-            <CalendarDays className="h-4 w-4" /> Schedule a call
-          </a>
-        </div>
-      </div>
-      <div className="border border-dashed border-[#1B29FF]/30 rounded-lg p-4 bg-[#1B29FF]/5">
-        <p className="text-[13px] text-[#1B29FF]">
-          Coverage is issued through our underwriting partners after a short
-          call. We’ll validate treasury size, coverage needs, and onboard you
-          end-to-end.
-        </p>
-      </div>
-    </div>
-  );
-
-  const totalSaved = vaultsVM.reduce((sum, v) => sum + v.balanceUsd, 0);
-  const totalEarned = vaultsVM.reduce((sum, v) => sum + v.earnedUsd, 0);
-  const averageApy =
-    vaultsVM.length > 0
-      ? vaultsVM.reduce((sum, v) => sum + v.apy, 0) / vaultsVM.length
-      : 8.0;
-
-  const averageInstantApy = (() => {
-    if (totalSaved > 0) {
-      const weightedSum = vaultsVM.reduce(
-        (sum, v) => sum + v.instantApy * v.balanceUsd,
-        0,
-      );
-      return weightedSum / totalSaved;
-    }
-
-    if (vaultsVM.length > 0) {
-      return (
-        vaultsVM.reduce((sum, v) => sum + v.instantApy, 0) / vaultsVM.length
-      );
-    }
-
-    return 0.08;
-  })();
+  const totalSaved = calculateTotalSaved(vaultsVM);
+  const totalEarned = calculateTotalEarned(vaultsVM);
+  const averageApy = calculateAverageApy(vaultsVM);
+  const averageInstantApy = calculateWeightedInstantApy(vaultsVM, totalSaved);
 
   const animatedInitialEarned = isDemoMode ? 0 : totalEarned;
   const animatedBalance = isDemoMode ? totalSaved || 2500000 : totalSaved;
@@ -1065,46 +506,16 @@ export default function SavingsPageWrapper({
             isDemoMode={isDemoMode}
           />
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="bg-white border border-[#101010]/10 rounded-[12px] p-6">
-              <p className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60 mb-2">
-                Savings Balance
-              </p>
-              <p className="font-serif text-[28px] sm:text-[32px] leading-[1.1] tabular-nums text-[#101010]">
-                {formatUsd(totalSaved)}
-              </p>
-              <p className="mt-2 text-[13px] text-[#101010]/60">
-                Deposited across {vaultsVM.length} active strategies.
-              </p>
-            </div>
-
-            <div className="bg-white border border-[#101010]/10 rounded-[12px] p-6">
-              <p className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60 mb-2">
-                Earnings (Live)
-              </p>
-              <p className="font-serif text-[28px] sm:text-[32px] leading-[1.1] tabular-nums text-[#1B29FF]">
-                {isDemoMode ? (
-                  <AnimatedTotalEarned
-                    initialEarned={animatedInitialEarned}
-                    apy={averageInstantApy}
-                    balance={animatedBalance}
-                  />
-                ) : safeAddress ? (
-                  <AnimatedTotalEarnedV2
-                    safeAddress={safeAddress}
-                    fallbackApy={fallbackApyPercent}
-                    fallbackBalance={totalSaved}
-                    className="inline-block"
-                  />
-                ) : (
-                  <span className="text-[#101010]/40">Calculating...</span>
-                )}
-              </p>
-              <p className="mt-2 text-[13px] text-[#101010]/60">
-                Live counter refreshes as vault yield accrues.
-              </p>
-            </div>
-          </div>
+          <PortfolioOverview
+            totalSaved={totalSaved}
+            isDemoMode={isDemoMode}
+            safeAddress={safeAddress}
+            fallbackApyPercent={fallbackApyPercent}
+            averageInstantApy={averageInstantApy}
+            animatedBalance={animatedBalance}
+            animatedInitialEarned={animatedInitialEarned}
+            vaultCount={vaultsVM.length}
+          />
         </div>
 
         {/* Live Yield Counter - Premium Card */}
@@ -1603,41 +1014,11 @@ export default function SavingsPageWrapper({
           </div>
         </div>
 
-        {/* Auto-Savings Status - Minimal Card */}
-        {savingsState?.enabled && (
-          <div className="bg-[#F6F5EF] border border-[#101010]/10 p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60 mb-2">
-                  Auto-Savings Active
-                </p>
-                <p className="text-[16px] text-[#101010]">
-                  Automatically saving {savingsState.allocation}% of incoming
-                  deposits
-                </p>
-              </div>
-              {isDemoMode ? (
-                <button
-                  onClick={() =>
-                    toast(
-                      'Configure auto-savings once your live account is activated.',
-                    )
-                  }
-                  className="text-[14px] text-[#1B29FF] hover:text-[#1420CC] underline decoration-[#1B29FF]/30 underline-offset-[4px] transition-colors"
-                >
-                  Configure →
-                </button>
-              ) : (
-                <Link
-                  href="/dashboard/savings/settings"
-                  className="text-[14px] text-[#1B29FF] hover:text-[#1420CC] underline decoration-[#1B29FF]/30 underline-offset-[4px] transition-colors"
-                >
-                  Configure →
-                </Link>
-              )}
-            </div>
-          </div>
-        )}
+        <AutoSavingsStatus
+          enabled={savingsState?.enabled || false}
+          allocation={savingsState?.allocation || 0}
+          isDemoMode={isDemoMode}
+        />
       </div>
     </div>
   );
