@@ -44,13 +44,12 @@ function getRecipientName(
   account: VirtualAccount,
   userData?: UserData | null,
 ): string {
-  if (account.sourceBankBeneficiaryName) {
-    return account.sourceBankBeneficiaryName;
-  }
-
   // SEPA/IBAN accounts route through Bridge
   if (account.sourceAccountType === 'iban') {
     return 'Bridge Building Sp.z.o.o.';
+  }
+  if (account.sourceBankBeneficiaryName) {
+    return account.sourceBankBeneficiaryName;
   }
 
   // US ACH shows user's name
