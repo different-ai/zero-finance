@@ -242,34 +242,34 @@ function AccountCard({
 
           {showAdvanced && (
             <div className="mt-3 p-4 bg-[#101010]/5 border border-[#101010]/10 rounded-md space-y-3">
-              <div className="pb-3 mb-3 border-b border-[#101010]/10">
-                <div className="space-y-2">
-                  <div className="flex items-start gap-2">
-                    <span className="text-[10px] text-[#101010]/50 uppercase tracking-[0.14em] min-w-[80px]">
-                      Platform
-                    </span>
-                    <span className="text-[11px] text-[#101010]/70">
-                      Different AI Inc. (0 Finance)
-                    </span>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <span className="text-[10px] text-[#101010]/50 uppercase tracking-[0.14em] min-w-[80px]">
-                      Payments
-                    </span>
-                    <span className="text-[11px] text-[#101010]/70">
-                      Bridge Building Sp. Z.o.o. (via Fractal)
-                    </span>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <span className="text-[10px] text-[#101010]/50 uppercase tracking-[0.14em] min-w-[80px]">
-                      Custody
-                    </span>
-                    <span className="text-[11px] text-[#101010]/70">
-                      Self-custodied (you own the funds)
-                    </span>
-                  </div>
+              <div className="space-y-3">
+                <div className="flex justify-between items-start text-[12px]">
+                  <span className="text-[#101010]/60 uppercase tracking-[0.14em] text-[10px]">
+                    Platform
+                  </span>
+                  <span className="text-[#101010] font-medium text-right">
+                    Different AI Inc. (0 Finance)
+                  </span>
                 </div>
-                <p className="mt-3 pt-3 border-t border-[#101010]/10 text-[10px] text-[#101010]/50 leading-relaxed">
+                <div className="flex justify-between items-start text-[12px]">
+                  <span className="text-[#101010]/60 uppercase tracking-[0.14em] text-[10px]">
+                    Payments
+                  </span>
+                  <span className="text-[#101010] font-medium text-right max-w-[60%]">
+                    Bridge Building Sp. Z.o.o. (via Fractal)
+                  </span>
+                </div>
+                <div className="flex justify-between items-start text-[12px]">
+                  <span className="text-[#101010]/60 uppercase tracking-[0.14em] text-[10px]">
+                    Custody
+                  </span>
+                  <span className="text-[#101010] font-medium text-right">
+                    Self-custodied (you own the funds)
+                  </span>
+                </div>
+              </div>
+              <div className="pt-3 border-t border-[#101010]/10">
+                <p className="text-[11px] text-[#101010]/60 leading-relaxed">
                   Email receipts will show "Bridge" as the payment processor.
                   This is normal.
                 </p>

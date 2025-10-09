@@ -155,9 +155,11 @@ export default function SignInContent() {
     setEmailError('');
   };
   return (
-    <section className="relative min-h-screen border-y border-[#101010]/10 bg-white/90 overflow-hidden">
-      {/* Gradient Background */}
-      <GeneratedComponent className="z-0 bg-[#F6F5EF]" />
+    <section className="relative min-h-screen border-y border-[#101010]/10 bg-[#F6F5EF] md:bg-white/90 overflow-hidden">
+      {/* Gradient Background - Hidden on mobile for performance */}
+      <div className="hidden md:block">
+        <GeneratedComponent className="z-0 bg-[#F6F5EF]" />
+      </div>
 
       {/* Header */}
       <div className="relative z-10 border-b border-[#101010]/10 bg-white/80 backdrop-blur-sm">
@@ -177,10 +179,10 @@ export default function SignInContent() {
         </div>
       </div>
 
-      <div className="relative z-10 max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 lg:py-20">
+      <div className="relative z-10 max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 lg:py-20">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-0 max-w-5xl mx-auto rounded-xl overflow-hidden border border-[#101010]/10 shadow-[0_2px_8px_rgba(16,16,16,0.04)]">
-          {/* Left side - Value Proposition */}
-          <div className="bg-white/95 backdrop-blur-sm p-8 lg:p-12">
+          {/* Left side - Value Proposition - Hidden on mobile */}
+          <div className="hidden lg:block bg-white/95 backdrop-blur-sm p-8 lg:p-12">
             <div className="mb-8">
               <p className="uppercase tracking-[0.14em] text-[12px] text-[#101010]/60 mb-3">
                 Business Savings Account
@@ -232,7 +234,7 @@ export default function SignInContent() {
           </div>
 
           {/* Right side - Sign In */}
-          <div className="bg-white/90 backdrop-blur-sm border-t lg:border-t-0 lg:border-l border-[#101010]/10 p-8 lg:p-12 flex flex-col justify-center">
+          <div className="bg-white/90 backdrop-blur-sm border-t lg:border-t-0 lg:border-l border-[#101010]/10 p-6 sm:p-8 lg:p-12 flex flex-col justify-center">
             {/* Invite Section */}
             {inviteToken && inviteCompany && (
               <div className="mb-8 p-4 bg-[#EAF0FF] border border-[#1B29FF]/20 rounded-md">
@@ -293,6 +295,11 @@ export default function SignInContent() {
                           ref={emailInputRef}
                           id="email"
                           type="email"
+                          inputMode="email"
+                          autoComplete="email"
+                          autoCapitalize="none"
+                          autoCorrect="off"
+                          spellCheck="false"
                           value={email}
                           onChange={(e) => {
                             setEmail(e.target.value);
@@ -370,6 +377,8 @@ export default function SignInContent() {
                                 }, 100);
                               }
                             }}
+                            inputMode="numeric"
+                            pattern="[0-9]*"
                           >
                             <InputOTPGroup>
                               <InputOTPSlot index={0} />
