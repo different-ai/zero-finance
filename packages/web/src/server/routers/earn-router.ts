@@ -35,6 +35,25 @@ import { privateKeyToAccount } from 'viem/accounts';
 import { base, mainnet } from 'viem/chains';
 import crypto from 'crypto';
 
+type EarningsEventPayload = {
+  id: string;
+  type: 'deposit' | 'withdrawal';
+  timestamp: string;
+  amount: string;
+  shares?: string;
+  vaultAddress: string;
+  apy: number;
+  decimals: number;
+};
+
+type EarningsEventsCacheEntry = {
+  data: EarningsEventPayload[];
+  expiresAt: number;
+};
+
+const earningsEventsCache = new Map<string, EarningsEventsCacheEntry>();
+const EARNINGS_EVENTS_CACHE_TTL_MS = 5 * 60 * 1000;
+
 const AUTO_EARN_MODULE_ADDRESS = process.env.AUTO_EARN_MODULE_ADDRESS as
   | Hex
   | undefined;
@@ -689,6 +708,12 @@ export const earnRouter = router({
       const { safeAddress } = input;
       const safeUserLink = await getSafeForWorkspace(ctx, safeAddress);
       const workspaceId = safeUserLink.workspaceId;
+      const cacheKey = safeAddress.toLowerCase();
+      const cached = earningsEventsCache.get(cacheKey);
+
+      if (cached && cached.expiresAt > Date.now()) {
+        return cached.data;
+      }
 
       // Fetch deposits
       const deposits = await db.query.earnDeposits.findMany({
@@ -730,16 +755,7 @@ export const earnRouter = router({
         return apyBasisPoints;
       };
 
-      const events = [] as Array<{
-        id: string;
-        type: 'deposit' | 'withdrawal';
-        timestamp: string;
-        amount: string;
-        shares?: string;
-        vaultAddress: string;
-        apy: number;
-        decimals: number;
-      }>;
+      const events: EarningsEventPayload[] = [];
 
       for (const deposit of deposits) {
         const decimals =
@@ -795,6 +811,11 @@ export const earnRouter = router({
         (a, b) =>
           new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
       );
+
+      earningsEventsCache.set(cacheKey, {
+        data: events,
+        expiresAt: Date.now() + EARNINGS_EVENTS_CACHE_TTL_MS,
+      });
 
       return events;
     }),

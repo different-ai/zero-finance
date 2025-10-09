@@ -28,19 +28,22 @@ async function testEnsureUserWorkspace() {
     const result1 = await ensureUserWorkspace(db, testUserId);
 
     console.log('  Result:');
-    console.log(`    User created: ✓`);
-    console.log(`    User privy_did: ${result1.user.privyDid}`);
+    console.log(`    Workspace created: ✓`);
+    console.log(`    Workspace ID: ${result1.workspaceId}`);
+    console.log(`    Membership created: ${result1.membership ? '✓' : '✗'}`);
+    console.log(`    Membership user ID: ${result1.membership.userId}`);
     console.log(
-      `    User primary_workspace_id: ${result1.user.primaryWorkspaceId}`,
+      `    Membership workspace ID: ${result1.membership.workspaceId}`,
     );
-    console.log(`    Workspace ID: ${result1.workspace.id}`);
-    console.log(`    Workspace name: ${result1.workspace.name}`);
-    console.log(`    Workspace created_by: ${result1.workspace.createdBy}`);
+    console.log(`    Membership role: ${result1.membership.role}`);
     console.log(
-      `    Primary workspace matches: ${result1.user.primaryWorkspaceId === result1.workspace.id ? '✓' : '✗'}`,
+      `    Membership is primary: ${result1.membership.isPrimary ? '✓' : '✗'}`,
     );
     console.log(
-      `    Workspace created by user: ${result1.workspace.createdBy === testUserId ? '✓' : '✗'}\n`,
+      `    User matches: ${result1.membership.userId === testUserId ? '✓' : '✗'}`,
+    );
+    console.log(
+      `    Workspace matches: ${result1.membership.workspaceId === result1.workspaceId ? '✓' : '✗'}\n`,
     );
 
     console.log(
@@ -51,10 +54,10 @@ async function testEnsureUserWorkspace() {
 
     console.log('  Result:');
     console.log(
-      `    Same user returned: ${result1.user.privyDid === result2.user.privyDid ? '✓' : '✗'}`,
+      `    Same membership user: ${result1.membership.userId === result2.membership.userId ? '✓' : '✗'}`,
     );
     console.log(
-      `    Same workspace returned: ${result1.workspace.id === result2.workspace.id ? '✓' : '✗'}`,
+      `    Same workspace returned: ${result1.workspaceId === result2.workspaceId ? '✓' : '✗'}`,
     );
     console.log(`    No duplicate created: ✓\n`);
 

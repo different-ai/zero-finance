@@ -89,10 +89,13 @@ async function fetchAndUpdateWorkspaceKycStatus(
   );
   try {
     const customer = await alignApi.getCustomer(alignCustomerId);
-    console.log(
-      '[fetchAndUpdateWorkspaceKycStatus] Customer data received:',
-      JSON.stringify(customer, null, 2),
-    );
+    if (process.env.NODE_ENV !== 'production') {
+      console.debug('[fetchAndUpdateWorkspaceKycStatus] Customer payload meta', {
+        alignCustomerId,
+        workspaceId,
+        kycCount: Array.isArray(customer.kycs) ? customer.kycs.length : 0,
+      });
+    }
     const latestKyc =
       customer.kycs && customer.kycs.length > 0 ? customer.kycs[0] : null;
 
@@ -118,10 +121,18 @@ async function fetchAndUpdateWorkspaceKycStatus(
       );
     }
 
-    console.log(
-      '[fetchAndUpdateWorkspaceKycStatus] Returning KYC data:',
-      JSON.stringify(latestKyc, null, 2),
-    );
+    if (process.env.NODE_ENV !== 'production') {
+      console.debug(
+        '[fetchAndUpdateWorkspaceKycStatus] Returning KYC summary',
+        latestKyc
+          ? {
+              status: latestKyc.status,
+              subStatus: latestKyc.sub_status,
+              flowLink: Boolean(latestKyc.kyc_flow_link),
+            }
+          : { status: 'missing' },
+      );
+    }
     return latestKyc;
   } catch (error) {
     console.error('[fetchAndUpdateWorkspaceKycStatus] Error:', error);

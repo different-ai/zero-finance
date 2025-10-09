@@ -44,6 +44,9 @@ export function CheckingActionsCard({
     enabled: !isDemoMode && ready && authenticated && !!user?.id,
   });
 
+  const [hasRequestedStarterAccounts, setHasRequestedStarterAccounts] =
+    useState(false);
+
   const createStarterAccountsMutation =
     api.align.createStarterAccountsRetroactively.useMutation({
       onSuccess: () => {
@@ -54,6 +57,7 @@ export function CheckingActionsCard({
           '[Banking Instructions] Failed to create starter accounts:',
           error,
         );
+        setHasRequestedStarterAccounts(false);
       },
     });
 
@@ -75,25 +79,8 @@ export function CheckingActionsCard({
   const hasVirtualAccounts = Boolean(achAccount || ibanAccount);
 
   useEffect(() => {
-    if (
-      !isDemoMode &&
-      !isLoadingFundingSources &&
-      fundingSources.length === 0 &&
-      safeAddress &&
-      !createStarterAccountsMutation.isPending
-    ) {
-      console.log(
-        '[Banking Instructions] No funding sources found - attempting to create starter accounts',
-      );
-      createStarterAccountsMutation.mutate();
-    }
-  }, [
-    isDemoMode,
-    isLoadingFundingSources,
-    fundingSources.length,
-    safeAddress,
-    createStarterAccountsMutation,
-  ]);
+    setHasRequestedStarterAccounts(false);
+  }, [safeAddress]);
 
   const handleCopyAddress = () => {
     if (!safeAddress || typeof navigator === 'undefined') return;
@@ -156,8 +143,18 @@ export function CheckingActionsCard({
 
         <Dialog
           onOpenChange={(open) => {
-            if (open && !isDemoMode) {
+            if (!isDemoMode && open) {
               void refetchFundingSources();
+              if (
+                !hasRequestedStarterAccounts &&
+                !isLoadingFundingSources &&
+                fundingSources.length === 0 &&
+                safeAddress &&
+                !createStarterAccountsMutation.isPending
+              ) {
+                setHasRequestedStarterAccounts(true);
+                createStarterAccountsMutation.mutate();
+              }
             }
           }}
         >
