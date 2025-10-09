@@ -198,23 +198,72 @@ export async function ensureUserWorkspace(
       let primaryWorkspaceId: string;
 
       if (existingMembership) {
-        primaryWorkspaceId = existingMembership.workspaceId;
+        const workspaceRows = await tx
+          .select()
+          .from(workspaces)
+          .where(eq(workspaces.id, existingMembership.workspaceId))
+          .limit(1);
 
-        const inserted = await tx
-          .insert(users)
-          .values({ privyDid: userId, primaryWorkspaceId })
-          .onConflictDoNothing()
-          .returning();
+        if (workspaceRows.length > 0) {
+          primaryWorkspaceId = existingMembership.workspaceId;
 
-        if (inserted.length === 0) {
-          const existing = await tx
-            .select()
-            .from(users)
-            .where(eq(users.privyDid, userId))
-            .limit(1);
-          user = existing[0];
+          const inserted = await tx
+            .insert(users)
+            .values({ privyDid: userId, primaryWorkspaceId })
+            .onConflictDoNothing()
+            .returning();
+
+          if (inserted.length === 0) {
+            const existing = await tx
+              .select()
+              .from(users)
+              .where(eq(users.privyDid, userId))
+              .limit(1);
+            user = existing[0];
+          } else {
+            user = inserted[0];
+          }
         } else {
-          user = inserted[0];
+          console.warn(
+            `[ensureUserWorkspace] Orphaned workspace membership detected for user ${userId}, ` +
+              `workspace ${existingMembership.workspaceId} does not exist. Creating new workspace.`,
+          );
+
+          await tx
+            .delete(workspaceMembers)
+            .where(eq(workspaceMembers.id, existingMembership.id));
+
+          const tempWorkspaceId = randomUUID();
+
+          const insertedUsers = await tx
+            .insert(users)
+            .values({ privyDid: userId, primaryWorkspaceId: tempWorkspaceId })
+            .onConflictDoNothing()
+            .returning();
+
+          if (insertedUsers.length === 0) {
+            const existing = await tx
+              .select()
+              .from(users)
+              .where(eq(users.privyDid, userId))
+              .limit(1);
+            user = existing[0];
+          } else {
+            const [workspace] = await tx
+              .insert(workspaces)
+              .values({
+                id: tempWorkspaceId,
+                name: `${userId.slice(0, 8)}'s Workspace`,
+                createdBy: userId,
+              })
+              .returning();
+
+            if (!workspace) {
+              throw new Error('Failed to create workspace for user');
+            }
+
+            user = insertedUsers[0];
+          }
         }
       } else {
         const tempWorkspaceId = randomUUID();
