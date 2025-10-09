@@ -137,7 +137,10 @@ export function CheckingActionsCard({
           <DialogContent
             className={`p-0 ${isMobile ? 'h-screen max-h-screen w-screen max-w-none m-0' : 'max-w-2xl'}`}
           >
-            <SimplifiedOffRamp fundingSources={fundingSources} />
+            <SimplifiedOffRamp
+              fundingSources={fundingSources}
+              maxBalance={balanceUsd}
+            />
           </DialogContent>
         </Dialog>
 

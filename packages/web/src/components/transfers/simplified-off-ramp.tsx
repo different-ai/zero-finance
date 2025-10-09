@@ -94,9 +94,9 @@ function SimplifiedOffRampDemo({
   const [amount, setAmount] = useState(
     defaultValues?.amount ?? prefillFromInvoice?.amount ?? '10000',
   );
-  const [destinationType, setDestinationType] = useState<'ach' | 'iban' | 'external'>(
-    'ach',
-  );
+  const [destinationType, setDestinationType] = useState<
+    'ach' | 'iban' | 'external'
+  >('ach');
   const [isProcessing, setIsProcessing] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
   const [step, setStep] = useState(1);
@@ -186,7 +186,9 @@ function SimplifiedOffRampDemo({
                   </div>
                   <div className="flex justify-between text-[13px]">
                     <span className="text-[#101010]/60">Status</span>
-                    <span className="text-green-600 font-medium">Processing</span>
+                    <span className="text-green-600 font-medium">
+                      Processing
+                    </span>
                   </div>
                 </div>
               </div>
@@ -534,6 +536,7 @@ interface SimplifiedOffRampProps {
     description?: string | null;
   };
   mode?: SimplifiedOffRampMode;
+  maxBalance?: number;
 }
 
 type SimplifiedOffRampInnerProps = Omit<SimplifiedOffRampProps, 'mode'>;
@@ -542,6 +545,7 @@ function SimplifiedOffRampReal({
   fundingSources,
   prefillFromInvoice,
   defaultValues,
+  maxBalance,
 }: SimplifiedOffRampInnerProps) {
   const [currentStep, setCurrentStep] = useState(0);
   const [formStep, setFormStep] = useState(1);
@@ -1225,7 +1229,13 @@ function SimplifiedOffRampReal({
                         const num = parseFloat(value);
                         if (isNaN(num) || num <= 0)
                           return 'Please enter a valid positive amount.';
-                        if (usdcBalance && num > parseFloat(usdcBalance))
+                        const availableBalance =
+                          maxBalance !== undefined
+                            ? maxBalance
+                            : usdcBalance
+                              ? parseFloat(usdcBalance)
+                              : null;
+                        if (availableBalance !== null && num > availableBalance)
                           return 'Amount exceeds your available balance.';
                         return true;
                       },
@@ -1238,17 +1248,27 @@ function SimplifiedOffRampReal({
                       <Loader2 className="h-4 w-4 animate-spin text-[#101010]/40" />
                     </div>
                   ) : (
-                    usdcBalance !== null && (
+                    (maxBalance !== undefined ? maxBalance : usdcBalance) !==
+                      null && (
                       <button
                         type="button"
-                        onClick={() =>
-                          setValue('amount', usdcBalance, {
-                            shouldValidate: true,
-                          })
-                        }
+                        onClick={() => {
+                          const balance =
+                            maxBalance !== undefined
+                              ? maxBalance.toString()
+                              : usdcBalance;
+                          if (balance) {
+                            setValue('amount', balance, {
+                              shouldValidate: true,
+                            });
+                          }
+                        }}
                         className="absolute inset-y-0 right-0 pr-3 flex items-center text-[12px] text-[#1B29FF] hover:text-[#1420CC]"
                       >
-                        Max: {parseFloat(usdcBalance).toFixed(4)}
+                        Max:{' '}
+                        {maxBalance !== undefined
+                          ? maxBalance.toFixed(2)
+                          : parseFloat(usdcBalance || '0').toFixed(4)}
                       </button>
                     )
                   )}
@@ -1256,9 +1276,11 @@ function SimplifiedOffRampReal({
                 <div className="mt-3 flex justify-between text-[12px]">
                   <span className="text-[#101010]/60">Available balance</span>
                   <span className="font-medium tabular-nums text-[#101010]">
-                    {usdcBalance
-                      ? `${parseFloat(usdcBalance).toFixed(2)} USDC`
-                      : '—'}
+                    {maxBalance !== undefined
+                      ? formatUsd(maxBalance)
+                      : usdcBalance
+                        ? `${parseFloat(usdcBalance).toFixed(2)} USDC`
+                        : '—'}
                   </span>
                 </div>
                 {errors.amount && (
@@ -1617,7 +1639,13 @@ function SimplifiedOffRampReal({
                         const num = parseFloat(value);
                         if (isNaN(num) || num <= 0)
                           return 'Please enter a valid positive amount.';
-                        if (usdcBalance && num > parseFloat(usdcBalance))
+                        const availableBalance =
+                          maxBalance !== undefined
+                            ? maxBalance
+                            : usdcBalance
+                              ? parseFloat(usdcBalance)
+                              : null;
+                        if (availableBalance !== null && num > availableBalance)
                           return 'Amount exceeds your available balance.';
                         return true;
                       },
@@ -1625,17 +1653,27 @@ function SimplifiedOffRampReal({
                     placeholder="0.00"
                     className="pl-10 text-[20px] font-semibold tabular-nums h-12 border-[#101010]/10 bg-white"
                   />
-                  {usdcBalance !== null && (
+                  {(maxBalance !== undefined ? maxBalance : usdcBalance) !==
+                    null && (
                     <button
                       type="button"
-                      onClick={() =>
-                        setValue('amount', usdcBalance, {
-                          shouldValidate: true,
-                        })
-                      }
+                      onClick={() => {
+                        const balance =
+                          maxBalance !== undefined
+                            ? maxBalance.toString()
+                            : usdcBalance;
+                        if (balance) {
+                          setValue('amount', balance, {
+                            shouldValidate: true,
+                          });
+                        }
+                      }}
                       className="absolute inset-y-0 right-0 pr-3 flex items-center text-[12px] text-[#1B29FF] hover:text-[#1420CC]"
                     >
-                      Max: {parseFloat(usdcBalance).toFixed(4)}
+                      Max:{' '}
+                      {maxBalance !== undefined
+                        ? maxBalance.toFixed(2)
+                        : parseFloat(usdcBalance || '0').toFixed(4)}
                     </button>
                   )}
                 </div>
@@ -1717,7 +1755,9 @@ function SimplifiedOffRampReal({
                   </p>
                   <div className="space-y-3">
                     <div className="flex justify-between items-center">
-                      <span className="text-[13px] text-[#101010]/60">Type</span>
+                      <span className="text-[13px] text-[#101010]/60">
+                        Type
+                      </span>
                       <span className="text-[13px] font-medium text-[#101010]">
                         {destinationType === 'ach'
                           ? 'ACH transfer'
@@ -1727,7 +1767,9 @@ function SimplifiedOffRampReal({
                       </span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-[13px] text-[#101010]/60">Amount</span>
+                      <span className="text-[13px] text-[#101010]/60">
+                        Amount
+                      </span>
                       <span className="text-[18px] font-semibold tabular-nums text-[#101010]">
                         {watch('amount')} USDC
                       </span>
