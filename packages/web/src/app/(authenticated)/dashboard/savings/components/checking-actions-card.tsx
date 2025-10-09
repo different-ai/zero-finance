@@ -164,18 +164,18 @@ export function CheckingActionsCard({
               className="flex-1 inline-flex items-center justify-center gap-2 px-5 py-3 text-[15px] font-semibold text-[#101010] border border-[#101010]/10 hover:border-[#1B29FF]/20 hover:text-[#1B29FF] hover:bg-[#F7F7F2] transition-colors"
             >
               <Info className="h-5 w-5 text-[#101010]/60" />
-              Details
+              Account Info
             </Button>
           </DialogTrigger>
           <DialogContent className="bg-white border-[#101010]/10 max-w-3xl max-h-[90vh] overflow-y-auto">
             <DialogHeader className="border-b border-[#101010]/10 pb-4">
               <div>
                 <p className="uppercase tracking-[0.12em] text-[11px] text-[#101010]/60 mb-2">
-                  Banking instructions
+                  Banking information
                 </p>
                 <DialogTitle className="text-[22px] font-semibold tracking-[-0.01em] text-[#101010] flex items-center gap-2">
                   <Building2 className="h-5 w-5 text-[#101010]/60" />
-                  Virtual account details
+                  Your account details
                 </DialogTitle>
                 {safeAddress && (
                   <div className="mt-6 border-t border-[#101010]/10 pt-4">
@@ -184,7 +184,9 @@ export function CheckingActionsCard({
                       onClick={() => setShowAdvancedDetails((prev) => !prev)}
                       className="inline-flex items-center gap-2 text-[12px] font-medium text-[#101010]/70 hover:text-[#1B29FF] transition-colors"
                     >
-                      {showAdvancedDetails ? 'Hide advanced' : 'Show advanced'}{' '}
+                      {showAdvancedDetails
+                        ? 'Hide technical'
+                        : 'Show technical'}{' '}
                       details
                     </button>
 

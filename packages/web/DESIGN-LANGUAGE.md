@@ -597,12 +597,145 @@ Styling: White background, `#1B29FF` focus ring, 12px height, 11px width per slo
 
 ## Content Guidelines
 
+### Progressive Disclosure & Information Hierarchy
+
+**Philosophy:** Layer information by relevance and technical depth. Users should see banking-first value propositions immediately, with legal/technical details accessible on demand.
+
+#### 3-Tier Information Architecture
+
+**Level 0: Value Propositions (Always Visible)**
+
+The first impression. Focus on benefits, features, and user outcomes.
+
+- ✅ Banking-first language: "Enable higher limits & transfers"
+- ✅ Specific, measurable benefits: "Remove $10,000 deposit limit"
+- ✅ Action-oriented copy: "Enable", "Transfer", "Earn"
+- ❌ No legal entities: Different AI Inc., custody providers
+- ❌ No technical jargon: "virtual account", "settlement layer"
+- ❌ No vague promises: "unlimited" → use specific limits instead
+
+**Examples:**
+
+```jsx
+// Onboarding card (Level 0)
+<h3>Enable higher limits & transfers</h3>
+<ul>
+  <li>Remove $10,000 deposit limit</li>
+  <li>Enable bank transfers in and out</li>
+  <li>Earn 8-10% annually on deposits</li>
+</ul>
+```
+
+**Level 1: Banking Details (Click → Modal/Dialog)**
+
+Operational information users need for transactions. Revealed when clicking "Account Info", "Banking Details", or "View Details".
+
+- ✅ Banking coordinates: IBAN, routing numbers, account numbers
+- ✅ Source currency: USD, EUR
+- ✅ Operational messaging: "Funds arrive directly to your account"
+- ✅ Copy-to-clipboard functionality for all reference numbers
+- ❌ Still hide: Different AI Inc., blockchain infrastructure
+- ❌ Avoid crypto terminology at this level
+
+**Examples:**
+
+```jsx
+// Banking instructions modal (Level 1)
+<Dialog>
+  <DialogHeader>
+    <DialogTitle>Banking information</DialogTitle>
+    <DialogDescription>Your account details</DialogDescription>
+  </DialogHeader>
+  <DialogContent>
+    <div>
+      <label>Account Number</label>
+      <p>1234567890</p>
+      <CopyButton />
+    </div>
+    <div>
+      <label>Routing Number</label>
+      <p>987654321</p>
+      <CopyButton />
+    </div>
+  </DialogContent>
+</Dialog>
+```
+
+**Level 2: Technical Details (Deliberate Toggle)**
+
+Advanced/developer information. Only shown when user explicitly clicks "Technical details" or "Advanced settings" toggle.
+
+- ✅ Legal entities: "Different AI Inc."
+- ✅ Settlement/custody information: Destination addresses, networks
+- ✅ Blockchain infrastructure: "Settlement address", destination currency
+- ✅ Developer context: Chain IDs, contract addresses (if needed)
+- ❌ Still maintain banking-adjacent language where possible
+
+**Examples:**
+
+```jsx
+// Technical details toggle (Level 2)
+<Collapsible>
+  <CollapsibleTrigger>
+    <ChevronRight />
+    Technical details
+  </CollapsibleTrigger>
+  <CollapsibleContent>
+    <div>
+      <label>Legal Entity</label>
+      <p>Different AI Inc.</p>
+    </div>
+    <div>
+      <label>Settlement Address</label>
+      <p>0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb</p>
+    </div>
+    <div>
+      <label>Destination Currency</label>
+      <p>USDC (ERC-20)</p>
+    </div>
+  </CollapsibleContent>
+</Collapsible>
+```
+
+#### Button & Label Guidelines
+
+**Level 0 → Level 1 Transitions:**
+
+- ✅ "Account Info", "Banking Details", "View Details", "Get Banking Info"
+- ❌ "Details", "More Info", "Click Here"
+
+**Level 1 → Level 2 Transitions:**
+
+- ✅ "Technical details", "Advanced settings", "Developer info"
+- ❌ "Crypto details", "Show all", "Advanced details"
+
+#### Terminology Mapping
+
+| ❌ Avoid              | ✅ Use Instead         | Level |
+| --------------------- | ---------------------- | ----- |
+| "Unlimited deposits"  | "Remove $X limit"      | 0     |
+| "Virtual account"     | "Bank account"         | 0-1   |
+| "Destination address" | "Settlement address"   | 2     |
+| "Crypto details"      | "Technical details"    | 2     |
+| "Unlock features"     | "Enable [specific]"    | 0     |
+| "Different AI Inc."   | (Show only at Level 2) | 2     |
+| "Custody provider"    | (Show only at Level 2) | 2     |
+
+#### When to Disclose Legal Entities
+
+- ❌ **Never at Level 0**: Value prop cards, onboarding CTAs, landing pages
+- ❌ **Not at Level 1**: Banking instructions, account details modals
+- ✅ **Only at Level 2**: Inside "Technical details" toggle, terms of service, legal footer
+
+**Rationale:** Different AI Inc. is operationally important but creates cognitive friction in banking flows. Users need to trust the product first, understand the banking layer second, and learn infrastructure details third.
+
 ### Voice & Tone
 
 - **Clear**: Banking terms over crypto jargon
 - **Confident**: "Your funds earn 8% APY" not "Funds may earn up to 8%"
 - **Concise**: Remove filler words, get to the point
 - **Human**: Avoid robotic corporate speak
+- **Specific**: Use measurable limits over vague promises
 
 ### Writing Patterns
 
@@ -611,7 +744,9 @@ Styling: White background, `#1B29FF` focus ring, 12px height, 11px width per slo
 - "Transfer complete" → Clear, active
 - "Account created successfully" → Simple banking language
 - "Earning 8% APY on $50,000" → Specific, valuable
-- "View advanced details" → Progressive disclosure
+- "View technical details" → Progressive disclosure
+- "Remove $10,000 deposit limit" → Specific and measurable
+- "Enable bank transfers in and out" → Action-oriented
 
 **❌ Avoid:**
 
@@ -619,6 +754,8 @@ Styling: White background, `#1B29FF` focus ring, 12px height, 11px width per slo
 - "Transaction broadcasted to mempool" → Crypto jargon
 - "Your wallet address is..." → Use "account number" instead
 - "Gas fees: 0.002 ETH" → Hide in advanced, show USD equivalent
+- "Unlock unlimited deposits" → Vague promise
+- "Different AI Inc. account" → Entity disclosure at wrong level
 
 ### Number Formatting
 

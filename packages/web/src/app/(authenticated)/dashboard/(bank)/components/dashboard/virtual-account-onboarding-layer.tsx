@@ -50,13 +50,13 @@ export function VirtualAccountOnboardingLayer({ initialData }: Props) {
       <Card className="w-full border-[#101010]/10 bg-white shadow-[0_2px_8px_rgba(16,16,16,0.04)]">
         <CardHeader className="pb-3 sm:pb-4">
           <CardTitle className="text-[15px] sm:text-[16px] font-medium tracking-[-0.01em] text-[#101010]">
-            Unlock unlimited deposits & transfers
+            Enable higher limits & transfers
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4 sm:space-y-5">
           <p className="text-[13px] sm:text-[14px] leading-[1.5] text-[#101010]/80">
-            Complete identity verification to unlock bank transfers and accept
-            deposits over $10,000.
+            Complete verification to remove the $10,000 deposit cap and enable
+            bank transfers.
           </p>
 
           <ul className="space-y-3">
@@ -65,7 +65,7 @@ export function VirtualAccountOnboardingLayer({ initialData }: Props) {
                 <CheckCircle className="h-3 w-3 text-[#1B29FF]" />
               </div>
               <span className="text-[13px] sm:text-[14px] text-[#101010]/70">
-                Unlimited deposit amounts - no $10,000 cap
+                Remove $10,000 deposit limit
               </span>
             </li>
             <li className="flex items-start gap-3">
@@ -73,7 +73,7 @@ export function VirtualAccountOnboardingLayer({ initialData }: Props) {
                 <CheckCircle className="h-3 w-3 text-[#1B29FF]" />
               </div>
               <span className="text-[13px] sm:text-[14px] text-[#101010]/70">
-                Bank transfers to and from your account
+                Enable bank transfers in and out
               </span>
             </li>
             <li className="flex items-start gap-3">
@@ -81,7 +81,7 @@ export function VirtualAccountOnboardingLayer({ initialData }: Props) {
                 <CheckCircle className="h-3 w-3 text-[#1B29FF]" />
               </div>
               <span className="text-[13px] sm:text-[14px] text-[#101010]/70">
-                Earn 8-10% annually on your business savings
+                Earn 8-10% annually on deposits
               </span>
             </li>
           </ul>

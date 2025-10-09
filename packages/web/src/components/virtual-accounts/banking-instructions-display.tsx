@@ -213,11 +213,17 @@ function AccountCard({
                 showAdvanced && 'rotate-90',
               )}
             />
-            Crypto details
+            Technical details
           </button>
 
           {showAdvanced && (
             <div className="mt-3 p-4 bg-[#101010]/5 border border-[#101010]/10 rounded-md space-y-3">
+              <div className="pb-3 mb-3 border-b border-[#101010]/10">
+                <p className="text-[11px] text-[#101010]/60 leading-relaxed">
+                  Banking services provided by Different AI Inc. Funds are held
+                  directly on our secure platform.
+                </p>
+              </div>
               {account.destinationCurrency && (
                 <div className="flex justify-between text-[12px]">
                   <span className="text-[#101010]/60 uppercase tracking-[0.14em] text-[10px]">
@@ -231,7 +237,7 @@ function AccountCard({
               {account.destinationAddress && (
                 <div className="space-y-1">
                   <dt className="text-[#101010]/60 uppercase tracking-[0.14em] text-[10px]">
-                    Destination address
+                    Settlement address
                   </dt>
                   <dd className="text-[12px] text-[#101010]/80 font-mono break-all flex items-start gap-2">
                     <span className="flex-1">{account.destinationAddress}</span>
@@ -303,11 +309,11 @@ export function BankingInstructionsDisplay({
                   <span className="font-semibold text-[#101010]">
                     Deposits only:
                   </span>{' '}
-                  Accept up to $10,000 total.
+                  Accept up to $10,000 total. Funds arrive directly to your
+                  account.
                 </p>
                 <p>
-                  Complete business verification to unlock unlimited deposits
-                  and bank withdrawals.
+                  Complete verification to remove limits and enable transfers.
                 </p>
               </div>
             </div>
