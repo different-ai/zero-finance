@@ -16,6 +16,9 @@ import {
 import { relations } from 'drizzle-orm';
 import crypto from 'crypto';
 
+const largeIntNumeric = (name: string) =>
+  numeric(name, { precision: 78, scale: 0 }).$type<string>();
+
 // Import and re-export users and workspaces from modular schema
 export { users, type User, type NewUser } from './schema/users';
 export {
@@ -601,8 +604,8 @@ export const earnDeposits = pgTable(
     safeAddress: varchar('safe_address', { length: 42 }).notNull(),
     vaultAddress: varchar('vault_address', { length: 42 }).notNull(),
     tokenAddress: varchar('token_address', { length: 42 }).notNull(),
-    assetsDeposited: bigint('assets_deposited', { mode: 'bigint' }).notNull(),
-    sharesReceived: bigint('shares_received', { mode: 'bigint' }).notNull(),
+    assetsDeposited: largeIntNumeric('assets_deposited').notNull(),
+    sharesReceived: largeIntNumeric('shares_received').notNull(),
     txHash: varchar('tx_hash', { length: 66 }).notNull().unique(),
     timestamp: timestamp('timestamp', { withTimezone: true })
       .notNull()
@@ -634,8 +637,8 @@ export const earnWithdrawals = pgTable(
     safeAddress: varchar('safe_address', { length: 42 }).notNull(),
     vaultAddress: varchar('vault_address', { length: 42 }).notNull(),
     tokenAddress: varchar('token_address', { length: 42 }).notNull(),
-    assetsWithdrawn: bigint('assets_withdrawn', { mode: 'bigint' }).notNull(),
-    sharesBurned: bigint('shares_burned', { mode: 'bigint' }).notNull(),
+    assetsWithdrawn: largeIntNumeric('assets_withdrawn').notNull(),
+    sharesBurned: largeIntNumeric('shares_burned').notNull(),
     txHash: varchar('tx_hash', { length: 66 }).notNull().unique(),
     userOpHash: varchar('user_op_hash', { length: 66 }), // For AA transactions
     timestamp: timestamp('timestamp', { withTimezone: true })
@@ -702,13 +705,13 @@ export const incomingDeposits = pgTable(
     txHash: varchar('tx_hash', { length: 66 }).notNull().unique(),
     fromAddress: varchar('from_address', { length: 42 }).notNull(),
     tokenAddress: varchar('token_address', { length: 42 }).notNull(),
-    amount: bigint('amount', { mode: 'bigint' }).notNull(), // Amount in smallest unit
+    amount: largeIntNumeric('amount').notNull(), // Amount in smallest unit
     blockNumber: bigint('block_number', { mode: 'bigint' }).notNull(),
     timestamp: timestamp('timestamp', { withTimezone: true }).notNull(),
 
     // Sweep tracking
     swept: boolean('swept').notNull().default(false),
-    sweptAmount: bigint('swept_amount', { mode: 'bigint' }), // Amount that was swept to savings
+    sweptAmount: largeIntNumeric('swept_amount'), // Amount that was swept to savings
     sweptPercentage: integer('swept_percentage'), // Percentage used for sweep
     sweptTxHash: varchar('swept_tx_hash', { length: 66 }), // Transaction hash of the sweep
     sweptAt: timestamp('swept_at', { withTimezone: true }), // When it was swept
@@ -978,7 +981,7 @@ export type NewIncomingDeposit = typeof incomingDeposits.$inferInsert;
 // NEW: platformTotals table – store aggregated platform-level totals like total USDC across all safes
 export const platformTotals = pgTable('platform_totals', {
   token: text('token').primaryKey(), // e.g., 'USDC'
-  totalDeposited: bigint('total_deposited', { mode: 'bigint' }).notNull(), // Amount in smallest unit (BigInt)
+  totalDeposited: largeIntNumeric('total_deposited').notNull(), // Amount in smallest unit (string-encoded integer)
   updatedAt: timestamp('updated_at', { withTimezone: true })
     .defaultNow()
     .notNull(),

@@ -105,13 +105,17 @@ async function correctLedger(
   let shares = 0n;
 
   for (const deposit of deposits) {
-    totalDeposited += deposit.assetsDeposited;
-    shares += deposit.sharesReceived;
+    const depositAmount = BigInt(deposit.assetsDeposited);
+    const depositShares = BigInt(deposit.sharesReceived);
+    totalDeposited += depositAmount;
+    shares += depositShares;
   }
 
   for (const withdrawal of withdrawals) {
-    totalWithdrawn += withdrawal.assetsWithdrawn;
-    shares -= withdrawal.sharesBurned;
+    const withdrawnAmount = BigInt(withdrawal.assetsWithdrawn);
+    const burnedShares = BigInt(withdrawal.sharesBurned);
+    totalWithdrawn += withdrawnAmount;
+    shares -= burnedShares;
   }
 
   const ledgerPrincipal = totalDeposited - totalWithdrawn;
@@ -132,7 +136,7 @@ async function correctLedger(
   await db.transaction(async (tx) => {
     for (const deposit of deposits) {
       if (remaining <= 0n) break;
-      const currentAmount = deposit.assetsDeposited;
+      const currentAmount = BigInt(deposit.assetsDeposited);
       if (currentAmount === 0n) continue;
 
       const newAmount = currentAmount > remaining ? currentAmount - remaining : 0n;
@@ -141,7 +145,7 @@ async function correctLedger(
       if (adjusted > 0n) {
         await tx
           .update(earnDeposits)
-          .set({ assetsDeposited: newAmount })
+          .set({ assetsDeposited: newAmount.toString() })
           .where(eq(earnDeposits.id, deposit.id));
 
         console.log(

@@ -29,6 +29,7 @@ import {
   getAddress,
   createPublicClient,
   decodeEventLog,
+  formatUnits,
   type Address,
 } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
@@ -589,8 +590,8 @@ export const earnRouter = router({
           safeAddress: safeAddress,
           vaultAddress: vaultAddress,
           tokenAddress: effectiveTokenAddress,
-          assetsDeposited: amount,
-          sharesReceived: sharesReceived,
+          assetsDeposited: amount.toString(),
+          sharesReceived: sharesReceived.toString(),
           txHash: txHash,
           timestamp: new Date(),
           depositPercentage: depositPercentage, // Store the percentage used at deposit time
@@ -903,8 +904,10 @@ export const earnRouter = router({
             tokenDecimals: tokenDecimals,
           };
         }
-        byVault[key].principal += dep.assetsDeposited;
-        byVault[key].shares += dep.sharesReceived;
+        const depositAssets = BigInt(dep.assetsDeposited);
+        const depositShares = BigInt(dep.sharesReceived);
+        byVault[key].principal += depositAssets;
+        byVault[key].shares += depositShares;
       }
 
       console.log('byVault', byVault);
@@ -1519,7 +1522,9 @@ export const earnRouter = router({
       // The assetsDeposited is the amount that was saved (after percentage calculation)
       return deposits.map((deposit) => {
         // Convert from smallest unit to decimal (USDC has 6 decimals)
-        const savedAmountInDecimals = Number(deposit.assetsDeposited) / 1e6;
+        const savedAmountInDecimals = Number(
+          formatUnits(BigInt(deposit.assetsDeposited), 6),
+        );
 
         // Use the percentage stored at the time of deposit, or default to 10% for historical deposits
         const percentage = deposit.depositPercentage || 10;
@@ -1577,8 +1582,9 @@ export const earnRouter = router({
       // Transform to match VaultTransaction interface
       return withdrawals.map((withdrawal) => {
         // Convert from smallest unit to decimal (USDC has 6 decimals)
-        const withdrawnAmountInDecimals =
-          Number(withdrawal.assetsWithdrawn) / 1e6;
+        const withdrawnAmountInDecimals = Number(
+          formatUnits(BigInt(withdrawal.assetsWithdrawn), 6),
+        );
 
         return {
           id: withdrawal.id,
@@ -1651,8 +1657,8 @@ export const earnRouter = router({
         safeAddress: safeAddress,
         vaultAddress: vaultAddress,
         tokenAddress: tokenAddress,
-        assetsWithdrawn: assetsWithdrawn,
-        sharesBurned: sharesBurned,
+        assetsWithdrawn: assetsWithdrawn.toString(),
+        sharesBurned: sharesBurned.toString(),
         txHash: finalTxHash,
         userOpHash: userOpHash,
         timestamp: new Date(),
@@ -1835,8 +1841,10 @@ export const earnRouter = router({
           let shares = 0n;
 
           for (const dep of deposits) {
-            totalDeposited += dep.assetsDeposited;
-            shares += dep.sharesReceived;
+            const depositedAssets = BigInt(dep.assetsDeposited);
+            const depositedShares = BigInt(dep.sharesReceived);
+            totalDeposited += depositedAssets;
+            shares += depositedShares;
           }
 
           // Get withdrawals for this vault
@@ -1854,8 +1862,10 @@ export const earnRouter = router({
 
           let totalWithdrawn = 0n;
           for (const withdrawal of withdrawals) {
-            totalWithdrawn += withdrawal.assetsWithdrawn;
-            shares -= withdrawal.sharesBurned;
+            const withdrawnAssets = BigInt(withdrawal.assetsWithdrawn);
+            const burnedShares = BigInt(withdrawal.sharesBurned);
+            totalWithdrawn += withdrawnAssets;
+            shares -= burnedShares;
           }
 
           // Get current value if there are shares
