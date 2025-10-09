@@ -14,6 +14,7 @@ import { SimplifiedOffRamp } from '@/components/transfers/simplified-off-ramp';
 import { BankingInstructionsDisplay } from '@/components/virtual-accounts/banking-instructions-display';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { usePrivy } from '@privy-io/react-auth';
+import { useSafeOwnerCheck } from '@/hooks/use-safe-owner-check';
 import { api } from '@/trpc/react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatUsd } from '@/lib/utils';
@@ -35,6 +36,8 @@ export function CheckingActionsCard({
   const [showAdvancedDetails, setShowAdvancedDetails] = useState(false);
   const isMobile = useIsMobile();
   const { ready, authenticated, user } = usePrivy();
+  const { isOwner, isChecking: isCheckingOwnership } =
+    useSafeOwnerCheck(safeAddress);
 
   const {
     data: accountData,
@@ -95,14 +98,19 @@ export function CheckingActionsCard({
 
   const hasOnlyStarterAccounts = !hasCompletedKyc && fundingSources.length > 0;
   const canInitiateMove =
-    (isDemoMode || balanceUsd > 0) && !!safeAddress && !hasOnlyStarterAccounts;
+    (isDemoMode || balanceUsd > 0) &&
+    !!safeAddress &&
+    !hasOnlyStarterAccounts &&
+    isOwner !== false;
   const disableReason = !safeAddress
     ? 'Add a treasury safe to move funds'
-    : balanceUsd <= 0
-      ? 'No withdrawable balance available'
-      : hasOnlyStarterAccounts
-        ? 'Complete business verification to enable withdrawals'
-        : undefined;
+    : isOwner === false
+      ? 'You are not an owner of this Safe'
+      : balanceUsd <= 0
+        ? 'No withdrawable balance available'
+        : hasOnlyStarterAccounts
+          ? 'Complete business verification to enable withdrawals'
+          : undefined;
 
   return (
     <div className="bg-white border border-[#101010]/10 rounded-[12px] p-6 space-y-6">
@@ -125,7 +133,9 @@ export function CheckingActionsCard({
           <DialogTrigger asChild>
             <Button
               className="flex-1 inline-flex items-center justify-center gap-2 px-5 py-3 text-[15px] font-semibold text-white bg-[#1B29FF] hover:bg-[#1420CC] transition-colors"
-              disabled={!isDemoMode && !canInitiateMove}
+              disabled={
+                !isDemoMode && (!canInitiateMove || isCheckingOwnership)
+              }
               title={
                 !isDemoMode && !canInitiateMove ? disableReason : undefined
               }
