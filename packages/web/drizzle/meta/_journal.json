@@ -771,6 +771,13 @@
       "when": 1759950534304,
       "tag": "0109_migrate_kyc_data_to_workspaces",
       "breakpoints": true
+    },
+    {
+      "idx": 110,
+      "version": "7",
+      "when": 1759968574496,
+      "tag": "0110_dashing_emma_frost",
+      "breakpoints": true
     }
   ]
 }

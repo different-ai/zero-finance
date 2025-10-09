@@ -226,6 +226,12 @@ export const userFundingSources = pgTable(
     }), // Provider of the funding source
     alignVirtualAccountIdRef: text('align_virtual_account_id_ref'), // Reference to Align virtual account ID
 
+    // Account Tier & Ownership
+    accountTier: text('account_tier', {
+      enum: ['starter', 'full'],
+    }).default('full'), // Starter = pre-approved company KYB, Full = user's own KYB
+    ownerAlignCustomerId: text('owner_align_customer_id'), // Which Align customer owns this virtual account
+
     // Source Bank Account Details
     sourceAccountType: text('source_account_type', {
       enum: ['us_ach', 'iban', 'uk_details', 'other'],
