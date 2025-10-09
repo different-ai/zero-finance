@@ -225,8 +225,16 @@ export function CheckingActionsCard({
               </div>
             </DialogHeader>
 
-            {isLoadingFundingSources ? (
+            {isLoadingFundingSources ||
+            createStarterAccountsMutation.isPending ? (
               <div className="space-y-3 py-6">
+                <div className="text-center mb-4">
+                  <p className="text-[13px] text-[#101010]/60">
+                    {createStarterAccountsMutation.isPending
+                      ? 'Creating your starter accounts...'
+                      : 'Loading account details...'}
+                  </p>
+                </div>
                 {[1, 2, 3].map((item) => (
                   <Skeleton key={item} className="h-12 w-full bg-[#101010]/5" />
                 ))}
