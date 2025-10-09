@@ -47,6 +47,13 @@ function getRecipientName(
   if (account.sourceBankBeneficiaryName) {
     return account.sourceBankBeneficiaryName;
   }
+
+  // SEPA/IBAN accounts route through Bridge
+  if (account.sourceAccountType === 'iban') {
+    return 'Bridge Building Sp.z.o.o.';
+  }
+
+  // US ACH shows user's name
   if (userData?.companyName) {
     return userData.companyName;
   }
@@ -90,6 +97,7 @@ function AccountCard({
 }) {
   const [showAdvanced, setShowAdvanced] = useState(false);
   const isAch = account.sourceAccountType === 'us_ach';
+  const isFullAccount = account.accountTier === 'full';
 
   const hasAdvancedDetails =
     account.destinationAddress ||
@@ -125,16 +133,32 @@ function AccountCard({
         )}
       </div>
 
-      <div className="mb-4 p-3 bg-white/60 border border-[#101010]/5 rounded-md">
-        <div className="flex items-start gap-2">
-          <Info className="h-4 w-4 text-[#101010]/40 mt-0.5 flex-shrink-0" />
-          <div className="text-[11px] text-[#101010]/60 leading-relaxed">
-            <span className="font-semibold text-[#101010]">
-              Source currency:
-            </span>{' '}
-            {account.sourceCurrency?.toUpperCase() || (isAch ? 'USD' : 'EUR')}
+      <div className="space-y-2 mb-4">
+        <div className="p-3 bg-white/60 border border-[#101010]/5 rounded-md">
+          <div className="flex items-start gap-2">
+            <Info className="h-4 w-4 text-[#101010]/40 mt-0.5 flex-shrink-0" />
+            <div className="text-[11px] text-[#101010]/60 leading-relaxed">
+              <span className="font-semibold text-[#101010]">
+                Source currency:
+              </span>{' '}
+              {account.sourceCurrency?.toUpperCase() || (isAch ? 'USD' : 'EUR')}
+            </div>
           </div>
         </div>
+        {!isAch && isFullAccount && (
+          <div className="p-3 bg-blue-50/80 border border-blue-200/50 rounded-md">
+            <div className="flex items-start gap-2">
+              <Info className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+              <div className="text-[11px] text-blue-900/80 leading-relaxed">
+                <span className="font-semibold text-blue-900">
+                  Email receipts:
+                </span>{' '}
+                You'll receive transfer confirmations from Bridge (our payment
+                processor). This is normal.
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       <dl className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-[13px] text-[#101010]/80">
@@ -219,9 +243,35 @@ function AccountCard({
           {showAdvanced && (
             <div className="mt-3 p-4 bg-[#101010]/5 border border-[#101010]/10 rounded-md space-y-3">
               <div className="pb-3 mb-3 border-b border-[#101010]/10">
-                <p className="text-[11px] text-[#101010]/60 leading-relaxed">
-                  Banking services provided by Different AI Inc. Funds are held
-                  directly on our secure platform.
+                <div className="space-y-2">
+                  <div className="flex items-start gap-2">
+                    <span className="text-[10px] text-[#101010]/50 uppercase tracking-[0.14em] min-w-[80px]">
+                      Platform
+                    </span>
+                    <span className="text-[11px] text-[#101010]/70">
+                      Different AI Inc. (0 Finance)
+                    </span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="text-[10px] text-[#101010]/50 uppercase tracking-[0.14em] min-w-[80px]">
+                      Payments
+                    </span>
+                    <span className="text-[11px] text-[#101010]/70">
+                      Bridge Building Sp. Z.o.o. (via Fractal)
+                    </span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="text-[10px] text-[#101010]/50 uppercase tracking-[0.14em] min-w-[80px]">
+                      Custody
+                    </span>
+                    <span className="text-[11px] text-[#101010]/70">
+                      Self-custodied (you own the funds)
+                    </span>
+                  </div>
+                </div>
+                <p className="mt-3 pt-3 border-t border-[#101010]/10 text-[10px] text-[#101010]/50 leading-relaxed">
+                  Email receipts will show "Bridge" as the payment processor.
+                  This is normal.
                 </p>
               </div>
               {account.destinationCurrency && (
