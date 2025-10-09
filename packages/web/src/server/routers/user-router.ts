@@ -50,9 +50,9 @@ async function getOrCreateUserProfile(privyDid: string, email?: string) {
 }
 
 export const userRouter = router({
-  syncContactToLoops: protectedProcedure
+  syncContactToLoops: publicProcedure
     .input(SyncInputSchema)
-    .mutation(async ({ ctx, input }: { ctx: Context; input: SyncInput }) => {
+    .mutation(async ({ input }: { input: SyncInput }) => {
       const { privyUserId, email, name } = input;
       const loopsApiKey = process.env.LOOPS_API_KEY;
 
