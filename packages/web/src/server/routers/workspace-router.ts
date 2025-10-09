@@ -205,6 +205,105 @@ export const workspaceRouter = router({
   }),
 
   /**
+   * V2: Simplified workspace creation for welcome screen
+   * Creates workspace and membership without touching primaryWorkspaceId
+   * Returns the first workspace with isPrimary=true, or creates one if none exists
+   */
+  getOrCreateWorkspaceV2: protectedProcedure.query(async ({ ctx }) => {
+    const { userId } = ctx;
+
+    if (!userId) {
+      throw new TRPCError({
+        code: 'UNAUTHORIZED',
+        message: 'User not authenticated',
+      });
+    }
+
+    return await ctx.db.transaction(async (tx) => {
+      // Find any workspace where user is a member with isPrimary=true
+      const primaryMembership = await tx
+        .select()
+        .from(workspaceMembers)
+        .where(
+          and(
+            eq(workspaceMembers.userId, userId),
+            eq(workspaceMembers.isPrimary, true),
+          ),
+        )
+        .limit(1);
+
+      if (primaryMembership.length > 0) {
+        // Found primary workspace, return it
+        const workspace = await tx
+          .select()
+          .from(workspaces)
+          .where(eq(workspaces.id, primaryMembership[0].workspaceId))
+          .limit(1);
+
+        if (workspace.length > 0) {
+          return {
+            workspaceId: primaryMembership[0].workspaceId,
+            workspace: workspace[0],
+            membership: primaryMembership[0],
+          };
+        }
+      }
+
+      // No primary workspace exists - check for any workspace membership
+      const anyMembership = await tx
+        .select()
+        .from(workspaceMembers)
+        .where(eq(workspaceMembers.userId, userId))
+        .limit(1);
+
+      if (anyMembership.length > 0) {
+        // User has a workspace but it's not marked primary, mark it now
+        await tx
+          .update(workspaceMembers)
+          .set({ isPrimary: true })
+          .where(eq(workspaceMembers.id, anyMembership[0].id));
+
+        const workspace = await tx
+          .select()
+          .from(workspaces)
+          .where(eq(workspaces.id, anyMembership[0].workspaceId))
+          .limit(1);
+
+        return {
+          workspaceId: anyMembership[0].workspaceId,
+          workspace: workspace[0],
+          membership: { ...anyMembership[0], isPrimary: true },
+        };
+      }
+
+      // No workspace at all - create a new one (bootstrap)
+      const newWorkspace = await tx
+        .insert(workspaces)
+        .values({
+          name: 'Personal Workspace',
+          createdBy: userId,
+        })
+        .returning();
+
+      const newMembership = await tx
+        .insert(workspaceMembers)
+        .values({
+          workspaceId: newWorkspace[0].id,
+          userId,
+          role: 'owner',
+          isPrimary: true,
+        })
+        .returning();
+
+      return {
+        workspaceId: newWorkspace[0].id,
+        workspace: newWorkspace[0],
+        membership: newMembership[0],
+      };
+    });
+  }),
+
+  /**
    * Get team members for a workspace
    */
   getTeamMembers: protectedProcedure

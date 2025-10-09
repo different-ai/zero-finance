@@ -28,7 +28,7 @@ export default function WelcomePage() {
   const [isSetupComplete, setIsSetupComplete] = useState(false);
 
   const { data: workspaceData, isLoading: workspaceLoading } =
-    api.workspace.getOrCreateWorkspace.useQuery(undefined, {
+    api.workspace.getOrCreateWorkspaceV2.useQuery(undefined, {
       enabled: ready && authenticated,
     });
 
@@ -146,7 +146,7 @@ export default function WelcomePage() {
     <section className="relative min-h-screen border-y border-[#101010]/10 bg-white/90 overflow-hidden flex items-center justify-center">
       {/* Gradient Background - positioned behind content */}
       <GeneratedComponent className="z-0 bg-[#F6F5EF]" />
-      
+
       {/* Content - positioned above gradient */}
       <div className="relative z-10 w-full max-w-[500px] px-4">
         <EnsureEmbeddedWallet />
@@ -161,7 +161,8 @@ export default function WelcomePage() {
                 Let&apos;s get started
               </h1>
               <p className="mt-4 text-[15px] sm:text-[16px] leading-[1.5] text-[#101010]/70">
-                Name your workspace to get started. You can create companies and invite team members later.
+                Name your workspace to get started. You can create companies and
+                invite team members later.
               </p>
             </div>
 
@@ -185,7 +186,8 @@ export default function WelcomePage() {
                   autoFocus
                 />
                 <p className="text-[12px] text-[#101010]/50 mt-1">
-                  This is your personal workspace. You can create company profiles separately.
+                  This is your personal workspace. You can create company
+                  profiles separately.
                 </p>
               </div>
 
@@ -226,7 +228,9 @@ export default function WelcomePage() {
               <ul className="space-y-3">
                 {statusItems.map((item) => (
                   <li key={item.title} className="flex items-start gap-3">
-                    <div className="mt-0.5">{renderStatusIcon(item.status)}</div>
+                    <div className="mt-0.5">
+                      {renderStatusIcon(item.status)}
+                    </div>
                     <div>
                       <p className="text-sm font-medium text-[#101010]">
                         {item.title}
