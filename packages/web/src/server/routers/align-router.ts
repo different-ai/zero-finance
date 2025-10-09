@@ -853,6 +853,59 @@ export const alignRouter = router({
    * Get virtual account details
    * Returns the details of the workspace's virtual account
    */
+  createStarterAccountsRetroactively: protectedProcedure.mutation(
+    async ({ ctx }) => {
+      const userFromPrivy = await getUser();
+      if (!userFromPrivy?.id) {
+        throw new TRPCError({
+          code: 'UNAUTHORIZED',
+          message: 'User not found',
+        });
+      }
+
+      const workspaceId = ctx.workspaceId;
+      if (!workspaceId) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Workspace context is unavailable.',
+        });
+      }
+
+      const primarySafe = await db.query.userSafes.findFirst({
+        where: and(
+          eq(userSafes.userDid, userFromPrivy.id),
+          eq(userSafes.safeType, 'primary'),
+        ),
+      });
+
+      if (!primarySafe?.safeAddress) {
+        throw new TRPCError({
+          code: 'PRECONDITION_FAILED',
+          message: 'No primary Safe found',
+        });
+      }
+
+      const { createStarterVirtualAccounts } = await import(
+        '@/server/services/align-starter-accounts'
+      );
+
+      const result = await createStarterVirtualAccounts({
+        userId: userFromPrivy.id,
+        workspaceId,
+        destinationAddress: primarySafe.safeAddress,
+      });
+
+      if (!result) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to create starter accounts',
+        });
+      }
+
+      return { success: true, accounts: result };
+    },
+  ),
+
   getVirtualAccountDetails: protectedProcedure.query(async ({ ctx }) => {
     const userFromPrivy = await getUser();
     if (!userFromPrivy?.id) {

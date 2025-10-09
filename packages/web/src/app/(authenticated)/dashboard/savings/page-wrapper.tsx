@@ -182,6 +182,19 @@ function CheckingActionsCard({
     enabled: !isDemoMode && ready && authenticated && !!user?.id,
   });
 
+  const createStarterAccountsMutation =
+    api.align.createStarterAccountsRetroactively.useMutation({
+      onSuccess: () => {
+        void refetchFundingSources();
+      },
+      onError: (error) => {
+        console.error(
+          '[Banking Instructions] Failed to create starter accounts:',
+          error,
+        );
+      },
+    });
+
   const fundingSources = isDemoMode
     ? demoFundingSources
     : accountData?.fundingSources || [];
@@ -198,6 +211,27 @@ function CheckingActionsCard({
   );
 
   const hasVirtualAccounts = Boolean(achAccount || ibanAccount);
+
+  useEffect(() => {
+    if (
+      !isDemoMode &&
+      !isLoadingFundingSources &&
+      fundingSources.length === 0 &&
+      safeAddress &&
+      !createStarterAccountsMutation.isPending
+    ) {
+      console.log(
+        '[Banking Instructions] No funding sources found - attempting to create starter accounts',
+      );
+      createStarterAccountsMutation.mutate();
+    }
+  }, [
+    isDemoMode,
+    isLoadingFundingSources,
+    fundingSources.length,
+    safeAddress,
+    createStarterAccountsMutation,
+  ]);
 
   const handleCopyAddress = () => {
     if (!safeAddress || typeof navigator === 'undefined') return;

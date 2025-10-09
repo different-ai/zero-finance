@@ -33,21 +33,23 @@ async function createVirtualAccountsForWorkspace(
       `[virtual-account-sync] Creating accounts for workspace ${workspaceId}`,
     );
 
-    // Check if workspace already has funding sources
-    const existingAccounts = await db.query.userFundingSources.findMany({
+    // Check if workspace already has FULL-tier funding sources
+    // Ignore starter accounts since they should coexist with full accounts
+    const existingFullAccounts = await db.query.userFundingSources.findMany({
       where: and(
         eq(userFundingSources.userPrivyDid, userId),
         eq(userFundingSources.workspaceId, workspaceId),
+        eq(userFundingSources.accountTier, 'full'),
       ),
     });
 
-    if (existingAccounts.length > 0) {
+    if (existingFullAccounts.length > 0) {
       console.log(
-        `[virtual-account-sync] Workspace ${workspaceId} already has ${existingAccounts.length} funding source(s)`,
+        `[virtual-account-sync] Workspace ${workspaceId} already has ${existingFullAccounts.length} full-tier funding source(s)`,
       );
       return {
         success: true,
-        details: `Already has ${existingAccounts.length} funding source(s)`,
+        details: `Already has ${existingFullAccounts.length} full-tier funding source(s)`,
       };
     }
 
@@ -70,6 +72,8 @@ async function createVirtualAccountsForWorkspace(
         userPrivyDid: userId,
         workspaceId: workspaceId,
         sourceProvider: 'align',
+        accountTier: 'full',
+        ownerAlignCustomerId: alignCustomerId,
         alignVirtualAccountIdRef: usdAccount.id,
         sourceAccountType: 'us_ach',
         sourceCurrency: 'usd',
@@ -124,6 +128,8 @@ async function createVirtualAccountsForWorkspace(
         userPrivyDid: userId,
         workspaceId: workspaceId,
         sourceProvider: 'align',
+        accountTier: 'full',
+        ownerAlignCustomerId: alignCustomerId,
         alignVirtualAccountIdRef: eurAccount.id,
         sourceAccountType: 'iban',
         sourceCurrency: 'eur',

@@ -15,6 +15,14 @@ export async function createStarterVirtualAccounts(params: {
   destinationAddress: string;
 }) {
   const companyCustomerId = process.env.ALIGN_COMPANY_CUSTOMER_ID;
+  const featureEnabled = process.env.ENABLE_STARTER_ACCOUNTS === 'true';
+
+  if (!featureEnabled) {
+    console.log(
+      '[Starter Accounts] Feature disabled via ENABLE_STARTER_ACCOUNTS',
+    );
+    return null;
+  }
 
   if (!companyCustomerId) {
     console.warn(
