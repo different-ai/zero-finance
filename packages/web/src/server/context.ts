@@ -52,18 +52,6 @@ export const createContext = async ({
     userId = await getUserId();
     console.log(`0xHypr - userId fetched in context: ${userId}`);
     if (userId) {
-      try {
-        const { workspaceId: ensuredWorkspaceId, membership } =
-          await ensureUserWorkspace(db, userId);
-        workspaceId = ensuredWorkspaceId;
-        workspaceMembershipId = membership.id;
-      } catch (workspaceError) {
-        console.error(
-          '0xHypr - Error ensuring workspace in context:',
-          workspaceError,
-        );
-      }
-
       // Fetch and cache full user object from Privy ONCE per request
       // This avoids hitting rate limits from multiple getUser() calls
       try {
