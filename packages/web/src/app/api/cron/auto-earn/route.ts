@@ -175,7 +175,7 @@ async function syncIncomingDeposits(
         txHash: transfer.transactionHash as `0x${string}`,
         fromAddress: transfer.from as `0x${string}`,
         tokenAddress: USDC_ADDRESS as `0x${string}`,
-        amount: BigInt(transfer.value),
+        amount: BigInt(transfer.value).toString(),
         blockNumber: BigInt(transfer.blockNumber),
         timestamp: new Date(transfer.executionDate),
         swept: false,
@@ -278,10 +278,11 @@ async function sweep() {
       
       // Step 3: Process each unswept deposit
       for (const deposit of unsweptDeposits) {
-        const amountToSave = (deposit.amount * BigInt(pct)) / 100n;
+        const depositAmount = BigInt(deposit.amount);
+        const amountToSave = (depositAmount * BigInt(pct)) / 100n;
         
         console.log(`[auto-earn-cron] Processing deposit ${deposit.txHash}:`);
-        console.log(`  💰 Original amount: ${formatUnits(deposit.amount, USDC_DECIMALS)} USDC`);
+        console.log(`  💰 Original amount: ${formatUnits(depositAmount, USDC_DECIMALS)} USDC`);
         console.log(`  📊 Percentage to save: ${pct}%`);
         console.log(`  💡 Amount to save: ${formatUnits(amountToSave, USDC_DECIMALS)} USDC`);
         
@@ -291,7 +292,7 @@ async function sweep() {
             .update(incomingDeposits)
             .set({
               swept: true,
-              sweptAmount: 0n,
+              sweptAmount: '0',
               sweptPercentage: pct,
               sweptAt: new Date(),
               workspaceId: workspaceId ?? null,
@@ -378,8 +379,8 @@ async function sweep() {
           safeAddress: safeAddr,
           vaultAddress: resolvedVaultAddress,
           tokenAddress: USDC_ADDRESS,
-          assetsDeposited: actualAmountDeposited,
-          sharesReceived,
+          assetsDeposited: actualAmountDeposited.toString(),
+          sharesReceived: sharesReceived.toString(),
           txHash,
           timestamp: new Date(),
           depositPercentage: pct,
@@ -392,7 +393,7 @@ async function sweep() {
           .update(incomingDeposits)
           .set({
             swept: true,
-            sweptAmount: actualAmountDeposited,
+            sweptAmount: actualAmountDeposited.toString(),
             sweptPercentage: pct,
             sweptTxHash: txHash,
             sweptAt: new Date(),
@@ -411,14 +412,14 @@ async function sweep() {
           );
 
         console.log(`[auto-earn-cron] 📊 SUMMARY for deposit ${deposit.txHash}:`);
-        console.log(`  🔍 Original deposit: ${formatUnits(deposit.amount, USDC_DECIMALS)} USDC`);
+        console.log(`  🔍 Original deposit: ${formatUnits(depositAmount, USDC_DECIMALS)} USDC`);
         console.log(`  💡 Saved: ${formatUnits(actualAmountDeposited, USDC_DECIMALS)} USDC (${pct}%)`);
         console.log(`  🎯 Shares Received: ${formatUnits(sharesReceived, 18)} vault shares`);
         
         results.push({
           safeAddress: safeAddr,
           depositTxHash: deposit.txHash,
-          originalAmount: formatUnits(deposit.amount, USDC_DECIMALS),
+          originalAmount: formatUnits(depositAmount, USDC_DECIMALS),
           amountSaved: formatUnits(actualAmountDeposited, USDC_DECIMALS),
           sweepTxHash: txHash,
         });

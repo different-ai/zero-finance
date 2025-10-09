@@ -13,7 +13,7 @@ async function fixSharesDeposit() {
   try {
     const result = await db
       .update(earnDeposits)
-      .set({ sharesReceived: correctShares })
+      .set({ sharesReceived: correctShares.toString() })
       .where(eq(earnDeposits.id, depositId))
       .returning();
     

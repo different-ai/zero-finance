@@ -301,7 +301,7 @@ export const safeRouter = router({
                     txHash: transfer.transactionHash as `0x${string}`,
                     fromAddress: transfer.from as `0x${string}`,
                     tokenAddress: USDC_ADDRESS as `0x${string}`,
-                    amount: BigInt(transfer.value),
+                    amount: BigInt(transfer.value).toString(),
                     blockNumber: BigInt(transfer.blockNumber),
                     timestamp: new Date(transfer.executionDate),
                     swept: false,

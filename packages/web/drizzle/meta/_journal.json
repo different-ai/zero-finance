@@ -785,6 +785,13 @@
       "when": 1759970640104,
       "tag": "0111_workable_shadow_king",
       "breakpoints": true
+    },
+    {
+      "idx": 112,
+      "version": "7",
+      "when": 1760051342227,
+      "tag": "0112_living_pet_avengers",
+      "breakpoints": true
     }
   ]
 }

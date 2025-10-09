@@ -143,11 +143,13 @@ async function diagnoseSafe(safeAddress: string, email?: string) {
       console.log('  No deposits found');
     } else {
       for (const deposit of vaultDeposits) {
-        totalDeposited += deposit.assetsDeposited;
-        ledgerShares += deposit.sharesReceived;
+        const depositAmount = BigInt(deposit.assetsDeposited);
+        const depositShares = BigInt(deposit.sharesReceived);
+        totalDeposited += depositAmount;
+        ledgerShares += depositShares;
         console.log(`  • ${new Date(deposit.timestamp).toISOString()}`);
-        console.log(`    Assets: ${formatUsd(deposit.assetsDeposited)}`);
-        console.log(`    Shares: ${deposit.sharesReceived}`);
+        console.log(`    Assets: ${formatUsd(depositAmount)}`);
+        console.log(`    Shares: ${depositShares}`);
         console.log(`    TX: ${deposit.depositTxHash}`);
       }
     }
@@ -157,11 +159,13 @@ async function diagnoseSafe(safeAddress: string, email?: string) {
       console.log('  No withdrawals found');
     } else {
       for (const withdrawal of vaultWithdrawals) {
-        totalWithdrawn += withdrawal.assetsWithdrawn;
-        ledgerShares -= withdrawal.sharesBurned;
+        const withdrawnAmount = BigInt(withdrawal.assetsWithdrawn);
+        const burnedShares = BigInt(withdrawal.sharesBurned);
+        totalWithdrawn += withdrawnAmount;
+        ledgerShares -= burnedShares;
         console.log(`  • ${new Date(withdrawal.timestamp).toISOString()}`);
-        console.log(`    Assets: ${formatUsd(withdrawal.assetsWithdrawn)}`);
-        console.log(`    Shares: ${withdrawal.sharesBurned}`);
+        console.log(`    Assets: ${formatUsd(withdrawnAmount)}`);
+        console.log(`    Shares: ${burnedShares}`);
         console.log(`    TX: ${withdrawal.withdrawalTxHash}`);
       }
     }

@@ -137,7 +137,7 @@ export const adminRouter = router({
       await db.delete(platformTotals).where(eq(platformTotals.token, 'USDC'));
       await db.insert(platformTotals).values({
         token: 'USDC',
-        totalDeposited: grandTotal,
+        totalDeposited: grandTotal.toString(),
         updatedAt: new Date(),
       });
     } catch (persistErr) {
