@@ -45,7 +45,7 @@ export const users = pgTable(
       .default('startup')
       .notNull(),
     contractorInviteCode: text('contractor_invite_code'),
-    primaryWorkspaceId: uuid('primary_workspace_id'),
+    primaryWorkspaceId: uuid('primary_workspace_id').notNull(),
   },
   (table) => ({
     primaryWorkspaceIdx: index('users_primary_workspace_idx').on(

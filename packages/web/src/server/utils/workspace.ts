@@ -184,13 +184,14 @@ export async function ensureUserWorkspace(
     let user = userRows[0];
 
     if (!user) {
+      const tempWorkspaceId = randomUUID();
+
       const inserted = await tx
         .insert(users)
-        .values({ privyDid: userId })
+        .values({ privyDid: userId, primaryWorkspaceId: tempWorkspaceId })
         .onConflictDoNothing()
         .returning();
 
-      // If insert returned nothing (conflict), query for the existing user
       if (inserted.length === 0) {
         const existing = await tx
           .select()
@@ -200,6 +201,39 @@ export async function ensureUserWorkspace(
         user = existing[0];
       } else {
         user = inserted[0];
+
+        const existingMembershipRows = await tx
+          .select()
+          .from(workspaceMembers)
+          .where(eq(workspaceMembers.userId, userId))
+          .orderBy(
+            desc(workspaceMembers.isPrimary),
+            desc(workspaceMembers.joinedAt),
+          )
+          .limit(1);
+
+        const existingMembership = existingMembershipRows[0];
+
+        if (existingMembership) {
+          await tx
+            .update(users)
+            .set({ primaryWorkspaceId: existingMembership.workspaceId })
+            .where(eq(users.privyDid, userId));
+          user.primaryWorkspaceId = existingMembership.workspaceId;
+        } else {
+          const [workspace] = await tx
+            .insert(workspaces)
+            .values({
+              id: tempWorkspaceId,
+              name: `${userId.slice(0, 8)}'s Workspace`,
+              createdBy: userId,
+            })
+            .returning();
+
+          if (!workspace) {
+            throw new Error('Failed to create workspace for user');
+          }
+        }
       }
     }
 

@@ -54,10 +54,12 @@ export const onboardingRouter = router({
         );
         try {
           // Ensure user exists in users table
-          await db
-            .insert(users)
-            .values({ privyDid: userId })
-            .onConflictDoNothing();
+          if (workspaceId) {
+            await db
+              .insert(users)
+              .values({ privyDid: userId, primaryWorkspaceId: workspaceId })
+              .onConflictDoNothing();
+          }
           // Insert safe into userSafes table
           await db
             .insert(userSafes)
@@ -118,7 +120,7 @@ export const onboardingRouter = router({
         // Upsert into `users` table first
         await db
           .insert(users)
-          .values({ privyDid: userId })
+          .values({ privyDid: userId, primaryWorkspaceId: workspaceId })
           .onConflictDoNothing();
 
         // Upsert into `user_profiles` table (with workspace)
