@@ -16,7 +16,7 @@ import {
   /* alignOfframpTransferSchema, */ AlignDestinationBankAccount,
 } from '../services/align-api';
 import { loopsApi, LoopsEvent } from '../services/loops-service';
-import { eq, and, desc } from 'drizzle-orm';
+import { eq, and, desc, or } from 'drizzle-orm';
 import { getUser } from '@/lib/auth';
 import {
   prepareTokenTransferData,
@@ -90,11 +90,14 @@ async function fetchAndUpdateWorkspaceKycStatus(
   try {
     const customer = await alignApi.getCustomer(alignCustomerId);
     if (process.env.NODE_ENV !== 'production') {
-      console.debug('[fetchAndUpdateWorkspaceKycStatus] Customer payload meta', {
-        alignCustomerId,
-        workspaceId,
-        kycCount: Array.isArray(customer.kycs) ? customer.kycs.length : 0,
-      });
+      console.debug(
+        '[fetchAndUpdateWorkspaceKycStatus] Customer payload meta',
+        {
+          alignCustomerId,
+          workspaceId,
+          kycCount: Array.isArray(customer.kycs) ? customer.kycs.length : 0,
+        },
+      );
     }
     const latestKyc =
       customer.kycs && customer.kycs.length > 0 ? customer.kycs[0] : null;
@@ -2445,9 +2448,25 @@ export const alignRouter = router({
       const limit = input?.limit ?? 20;
       const skip = input?.skip ?? 0;
 
-      // Read from database
+      // Get user's workspace to filter transfers
+      const userRecord = await db.query.users.findFirst({
+        where: eq(users.privyDid, userId),
+        columns: { primaryWorkspaceId: true },
+      });
+
+      if (!userRecord?.primaryWorkspaceId) {
+        throw new TRPCError({
+          code: 'PRECONDITION_FAILED',
+          message: 'User has no primary workspace',
+        });
+      }
+
+      // Read from database - filter by workspace OR user (for backwards compatibility)
       const transfers = await db.query.offrampTransfers.findMany({
-        where: eq(offrampTransfers.userId, userId),
+        where: or(
+          eq(offrampTransfers.workspaceId, userRecord.primaryWorkspaceId),
+          eq(offrampTransfers.userId, userId),
+        ),
         orderBy: (transfers, { desc }) => [desc(transfers.createdAt)],
         limit,
         offset: skip,
@@ -2506,9 +2525,25 @@ export const alignRouter = router({
       const limit = input?.limit ?? 20;
       const skip = input?.skip ?? 0;
 
-      // Read from database
+      // Get user's workspace to filter transfers
+      const userRecord = await db.query.users.findFirst({
+        where: eq(users.privyDid, userId),
+        columns: { primaryWorkspaceId: true },
+      });
+
+      if (!userRecord?.primaryWorkspaceId) {
+        throw new TRPCError({
+          code: 'PRECONDITION_FAILED',
+          message: 'User has no primary workspace',
+        });
+      }
+
+      // Read from database - filter by workspace OR user (for backwards compatibility)
       const transfers = await db.query.onrampTransfers.findMany({
-        where: eq(onrampTransfers.userId, userId),
+        where: or(
+          eq(onrampTransfers.workspaceId, userRecord.primaryWorkspaceId),
+          eq(onrampTransfers.userId, userId),
+        ),
         orderBy: (transfers, { desc }) => [desc(transfers.createdAt)],
         limit,
         offset: skip,
@@ -2600,6 +2635,7 @@ export const alignRouter = router({
             target: onrampTransfers.alignTransferId,
             set: {
               status: transfer.status,
+              workspaceId: userRecord.primaryWorkspaceId,
               updatedAt: new Date(),
             },
           });
@@ -2670,6 +2706,7 @@ export const alignRouter = router({
               destinationCurrency: transfer.destination_currency,
               depositToken: transfer.source_token,
               depositNetwork: transfer.source_network,
+              workspaceId: userRecord.primaryWorkspaceId,
               updatedAt: new Date(),
             })
             .where(eq(offrampTransfers.alignTransferId, transfer.id));
