@@ -3,8 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "PORT=3050 next dev --turbo",
-    "dev:prod": "PORT=3050 dotenv -e .env.prod.local -- next dev --turbo",
+    "dev": "PORT=3050 dotenv -e .env.development.local.bak -- next dev --turbo",
+    "dev:prod": "PORT=3050 dotenv -e .env.production.local -- next dev --turbo",
     "build": "next build",
     "build:vercel": "pnpm db:migrate && next build",
     "start": "next start",
@@ -146,6 +146,7 @@
     "crypto-browserify": "^3.12.1",
     "dotenv-cli": "^8.0.0",
     "drizzle-kit": "catalog:",
+    "env-cmd": "^11.0.0",
     "eslint": "catalog:",
     "eslint-config-next": "catalog:",
     "knip": "^5.49.0",
