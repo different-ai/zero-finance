@@ -235,14 +235,31 @@ console.log('[listOnrampTransfers] Found:', transfers.length);
 
 ## Migration Notes
 
-### Existing Data
+### Existing Data - Auto-Fixed by Sync! ✅
 
-⚠️ **Important:** Old transfers with `workspaceId = NULL` will **NOT be visible** after this fix.
+**Good news:** Old transfers with `workspaceId = NULL` will be **automatically fixed** when the sync mutations run!
 
-If you have existing transfers that need to be migrated:
+The sync mutations already update `workspaceId` when updating existing transfers:
+
+- **syncOnrampTransfers** (line 2637): Sets `workspaceId` on conflict
+- **syncOfframpTransfers** (line 2703): Sets `workspaceId` on update
+
+**What happens:**
+
+1. User opens bank transfers list
+2. Component triggers sync mutations on mount
+3. Sync fetches transfers from Align API
+4. For existing transfers: Updates `workspaceId = workspace.id`
+5. Next query will find them (they're now workspace-scoped!)
+
+**No manual migration needed** - the fix is self-healing!
+
+### Optional: Manual Migration (if you want immediate visibility)
+
+If you don't want to wait for auto-sync:
 
 ```sql
--- REQUIRED: Migrate old transfers to workspace ownership
+-- Optional: Manually migrate old transfers
 UPDATE onramp_transfers
 SET workspace_id = (
   SELECT primary_workspace_id
@@ -261,8 +278,6 @@ SET workspace_id = (
 WHERE workspace_id IS NULL
   AND user_id IS NOT NULL;
 ```
-
-**Run this migration before deploying the fix** to avoid data loss.
 
 ---
 
