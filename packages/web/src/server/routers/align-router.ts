@@ -2454,15 +2454,42 @@ export const alignRouter = router({
       });
 
       // Transform to match API response format
-      return transfers.map((transfer) => ({
-        id: transfer.alignTransferId,
-        status: transfer.status,
-        amount: transfer.amountToSend,
-        source_token: transfer.depositToken as 'usdc' | 'usdt' | 'eurc',
-        source_network: transfer.depositNetwork as any,
-        destination_currency: transfer.destinationCurrency as any,
-        destination_bank_account: transfer.destinationBankAccountSnapshot || {},
-      }));
+      return transfers.map((transfer) => {
+        let destinationSnapshot: unknown =
+          transfer.destinationBankAccountSnapshot ?? {};
+
+        if (
+          typeof transfer.destinationBankAccountSnapshot === 'string' &&
+          transfer.destinationBankAccountSnapshot.length
+        ) {
+          try {
+            destinationSnapshot = JSON.parse(
+              transfer.destinationBankAccountSnapshot,
+            );
+          } catch (error) {
+            console.warn(
+              '[listOfframpTransfers] Failed to parse destinationBankAccountSnapshot',
+              {
+                alignTransferId: transfer.alignTransferId,
+                error,
+              },
+            );
+            destinationSnapshot = {};
+          }
+        }
+
+        return {
+          id: transfer.alignTransferId,
+          status: transfer.status,
+          amount: transfer.amountToSend,
+          source_token: transfer.depositToken as 'usdc' | 'usdt' | 'eurc',
+          source_network: transfer.depositNetwork as any,
+          destination_currency: transfer.destinationCurrency as any,
+          destination_bank_account: destinationSnapshot,
+          created_at: transfer.createdAt?.toISOString(),
+          updated_at: transfer.updatedAt?.toISOString(),
+        };
+      });
     }),
 
   listOnrampTransfers: protectedProcedure
@@ -2505,6 +2532,8 @@ export const alignRouter = router({
           deposit_message: transfer.depositMessage || '',
           fee_amount: transfer.feeAmount,
         },
+        created_at: transfer.createdAt?.toISOString(),
+        updated_at: transfer.updatedAt?.toISOString(),
       }));
     }),
 
@@ -2624,28 +2653,82 @@ export const alignRouter = router({
       );
 
       let updatedCount = 0;
+      let insertedCount = 0;
 
-      // For now, only update existing transfers
-      // New transfers are created via createOfframpTransfer which has all the data
       for (const transfer of transfers) {
         const existingTransfer = await db.query.offrampTransfers.findFirst({
           where: eq(offrampTransfers.alignTransferId, transfer.id),
         });
 
         if (existingTransfer) {
-          // Update status if it changed
+          // Update basic fields based on latest Align payload
           await db
             .update(offrampTransfers)
             .set({
               status: transfer.status,
+              amountToSend: transfer.amount,
+              destinationCurrency: transfer.destination_currency,
+              depositToken: transfer.source_token,
+              depositNetwork: transfer.source_network,
               updatedAt: new Date(),
             })
             .where(eq(offrampTransfers.alignTransferId, transfer.id));
           updatedCount++;
+          continue;
+        }
+
+        try {
+          // Fetch full transfer details so we can persist quote/deposit fields
+          const fullTransfer = await alignApi.getOfframpTransfer(
+            alignCustomerId as string,
+            transfer.id,
+          );
+
+          const destinationPaymentRails =
+            'destination_payment_rails' in fullTransfer
+              ? (fullTransfer as { destination_payment_rails: string })
+                  .destination_payment_rails
+              : null;
+
+          await db.insert(offrampTransfers).values({
+            userId,
+            workspaceId: userRecord.primaryWorkspaceId,
+            alignTransferId: fullTransfer.id,
+            status: fullTransfer.status as any,
+            amountToSend: fullTransfer.amount,
+            destinationCurrency: fullTransfer.destination_currency,
+            destinationPaymentRails,
+            destinationBankAccountSnapshot: JSON.stringify(
+              fullTransfer.destination_bank_account,
+            ),
+            depositAmount: fullTransfer.quote.deposit_amount,
+            depositToken: fullTransfer.quote.deposit_token,
+            depositNetwork: fullTransfer.quote.deposit_network,
+            depositAddress: fullTransfer.quote.deposit_blockchain_address,
+            feeAmount: fullTransfer.quote.fee_amount,
+            quoteExpiresAt: fullTransfer.quote.expires_at
+              ? new Date(fullTransfer.quote.expires_at)
+              : null,
+            transactionHash: fullTransfer.deposit_transaction_hash ?? null,
+          });
+          insertedCount++;
+        } catch (detailError) {
+          console.error(
+            '[syncOfframpTransfers] Failed to ingest transfer from Align',
+            {
+              alignCustomerId,
+              transferId: transfer.id,
+              error: detailError,
+            },
+          );
         }
       }
 
-      return { synced: updatedCount, total: transfers.length };
+      return {
+        synced: updatedCount,
+        inserted: insertedCount,
+        total: transfers.length,
+      };
     } catch (error) {
       console.error('Error syncing offramp transfers:', error);
       throw new TRPCError({
