@@ -1,8 +1,10 @@
 # 0 Finance
 
-> Get Paid. Pay Bills. Make Money Work.
+> Get Paid. Pay Bills. Make Money Work
 
-<img width="1840" height="1191" alt="Screenshot 2025-07-10 at 18 57 54" src="https://github.com/user-attachments/assets/14b8476f-1f02-4fb1-92c0-48bb1487ae06" />
+
+<img width="3680" height="2390" alt="image" src="https://github.com/user-attachments/assets/92fe569d-f8bd-4568-b896-f89dc40c7ac0" />
+
 
 
 ## What Zero Finance Does
