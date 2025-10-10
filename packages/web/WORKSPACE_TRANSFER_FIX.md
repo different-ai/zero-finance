@@ -46,11 +46,7 @@ The code had three different concepts mixed together:
 
 **File: `/packages/web/src/server/routers/align-router.ts`**
 
-#### 1. Import `or` operator from drizzle-orm
-
-Already present at line 19.
-
-#### 2. Fix `listOfframpTransfers` query (lines 2443-2472)
+#### 1. Fix `listOfframpTransfers` query (lines 2443-2472)
 
 **Before:**
 
@@ -77,21 +73,18 @@ if (!userRecord?.primaryWorkspaceId) {
   });
 }
 
-// Filter by workspace OR user (backwards compatibility)
+// Workspace-scoped only
 const transfers = await db.query.offrampTransfers.findMany({
-  where: or(
-    eq(offrampTransfers.workspaceId, userRecord.primaryWorkspaceId),
-    eq(offrampTransfers.userId, userId),
-  ),
+  where: eq(offrampTransfers.workspaceId, userRecord.primaryWorkspaceId),
   // ...
 });
 ```
 
-#### 3. Fix `listOnrampTransfers` query (lines 2520-2549)
+#### 2. Fix `listOnrampTransfers` query (lines 2520-2549)
 
-**Same fix as offramp** - filter by `workspaceId OR userId`
+**Same fix as offramp** - filter by `workspaceId` only (workspace-scoped)
 
-#### 4. Preserve `workspaceId` in `syncOnrampTransfers` conflict resolution (lines 2635-2641)
+#### 3. Preserve `workspaceId` in `syncOnrampTransfers` conflict resolution (lines 2635-2641)
 
 **Before:**
 
@@ -118,7 +111,7 @@ const transfers = await db.query.offrampTransfers.findMany({
 });
 ```
 
-#### 5. Preserve `workspaceId` in `syncOfframpTransfers` update (lines 2702-2710)
+#### 4. Preserve `workspaceId` in `syncOfframpTransfers` update (lines 2702-2710)
 
 **Before:**
 
@@ -170,9 +163,7 @@ await db
 2. LIST (listOnrampTransfers / listOfframpTransfers):
    - Get user's primaryWorkspaceId
    - Query transfers WHERE:
-     * workspaceId = user's workspace ID  ← All workspace transfers
-     OR
-     * userId = current user ID           ← Old user-level transfers (backwards compat)
+     * workspaceId = user's workspace ID  ← Workspace-scoped only
 ```
 
 ### Workspace-Level Transfers
@@ -182,7 +173,7 @@ Now transfers are properly **workspace-scoped**:
 - ✅ All users in a workspace see the same transfers
 - ✅ No conflicts when multiple users sync
 - ✅ Transfers persist with workspace, not individual users
-- ✅ Backwards compatible with old user-level transfers
+- ✅ **Workspace-locked** - only workspace members can see workspace transfers
 
 ---
 
@@ -246,19 +237,12 @@ console.log('[listOnrampTransfers] Found:', transfers.length);
 
 ### Existing Data
 
-If you have existing transfers in the database with:
+⚠️ **Important:** Old transfers with `workspaceId = NULL` will **NOT be visible** after this fix.
 
-- `userId` set
-- `workspaceId = NULL`
-
-The fix handles this via **backwards compatibility** - the `OR` clause in the query will still find these old user-level transfers.
-
-### Optional: Migrate Old Transfers
-
-To clean up old data and make everything workspace-level:
+If you have existing transfers that need to be migrated:
 
 ```sql
--- Update old transfers to use workspace ownership
+-- REQUIRED: Migrate old transfers to workspace ownership
 UPDATE onramp_transfers
 SET workspace_id = (
   SELECT primary_workspace_id
@@ -277,6 +261,8 @@ SET workspace_id = (
 WHERE workspace_id IS NULL
   AND user_id IS NOT NULL;
 ```
+
+**Run this migration before deploying the fix** to avoid data loss.
 
 ---
 

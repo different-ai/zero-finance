@@ -16,7 +16,7 @@ import {
   /* alignOfframpTransferSchema, */ AlignDestinationBankAccount,
 } from '../services/align-api';
 import { loopsApi, LoopsEvent } from '../services/loops-service';
-import { eq, and, desc, or } from 'drizzle-orm';
+import { eq, and, desc } from 'drizzle-orm';
 import { getUser } from '@/lib/auth';
 import {
   prepareTokenTransferData,
@@ -2461,12 +2461,9 @@ export const alignRouter = router({
         });
       }
 
-      // Read from database - filter by workspace OR user (for backwards compatibility)
+      // Read from database - workspace-scoped only
       const transfers = await db.query.offrampTransfers.findMany({
-        where: or(
-          eq(offrampTransfers.workspaceId, userRecord.primaryWorkspaceId),
-          eq(offrampTransfers.userId, userId),
-        ),
+        where: eq(offrampTransfers.workspaceId, userRecord.primaryWorkspaceId),
         orderBy: (transfers, { desc }) => [desc(transfers.createdAt)],
         limit,
         offset: skip,
@@ -2538,12 +2535,9 @@ export const alignRouter = router({
         });
       }
 
-      // Read from database - filter by workspace OR user (for backwards compatibility)
+      // Read from database - workspace-scoped only
       const transfers = await db.query.onrampTransfers.findMany({
-        where: or(
-          eq(onrampTransfers.workspaceId, userRecord.primaryWorkspaceId),
-          eq(onrampTransfers.userId, userId),
-        ),
+        where: eq(onrampTransfers.workspaceId, userRecord.primaryWorkspaceId),
         orderBy: (transfers, { desc }) => [desc(transfers.createdAt)],
         limit,
         offset: skip,
