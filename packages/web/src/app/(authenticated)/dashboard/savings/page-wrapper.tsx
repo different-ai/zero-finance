@@ -152,6 +152,7 @@ export default function SavingsPageWrapper({
   // Base vaults configuration
   const BASE_VAULTS = BASE_USDC_VAULTS;
   const baseVaultAddresses = BASE_VAULTS.map((v) => v.address);
+  const trpcUtils = trpc.useUtils();
 
   // Fetch multi-vault stats
   const realVaultStatsMany = trpc.earn.statsByVault.useQuery(
@@ -399,6 +400,44 @@ export default function SavingsPageWrapper({
       vaultAddress: null,
       vaultName: null,
     });
+  };
+
+  const handleVaultActionSuccess = () => {
+    closeModal();
+
+    if (!safeAddress || isDemoMode) {
+      return;
+    }
+
+    const refreshPromises: Promise<unknown>[] = [
+      trpcUtils.earn.stats.invalidate({ safeAddress }),
+      trpcUtils.earn.statsByVault.invalidate({
+        safeAddress,
+        vaultAddresses: baseVaultAddresses,
+      }),
+      trpcUtils.earn.userPositions.invalidate({
+        userSafe: safeAddress,
+        vaultAddresses: baseVaultAddresses,
+      }),
+      trpcUtils.earn.getState.invalidate({ safeAddress }),
+      trpcUtils.earn.getAutoEarnConfig.invalidate({ safeAddress }),
+      trpcUtils.earn.getRecentEarnDeposits.invalidate({
+        safeAddress,
+        limit: 5,
+      }),
+    ];
+
+    refreshPromises.push(realVaultStats.refetch());
+    refreshPromises.push(realVaultStatsMany.refetch());
+    refreshPromises.push(realUserPositions.refetch());
+
+    void (async () => {
+      try {
+        await Promise.all(refreshPromises);
+      } catch (error) {
+        console.error('Failed to refresh savings data after vault action:', error);
+      }
+    })();
   };
 
   return (
@@ -914,7 +953,7 @@ export default function SavingsPageWrapper({
                 <DepositEarnCard
                   safeAddress={safeAddress as Address}
                   vaultAddress={selectedVault.vaultAddress as Address}
-                  onDepositSuccess={closeModal}
+                  onDepositSuccess={handleVaultActionSuccess}
                 />
               )}
             </DialogContent>
@@ -936,7 +975,7 @@ export default function SavingsPageWrapper({
                 <WithdrawEarnCard
                   safeAddress={safeAddress as Address}
                   vaultAddress={selectedVault.vaultAddress as Address}
-                  onWithdrawSuccess={closeModal}
+                  onWithdrawSuccess={handleVaultActionSuccess}
                 />
               )}
             </DialogContent>

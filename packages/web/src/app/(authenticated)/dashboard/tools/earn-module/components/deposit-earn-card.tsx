@@ -106,6 +106,8 @@ export function DepositEarnCard({ safeAddress, vaultAddress, onDepositSuccess }:
     const currentAllowance = allowanceData ? BigInt(allowanceData.allowance) : 0n;
     const needsApproval = amountInSmallestUnit > currentAllowance;
 
+    let latestTxHash: `0x${string}` | undefined;
+
     try {
       // Step 1: Check requirements
       setTransactionState({ step: 'checking' });
@@ -125,21 +127,31 @@ export function DepositEarnCard({ safeAddress, vaultAddress, onDepositSuccess }:
           args: [vaultAddress, amountInSmallestUnit]
         });
 
-        const approvalTxHash = await sendTxViaRelay([{
-          to: USDC_ADDRESS,
-          value: '0',
-          data: approveData,
-        }], 300_000n);
+        const approvalTxHash = await sendTxViaRelay([
+          {
+            to: USDC_ADDRESS,
+            value: '0',
+            data: approveData,
+          },
+        ], 300_000n);
 
         if (!approvalTxHash) throw new Error('Approval transaction failed');
 
-        setTransactionState({ 
-          step: 'waiting-approval', 
-          txHash: approvalTxHash 
+        setTransactionState({
+          step: 'waiting-approval',
+          txHash: approvalTxHash,
         });
 
-        // Wait for approval to be mined
-        await new Promise(resolve => setTimeout(resolve, 7000));
+        // Wait for approval confirmation before proceeding
+        const approvalReceipt = await publicClient.waitForTransactionReceipt({
+          hash: approvalTxHash,
+          confirmations: 1,
+        });
+
+        if (approvalReceipt.status !== 'success') {
+          throw new Error('Approval transaction reverted on Base');
+        }
+
         await refetchAllowance();
       }
 
@@ -175,27 +187,38 @@ export function DepositEarnCard({ safeAddress, vaultAddress, onDepositSuccess }:
         args: [amountInSmallestUnit, safeAddress]
       });
 
-      const depositTxHash = await sendTxViaRelay([{
-        to: vaultAddress,
-        value: '0',
-        data: depositData,
-      }], 500_000n);
+      const depositTxHash = await sendTxViaRelay([
+        {
+          to: vaultAddress,
+          value: '0',
+          data: depositData,
+        },
+      ], 500_000n);
 
       if (!depositTxHash) throw new Error('Deposit transaction failed');
 
-      setTransactionState({ 
-        step: 'waiting-deposit', 
-        txHash: depositTxHash 
+      latestTxHash = depositTxHash;
+
+      setTransactionState({
+        step: 'waiting-deposit',
+        txHash: depositTxHash,
       });
 
-      // Wait for deposit to be mined
-      await new Promise(resolve => setTimeout(resolve, 7000));
+      // Wait for deposit confirmation on Base
+      const receipt = await publicClient.waitForTransactionReceipt({
+        hash: depositTxHash,
+        confirmations: 1,
+      });
+
+      if (receipt.status !== 'success') {
+        throw new Error('Deposit transaction reverted on Base');
+      }
 
       // Success!
-      setTransactionState({ 
-        step: 'success', 
+      setTransactionState({
+        step: 'success',
         txHash: depositTxHash,
-        depositedAmount: amount 
+        depositedAmount: amount,
       });
 
       // Reset form and refetch data
@@ -209,9 +232,15 @@ export function DepositEarnCard({ safeAddress, vaultAddress, onDepositSuccess }:
 
     } catch (error) {
       console.error('Transaction error:', error);
-      setTransactionState({ 
-        step: 'error', 
-        errorMessage: error instanceof Error ? error.message : 'Transaction failed' 
+      const baseMessage =
+        error instanceof Error ? error.message : 'Transaction failed';
+      const errorMessage = latestTxHash
+        ? `${baseMessage}. Check BaseScan for hash ${latestTxHash}`
+        : baseMessage;
+      setTransactionState({
+        step: 'error',
+        txHash: latestTxHash,
+        errorMessage,
       });
     }
   };
@@ -287,7 +316,7 @@ export function DepositEarnCard({ safeAddress, vaultAddress, onDepositSuccess }:
                   Step 1 of 2: Approving USDC
                 </div>
                 {transactionState.txHash && (
-                  <a 
+                  <a
                     href={`https://basescan.org/tx/${transactionState.txHash}`}
                     target="_blank"
                     rel="noopener noreferrer"
@@ -297,9 +326,14 @@ export function DepositEarnCard({ safeAddress, vaultAddress, onDepositSuccess }:
                     <ExternalLink className="h-3 w-3" />
                   </a>
                 )}
+                {transactionState.step === 'waiting-approval' && (
+                  <p className="text-xs text-muted-foreground">
+                    Approval submitted. Waiting for confirmation on Base...
+                  </p>
+                )}
               </div>
             )}
-            
+
             {(transactionState.step === 'depositing' || transactionState.step === 'waiting-deposit') && (
               <div className="space-y-2">
                 <div className="flex items-center gap-2 text-sm">
@@ -307,7 +341,7 @@ export function DepositEarnCard({ safeAddress, vaultAddress, onDepositSuccess }:
                   Step 2 of 2: Depositing USDC
                 </div>
                 {transactionState.txHash && (
-                  <a 
+                  <a
                     href={`https://basescan.org/tx/${transactionState.txHash}`}
                     target="_blank"
                     rel="noopener noreferrer"
@@ -317,11 +351,16 @@ export function DepositEarnCard({ safeAddress, vaultAddress, onDepositSuccess }:
                     <ExternalLink className="h-3 w-3" />
                   </a>
                 )}
+                {transactionState.step === 'waiting-deposit' && (
+                  <p className="text-xs text-muted-foreground">
+                    Transaction submitted. Waiting for confirmation on Base...
+                  </p>
+                )}
               </div>
             )}
           </div>
         </div>
-        
+
         <p className="text-xs text-muted-foreground text-center">
           Please wait while your transaction is being processed on Base network
         </p>
