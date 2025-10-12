@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { usePrivy } from '@privy-io/react-auth';
 import AdminPanel from '@/components/admin/admin-panel';
 import KycKanbanBoard from '@/components/admin/kyc-kanban-board';
+import WorkspacesPanel from '@/components/admin/workspaces-panel';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { api } from '@/trpc/react';
@@ -15,7 +16,13 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { TableIcon, LayoutGrid, RefreshCw, ShieldAlert } from 'lucide-react';
+import {
+  TableIcon,
+  LayoutGrid,
+  RefreshCw,
+  ShieldAlert,
+  Building2,
+} from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -26,7 +33,9 @@ import {
 
 export default function AdminPage() {
   const { user, authenticated, login } = usePrivy();
-  const [activeView, setActiveView] = useState<'table' | 'kanban'>('table');
+  const [activeView, setActiveView] = useState<
+    'workspaces' | 'table' | 'kanban'
+  >('workspaces');
   const [isSyncing, setIsSyncing] = useState(false);
 
   // Check if user is admin
@@ -185,18 +194,28 @@ export default function AdminPage() {
 
       <Tabs
         value={activeView}
-        onValueChange={(v) => setActiveView(v as 'table' | 'kanban')}
+        onValueChange={(v) =>
+          setActiveView(v as 'workspaces' | 'table' | 'kanban')
+        }
       >
         <TabsList className="mb-6">
+          <TabsTrigger value="workspaces" className="flex items-center gap-2">
+            <Building2 className="h-4 w-4" />
+            Workspaces
+          </TabsTrigger>
           <TabsTrigger value="table" className="flex items-center gap-2">
             <TableIcon className="h-4 w-4" />
-            Table View
+            Users
           </TabsTrigger>
           <TabsTrigger value="kanban" className="flex items-center gap-2">
             <LayoutGrid className="h-4 w-4" />
             KYC Kanban
           </TabsTrigger>
         </TabsList>
+
+        <TabsContent value="workspaces">
+          <WorkspacesPanel />
+        </TabsContent>
 
         <TabsContent value="table">
           <AdminPanel />

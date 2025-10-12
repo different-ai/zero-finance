@@ -13,6 +13,8 @@ import {
   workspaces,
   workspaceMembers,
   admins,
+  autoEarnConfigs,
+  earnDeposits,
 } from '../../db/schema';
 import { eq, and } from 'drizzle-orm';
 import { customAlphabet } from 'nanoid';
@@ -1172,6 +1174,167 @@ export const adminRouter = router({
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
           message: `Failed to fetch user details: ${(error as Error).message}`,
+        });
+      }
+    }),
+
+  listWorkspaces: protectedProcedure.query(async ({ ctx }) => {
+    if (!ctx.userId) {
+      throw new TRPCError({
+        code: 'UNAUTHORIZED',
+        message: 'User ID not found',
+      });
+    }
+    await requireAdmin(ctx.userId);
+
+    try {
+      const allWorkspaces = await db
+        .select({
+          id: workspaces.id,
+          name: workspaces.name,
+          createdAt: workspaces.createdAt,
+          workspaceType: workspaces.workspaceType,
+          kycStatus: workspaces.kycStatus,
+          kycProvider: workspaces.kycProvider,
+          alignCustomerId: workspaces.alignCustomerId,
+          alignVirtualAccountId: workspaces.alignVirtualAccountId,
+          beneficiaryType: workspaces.beneficiaryType,
+          companyName: workspaces.companyName,
+          createdBy: workspaces.createdBy,
+        })
+        .from(workspaces);
+
+      return allWorkspaces;
+    } catch (error) {
+      ctx.log.error(
+        { error: (error as Error).message },
+        'Failed to list workspaces.',
+      );
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: `Failed to list workspaces: ${(error as Error).message}`,
+      });
+    }
+  }),
+
+  getWorkspaceDetails: protectedProcedure
+    .input(
+      z.object({
+        workspaceId: z.string().uuid('Invalid workspace ID'),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      if (!ctx.userId) {
+        throw new TRPCError({
+          code: 'UNAUTHORIZED',
+          message: 'User ID not found',
+        });
+      }
+      await requireAdmin(ctx.userId);
+
+      const { workspaceId } = input;
+
+      try {
+        const workspace = await db.query.workspaces.findFirst({
+          where: eq(workspaces.id, workspaceId),
+        });
+
+        if (!workspace) {
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'Workspace not found.',
+          });
+        }
+
+        const members = await db
+          .select({
+            userId: workspaceMembers.userId,
+            role: workspaceMembers.role,
+            isPrimary: workspaceMembers.isPrimary,
+            joinedAt: workspaceMembers.joinedAt,
+            userFirstName: users.firstName,
+            userLastName: users.lastName,
+            userEmail: users.privyDid,
+          })
+          .from(workspaceMembers)
+          .leftJoin(users, eq(workspaceMembers.userId, users.privyDid))
+          .where(eq(workspaceMembers.workspaceId, workspaceId));
+
+        const safes = await db.query.userSafes.findMany({
+          where: eq(userSafes.workspaceId, workspaceId),
+        });
+
+        const autoEarnConfigsList = await db.query.autoEarnConfigs.findMany({
+          where: eq(autoEarnConfigs.workspaceId, workspaceId),
+        });
+
+        const earnDepositsList = await db.query.earnDeposits.findMany({
+          where: eq(earnDeposits.workspaceId, workspaceId),
+        });
+
+        const totalDeposited = earnDepositsList.reduce(
+          (sum: bigint, d) => sum + BigInt(d.assetsDeposited),
+          0n,
+        );
+
+        return {
+          workspace: {
+            id: workspace.id,
+            name: workspace.name,
+            createdAt: workspace.createdAt,
+            updatedAt: workspace.updatedAt,
+            createdBy: workspace.createdBy,
+            workspaceType: workspace.workspaceType,
+            kycStatus: workspace.kycStatus,
+            kycProvider: workspace.kycProvider,
+            kycSubStatus: workspace.kycSubStatus,
+            kycFlowLink: workspace.kycFlowLink,
+            alignCustomerId: workspace.alignCustomerId,
+            alignVirtualAccountId: workspace.alignVirtualAccountId,
+            beneficiaryType: workspace.beneficiaryType,
+            companyName: workspace.companyName,
+            firstName: workspace.firstName,
+            lastName: workspace.lastName,
+          },
+          members: members.map((m) => ({
+            userId: m.userId,
+            role: m.role,
+            isPrimary: m.isPrimary,
+            joinedAt: m.joinedAt,
+            firstName: m.userFirstName,
+            lastName: m.userLastName,
+          })),
+          safes: safes.map((s) => ({
+            safeAddress: s.safeAddress,
+            safeType: s.safeType,
+            isEarnModuleEnabled: s.isEarnModuleEnabled,
+            createdAt: s.createdAt,
+          })),
+          autoEarn: {
+            configs: autoEarnConfigsList.map((c) => ({
+              safeAddress: c.safeAddress,
+              percentage: c.pct,
+              lastTrigger: c.lastTrigger,
+            })),
+            enabled: autoEarnConfigsList.length > 0,
+          },
+          finances: {
+            totalDeposited: totalDeposited.toString(),
+            depositCount: earnDepositsList.length,
+            safeCount: safes.length,
+          },
+        };
+      } catch (error) {
+        ctx.log.error(
+          { workspaceId, error: (error as Error).message },
+          'Failed to fetch workspace details.',
+        );
+        if (error instanceof TRPCError) {
+          throw error;
+        }
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: `Failed to fetch workspace details: ${(error as Error).message}`,
         });
       }
     }),
