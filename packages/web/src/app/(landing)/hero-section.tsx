@@ -4,6 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { GradientBackground } from './gradient-background';
 import { BrowserFrame } from '@/components/BrowserFrame';
+import { Dithering } from '@paper-design/shaders-react';
 
 export function HeroSection() {
   return (
@@ -202,15 +203,35 @@ export function HeroSection() {
       </section>
 
       {/* How it works */}
-      <section className="bg-[#F6F5EF] border-t border-[#101010]/10 py-8 sm:py-12 lg:py-16">
-        <div className="mx-auto max-w-[1200px] px-4 sm:px-6 lg:px-8">
+      <section className="relative bg-[#F7F7F2] border-t border-[#101010]/10 py-8 sm:py-12 lg:py-16 overflow-hidden">
+        {/* Dithering background - very subtle for readability */}
+        <div className="absolute inset-0 z-0 opacity-10">
+          <Dithering
+            colorBack="#00000000"
+            colorFront="#1B29FF"
+            speed={0.05}
+            shape="warp"
+            type="4x4"
+            size={2}
+            scale={0.6}
+            pxSize={0.05}
+            style={{
+              width: '100%',
+              height: '100%',
+              position: 'absolute',
+              top: 0,
+              left: 0,
+            }}
+          />
+        </div>
+        <div className="relative z-10 mx-auto max-w-[1200px] px-4 sm:px-6 lg:px-8">
           <p className="uppercase tracking-[0.14em] sm:tracking-[0.18em] text-[11px] sm:text-[12px] text-[#101010]/60">
             Simple as any savings account
           </p>
           <h2 className="mt-2 font-serif text-[24px] sm:text-[30px] lg:text-[36px] leading-[1.1] tracking-[-0.01em] text-[#101010]">
             Connect → Sweep → Earn
           </h2>
-          <div className="mt-6 sm:mt-8 grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-[#101010]/10 border border-[#101010]/10 bg-white">
+          <div className="mt-6 sm:mt-8 grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-[#101010]/10 border border-[#101010]/10 bg-white/95 backdrop-blur-sm shadow-[0_2px_8px_rgba(16,16,16,0.04)]">
             <div className="p-4 sm:p-6">
               <div className="text-[11px] sm:text-[12px] uppercase tracking-[0.14em] text-[#101010]/60">
                 1

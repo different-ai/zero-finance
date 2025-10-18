@@ -3,7 +3,16 @@
     "allow": [
       "Bash(pnpm db:generate:*)",
       "Read(//var/folders/d9/xqhkvsp94rg0n0n523snqztm0000gn/T/TemporaryItems/NSIRD_screencaptureui_de8GN8/**)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Read(//Users/benjaminshafii/**)",
+      "Bash(claude mcp list-servers:*)",
+      "mcp__notion__notion-search",
+      "mcp__notion__notion-fetch",
+      "Bash(node extract-outreach-data.mjs:*)",
+      "mcp__exa__get_code_context_exa",
+      "mcp__exa__web_search_exa",
+      "Read(//var/folders/d9/xqhkvsp94rg0n0n523snqztm0000gn/T/TemporaryItems/NSIRD_screencaptureui_aSkq2E/**)",
+      "Read(//var/folders/d9/xqhkvsp94rg0n0n523snqztm0000gn/T/TemporaryItems/NSIRD_screencaptureui_gRH1wV/**)"
     ],
     "deny": [],
     "ask": []

@@ -13,40 +13,40 @@ export function GradientBackground({
   const noise = (variant: 'hero' | 'demo' | 'welcome') => {
     switch (variant) {
       case 'hero':
-        return 0.2;
+        return 0.25;
       case 'demo':
-        return 0.1;
+        return 0.25;
       case 'welcome':
-        return 0.1;
+        return 0.25;
     }
   };
 
   const shape = (variant: 'hero' | 'demo' | 'welcome') => {
     switch (variant) {
       case 'hero':
-        return 'blob' as const;
+        return 'corners' as const;
       case 'demo':
-        return 'wave' as const;
+        return 'corners' as const;
       case 'welcome':
-        return 'wave' as const;
+        return 'corners' as const;
     }
   };
   const offsetX = (variant: 'hero' | 'demo' | 'welcome') => {
     switch (variant) {
       case 'hero':
-        return 0.9;
+        return -1;
       case 'demo':
-        return 0.3;
+        return -1;
       case 'welcome':
-        return 0.3;
+        return -1;
     }
   };
   const offsetY = (variant: 'hero' | 'demo' | 'welcome') => {
     switch (variant) {
       case 'hero':
-        return -0.5;
+        return 0;
       case 'demo':
-        return -0.3;
+        return 0;
       case 'welcome':
         return 0;
     }
@@ -54,43 +54,42 @@ export function GradientBackground({
   const rotation = (variant: 'hero' | 'demo' | 'welcome') => {
     switch (variant) {
       case 'hero':
-        return 180;
+        return 0;
       case 'demo':
-        return -30;
+        return 0;
       case 'welcome':
         return 0;
     }
   };
-  // Blue gradient colors concentrated in top-right
+  // Brand gradient colors from Design Language (readable on light backgrounds)
   const heroColors = [
-    'rgba(27, 41, 255, 0.1)', // Transparent blue
-    '#4A5BFF', // Medium blue
-    '#1B29FF', // Strong blue
-    '#3344FF', // Vibrant blue
+    '#668fff', // Light blue
+    '#1B29FF', // Brand primary
+    'rgba(246, 245, 239, 0)', // Transparent cream
+    'rgba(27, 41, 255, 0.3)', // Semi-transparent brand blue
   ];
 
   const demoColors = [
-    'rgba(27, 41, 255, 0.05)', // Very transparent blue
-    '#4A5BFF',
-    '#6677FF',
+    '#668fff',
     '#1B29FF',
+    'rgba(246, 245, 239, 0)',
+    'rgba(27, 41, 255, 0.2)',
   ];
 
   const sharedProps = {
-    colorBack: 'rgba(246, 245, 239, 0)', // Transparent background
-    softness: 0.3, // Softer edges for better blending
-    intensity: 0.1, // Slightly more intense
-    // handle more than 2 variants cleanly
+    colorBack: 'rgba(246, 245, 239, 0)', // Transparent background matching design language
+    softness: 0.3, // Softer for better text readability
+    intensity: 0.2, // Lower intensity for background use
     noise: noise(variant),
     shape: shape(variant),
-    scale: 1, // Larger scale to cover more area
-    speed: 0.2,
+    scale: 1,
+    speed: 0.2, // Slower, subtle movement per design language
     style: {
       position: 'absolute' as const,
       inset: 0,
       width: '100%',
       height: '100%',
-      // opacity: variant === 'hero' ? 0.6 : 0.4,
+      opacity: variant === 'hero' ? 0.5 : 0.3, // Ensure text readability
     },
   };
 
