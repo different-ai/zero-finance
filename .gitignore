@@ -65,3 +65,7 @@ memory/outreach-log.md
 data/
 # But don't ignore the companies.json file
 !packages/weloveyourstartup/src/data/companies.json
+
+# Claude settings
+.claude/settings.local.json
+**/settings.local.json
