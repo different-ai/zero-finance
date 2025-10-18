@@ -152,8 +152,8 @@ function AccountCard({
                 <span className="font-semibold text-blue-900">
                   Email receipts:
                 </span>{' '}
-                You'll receive transfer confirmations from Bridge (our payment
-                processor). This is normal.
+                You&apos;ll receive transfer confirmations from Bridge (our
+                payment processor). This is normal.
               </div>
             </div>
           </div>
@@ -269,8 +269,8 @@ function AccountCard({
               </div>
               <div className="pt-3 border-t border-[#101010]/10">
                 <p className="text-[11px] text-[#101010]/60 leading-relaxed">
-                  Email receipts will show "Bridge" as the payment processor.
-                  This is normal.
+                  Email receipts will show &quot;Bridge&quot; as the payment
+                  processor. This is normal.
                 </p>
               </div>
               {account.destinationCurrency && (

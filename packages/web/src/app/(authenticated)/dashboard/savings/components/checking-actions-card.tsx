@@ -115,15 +115,15 @@ export function CheckingActionsCard({
   return (
     <div className="bg-white border border-[#101010]/10 rounded-[12px] p-6 space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <p className="uppercase tracking-[0.12em] text-[11px] text-[#101010]/60 mb-2">
-            Treasury Checking
+        <div className="flex-1">
+          <p className="uppercase tracking-[0.16em] text-[11px] text-[#101010]/60 mb-2">
+            Available Balance
           </p>
-          <p className="text-[20px] sm:text-[22px] font-semibold tracking-[-0.01em] text-[#101010]">
-            Withdrawable balance
-          </p>
-          <p className="mt-2 text-[32px] sm:text-[36px] font-semibold leading-[1.1] tabular-nums text-[#101010]">
+          <p className="text-[44px] sm:text-[56px] font-semibold leading-[0.95] tabular-nums text-[#101010]">
             {formatUsd(balanceUsd)}
+          </p>
+          <p className="mt-3 text-[13px] text-[#101010]/60">
+            Ready to transfer or invest
           </p>
         </div>
       </div>
@@ -255,7 +255,6 @@ export function CheckingActionsCard({
             ) : hasVirtualAccounts ? (
               <BankingInstructionsDisplay
                 accounts={fundingSources}
-                hasCompletedKyc={hasCompletedKyc}
                 userData={userData}
               />
             ) : (
