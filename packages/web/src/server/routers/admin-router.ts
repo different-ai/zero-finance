@@ -1206,7 +1206,7 @@ export const adminRouter = router({
       }
     }),
 
-  listWorkspaces: protectedProcedure.query(async ({ ctx }) => {
+  listWorkspacesWithMembers: protectedProcedure.query(async ({ ctx }) => {
     if (!ctx.userId) {
       throw new TRPCError({
         code: 'UNAUTHORIZED',
@@ -1228,15 +1228,94 @@ export const adminRouter = router({
           alignVirtualAccountId: workspaces.alignVirtualAccountId,
           beneficiaryType: workspaces.beneficiaryType,
           companyName: workspaces.companyName,
+          firstName: workspaces.firstName,
+          lastName: workspaces.lastName,
           createdBy: workspaces.createdBy,
         })
-        .from(workspaces);
+        .from(workspaces)
+        .orderBy(workspaces.createdAt);
 
-      return allWorkspaces;
+      const workspacesWithData = await Promise.all(
+        allWorkspaces.map(async (workspace) => {
+          const members = await db
+            .select({
+              userId: workspaceMembers.userId,
+              role: workspaceMembers.role,
+              isPrimary: workspaceMembers.isPrimary,
+              joinedAt: workspaceMembers.joinedAt,
+              email: userProfilesTable.email,
+              businessName: userProfilesTable.businessName,
+            })
+            .from(workspaceMembers)
+            .leftJoin(
+              userProfilesTable,
+              eq(workspaceMembers.userId, userProfilesTable.privyDid),
+            )
+            .where(eq(workspaceMembers.workspaceId, workspace.id));
+
+          const safes = await db
+            .select({
+              safeAddress: userSafes.safeAddress,
+              safeType: userSafes.safeType,
+            })
+            .from(userSafes)
+            .where(eq(userSafes.workspaceId, workspace.id));
+
+          let totalSafeBalance = 0n;
+          for (const safe of safes) {
+            try {
+              const balance = await getSafeBalance({
+                safeAddress: safe.safeAddress as `0x${string}`,
+              });
+              totalSafeBalance += balance?.raw ?? 0n;
+            } catch (err) {
+              console.error(
+                `Failed to fetch balance for safe ${safe.safeAddress}:`,
+                err,
+              );
+            }
+          }
+
+          const deposits = await db
+            .select()
+            .from(earnDeposits)
+            .where(eq(earnDeposits.workspaceId, workspace.id));
+
+          const withdrawals = await db
+            .select()
+            .from(earnWithdrawals)
+            .where(eq(earnWithdrawals.workspaceId, workspace.id));
+
+          const totalDepositsAmount = deposits.reduce(
+            (sum, d) => sum + BigInt(d.assetsDeposited),
+            0n,
+          );
+          const totalWithdrawalsAmount = withdrawals.reduce(
+            (sum, w) => sum + BigInt(w.assetsWithdrawn),
+            0n,
+          );
+          const netInVaults = totalDepositsAmount - totalWithdrawalsAmount;
+          const totalBalance = totalSafeBalance + netInVaults;
+
+          return {
+            ...workspace,
+            members,
+            memberCount: members.length,
+            safeCount: safes.length,
+            totalBalance: totalBalance.toString(),
+            balanceInSafes: totalSafeBalance.toString(),
+            balanceInVaults: netInVaults.toString(),
+            depositCount: deposits.length,
+            withdrawalCount: withdrawals.length,
+          };
+        }),
+      );
+
+      return workspacesWithData;
     } catch (error) {
       ctx.log.error(
         { error: (error as Error).message },
-        'Failed to list workspaces.',
+        'Failed to list workspaces with members.',
       );
       throw new TRPCError({
         code: 'INTERNAL_SERVER_ERROR',
