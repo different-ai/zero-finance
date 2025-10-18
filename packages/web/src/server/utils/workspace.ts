@@ -235,19 +235,6 @@ export async function ensureUserWorkspace(
 
           const tempWorkspaceId = randomUUID();
 
-          const [workspace] = await tx
-            .insert(workspaces)
-            .values({
-              id: tempWorkspaceId,
-              name: `${userId.slice(0, 8)}'s Workspace`,
-              createdBy: userId,
-            })
-            .returning();
-
-          if (!workspace) {
-            throw new Error('Failed to create workspace for user');
-          }
-
           const insertedUsers = await tx
             .insert(users)
             .values({ privyDid: userId, primaryWorkspaceId: tempWorkspaceId })
@@ -262,24 +249,24 @@ export async function ensureUserWorkspace(
               .limit(1);
             user = existing[0];
           } else {
+            const [workspace] = await tx
+              .insert(workspaces)
+              .values({
+                id: tempWorkspaceId,
+                name: `${userId.slice(0, 8)}'s Workspace`,
+                createdBy: userId,
+              })
+              .returning();
+
+            if (!workspace) {
+              throw new Error('Failed to create workspace for user');
+            }
+
             user = insertedUsers[0];
           }
         }
       } else {
         const tempWorkspaceId = randomUUID();
-
-        const [workspace] = await tx
-          .insert(workspaces)
-          .values({
-            id: tempWorkspaceId,
-            name: `${userId.slice(0, 8)}'s Workspace`,
-            createdBy: userId,
-          })
-          .returning();
-
-        if (!workspace) {
-          throw new Error('Failed to create workspace for user');
-        }
 
         const insertedUsers = await tx
           .insert(users)
@@ -295,6 +282,19 @@ export async function ensureUserWorkspace(
             .limit(1);
           user = existing[0];
         } else {
+          const [workspace] = await tx
+            .insert(workspaces)
+            .values({
+              id: tempWorkspaceId,
+              name: `${userId.slice(0, 8)}'s Workspace`,
+              createdBy: userId,
+            })
+            .returning();
+
+          if (!workspace) {
+            throw new Error('Failed to create workspace for user');
+          }
+
           user = insertedUsers[0];
         }
       }
