@@ -34,7 +34,7 @@ export function FollowUpsDemo() {
         
         <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
           <p className="text-xs text-blue-800 text-center">
-            <span className="font-semibold">5 payment reminders</span> sent this week
+            <span className="font-semibold">5 payment reminders</span> sent next week
           </p>
         </div>
       </div>

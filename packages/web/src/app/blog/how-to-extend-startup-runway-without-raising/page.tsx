@@ -90,7 +90,7 @@ export default function ExtendRunwayBlogPost() {
             <p className="text-[16px] leading-[1.6] text-[#101010]/80 mt-6">
               After analyzing data from 50+ startups, we've identified five
               strategies that consistently extend runway without dilution. The
-              best part? You can implement most of them this week.
+              best part? You can implement most of them next week.
             </p>
 
             <h2 className="font-serif text-[28px] mt-12 mb-4 text-[#101010]">
@@ -134,7 +134,7 @@ export default function ExtendRunwayBlogPost() {
 
             <p className="text-[16px] leading-[1.6] text-[#101010]/80">
               Your top 3-5 vendors likely represent 60-80% of your non-payroll
-              burn. Schedule calls with each this week. The magic words: "We're
+              burn. Schedule calls with each next week. The magic words: "We're
               optimizing spend across all vendors. Can you help us out with
               pricing?"
             </p>

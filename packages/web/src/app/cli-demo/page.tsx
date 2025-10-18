@@ -401,7 +401,7 @@ export default function CLIDemo() {
           '  • Paid: Vercel Hosting - $20.00',
           '  • Categorized: 6 transactions',
           '',
-          '💡 AI Suggestion: "3 invoices due this week totaling $4,792.32"'
+          '💡 AI Suggestion: "3 invoices due next week totaling $4,792.32"'
         ];
 
       case 'clear':

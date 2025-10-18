@@ -88,7 +88,7 @@ const randomNewsletter: Message = {
   sender: "Tech Weekly",
   senderEmail: "newsletter@techweekly.com",
   recipient: "Benjamin",
-  subject: "This Week's Top Tech News",
+  subject: "next week's Top Tech News",
   body: "From AI breakthroughs to the latest gadget reviews, here's what you missed.",
   timestamp: "2025-07-22T08:20:00Z",
   isRead: false,

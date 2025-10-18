@@ -88,7 +88,7 @@ export default function Home() {
               </p>
               {index === 0 ? (
                 <h2 className="mt-2 font-serif text-[30px] sm:text-[36px] leading-[1.1] tracking-[-0.01em] text-[#101010]">
-                  This Week's Highlight
+                  next week's Highlight
                 </h2>
               ) : (
                 <h2 className="mt-2 font-serif text-[30px] sm:text-[36px] leading-[1.1] tracking-[-0.01em] text-[#101010]/80">

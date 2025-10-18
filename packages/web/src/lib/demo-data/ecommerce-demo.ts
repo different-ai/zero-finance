@@ -100,7 +100,7 @@ const googleAds: Message = {
   sender: "Google Ads",
   senderEmail: "noreply@google.com",
   recipient: "Sarah",
-  subject: "Your Google Ads spent $2,450 this week",
+  subject: "Your Google Ads spent $2,450 next week",
   body: "Your campaigns are performing well with a 3.2% conversion rate.",
   timestamp: "2025-07-22T08:37:00Z",
   isRead: false,
