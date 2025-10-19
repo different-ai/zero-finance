@@ -192,7 +192,9 @@ export function WithdrawEarnCard({
         });
 
         if (sharesToRedeem === 0n) {
-          throw new Error('Requested amount is below the minimum withdrawable size.');
+          throw new Error(
+            'Requested amount is below the minimum withdrawable size.',
+          );
         }
 
         if (sharesToRedeem > vaultInfo.shares) {
@@ -335,7 +337,7 @@ export function WithdrawEarnCard({
         </div>
         <div className="text-2xl font-bold ">
           <span className="text-[#0040FF]">${displayBalance}</span>{' '}
-          <span className="text-sm">USDC</span>
+          <span className="text-sm">USD</span>
         </div>
       </div>
 
@@ -355,7 +357,7 @@ export function WithdrawEarnCard({
             max={availableBalance}
           />
           <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
-            <span className="text-xs text-[#0040FF]">USDC</span>
+            <span className="text-xs text-[#0040FF]">USD</span>
             <Button
               type="button"
               variant="ghost"
@@ -368,7 +370,7 @@ export function WithdrawEarnCard({
           </div>
         </div>
         <p className="text-xs text-[#0040FF]">
-          Enter the amount of USDC you want to withdraw
+          Enter the amount you want to withdraw
         </p>
       </div>
 

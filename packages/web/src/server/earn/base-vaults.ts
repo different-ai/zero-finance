@@ -3,7 +3,8 @@ export const ETHEREUM_CHAIN_ID = 1;
 
 export type BaseVault = {
   id: 'morphoGauntlet' | 'seamless' | 'gauntletCore' | 'steakhouse';
-  name: string;
+  name: string; // Technical name (shown in Level 2 - Technical Details)
+  displayName: string; // Banking-friendly name (shown in Level 0 - Primary UI)
   address: `0x${string}`;
   risk: 'Conservative' | 'Balanced' | 'High' | 'Optimized';
   curator: string;
@@ -15,6 +16,7 @@ export type BaseVault = {
 export const PRIMARY_VAULT: BaseVault = {
   id: 'morphoGauntlet',
   name: 'Gauntlet USDC Frontier',
+  displayName: 'High-Yield Savings',
   address: '0x236919F11ff9eA9550A4287696C2FC9e18E6e890',
   risk: 'Optimized',
   curator: 'Morpho × Gauntlet',
@@ -30,6 +32,7 @@ export const BASE_USDC_VAULTS: BaseVault[] = [
   {
     id: 'seamless',
     name: 'Seamless USDC',
+    displayName: 'Balanced Yield',
     address: '0x616a4E1db48e22028f6bbf20444Cd3b8e3273738',
     risk: 'Balanced',
     curator: 'Gauntlet',
@@ -40,6 +43,7 @@ export const BASE_USDC_VAULTS: BaseVault[] = [
   {
     id: 'steakhouse',
     name: 'Steakhouse USDC',
+    displayName: 'Stable Growth',
     address: '0xbeeF010f9cb27031ad51e3333f9aF9C6B1228183',
     risk: 'Balanced',
     curator: 'Steakhouse',

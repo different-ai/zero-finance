@@ -13,7 +13,7 @@ import {
 import { trpc, type RouterOutputs } from '@/utils/trpc';
 import { useMemo, useEffect, useState, useRef, useCallback } from 'react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Wallet, ExternalLink, AlertCircle } from 'lucide-react';
+import { Wallet, ExternalLink, AlertCircle, Shield } from 'lucide-react';
 import { WithdrawEarnCard } from '@/app/(authenticated)/dashboard/tools/earn-module/components/withdraw-earn-card';
 import { DepositEarnCard } from '@/app/(authenticated)/dashboard/tools/earn-module/components/deposit-earn-card';
 import { formatUsd, cn } from '@/lib/utils';
@@ -351,6 +351,7 @@ export default function SavingsPageWrapper({
     () => ({
       id: 'insured-vault',
       name: 'Insured Vault',
+      displayName: 'Insured Vault',
       risk: 'Conservative',
       curator: '0 Finance',
       address: 'insured-contact',
@@ -498,6 +499,34 @@ export default function SavingsPageWrapper({
     <div className="space-y-10">
       {/* Always show the full savings interface - auto-earn module is now optional */}
       <div className="space-y-12">
+        {/* Account-Level Insurance Status Banner */}
+        {userIsInsured && (
+          <div className="bg-gradient-to-r from-[#1B29FF]/10 via-[#1B29FF]/5 to-transparent border-2 border-[#1B29FF]/30 rounded-[16px] p-6 shadow-[0_4px_16px_rgba(27,41,255,0.12)]">
+            <div className="flex items-start gap-4">
+              <div className="flex-shrink-0 w-12 h-12 rounded-full bg-[#1B29FF]/15 flex items-center justify-center">
+                <Shield className="h-6 w-6 text-[#1B29FF]" />
+              </div>
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-2">
+                  <h3 className="text-[18px] font-semibold text-[#101010]">
+                    Insurance Protection Active
+                  </h3>
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-green-50 border border-green-200">
+                    <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
+                    <span className="text-[11px] font-semibold text-green-700 uppercase tracking-wide">
+                      Protected
+                    </span>
+                  </span>
+                </div>
+                <p className="text-[14px] text-[#101010]/70 leading-relaxed">
+                  All your savings are covered by 0 Finance insurance at no
+                  additional cost. Coverage applies to all vaults automatically.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Portfolio Overview - Grid Layout */}
         <div className="grid gap-6 lg:grid-cols-[minmax(0,360px)_1fr]">
           <CheckingActionsCard
@@ -617,46 +646,32 @@ export default function SavingsPageWrapper({
                                 </span>
                               )}
                               <p className="text-[15px] font-medium text-[#101010] truncate">
-                                {vault.name}
+                                {vault.displayName || vault.name}
                               </p>
-                              {vault.isInsured && (
-                                <span className="insured-pill animate-glow inline-flex items-center gap-1 px-2 py-1 rounded-full bg-[#1B29FF]/15 text-[#1B29FF] text-[10px] font-semibold uppercase tracking-[0.18em]">
-                                  <Image
-                                    src={ZERO_LOGO_SRC}
-                                    alt="0 Finance insured"
-                                    width={14}
-                                    height={14}
-                                    className="h-3.5 w-3.5"
-                                  />
-                                  Insured
-                                </span>
-                              )}
                             </div>
                             <p className="text-[12px] text-[#101010]/60 truncate mt-1">
                               {vault.curator}
                               {vault.risk ? ` · ${vault.risk}` : ''}
-                              {vault.isContactOnly &&
-                                ' · Coverage arranged via 0 Finance'}
                             </p>
                           </div>
                         </div>
                       </div>
 
                       <div className="col-span-2 text-right">
-                        <p className="text-[18px] font-medium tabular-nums text-[#1B29FF]">
+                        <p className="text-[24px] font-semibold tabular-nums text-[#1B29FF]">
                           {vault.apy.toFixed(1)}%
                         </p>
                       </div>
 
                       <div className="col-span-2 text-right">
-                        <p className="text-[16px] tabular-nums text-[#101010]">
+                        <p className="text-[18px] font-medium tabular-nums text-[#101010]">
                           {vault.isContactOnly
                             ? '—'
                             : formatUsd(vault.balanceUsd)}
                         </p>
                         {vault.earnedUsd > 0 && !vault.isContactOnly && (
-                          <p className="text-[12px] tabular-nums text-[#1B29FF]">
-                            +{formatUsd(vault.earnedUsd)}
+                          <p className="text-[13px] tabular-nums text-[#1B29FF] mt-0.5">
+                            +{formatUsd(vault.earnedUsd)} earned
                           </p>
                         )}
                       </div>
@@ -834,30 +849,16 @@ export default function SavingsPageWrapper({
                                 </span>
                               )}
                               <p className="text-[15px] font-medium text-[#101010]">
-                                {vault.name}
+                                {vault.displayName || vault.name}
                               </p>
-                              {vault.isInsured && (
-                                <span className="insured-pill animate-glow inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#1B29FF]/15 text-[#1B29FF] text-[10px] font-semibold uppercase tracking-[0.18em]">
-                                  <Image
-                                    src={ZERO_LOGO_SRC}
-                                    alt="0 Finance insured"
-                                    width={14}
-                                    height={14}
-                                    className="h-3.5 w-3.5"
-                                  />
-                                  Insured
-                                </span>
-                              )}
                             </div>
                             <p className="text-[12px] text-[#101010]/60">
                               {vault.curator}
                               {vault.risk ? ` · ${vault.risk}` : ''}
-                              {vault.isContactOnly &&
-                                ' · Coverage arranged via 0 Finance'}
                             </p>
                           </div>
                         </div>
-                        <p className="text-[18px] font-medium tabular-nums text-[#1B29FF]">
+                        <p className="text-[22px] font-semibold tabular-nums text-[#1B29FF]">
                           {vault.apy.toFixed(1)}%
                         </p>
                       </div>

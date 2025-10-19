@@ -27,23 +27,24 @@ export function PortfolioOverview({
 }: PortfolioOverviewProps) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-      <div className="bg-white border border-[#101010]/10 rounded-[12px] p-6">
-        <p className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60 mb-2">
+      <div className="bg-white border border-[#101010]/10 rounded-[12px] p-6 sm:p-8">
+        <p className="uppercase tracking-[0.16em] text-[11px] text-[#101010]/60 mb-3">
           Savings Balance
         </p>
-        <p className="font-serif text-[28px] sm:text-[32px] leading-[1.1] tabular-nums text-[#101010]">
+        <p className="font-serif text-[44px] sm:text-[56px] leading-[0.95] tabular-nums text-[#101010]">
           {formatUsd(totalSaved)}
         </p>
-        <p className="mt-2 text-[13px] text-[#101010]/60">
-          Deposited across {vaultCount} active strategies.
+        <p className="mt-3 text-[13px] text-[#101010]/60">
+          Deposited across {vaultCount}{' '}
+          {vaultCount === 1 ? 'strategy' : 'strategies'}
         </p>
       </div>
 
-      <div className="bg-white border border-[#101010]/10 rounded-[12px] p-6">
-        <p className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60 mb-2">
-          Earnings (Live)
+      <div className="bg-white border border-[#101010]/10 rounded-[12px] p-6 sm:p-8">
+        <p className="uppercase tracking-[0.16em] text-[11px] text-[#101010]/60 mb-3">
+          Total Earned
         </p>
-        <p className="font-serif text-[28px] sm:text-[32px] leading-[1.1] tabular-nums text-[#1B29FF]">
+        <p className="font-serif text-[44px] sm:text-[56px] leading-[0.95] tabular-nums text-[#1B29FF]">
           {isDemoMode ? (
             <AnimatedTotalEarned
               initialEarned={animatedInitialEarned}
@@ -61,8 +62,8 @@ export function PortfolioOverview({
             <span className="text-[#101010]/40">Calculating...</span>
           )}
         </p>
-        <p className="mt-2 text-[13px] text-[#101010]/60">
-          Live counter refreshes as vault yield accrues.
+        <p className="mt-3 text-[13px] text-[#101010]/60">
+          Live counter updates in real-time
         </p>
       </div>
     </div>
