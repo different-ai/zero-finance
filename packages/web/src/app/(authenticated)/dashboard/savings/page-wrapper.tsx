@@ -351,6 +351,7 @@ export default function SavingsPageWrapper({
     () => ({
       id: 'insured-vault',
       name: 'Insured Vault',
+      displayName: 'Insured Vault',
       risk: 'Conservative',
       curator: '0 Finance',
       address: 'insured-contact',
@@ -645,7 +646,7 @@ export default function SavingsPageWrapper({
                                 </span>
                               )}
                               <p className="text-[15px] font-medium text-[#101010] truncate">
-                                {vault.name}
+                                {vault.displayName || vault.name}
                               </p>
                             </div>
                             <p className="text-[12px] text-[#101010]/60 truncate mt-1">
@@ -848,7 +849,7 @@ export default function SavingsPageWrapper({
                                 </span>
                               )}
                               <p className="text-[15px] font-medium text-[#101010]">
-                                {vault.name}
+                                {vault.displayName || vault.name}
                               </p>
                             </div>
                             <p className="text-[12px] text-[#101010]/60">

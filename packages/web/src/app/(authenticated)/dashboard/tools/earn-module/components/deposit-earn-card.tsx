@@ -641,7 +641,7 @@ export function DepositEarnCard({
             disabled={usdcBalance === 0n}
           />
           <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
-            <span className="text-[11px] text-[#101010]/50">USDC</span>
+            <span className="text-[11px] text-[#101010]/50">USD</span>
             <button
               type="button"
               onClick={handleMax}
@@ -654,7 +654,7 @@ export function DepositEarnCard({
         </div>
         {needsApproval && amount && (
           <p className="text-[11px] text-[#101010]/50">
-            Will require approval for {amount} USDC
+            Will require approval for ${amount}
           </p>
         )}
       </div>
@@ -681,7 +681,8 @@ export function DepositEarnCard({
           <div className="flex gap-2 items-start">
             <AlertCircle className="h-4 w-4 text-[#FFA500] flex-shrink-0 mt-0.5" />
             <p className="text-[12px] text-[#101010]/70">
-              You don't have any USDC in your Safe wallet to deposit.
+              No balance available to deposit. Wire funds to your account to get
+              started.
             </p>
           </div>
         </div>

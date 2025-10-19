@@ -198,10 +198,10 @@ export default function SignInContent() {
 
             <div className="space-y-4 mb-8">
               {[
-                'Institutional-grade yield strategies',
-                'Same-day ACH transfers',
-                'Works like your existing bank',
-                'Start earning in 2 minutes',
+                'Insurance included — 100% coverage on all deposits',
+                'Wire USD — automatic conversion to earning balance',
+                'Same-day ACH transfers in and out',
+                'Start earning 8-10% APY in 2 minutes',
               ].map((item, index) => (
                 <div key={index} className="flex items-start gap-3">
                   <div className="h-5 w-5 rounded-full bg-[#1B29FF]/10 flex items-center justify-center flex-shrink-0 mt-0.5">

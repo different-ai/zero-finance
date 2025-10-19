@@ -21,6 +21,7 @@ export type UserPosition = {
 export type BaseVault = {
   id: string;
   name: string;
+  displayName?: string;
   risk: string;
   curator: string;
   address: string;
@@ -30,6 +31,7 @@ export type BaseVault = {
 export type VaultViewModel = {
   id: string;
   name: string;
+  displayName?: string;
   risk: string;
   curator: string;
   address: string;
@@ -157,6 +159,7 @@ export function calculateVaultViewModels(
     return {
       id: v.id,
       name: v.name,
+      displayName: v.displayName,
       risk: v.risk,
       curator: v.curator,
       address: v.address,
