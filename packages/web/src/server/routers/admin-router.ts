@@ -16,8 +16,9 @@ import {
   autoEarnConfigs,
   earnDeposits,
   earnWithdrawals,
+  starterAccountWhitelist,
 } from '../../db/schema';
-import { eq, and, sql } from 'drizzle-orm';
+import { eq, and, sql, desc } from 'drizzle-orm';
 import { customAlphabet } from 'nanoid';
 import { alignApi, AlignCustomer } from '@/server/services/align-api';
 import { getSafeBalance } from '@/server/services/safe.service';
@@ -1667,5 +1668,99 @@ export const adminRouter = router({
           message: `Failed to remove admin: ${(error as Error).message}`,
         });
       }
+    }),
+
+  listStarterWhitelist: protectedProcedure.query(async ({ ctx }) => {
+    if (!ctx.userId) {
+      throw new TRPCError({
+        code: 'UNAUTHORIZED',
+        message: 'User ID not found',
+      });
+    }
+    await requireAdmin(ctx.userId);
+
+    const whitelist = await db.query.starterAccountWhitelist.findMany({
+      orderBy: [desc(starterAccountWhitelist.createdAt)],
+      with: {
+        addedByAdmin: true,
+      },
+    });
+
+    return whitelist;
+  }),
+
+  addToStarterWhitelist: protectedProcedure
+    .input(
+      z.object({
+        email: z.string().email(),
+        notes: z.string().optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      if (!ctx.userId) {
+        throw new TRPCError({
+          code: 'UNAUTHORIZED',
+          message: 'User ID not found',
+        });
+      }
+      await requireAdmin(ctx.userId);
+
+      const existingEntry = await db.query.starterAccountWhitelist.findFirst({
+        where: eq(starterAccountWhitelist.email, input.email.toLowerCase()),
+      });
+
+      if (existingEntry) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Email already in whitelist',
+        });
+      }
+
+      const [result] = await db
+        .insert(starterAccountWhitelist)
+        .values({
+          email: input.email.toLowerCase(),
+          addedBy: ctx.userId,
+          notes: input.notes,
+        })
+        .returning();
+
+      return {
+        success: true,
+        entry: result,
+      };
+    }),
+
+  removeFromStarterWhitelist: protectedProcedure
+    .input(
+      z.object({
+        id: z.string().uuid(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      if (!ctx.userId) {
+        throw new TRPCError({
+          code: 'UNAUTHORIZED',
+          message: 'User ID not found',
+        });
+      }
+      await requireAdmin(ctx.userId);
+
+      const result = await db
+        .delete(starterAccountWhitelist)
+        .where(eq(starterAccountWhitelist.id, input.id))
+        .returning();
+
+      if (result.length === 0) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Whitelist entry not found',
+        });
+      }
+
+      return {
+        success: true,
+        message: 'Email removed from whitelist',
+      };
     }),
 });

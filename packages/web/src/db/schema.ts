@@ -43,6 +43,7 @@ export { admins, type Admin, type NewAdmin } from './schema/admins';
 // Import for internal use within this file
 import { users } from './schema/users';
 import { workspaces, workspaceMembers } from './schema/workspaces';
+import { admins } from './schema/admins';
 
 // Define specific types for role and status for better type safety
 export type InvoiceRole = 'seller' | 'buyer';
@@ -959,6 +960,46 @@ export type UserClassificationSetting =
   typeof userClassificationSettings.$inferSelect;
 export type NewUserClassificationSetting =
   typeof userClassificationSettings.$inferInsert;
+
+// --- STARTER ACCOUNT WHITELIST -------------------------------------------
+export const starterAccountWhitelist = pgTable(
+  'starter_account_whitelist',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    email: text('email').notNull().unique(),
+    addedBy: text('added_by')
+      .notNull()
+      .references(() => admins.privyDid, { onDelete: 'cascade' }),
+    notes: text('notes'),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => {
+    return {
+      emailIdx: index('starter_whitelist_email_idx').on(table.email),
+    };
+  },
+);
+
+export const starterAccountWhitelistRelations = relations(
+  starterAccountWhitelist,
+  ({ one }) => ({
+    addedByAdmin: one(admins, {
+      fields: [starterAccountWhitelist.addedBy],
+      references: [admins.privyDid],
+    }),
+  }),
+);
+
+export type StarterAccountWhitelist =
+  typeof starterAccountWhitelist.$inferSelect;
+export type NewStarterAccountWhitelist =
+  typeof starterAccountWhitelist.$inferInsert;
 
 // Added type inference for onramp transfers
 export type OnrampTransfer = typeof onrampTransfers.$inferSelect;

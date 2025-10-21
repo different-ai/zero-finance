@@ -5,6 +5,7 @@ import { usePrivy } from '@privy-io/react-auth';
 import AdminPanel from '@/components/admin/admin-panel';
 import KycKanbanBoard from '@/components/admin/kyc-kanban-board';
 import WorkspacesPanel from '@/components/admin/workspaces-panel';
+import StarterWhitelistPanel from '@/components/admin/starter-whitelist-panel';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { api } from '@/trpc/react';
@@ -22,6 +23,7 @@ import {
   RefreshCw,
   ShieldAlert,
   Building2,
+  ListFilter,
 } from 'lucide-react';
 import {
   Dialog,
@@ -34,7 +36,7 @@ import {
 export default function AdminPage() {
   const { user, authenticated, login } = usePrivy();
   const [activeView, setActiveView] = useState<
-    'workspaces' | 'table' | 'kanban'
+    'workspaces' | 'table' | 'kanban' | 'whitelist'
   >('workspaces');
   const [isSyncing, setIsSyncing] = useState(false);
 
@@ -195,7 +197,7 @@ export default function AdminPage() {
       <Tabs
         value={activeView}
         onValueChange={(v) =>
-          setActiveView(v as 'workspaces' | 'table' | 'kanban')
+          setActiveView(v as 'workspaces' | 'table' | 'kanban' | 'whitelist')
         }
       >
         <TabsList className="mb-6">
@@ -210,6 +212,10 @@ export default function AdminPage() {
           <TabsTrigger value="kanban" className="flex items-center gap-2">
             <LayoutGrid className="h-4 w-4" />
             KYC Kanban
+          </TabsTrigger>
+          <TabsTrigger value="whitelist" className="flex items-center gap-2">
+            <ListFilter className="h-4 w-4" />
+            Starter Whitelist
           </TabsTrigger>
         </TabsList>
 
@@ -228,6 +234,10 @@ export default function AdminPage() {
             onUserClick={handleUserClick}
             onRefresh={refetchUsers}
           />
+        </TabsContent>
+
+        <TabsContent value="whitelist">
+          <StarterWhitelistPanel />
         </TabsContent>
       </Tabs>
 

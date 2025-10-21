@@ -1,6 +1,7 @@
 import { alignApi } from './align-api';
 import { db } from '@/db';
-import { userFundingSources } from '@/db/schema';
+import { userFundingSources, starterAccountWhitelist } from '@/db/schema';
+import { eq } from 'drizzle-orm';
 
 /**
  * Creates starter virtual accounts for new users using the company's pre-approved KYB
@@ -13,6 +14,7 @@ export async function createStarterVirtualAccounts(params: {
   userId: string;
   workspaceId: string;
   destinationAddress: string;
+  userEmail?: string;
 }) {
   const companyCustomerId = process.env.ALIGN_COMPANY_CUSTOMER_ID;
   const featureEnabled = true;
@@ -29,6 +31,26 @@ export async function createStarterVirtualAccounts(params: {
       '[Starter Accounts] Company customer ID not configured - skipping starter account creation',
     );
     return null;
+  }
+
+  if (params.userEmail) {
+    const whitelistEntry = await db.query.starterAccountWhitelist.findFirst({
+      where: eq(starterAccountWhitelist.email, params.userEmail.toLowerCase()),
+    });
+
+    if (!whitelistEntry) {
+      console.log(
+        '[Starter Accounts] Email not in whitelist:',
+        params.userEmail,
+        '- skipping starter account creation',
+      );
+      return null;
+    }
+
+    console.log(
+      '[Starter Accounts] Email found in whitelist:',
+      params.userEmail,
+    );
   }
 
   console.log(

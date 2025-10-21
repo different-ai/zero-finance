@@ -903,10 +903,14 @@ export const alignRouter = router({
         '@/server/services/align-starter-accounts'
       );
 
+      const userEmail =
+        userFromPrivy.email?.address || userFromPrivy.google?.email;
+
       const result = await createStarterVirtualAccounts({
         userId: userFromPrivy.id,
         workspaceId,
         destinationAddress: primarySafe.safeAddress,
+        userEmail,
       });
 
       if (!result) {

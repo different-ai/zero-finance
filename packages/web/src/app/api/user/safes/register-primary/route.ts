@@ -111,10 +111,14 @@ export async function POST(request: NextRequest) {
       .returning();
 
     // 7. Create starter virtual accounts for instant deposits (non-blocking)
+    const privyUser = await privyClient.getUser(privyDid);
+    const userEmail = privyUser.email?.address || privyUser.google?.email;
+
     createStarterVirtualAccounts({
       userId: privyDid,
       workspaceId,
       destinationAddress: safeAddress,
+      userEmail,
     }).catch((error) => {
       console.error(
         '[Safe Registration] Failed to create starter accounts:',
