@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { api } from '@/trpc/react';
 import {
   Shield,
@@ -20,6 +21,7 @@ export default function InsuranceActivatePage() {
     'initial',
   );
   const [isActivating, setIsActivating] = useState(false);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
 
   const activateInsurance = api.user.activateInsurance.useMutation();
   const utils = api.useUtils();
@@ -103,18 +105,42 @@ export default function InsuranceActivatePage() {
                 <h1 className="font-serif text-[36px] sm:text-[44px] leading-[0.96] tracking-[-0.015em] text-[#101010]">
                   Activate Coverage
                 </h1>
-
                 <p className="mt-4 text-[15px] sm:text-[16px] leading-[1.5] text-[#101010]/70">
-                  Enable insurance protection for your savings accounts.
+                  Enable insurance protection for your Morpho vaults.
                 </p>
               </div>
 
-              
+              {/* Terms and Conditions Checkbox */}
+              <div className="bg-[#F6F5EF] border border-[#101010]/10 rounded-lg p-4">
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={acceptedTerms}
+                    onChange={(e) => setAcceptedTerms(e.target.checked)}
+                    className="mt-1 h-4 w-4 rounded border-[#101010]/30 text-[#1B29FF] focus:ring-[#1B29FF] focus:ring-offset-0"
+                  />
+                  <span className="text-[13px] sm:text-[14px] text-[#101010]/80 leading-[1.5]">
+                    I have read and agree to the{' '}
+                    <Link
+                      href="/terms-of-service"
+                      target="_blank"
+                      className="text-[#1B29FF] hover:underline font-medium"
+                    >
+                      Terms and Conditions
+                    </Link>{' '}
+                    for the DeFi Protection Security Guarantee. I understand
+                    that only Morpho vaults are covered through this interface,
+                    insurance is provided by Chainproof, and smart contract
+                    audits are performed by Quantstamp.
+                  </span>
+                </label>
+              </div>
+
               {/* Actions */}
               <div className="space-y-3">
                 <button
                   onClick={handleActivate}
-                  disabled={isActivating}
+                  disabled={isActivating || !acceptedTerms}
                   className="w-full inline-flex items-center justify-center px-6 py-3 text-[15px] sm:text-[16px] font-medium text-white bg-[#1B29FF] hover:bg-[#1420CC] rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Activate Insurance Protection
@@ -134,8 +160,8 @@ export default function InsuranceActivatePage() {
               {/* Footer note */}
               <div className="pt-4 border-t border-[#101010]/10">
                 <p className="text-[12px] sm:text-[13px] text-[#101010]/50 text-center">
-                  Insurance coverage applies to all eligible vaults in your
-                  account
+                  Insurance coverage applies to all eligible Morpho vaults in
+                  your account
                 </p>
               </div>
             </div>
