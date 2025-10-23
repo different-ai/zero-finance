@@ -18,19 +18,18 @@ The admin dashboard is experiencing 429 errors (compute units per second capacit
 1. **Multiple Sequential Requests**: The admin panel fetches balances for each Safe individually
 2. **No Caching**: Every page load triggers fresh RPC calls
 3. **No Request Batching**: Balance checks are not grouped into multicall transactions
-4. **No Rate Limiting**: No throttling mechanism in place
-5. **Synchronous Loading**: All balance checks happen simultaneously on page load
 
-## Recommended Solutions (Priority Order)
+## Solutions
 
-### 1. Immediate: Implement Request Batching with Multicall
+### 1. Request Batching with Multicall (Primary Solution)
 
 **Impact**: Reduces RPC calls by 10-100x  
 **Effort**: Medium  
 **Location**: `src/server/services/safe.service.ts`
 
+Use viem's multicall to batch balance checks into a single RPC request:
+
 ```typescript
-// Use viem's multicall to batch balance checks
 import { createPublicClient, http, parseAbi } from 'viem';
 import { base } from 'viem/chains';
 
@@ -64,11 +63,50 @@ export async function getBatchSafeBalances(addresses: string[]) {
 }
 ```
 
-### 2. Immediate: Add Redis Caching Layer
+### 2. Exponential Backoff Retry Logic
+
+**Impact**: Gracefully handles temporary rate limits  
+**Effort**: Low
+
+Wrap RPC calls with retry logic that backs off exponentially on 429 errors:
+
+```typescript
+export async function executeWithRetry<T>(
+  operation: () => Promise<T>,
+  maxAttempts = 5,
+): Promise<T> {
+  let lastError: Error;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      return await operation();
+    } catch (error: any) {
+      lastError = error;
+
+      if (error.status !== 429 || attempt === maxAttempts) {
+        throw error;
+      }
+
+      const delay = Math.min(1000 * Math.pow(2, attempt - 1), 30000);
+      await new Promise((resolve) => setTimeout(resolve, delay));
+    }
+  }
+
+  throw lastError!;
+}
+```
+
+### 3. Caching (Choose ONE Implementation)
 
 **Impact**: Reduces RPC calls by 80-95%  
-**Effort**: Low  
 **TTL**: 60 seconds
+
+Choose **either** database-level caching **or** Redis based on your infrastructure. Do not implement both.
+
+#### Option A: Redis Caching
+
+**Pros**: Fast, simple, minimal overhead  
+**Cons**: Requires Redis infrastructure
 
 ```typescript
 // src/lib/cache/balance-cache.ts
@@ -102,10 +140,10 @@ export class SafeBalanceCache {
 }
 ```
 
-### 3. Short-term: Database-level Caching
+#### Option B: Database-level Caching
 
-**Impact**: Provides persistent fallback when Redis is unavailable  
-**Effort**: Medium
+**Pros**: No additional infrastructure, persistent  
+**Cons**: Slower than Redis, adds DB load
 
 ```sql
 -- Add to drizzle schema
@@ -121,155 +159,61 @@ CREATE TABLE safe_balance_cache (
 CREATE INDEX idx_balance_cache_updated ON safe_balance_cache(updated_at);
 ```
 
-### 4. Medium-term: Implement Fallback RPC Providers
-
-**Impact**: Prevents complete service outage, distributes load  
-**Effort**: Low
-
 ```typescript
-import { fallback, http } from 'viem';
+// Query with TTL check
+export async function getCachedBalance(safeAddress: string) {
+  const cached = await db
+    .select()
+    .from(safeBalanceCache)
+    .where(
+      and(
+        eq(safeBalanceCache.safeAddress, safeAddress.toLowerCase()),
+        gt(safeBalanceCache.updatedAt, new Date(Date.now() - 60000)),
+      ),
+    )
+    .limit(1);
 
-const transport = fallback(
-  [
-    http(process.env.ALCHEMY_BASE_URL, { timeout: 3000 }),
-    http(process.env.QUICKNODE_BASE_URL, { timeout: 5000 }),
-    http('https://rpc.ankr.com/base', { timeout: 8000 }),
-    http('https://mainnet.base.org', { timeout: 10000 }),
-  ],
-  {
-    rank: false,
-    retryCount: 2,
-    retryDelay: 200,
-  },
-);
-```
-
-### 5. Medium-term: Request Queue with Rate Limiting
-
-**Impact**: Prevents rate limit errors  
-**Effort**: Medium
-
-```typescript
-// src/lib/rpc/rate-limiter.ts
-import { RateLimiter } from 'limiter';
-
-export class AlchemyRateLimiter {
-  private limiter = new RateLimiter(25, 'second'); // 25 req/sec conservative
-
-  async executeRequest<T>(request: () => Promise<T>): Promise<T> {
-    return new Promise((resolve, reject) => {
-      this.limiter.removeTokens(1, (err) => {
-        if (err) return reject(err);
-        request().then(resolve).catch(reject);
-      });
-    });
-  }
-}
-```
-
-### 6. Long-term: Exponential Backoff Retry Logic
-
-**Impact**: Gracefully handles temporary rate limits  
-**Effort**: Low
-
-```typescript
-export async function executeWithRetry<T>(
-  operation: () => Promise<T>,
-  maxAttempts = 5,
-): Promise<T> {
-  let lastError: Error;
-
-  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-    try {
-      return await operation();
-    } catch (error: any) {
-      lastError = error;
-
-      if (error.status !== 429 || attempt === maxAttempts) {
-        throw error;
-      }
-
-      const delay = Math.min(1000 * Math.pow(2, attempt - 1), 30000);
-      await new Promise((resolve) => setTimeout(resolve, delay));
-    }
-  }
-
-  throw lastError!;
+  return cached[0]?.balance || null;
 }
 ```
 
 ## Implementation Plan
 
-### Phase 1 (Week 1) - Critical Fixes
+### Step 1: Implement Multicall Batching
 
-- [ ] Implement multicall for batch balance checks
-- [ ] Add Redis caching with 60s TTL
-- [ ] Add basic retry logic with exponential backoff
-- [ ] Update `admin.listWorkspacesWithMembers` to use cached data
+- [ ] Update `src/server/services/safe.service.ts` to use multicall
+- [ ] Configure viem client with batch settings
+- [ ] Test with multiple Safe addresses
 
-### Phase 2 (Week 2) - Optimization
+### Step 2: Add Exponential Backoff
 
-- [ ] Add database-level caching
-- [ ] Implement request queue
-- [ ] Add rate limiting middleware
-- [ ] Set up fallback RPC providers
+- [ ] Create retry wrapper function
+- [ ] Wrap all RPC calls with `executeWithRetry`
+- [ ] Configure max attempts and backoff delays
 
-### Phase 3 (Week 3) - Monitoring
+### Step 3: Choose and Implement Caching
 
-- [ ] Add compute unit tracking
-- [ ] Set up alerts for rate limit hits
-- [ ] Monitor cache hit rates
-- [ ] Optimize cache TTLs based on usage patterns
+**Choose ONE:**
 
-## Monitoring & Metrics
+- [ ] **Option A**: Set up Redis and implement `SafeBalanceCache` class
+- [ ] **Option B**: Add database schema and implement DB caching queries
 
-Track these metrics to measure success:
+### Step 4: Integration
 
-1. **Rate Limit Hit Rate**: Should drop to <1%
-2. **Cache Hit Rate**: Target >85%
-3. **Average Response Time**: Target <500ms
-4. **Error Rate**: Target <0.1%
-5. **Compute Units Used**: Monitor via Alchemy dashboard
+- [ ] Update `admin.listWorkspacesWithMembers` to use batched + cached calls
+- [ ] Test end-to-end in admin panel
+- [ ] Monitor Alchemy dashboard for reduced compute unit usage
 
-## Cost Analysis
+## Expected Impact
 
-### Current Alchemy Plan
+With all three solutions implemented:
 
-- **Growth Plan**: 330 CUPS, ~3M compute units/month
-- **Estimated Current Usage**: ~1-2M CU/month (high variance during admin access)
-
-### Options
-
-1. **Optimize First** (Recommended): Implement caching + batching → Expect 80-95% reduction
-2. **Upgrade to Scale Plan**: $199/month for 2000 CUPS if optimization insufficient
-
-## Alternative Solutions Considered
-
-### GraphQL Subgraph (Not Recommended)
-
-- **Pros**: No rate limits, cached data
-- **Cons**: Requires subgraph deployment, data lag, maintenance overhead
-
-### WebSocket Subscriptions (Future Enhancement)
-
-- **Pros**: Real-time updates, efficient
-- **Cons**: Complex implementation, requires connection management
-
-### Self-hosted Archive Node (Not Recommended)
-
-- **Pros**: No rate limits
-- **Cons**: Very expensive ($500+/month), high maintenance
+- **RPC call reduction**: 90-99%
+- **Rate limit errors**: <1%
+- **Admin panel load time**: <500ms
 
 ## References
 
 - [Alchemy Throughput Documentation](https://docs.alchemy.com/reference/throughput)
 - [Viem Multicall Guide](https://viem.sh/docs/contract/multicall.html)
 - [Safe Smart Account SDK](https://docs.safe.global/sdk/protocol-kit)
-
-## Questions?
-
-Contact the team or see implementation examples in:
-
-- `src/server/services/safe.service.ts`
-- `src/lib/cache/balance-cache.ts`
-- `src/server/routers/admin-router.ts`
