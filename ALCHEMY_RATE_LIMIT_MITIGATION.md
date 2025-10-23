@@ -2,7 +2,7 @@
 
 ## Problem Summary
 
-The admin dashboard is experiencing 429 errors (compute units per second capacity exceeded) when fetching Safe wallet balances via Alchemy's RPC endpoint. The error occurs when making multiple `eth_call` requests to check balances across many Safe wallets.
+The admin dashboard is experiencing 429 errors (compute units per second capacity exceeded) when fetching Safe wallet balances via Alchemy's RPC endpoint.
 
 **Error Details:**
 
@@ -13,62 +13,14 @@ The admin dashboard is experiencing 429 errors (compute units per second capacit
 }
 ```
 
-## Root Causes
+## Current Mitigation (Already Implemented)
 
-1. **Multiple Sequential Requests**: The admin panel fetches balances for each Safe individually
-2. **No Caching**: Every page load triggers fresh RPC calls
-3. **No Request Batching**: Balance checks are not grouped into multicall transactions
+### Exponential Backoff Retry Logic
 
-## Solutions
+**Status**: ✅ Implemented  
+**Impact**: Gracefully handles temporary rate limits
 
-### 1. Request Batching with Multicall (Primary Solution)
-
-**Impact**: Reduces RPC calls by 10-100x  
-**Effort**: Medium  
-**Location**: `src/server/services/safe.service.ts`
-
-Use viem's multicall to batch balance checks into a single RPC request:
-
-```typescript
-import { createPublicClient, http, parseAbi } from 'viem';
-import { base } from 'viem/chains';
-
-const client = createPublicClient({
-  chain: base,
-  transport: http(process.env.ALCHEMY_BASE_URL, {
-    batch: {
-      batchSize: 1024,
-      wait: 16,
-    },
-  }),
-  batch: {
-    multicall: true,
-  },
-});
-
-export async function getBatchSafeBalances(addresses: string[]) {
-  const contracts = addresses.map((address) => ({
-    address: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913', // USDC
-    abi: parseAbi(['function balanceOf(address) view returns (uint256)']),
-    functionName: 'balanceOf',
-    args: [address],
-  }));
-
-  const results = await client.multicall({ contracts, batchSize: 100 });
-
-  return results.reduce((acc, result, i) => {
-    acc[addresses[i]] = result.status === 'success' ? result.result : 0n;
-    return acc;
-  }, {});
-}
-```
-
-### 2. Exponential Backoff Retry Logic
-
-**Impact**: Gracefully handles temporary rate limits  
-**Effort**: Low
-
-Wrap RPC calls with retry logic that backs off exponentially on 429 errors:
+RPC calls are wrapped with retry logic that backs off exponentially on 429 errors:
 
 ```typescript
 export async function executeWithRetry<T>(
@@ -96,14 +48,15 @@ export async function executeWithRetry<T>(
 }
 ```
 
-### 3. Caching (Choose ONE Implementation)
+## Future Optimization: Caching
 
-**Impact**: Reduces RPC calls by 80-95%  
-**TTL**: 60 seconds
+**Impact**: Would reduce RPC calls by 80-95%  
+**Recommended TTL**: 60 seconds  
+**Status**: Not yet implemented
 
-Choose **either** database-level caching **or** Redis based on your infrastructure. Do not implement both.
+Choose **one** of the following caching strategies based on your infrastructure needs:
 
-#### Option A: Redis Caching
+### Option A: Redis Caching
 
 **Pros**: Fast, simple, minimal overhead  
 **Cons**: Requires Redis infrastructure
@@ -140,7 +93,7 @@ export class SafeBalanceCache {
 }
 ```
 
-#### Option B: Database-level Caching
+### Option B: Database-level Caching
 
 **Pros**: No additional infrastructure, persistent  
 **Cons**: Slower than Redis, adds DB load
@@ -177,43 +130,37 @@ export async function getCachedBalance(safeAddress: string) {
 }
 ```
 
-## Implementation Plan
+## Implementation Plan (For Caching)
 
-### Step 1: Implement Multicall Batching
+**Choose ONE caching option:**
 
-- [ ] Update `src/server/services/safe.service.ts` to use multicall
-- [ ] Configure viem client with batch settings
-- [ ] Test with multiple Safe addresses
+### If Redis:
 
-### Step 2: Add Exponential Backoff
+- [ ] Set up Redis infrastructure
+- [ ] Implement `SafeBalanceCache` class
+- [ ] Integrate into `admin.listWorkspacesWithMembers`
+- [ ] Test and monitor cache hit rates
 
-- [ ] Create retry wrapper function
-- [ ] Wrap all RPC calls with `executeWithRetry`
-- [ ] Configure max attempts and backoff delays
+### If Database:
 
-### Step 3: Choose and Implement Caching
+- [ ] Add `safe_balance_cache` table to schema
+- [ ] Generate and apply Drizzle migration
+- [ ] Implement DB caching queries
+- [ ] Integrate into `admin.listWorkspacesWithMembers`
+- [ ] Test and monitor cache hit rates
 
-**Choose ONE:**
+## Expected Impact (With Caching Added)
 
-- [ ] **Option A**: Set up Redis and implement `SafeBalanceCache` class
-- [ ] **Option B**: Add database schema and implement DB caching queries
+Current state (with retry logic):
 
-### Step 4: Integration
+- **Rate limit errors**: Reduced, but still possible under high load
 
-- [ ] Update `admin.listWorkspacesWithMembers` to use batched + cached calls
-- [ ] Test end-to-end in admin panel
-- [ ] Monitor Alchemy dashboard for reduced compute unit usage
+With caching implemented:
 
-## Expected Impact
-
-With all three solutions implemented:
-
-- **RPC call reduction**: 90-99%
+- **RPC call reduction**: 80-95%
 - **Rate limit errors**: <1%
-- **Admin panel load time**: <500ms
+- **Admin panel load time**: Significantly improved
 
 ## References
 
 - [Alchemy Throughput Documentation](https://docs.alchemy.com/reference/throughput)
-- [Viem Multicall Guide](https://viem.sh/docs/contract/multicall.html)
-- [Safe Smart Account SDK](https://docs.safe.global/sdk/protocol-kit)

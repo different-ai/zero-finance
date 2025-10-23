@@ -209,8 +209,8 @@ export function RecoveryWalletManager({
           <Alert className="border-[#ef4444]/20 bg-[#ef4444]/5">
             <AlertCircle className="h-4 w-4 text-[#ef4444]" />
             <AlertDescription className="text-[13px] text-[#101010]/70">
-              You don't have permission to modify this Safe. Only Safe owners
-              can add recovery wallets.
+              You don&apos;t have permission to modify this Safe. Only Safe
+              owners can add recovery wallets.
               {currentSafe?.createdBy && (
                 <span className="block mt-1 text-[12px] text-[#101010]/60">
                   This Safe is owned by another workspace member.

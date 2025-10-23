@@ -301,80 +301,190 @@ export function AdvancedWalletClientContent() {
           </div>
         </div>
 
-        {/* Wallet Address Card */}
-        {!isLoadingSafes && !errorSafes && <WalletAddressCard />}
-
+        {/* Technical Details - Progressive Disclosure */}
         <Card className="border-dashed border-[#101010]/10 shadow-[0_2px_8px_rgba(16,16,16,0.04)]">
           <CardHeader>
-            <div className="flex items-center gap-2">
-              <Terminal className="h-4 w-4 text-[#101010]/60" />
-              <CardTitle className="text-[15px] font-medium">
-                Technical Details
-              </CardTitle>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Terminal className="h-4 w-4 text-[#101010]/60" />
+                <CardTitle className="text-[15px] font-medium">
+                  Technical Details
+                </CardTitle>
+              </div>
+              <button
+                onClick={() => setShowTechnicalDetails(!showTechnicalDetails)}
+                className="text-[13px] text-[#101010]/60 hover:text-[#1B29FF] transition-colors flex items-center gap-1 font-medium"
+              >
+                <ChevronRight
+                  className={cn(
+                    'h-4 w-4 transition-transform',
+                    showTechnicalDetails && 'rotate-90',
+                  )}
+                />
+                {showTechnicalDetails ? 'Hide' : 'Show'} details
+              </button>
             </div>
             <CardDescription className="text-[13px]">
-              For debugging and developer support
+              Developer wallet addresses and identifiers for advanced users
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <label className="text-[12px] font-medium text-[#101010]/60 uppercase tracking-[0.14em]">
-                Privy User ID
-              </label>
-              <div className="flex items-center gap-2">
-                <code className="flex-1 px-3 py-2 bg-[#101010]/5 border border-[#101010]/10 rounded-md text-[12px] font-mono break-all text-[#101010]/80">
-                  {user?.id || 'Not authenticated'}
-                </code>
-                {user?.id && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => copyToClipboard(user.id, 'did')}
-                    className="shrink-0 h-9"
-                  >
-                    {copiedDid ? (
-                      <CheckCircle2 className="h-4 w-4 text-[#10b981]" />
-                    ) : (
-                      <Copy className="h-4 w-4" />
-                    )}
-                  </Button>
-                )}
-              </div>
-            </div>
 
-            <div className="space-y-2">
-              <label className="text-[12px] font-medium text-[#101010]/60 uppercase tracking-[0.14em]">
-                Primary Safe Address
-              </label>
-              <div className="flex items-center gap-2">
-                {isLoadingSafes ? (
-                  <Skeleton className="h-10 flex-1" />
-                ) : (
-                  <>
-                    <code className="flex-1 px-3 py-2 bg-[#101010]/5 border border-[#101010]/10 rounded-md text-[12px] font-mono break-all text-[#101010]/80">
-                      {primarySafeAddress || 'No Safe wallet found'}
-                    </code>
-                    {primarySafeAddress && (
+          {showTechnicalDetails && (
+            <CardContent className="space-y-5 pt-0">
+              {/* Warning */}
+              <Alert className="border-[#ef4444]/20 bg-[#ef4444]/5">
+                <AlertTriangle className="h-4 w-4 text-[#ef4444]" />
+                <AlertTitle className="text-[14px] font-medium text-[#101010]">
+                  Do Not Send Funds to Internal Addresses
+                </AlertTitle>
+                <AlertDescription className="text-[13px] text-[#101010]/70">
+                  The Privy wallet addresses below are internal. Sending funds
+                  directly may result in permanent loss. Use your primary Safe
+                  address for receiving payments.
+                </AlertDescription>
+              </Alert>
+
+              {/* Primary Safe Address */}
+              <div className="space-y-2">
+                <label className="text-[12px] font-medium text-[#101010]/60 uppercase tracking-[0.14em]">
+                  Primary Safe Address
+                </label>
+                <p className="text-[12px] text-[#101010]/60 mb-2">
+                  Your main account address for receiving and managing funds
+                </p>
+                <div className="flex items-center gap-2">
+                  {isLoadingSafes ? (
+                    <Skeleton className="h-10 flex-1" />
+                  ) : (
+                    <>
+                      <code className="flex-1 px-3 py-2 bg-[#101010]/5 border border-[#101010]/10 rounded-md text-[12px] font-mono break-all text-[#101010]/80">
+                        {primarySafeAddress || 'No Safe wallet found'}
+                      </code>
+                      {primarySafeAddress && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() =>
+                            copyToClipboard(primarySafeAddress, 'safe')
+                          }
+                          className="shrink-0 h-9"
+                        >
+                          {copiedSafe ? (
+                            <CheckCircle2 className="h-4 w-4 text-[#10b981]" />
+                          ) : (
+                            <Copy className="h-4 w-4" />
+                          )}
+                        </Button>
+                      )}
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {/* Privy Smart Wallet */}
+              <div className="space-y-2">
+                <label className="text-[12px] font-medium text-[#101010]/60 uppercase tracking-[0.14em]">
+                  Privy Smart Wallet Address
+                </label>
+                <p className="text-[12px] text-[#101010]/60 mb-2">
+                  Internal smart wallet managed by Privy
+                </p>
+                <div className="flex items-center gap-2">
+                  {smartWalletAddress ? (
+                    <>
+                      <code className="flex-1 px-3 py-2 bg-[#101010]/5 border border-[#101010]/10 rounded-md text-[12px] font-mono break-all text-[#101010]/80">
+                        {smartWalletAddress}
+                      </code>
                       <Button
                         size="sm"
                         variant="outline"
                         onClick={() =>
-                          copyToClipboard(primarySafeAddress, 'safe')
+                          copyToClipboard(smartWalletAddress, 'smart')
                         }
                         className="shrink-0 h-9"
                       >
-                        {copiedSafe ? (
+                        {copiedSmart ? (
                           <CheckCircle2 className="h-4 w-4 text-[#10b981]" />
                         ) : (
                           <Copy className="h-4 w-4" />
                         )}
                       </Button>
-                    )}
-                  </>
-                )}
+                    </>
+                  ) : (
+                    <code className="flex-1 px-3 py-2 bg-[#101010]/5 border border-[#101010]/10 rounded-md text-[12px] text-[#101010]/60">
+                      No smart wallet found
+                    </code>
+                  )}
+                </div>
               </div>
-            </div>
-          </CardContent>
+
+              {/* Privy Embedded Wallet */}
+              <div className="space-y-2">
+                <label className="text-[12px] font-medium text-[#101010]/60 uppercase tracking-[0.14em]">
+                  Privy Embedded Wallet Address
+                </label>
+                <p className="text-[12px] text-[#101010]/60 mb-2">
+                  Internal embedded wallet managed by Privy
+                </p>
+                <div className="flex items-center gap-2">
+                  {embeddedWallet?.address ? (
+                    <>
+                      <code className="flex-1 px-3 py-2 bg-[#101010]/5 border border-[#101010]/10 rounded-md text-[12px] font-mono break-all text-[#101010]/80">
+                        {embeddedWallet.address}
+                      </code>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() =>
+                          copyToClipboard(embeddedWallet.address, 'embedded')
+                        }
+                        className="shrink-0 h-9"
+                      >
+                        {copiedEmbedded ? (
+                          <CheckCircle2 className="h-4 w-4 text-[#10b981]" />
+                        ) : (
+                          <Copy className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </>
+                  ) : (
+                    <code className="flex-1 px-3 py-2 bg-[#101010]/5 border border-[#101010]/10 rounded-md text-[12px] text-[#101010]/60">
+                      Loading embedded wallet...
+                    </code>
+                  )}
+                </div>
+              </div>
+
+              {/* Privy User ID */}
+              <div className="space-y-2">
+                <label className="text-[12px] font-medium text-[#101010]/60 uppercase tracking-[0.14em]">
+                  Privy User ID
+                </label>
+                <p className="text-[12px] text-[#101010]/60 mb-2">
+                  For debugging and developer support
+                </p>
+                <div className="flex items-center gap-2">
+                  <code className="flex-1 px-3 py-2 bg-[#101010]/5 border border-[#101010]/10 rounded-md text-[12px] font-mono break-all text-[#101010]/80">
+                    {user?.id || 'Not authenticated'}
+                  </code>
+                  {user?.id && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => copyToClipboard(user.id, 'did')}
+                      className="shrink-0 h-9"
+                    >
+                      {copiedDid ? (
+                        <CheckCircle2 className="h-4 w-4 text-[#10b981]" />
+                      ) : (
+                        <Copy className="h-4 w-4" />
+                      )}
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          )}
         </Card>
       </main>
     </div>
