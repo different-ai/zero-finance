@@ -28,6 +28,7 @@ import {
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { Skeleton } from '@/components/ui/skeleton';
 import { TeamTab } from './team-tab';
+import { AccountOwnersTab } from './account-owners-tab';
 import { cn } from '@/lib/utils';
 
 export default function CompanySettingsPage() {
@@ -328,6 +329,7 @@ export default function CompanySettingsPage() {
               { value: 'info', label: 'Workspace & Company' },
               { value: 'shared', label: 'Shared Data' },
               { value: 'team', label: 'Team' },
+              { value: 'owners', label: 'Account Owners' },
             ].map((item) => (
               <button
                 key={item.value}
@@ -912,6 +914,9 @@ export default function CompanySettingsPage() {
 
         {/* Team Tab Content */}
         {tab === 'team' && <TeamTab companyId={company?.id} />}
+
+        {/* Account Owners Tab Content */}
+        {tab === 'owners' && <AccountOwnersTab companyId={company?.id} />}
 
         {/* Invite Links Tab */}
         {tab === 'invites' && (
