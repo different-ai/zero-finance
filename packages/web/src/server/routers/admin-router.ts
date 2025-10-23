@@ -1377,85 +1377,89 @@ export const adminRouter = router({
 
         // Get vault breakdown for this workspace
         let vaultBreakdown: any[] = [];
-        if (safes.length > 0) {
-          try {
-            const { BASE_USDC_VAULTS } = require('@/server/earn/base-vaults');
-            const vaultAddresses = BASE_USDC_VAULTS.map(
-              (vault: any) => vault.address,
-            );
+        try {
+          const { BASE_USDC_VAULTS } = require('@/server/earn/base-vaults');
 
-            // Use the first safe for vault breakdown (typically there's only one primary Safe per workspace)
-            const primarySafe = safes[0];
+          // Get unique vault addresses from deposits for this workspace
+          const uniqueVaultAddresses = Array.from(
+            new Set(earnDepositsList.map((d) => d.vaultAddress)),
+          );
 
-            const vaultStats = await Promise.all(
-              vaultAddresses.map(async (vaultAddress: string) => {
-                try {
-                  // Get deposits for this vault and workspace
-                  const vaultDeposits = earnDepositsList.filter(
-                    (d) => d.vaultAddress === vaultAddress,
-                  );
+          // Get withdrawals for this workspace
+          const earnWithdrawalsList = await db.query.earnWithdrawals.findMany({
+            where: eq(earnWithdrawals.workspaceId, workspaceId),
+          });
 
-                  // Get withdrawals for this vault and workspace
-                  const vaultWithdrawals =
-                    await db.query.earnWithdrawals.findMany({
-                      where: and(
-                        eq(
-                          earnWithdrawals.safeAddress,
-                          primarySafe.safeAddress,
-                        ),
-                        eq(earnWithdrawals.vaultAddress, vaultAddress),
-                        eq(earnWithdrawals.workspaceId, workspaceId),
-                      ),
-                    });
+          const vaultStats = await Promise.all(
+            uniqueVaultAddresses.map(async (vaultAddress: string) => {
+              try {
+                // Get deposits for this vault
+                const vaultDeposits = earnDepositsList.filter(
+                  (d) => d.vaultAddress === vaultAddress,
+                );
 
-                  let totalVaultDeposited = 0n;
-                  for (const deposit of vaultDeposits) {
-                    totalVaultDeposited += BigInt(deposit.assetsDeposited);
-                  }
+                // Get withdrawals for this vault
+                const vaultWithdrawals = earnWithdrawalsList.filter(
+                  (w) => w.vaultAddress === vaultAddress,
+                );
 
-                  let totalVaultWithdrawn = 0n;
-                  for (const withdrawal of vaultWithdrawals) {
-                    totalVaultWithdrawn += BigInt(withdrawal.assetsWithdrawn);
-                  }
-
-                  const netBalance = totalVaultDeposited - totalVaultWithdrawn;
-
-                  // Find vault info from base vaults
-                  const vaultInfo = BASE_USDC_VAULTS.find(
-                    (vault: any) =>
-                      vault.address.toLowerCase() ===
-                      vaultAddress.toLowerCase(),
-                  );
-
-                  return {
-                    vaultAddress,
-                    vaultName: vaultInfo?.name || 'Unknown Vault',
-                    displayName: vaultInfo?.displayName || 'Unknown Vault',
-                    balance: netBalance.toString(),
-                    balanceUsd: Number(netBalance) / 1_000_000, // Convert from 6-decimal USDC to USD
-                  };
-                } catch (error) {
-                  console.error(
-                    `Error getting vault stats for ${vaultAddress}:`,
-                    error,
-                  );
-                  return {
-                    vaultAddress,
-                    vaultName: 'Error',
-                    displayName: 'Error',
-                    balance: '0',
-                    balanceUsd: 0,
-                  };
+                let totalVaultDeposited = 0n;
+                for (const deposit of vaultDeposits) {
+                  totalVaultDeposited += BigInt(deposit.assetsDeposited);
                 }
-              }),
-            );
 
-            // Filter out vaults with zero balance
-            vaultBreakdown = vaultStats.filter(
-              (vault) => vault.balance !== '0',
+                let totalVaultWithdrawn = 0n;
+                for (const withdrawal of vaultWithdrawals) {
+                  totalVaultWithdrawn += BigInt(withdrawal.assetsWithdrawn);
+                }
+
+                const netBalance = totalVaultDeposited - totalVaultWithdrawn;
+
+                // Find vault info from base vaults
+                const vaultInfo = BASE_USDC_VAULTS.find(
+                  (vault: any) =>
+                    vault.address.toLowerCase() === vaultAddress.toLowerCase(),
+                );
+
+                return {
+                  vaultAddress,
+                  vaultName: vaultInfo?.name || 'Unknown Vault',
+                  displayName: vaultInfo?.displayName || vaultAddress,
+                  balance: netBalance.toString(),
+                  balanceUsd: Number(netBalance) / 1_000_000,
+                };
+              } catch (error) {
+                console.error(
+                  `Error getting vault stats for ${vaultAddress}:`,
+                  error,
+                );
+                return {
+                  vaultAddress,
+                  vaultName: 'Error',
+                  displayName: 'Error',
+                  balance: '0',
+                  balanceUsd: 0,
+                };
+              }
+            }),
+          );
+
+          // Include all vaults this workspace has ever deposited to (even if balance is now zero)
+          vaultBreakdown = vaultStats;
+        } catch (error) {
+          console.error('Error getting vault breakdown:', error);
+        }
+
+        // Get virtual account details if workspace has one
+        let virtualAccount: any = null;
+        if (workspace.alignCustomerId && workspace.alignVirtualAccountId) {
+          try {
+            virtualAccount = await alignApi.getVirtualAccount(
+              workspace.alignCustomerId,
+              workspace.alignVirtualAccountId,
             );
           } catch (error) {
-            console.error('Error getting vault breakdown:', error);
+            console.error('Error fetching virtual account details:', error);
           }
         }
 
@@ -1506,6 +1510,7 @@ export const adminRouter = router({
             safeCount: safes.length,
             vaultBreakdown,
           },
+          virtualAccount,
         };
       } catch (error) {
         ctx.log.error(
