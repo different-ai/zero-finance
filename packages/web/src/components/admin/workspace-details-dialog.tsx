@@ -426,42 +426,6 @@ export default function WorkspaceDetailsDialog({
 
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">Financial Overview</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2 text-sm">
-                <div className="grid grid-cols-3 gap-4">
-                  <div>
-                    <div className="text-xs text-muted-foreground">
-                      Total Deposited
-                    </div>
-                    <div className="text-2xl font-bold">
-                      ${' '}
-                      {formatUnits(
-                        BigInt(workspaceDetails.finances.totalDeposited),
-                        6,
-                      )}
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-xs text-muted-foreground">
-                      Deposits
-                    </div>
-                    <div className="text-2xl font-bold">
-                      {workspaceDetails.finances.depositCount}
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-xs text-muted-foreground">Safes</div>
-                    <div className="text-2xl font-bold">
-                      {workspaceDetails.finances.safeCount}
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
                 <CardTitle className="text-lg">Auto-Earn Settings</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2 text-sm">
@@ -494,6 +458,226 @@ export default function WorkspaceDetailsDialog({
                 )}
               </CardContent>
             </Card>
+
+            {workspaceDetails.fundingSources &&
+              workspaceDetails.fundingSources.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">
+                      Starter Accounts (Funding Sources)
+                    </CardTitle>
+                    <CardDescription>
+                      Bank accounts members use to fund their accounts
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {workspaceDetails.fundingSources.map((fs: any) => {
+                        const member = workspaceDetails.members.find(
+                          (m: any) => m.userId === fs.userPrivyDid,
+                        );
+                        return (
+                          <div
+                            key={fs.id}
+                            className="p-4 border rounded-lg space-y-3"
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="font-medium">
+                                {member?.firstName} {member?.lastName}
+                              </div>
+                              <Badge
+                                variant={
+                                  fs.accountTier === 'starter'
+                                    ? 'secondary'
+                                    : 'default'
+                                }
+                              >
+                                {fs.accountTier || 'full'}
+                              </Badge>
+                            </div>
+                            <div className="grid grid-cols-2 gap-3 text-sm">
+                              <div>
+                                <div className="text-xs text-muted-foreground mb-1">
+                                  Account Type
+                                </div>
+                                <div className="font-medium uppercase">
+                                  {fs.sourceAccountType}
+                                </div>
+                              </div>
+                              <div>
+                                <div className="text-xs text-muted-foreground mb-1">
+                                  Currency
+                                </div>
+                                <div className="font-medium uppercase">
+                                  {fs.sourceCurrency || 'USD'}
+                                </div>
+                              </div>
+                              {fs.sourceBankName && (
+                                <div className="col-span-2">
+                                  <div className="text-xs text-muted-foreground mb-1">
+                                    Bank Name
+                                  </div>
+                                  <div className="font-medium">
+                                    {fs.sourceBankName}
+                                  </div>
+                                </div>
+                              )}
+                              {fs.sourceBankBeneficiaryName && (
+                                <div className="col-span-2">
+                                  <div className="text-xs text-muted-foreground mb-1">
+                                    Beneficiary Name
+                                  </div>
+                                  <div className="font-medium">
+                                    {fs.sourceBankBeneficiaryName}
+                                  </div>
+                                </div>
+                              )}
+                              {fs.sourceIban && (
+                                <div className="col-span-2">
+                                  <div className="text-xs text-muted-foreground mb-1">
+                                    IBAN
+                                  </div>
+                                  <div className="font-mono text-xs flex items-center gap-2">
+                                    {fs.sourceIban}
+                                    <CopyButton value={fs.sourceIban} />
+                                  </div>
+                                </div>
+                              )}
+                              {fs.sourceBicSwift && (
+                                <div>
+                                  <div className="text-xs text-muted-foreground mb-1">
+                                    BIC/SWIFT
+                                  </div>
+                                  <div className="font-mono text-xs">
+                                    {fs.sourceBicSwift}
+                                  </div>
+                                </div>
+                              )}
+                              {fs.sourceAccountNumber && (
+                                <div>
+                                  <div className="text-xs text-muted-foreground mb-1">
+                                    Account Number
+                                  </div>
+                                  <div className="font-mono text-xs flex items-center gap-2">
+                                    {fs.sourceAccountNumber}
+                                    <CopyButton
+                                      value={fs.sourceAccountNumber}
+                                    />
+                                  </div>
+                                </div>
+                              )}
+                              {fs.sourceRoutingNumber && (
+                                <div>
+                                  <div className="text-xs text-muted-foreground mb-1">
+                                    Routing Number
+                                  </div>
+                                  <div className="font-mono text-xs flex items-center gap-2">
+                                    {fs.sourceRoutingNumber}
+                                    <CopyButton
+                                      value={fs.sourceRoutingNumber}
+                                    />
+                                  </div>
+                                </div>
+                              )}
+                              {fs.sourceSortCode && (
+                                <div>
+                                  <div className="text-xs text-muted-foreground mb-1">
+                                    Sort Code
+                                  </div>
+                                  <div className="font-mono text-xs">
+                                    {fs.sourceSortCode}
+                                  </div>
+                                </div>
+                              )}
+                              {fs.destinationAddress && (
+                                <div className="col-span-2">
+                                  <div className="text-xs text-muted-foreground mb-1">
+                                    Destination Address (
+                                    {fs.destinationCurrency})
+                                  </div>
+                                  <div className="font-mono text-xs flex items-center gap-2">
+                                    {fs.destinationAddress}
+                                    <CopyButton value={fs.destinationAddress} />
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+            {workspaceDetails.memberVirtualAccounts &&
+              workspaceDetails.memberVirtualAccounts.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">
+                      Member Virtual Accounts
+                    </CardTitle>
+                    <CardDescription>
+                      Personal virtual accounts owned by workspace members
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {workspaceDetails.memberVirtualAccounts.map(
+                        (mva: any, idx: number) => (
+                          <div
+                            key={idx}
+                            className="p-4 border rounded-lg space-y-3"
+                          >
+                            <div className="font-medium">
+                              {mva.firstName} {mva.lastName}
+                            </div>
+                            <div className="grid grid-cols-2 gap-3 text-sm">
+                              <div>
+                                <div className="text-xs text-muted-foreground mb-1">
+                                  Status
+                                </div>
+                                <Badge
+                                  variant={
+                                    mva.virtualAccount.status === 'active'
+                                      ? 'default'
+                                      : 'secondary'
+                                  }
+                                >
+                                  {mva.virtualAccount.status}
+                                </Badge>
+                              </div>
+                              <div>
+                                <div className="text-xs text-muted-foreground mb-1">
+                                  Currency
+                                </div>
+                                <div className="font-medium uppercase">
+                                  {mva.virtualAccount.source_currency || 'USD'}
+                                </div>
+                              </div>
+                              {mva.virtualAccount.destination_address && (
+                                <div className="col-span-2">
+                                  <div className="text-xs text-muted-foreground mb-1">
+                                    Destination Address
+                                  </div>
+                                  <div className="font-mono text-xs flex items-center gap-2">
+                                    {mva.virtualAccount.destination_address}
+                                    <CopyButton
+                                      value={
+                                        mva.virtualAccount.destination_address
+                                      }
+                                    />
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        ),
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
 
             <Card>
               <CardHeader>

@@ -792,6 +792,13 @@
       "when": 1760051342227,
       "tag": "0112_living_pet_avengers",
       "breakpoints": true
+    },
+    {
+      "idx": 113,
+      "version": "7",
+      "when": 1761259272380,
+      "tag": "0113_tricky_wrecker",
+      "breakpoints": true
     }
   ]
 }

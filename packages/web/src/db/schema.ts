@@ -1350,4 +1350,31 @@ export type UserInvoicePreferences = typeof userInvoicePreferences.$inferSelect;
 export type NewUserInvoicePreferences =
   typeof userInvoicePreferences.$inferInsert;
 
+// User Login Logs - Track user login activity with wallet addresses and email
+export const userLoginLogs = pgTable(
+  'user_login_logs',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    privyDid: varchar('privy_did', { length: 255 }).notNull(),
+    email: varchar('email', { length: 255 }),
+    smartWalletAddress: varchar('smart_wallet_address', { length: 42 }),
+    embeddedWalletAddress: varchar('embedded_wallet_address', { length: 42 }),
+    loginAt: timestamp('login_at', { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    userAgent: text('user_agent'),
+    ipAddress: varchar('ip_address', { length: 45 }),
+  },
+  (table) => {
+    return {
+      privyDidIdx: index('user_login_logs_privy_did_idx').on(table.privyDid),
+      loginAtIdx: index('user_login_logs_login_at_idx').on(table.loginAt),
+      emailIdx: index('user_login_logs_email_idx').on(table.email),
+    };
+  },
+);
+
+export type UserLoginLog = typeof userLoginLogs.$inferSelect;
+export type NewUserLoginLog = typeof userLoginLogs.$inferInsert;
+
 // Workspace invite system and extensions - imported from schema/workspaces.ts (see top of file)

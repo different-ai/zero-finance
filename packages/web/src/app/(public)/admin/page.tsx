@@ -5,6 +5,7 @@ import { usePrivy } from '@privy-io/react-auth';
 import AdminPanel from '@/components/admin/admin-panel';
 import KycKanbanBoard from '@/components/admin/kyc-kanban-board';
 import WorkspacesPanel from '@/components/admin/workspaces-panel';
+import { PlatformOverviewStats } from '@/components/admin/platform-overview-stats';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { api } from '@/trpc/react';
@@ -22,10 +23,6 @@ import {
   RefreshCw,
   ShieldAlert,
   Building2,
-  TrendingUp,
-  Users,
-  CheckCircle2,
-  Loader2,
 } from 'lucide-react';
 import {
   Dialog,
@@ -62,12 +59,6 @@ export default function AdminPage() {
     enabled: isAdmin,
     retry: false,
   });
-
-  const { data: totalDepositsData, isLoading: isLoadingTotalDeposits } =
-    api.admin.getTotalDeposited.useQuery(undefined, {
-      enabled: isAdmin,
-      retry: false,
-    });
 
   const [selectedUser, setSelectedUser] = useState<any | null>(null);
   const [isUserDetailsOpen, setIsUserDetailsOpen] = useState(false);
@@ -203,137 +194,7 @@ export default function AdminPage() {
       </div>
 
       {/* Platform Overview Stats - Always Visible */}
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle>Platform Overview</CardTitle>
-          <CardDescription>Key metrics and platform statistics</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <TrendingUp className="h-4 w-4" />
-                <span>Total Deposits</span>
-              </div>
-              {isLoadingTotalDeposits ? (
-                <div className="text-xl font-bold text-gray-400">
-                  Loading...
-                </div>
-              ) : totalDepositsData ? (
-                <div className="text-2xl font-bold">
-                  $
-                  {(
-                    Number(totalDepositsData.totalDeposited) / 1_000_000
-                  ).toLocaleString('en-US', {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}
-                </div>
-              ) : (
-                <div className="text-2xl font-bold text-gray-400">—</div>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Building2 className="h-4 w-4" />
-                <span>Value in Safes</span>
-              </div>
-              {isLoadingTotalDeposits ? (
-                <div className="text-xl font-bold text-gray-400">
-                  Loading...
-                </div>
-              ) : totalDepositsData?.breakdown ? (
-                <div className="text-2xl font-bold">
-                  $
-                  {(
-                    Number(totalDepositsData.breakdown.inSafes) / 1_000_000
-                  ).toLocaleString('en-US', {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}
-                </div>
-              ) : (
-                <div className="text-2xl font-bold text-gray-400">—</div>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <TrendingUp className="h-4 w-4" />
-                <span>Value in Vaults</span>
-              </div>
-              {isLoadingTotalDeposits ? (
-                <div className="text-xl font-bold text-gray-400">
-                  Loading...
-                </div>
-              ) : totalDepositsData?.breakdown ? (
-                <div className="text-2xl font-bold">
-                  $
-                  {(
-                    Number(totalDepositsData.breakdown.inVaults) / 1_000_000
-                  ).toLocaleString('en-US', {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}
-                </div>
-              ) : (
-                <div className="text-2xl font-bold text-gray-400">—</div>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Users className="h-4 w-4" />
-                <span>Total Users</span>
-              </div>
-              {isLoadingUsers ? (
-                <div className="text-xl font-bold text-gray-400">
-                  Loading...
-                </div>
-              ) : (
-                <div className="text-2xl font-bold">
-                  {usersData?.length || 0}
-                </div>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <CheckCircle2 className="h-4 w-4 text-green-600" />
-                <span>KYC Approved</span>
-              </div>
-              {isLoadingUsers ? (
-                <div className="text-xl font-bold text-gray-400">
-                  Loading...
-                </div>
-              ) : (
-                <div className="text-2xl font-bold text-green-600">
-                  {usersData?.filter((u: any) => u.kycStatus === 'approved')
-                    .length || 0}
-                </div>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Loader2 className="h-4 w-4 text-yellow-600" />
-                <span>KYC Pending</span>
-              </div>
-              {isLoadingUsers ? (
-                <div className="text-xl font-bold text-gray-400">
-                  Loading...
-                </div>
-              ) : (
-                <div className="text-2xl font-bold text-yellow-600">
-                  {usersData?.filter((u: any) => u.kycStatus === 'pending')
-                    .length || 0}
-                </div>
-              )}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      <PlatformOverviewStats />
 
       <Tabs
         value={activeView}

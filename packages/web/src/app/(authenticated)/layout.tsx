@@ -1,8 +1,8 @@
 import React from 'react';
 import { redirect } from 'next/navigation';
-import { cookies } from 'next/headers';
 import { userProfileService } from '@/lib/user-profile-service';
 import { getUser } from '@/lib/auth';
+import { logUserLogin } from '@/lib/user-login-logger';
 import DashboardClientLayout from './dashboard/dashboard-client-layout';
 
 // Force dynamic rendering since this layout uses cookies for authentication
@@ -24,6 +24,22 @@ export default async function AuthenticatedLayout({
   // Extract privyDid (user.id) and email
   const privyDid = privyUser.id;
   const email = privyUser.email?.address ?? '';
+
+  // Get wallet addresses from Privy user
+  const embeddedWalletAddress = (privyUser as any).wallet?.address;
+  const smartWalletAccount = (privyUser as any).linkedAccounts?.find(
+    (account: any) =>
+      account.type === 'smart_wallet' || account.walletClientType === 'privy',
+  );
+  const smartWalletAddress = smartWalletAccount?.address;
+
+  // Log user login (non-blocking)
+  logUserLogin({
+    privyDid,
+    email,
+    embeddedWalletAddress,
+    smartWalletAddress,
+  }).catch((err) => console.error('Failed to log user login:', err));
 
   // Get user profile (will create if it doesn't exist)
   const userProfile = await userProfileService.getOrCreateProfile(
