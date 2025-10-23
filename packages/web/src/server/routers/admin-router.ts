@@ -17,16 +17,52 @@ import {
   earnDeposits,
   earnWithdrawals,
 } from '../../db/schema';
-import { eq, and, sql } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import { customAlphabet } from 'nanoid';
 import { alignApi, AlignCustomer } from '@/server/services/align-api';
 import {
   getSafeBalance,
   getBatchSafeBalances,
 } from '@/server/services/safe.service';
+import { createPublicClient, http, parseAbi } from 'viem';
+import { base } from 'viem/chains';
+import { getBaseRpcUrl } from '@/lib/base-rpc-url';
 
 // Custom ID generator
 const generateId = customAlphabet('1234567890abcdefghijklmnopqrstuvwxyz', 10);
+
+// ERC4626 vault ABI for reading balances
+const ERC4626_VAULT_ABI = parseAbi([
+  'function balanceOf(address owner) public view returns (uint256)',
+  'function convertToAssets(uint256 shares) public view returns (uint256 assets)',
+]);
+
+// Public client for reading on-chain vault positions
+const publicClient = createPublicClient({
+  chain: base,
+  transport: http(getBaseRpcUrl(), {
+    batch: {
+      batchSize: 100,
+      wait: 16,
+    },
+  }),
+  batch: {
+    multicall: true,
+  },
+});
+
+// Cache for platform stats (60 second TTL)
+let platformStatsCache: {
+  data: {
+    totalValue: string;
+    inSafes: string;
+    inVaults: string;
+  } | null;
+  expiresAt: number;
+} = {
+  data: null,
+  expiresAt: 0,
+};
 
 /**
  * Helper to verify if a user is an admin
@@ -170,6 +206,143 @@ export const adminRouter = router({
       throw new TRPCError({
         code: 'INTERNAL_SERVER_ERROR',
         message: `Failed to calculate total deposited: ${(error as Error).message}`,
+      });
+    }
+  }),
+
+  /**
+   * Get platform stats with on-chain vault reading and caching
+   * Uses 60-second cache to avoid rate limiting
+   */
+  getPlatformStats: protectedProcedure.query(async ({ ctx }) => {
+    if (!ctx.userId) {
+      throw new TRPCError({
+        code: 'UNAUTHORIZED',
+        message: 'User ID not found',
+      });
+    }
+    await requireAdmin(ctx.userId);
+
+    // Check cache first
+    if (platformStatsCache.data && platformStatsCache.expiresAt > Date.now()) {
+      return platformStatsCache.data;
+    }
+
+    try {
+      const { BASE_USDC_VAULTS } = require('@/server/earn/base-vaults');
+
+      // Get all safes
+      const safes = await db
+        .select({ safeAddress: userSafes.safeAddress })
+        .from(userSafes);
+
+      const uniqueSafeAddresses = Array.from(
+        new Set(safes.map((s) => s.safeAddress).filter(Boolean)),
+      ) as `0x${string}`[];
+
+      if (uniqueSafeAddresses.length === 0) {
+        const result = {
+          totalValue: '0',
+          inSafes: '0',
+          inVaults: '0',
+        };
+        platformStatsCache = {
+          data: result,
+          expiresAt: Date.now() + 60_000,
+        };
+        return result;
+      }
+
+      // Read safe balances using existing batch function
+      const balanceMap = await getBatchSafeBalances({
+        safeAddresses: uniqueSafeAddresses,
+      });
+
+      const totalInSafes = Object.values(balanceMap).reduce(
+        (acc, balance) => acc + (balance?.raw ?? 0n),
+        0n,
+      );
+
+      // Read actual vault positions on-chain for ALL vaults
+      let totalInVaults = 0n;
+
+      // Use multicall to batch all vault reads
+      const vaultCalls = BASE_USDC_VAULTS.flatMap((vaultInfo: any) => {
+        const vaultAddress = vaultInfo.address as `0x${string}`;
+        return uniqueSafeAddresses.flatMap((safeAddress) => [
+          {
+            address: vaultAddress,
+            abi: ERC4626_VAULT_ABI,
+            functionName: 'balanceOf' as const,
+            args: [safeAddress],
+          },
+        ]);
+      });
+
+      // Execute all balanceOf calls in parallel with multicall
+      const sharesResults = await publicClient.multicall({
+        contracts: vaultCalls,
+      });
+
+      // Now convert shares to assets
+      const assetCalls: any[] = [];
+      for (let i = 0; i < sharesResults.length; i++) {
+        const result = sharesResults[i];
+        if (
+          result.status === 'success' &&
+          result.result &&
+          typeof result.result === 'bigint' &&
+          result.result > 0n
+        ) {
+          const vaultIndex = Math.floor(i / uniqueSafeAddresses.length);
+          const vaultAddress = BASE_USDC_VAULTS[vaultIndex]
+            .address as `0x${string}`;
+          assetCalls.push({
+            vaultAddress,
+            shares: result.result,
+            callData: {
+              address: vaultAddress,
+              abi: ERC4626_VAULT_ABI,
+              functionName: 'convertToAssets' as const,
+              args: [result.result],
+            },
+          });
+        }
+      }
+
+      // Execute all convertToAssets calls
+      if (assetCalls.length > 0) {
+        const assetsResults = await publicClient.multicall({
+          contracts: assetCalls.map((c) => c.callData),
+        });
+
+        for (const result of assetsResults) {
+          if (result.status === 'success' && result.result) {
+            totalInVaults += result.result as bigint;
+          }
+        }
+      }
+
+      const grandTotal = totalInSafes + totalInVaults;
+
+      const result = {
+        totalValue: grandTotal.toString(),
+        inSafes: totalInSafes.toString(),
+        inVaults: totalInVaults.toString(),
+      };
+
+      // Cache for 60 seconds
+      platformStatsCache = {
+        data: result,
+        expiresAt: Date.now() + 60_000,
+      };
+
+      return result;
+    } catch (error) {
+      console.error('admin.getPlatformStats: error calculating stats', error);
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: `Failed to calculate platform stats: ${(error as Error).message}`,
       });
     }
   }),
@@ -1366,8 +1539,16 @@ export const adminRouter = router({
           where: eq(autoEarnConfigs.workspaceId, workspaceId),
         });
 
+        const safeAddresses = safes.map((s) => s.safeAddress);
+
         const earnDepositsList = await db.query.earnDeposits.findMany({
-          where: eq(earnDeposits.workspaceId, workspaceId),
+          where: (tbl, { and, eq, or, isNull, inArray }) =>
+            safeAddresses.length > 0
+              ? and(
+                  inArray(tbl.safeAddress, safeAddresses),
+                  or(eq(tbl.workspaceId, workspaceId), isNull(tbl.workspaceId)),
+                )
+              : eq(tbl.workspaceId, workspaceId),
         });
 
         const totalDeposited = earnDepositsList.reduce(
@@ -1380,72 +1561,65 @@ export const adminRouter = router({
         try {
           const { BASE_USDC_VAULTS } = require('@/server/earn/base-vaults');
 
-          // Get unique vault addresses from deposits for this workspace
-          const uniqueVaultAddresses = Array.from(
-            new Set(earnDepositsList.map((d) => d.vaultAddress)),
-          );
+          if (safeAddresses.length === 0) {
+            vaultBreakdown = [];
+          } else {
+            // Solution 1A: Read actual on-chain vault positions
+            // This works even if database tracking is incomplete/missing
+            const vaultStats = await Promise.all(
+              BASE_USDC_VAULTS.map(async (vaultInfo: any) => {
+                try {
+                  const vaultAddress = vaultInfo.address as `0x${string}`;
 
-          // Get withdrawals for this workspace
-          const earnWithdrawalsList = await db.query.earnWithdrawals.findMany({
-            where: eq(earnWithdrawals.workspaceId, workspaceId),
-          });
+                  // Read vault positions for all safes in this workspace
+                  let totalAssets = 0n;
 
-          const vaultStats = await Promise.all(
-            uniqueVaultAddresses.map(async (vaultAddress: string) => {
-              try {
-                // Get deposits for this vault
-                const vaultDeposits = earnDepositsList.filter(
-                  (d) => d.vaultAddress === vaultAddress,
-                );
+                  for (const safeAddress of safeAddresses) {
+                    // Read ERC4626 vault shares for this Safe
+                    const shares = await publicClient.readContract({
+                      address: vaultAddress,
+                      abi: ERC4626_VAULT_ABI,
+                      functionName: 'balanceOf',
+                      args: [safeAddress as `0x${string}`],
+                    });
 
-                // Get withdrawals for this vault
-                const vaultWithdrawals = earnWithdrawalsList.filter(
-                  (w) => w.vaultAddress === vaultAddress,
-                );
+                    // Convert shares to assets (USDC)
+                    if (shares > 0n) {
+                      const assets = await publicClient.readContract({
+                        address: vaultAddress,
+                        abi: ERC4626_VAULT_ABI,
+                        functionName: 'convertToAssets',
+                        args: [shares],
+                      });
+                      totalAssets += assets;
+                    }
+                  }
 
-                let totalVaultDeposited = 0n;
-                for (const deposit of vaultDeposits) {
-                  totalVaultDeposited += BigInt(deposit.assetsDeposited);
+                  // Only include vaults with non-zero balances
+                  if (totalAssets === 0n) {
+                    return null;
+                  }
+
+                  return {
+                    vaultAddress: vaultInfo.address,
+                    vaultName: vaultInfo.name || 'Unknown Vault',
+                    displayName: vaultInfo.displayName || vaultInfo.address,
+                    balance: totalAssets.toString(),
+                    balanceUsd: Number(totalAssets) / 1_000_000,
+                  };
+                } catch (error) {
+                  console.error(
+                    `Error reading on-chain balance for ${vaultInfo.address}:`,
+                    error,
+                  );
+                  return null;
                 }
+              }),
+            );
 
-                let totalVaultWithdrawn = 0n;
-                for (const withdrawal of vaultWithdrawals) {
-                  totalVaultWithdrawn += BigInt(withdrawal.assetsWithdrawn);
-                }
-
-                const netBalance = totalVaultDeposited - totalVaultWithdrawn;
-
-                // Find vault info from base vaults
-                const vaultInfo = BASE_USDC_VAULTS.find(
-                  (vault: any) =>
-                    vault.address.toLowerCase() === vaultAddress.toLowerCase(),
-                );
-
-                return {
-                  vaultAddress,
-                  vaultName: vaultInfo?.name || 'Unknown Vault',
-                  displayName: vaultInfo?.displayName || vaultAddress,
-                  balance: netBalance.toString(),
-                  balanceUsd: Number(netBalance) / 1_000_000,
-                };
-              } catch (error) {
-                console.error(
-                  `Error getting vault stats for ${vaultAddress}:`,
-                  error,
-                );
-                return {
-                  vaultAddress,
-                  vaultName: 'Error',
-                  displayName: 'Error',
-                  balance: '0',
-                  balanceUsd: 0,
-                };
-              }
-            }),
-          );
-
-          // Include all vaults this workspace has ever deposited to (even if balance is now zero)
-          vaultBreakdown = vaultStats;
+            // Filter out null values (vaults with zero balance or errors)
+            vaultBreakdown = vaultStats.filter((v) => v !== null);
+          }
         } catch (error) {
           console.error('Error getting vault breakdown:', error);
         }
@@ -1460,6 +1634,46 @@ export const adminRouter = router({
             );
           } catch (error) {
             console.error('Error fetching virtual account details:', error);
+          }
+        }
+
+        // Get funding sources (starter accounts) for workspace members
+        const memberUserIds = members.map((m) => m.userId);
+        const fundingSources = await db.query.userFundingSources.findMany({
+          where: (tbl, { inArray }) =>
+            memberUserIds.length > 0
+              ? inArray(tbl.userPrivyDid, memberUserIds)
+              : undefined,
+        });
+
+        // Get user-owned virtual accounts for workspace members
+        const memberVirtualAccounts: any[] = [];
+        for (const member of members) {
+          const memberUser = await db.query.users.findFirst({
+            where: eq(users.privyDid, member.userId),
+          });
+
+          if (
+            memberUser?.alignCustomerId &&
+            memberUser?.alignVirtualAccountId
+          ) {
+            try {
+              const userVirtualAccount = await alignApi.getVirtualAccount(
+                memberUser.alignCustomerId,
+                memberUser.alignVirtualAccountId,
+              );
+              memberVirtualAccounts.push({
+                userId: member.userId,
+                firstName: memberUser.firstName,
+                lastName: memberUser.lastName,
+                virtualAccount: userVirtualAccount,
+              });
+            } catch (error) {
+              console.error(
+                `Error fetching virtual account for user ${member.userId}:`,
+                error,
+              );
+            }
           }
         }
 
@@ -1511,6 +1725,24 @@ export const adminRouter = router({
             vaultBreakdown,
           },
           virtualAccount,
+          fundingSources: fundingSources.map((fs) => ({
+            id: fs.id,
+            userPrivyDid: fs.userPrivyDid,
+            accountTier: fs.accountTier,
+            sourceAccountType: fs.sourceAccountType,
+            sourceCurrency: fs.sourceCurrency,
+            sourceBankName: fs.sourceBankName,
+            sourceBankBeneficiaryName: fs.sourceBankBeneficiaryName,
+            sourceIban: fs.sourceIban,
+            sourceBicSwift: fs.sourceBicSwift,
+            sourceRoutingNumber: fs.sourceRoutingNumber,
+            sourceAccountNumber: fs.sourceAccountNumber,
+            sourceSortCode: fs.sourceSortCode,
+            destinationCurrency: fs.destinationCurrency,
+            destinationAddress: fs.destinationAddress,
+            createdAt: fs.createdAt,
+          })),
+          memberVirtualAccounts,
         };
       } catch (error) {
         ctx.log.error(

@@ -25,10 +25,20 @@ export default async function AuthenticatedLayout({
   const privyDid = privyUser.id;
   const email = privyUser.email?.address ?? '';
 
-  // Get user profile (will create if it doesn't exist)
+  // Get wallet addresses from Privy user
+  const embeddedWalletAddress = (privyUser as any).wallet?.address;
+  const smartWalletAccount = (privyUser as any).linkedAccounts?.find(
+    (account: any) =>
+      account.type === 'smart_wallet' || account.walletClientType === 'privy',
+  );
+  const smartWalletAddress = smartWalletAccount?.address;
+
+  // Get user profile (will create if it doesn't exist, and update email/wallet addresses)
   const userProfile = await userProfileService.getOrCreateProfile(
     privyDid,
     email,
+    embeddedWalletAddress,
+    smartWalletAddress,
   );
 
   console.log('userProfile', userProfile);
