@@ -36,6 +36,12 @@ export default function WorkspaceDetailsDialog({
       },
     );
 
+  // Debug logging
+  if (workspaceDetails) {
+    console.log('Workspace Details:', workspaceDetails);
+    console.log('Vault Breakdown:', workspaceDetails.finances?.vaultBreakdown);
+  }
+
   const getKycStatusColor = (status: string) => {
     switch (status) {
       case 'approved':
@@ -207,8 +213,45 @@ export default function WorkspaceDetailsDialog({
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg">Vaults</CardTitle>
+                <CardDescription>
+                  Vault allocations for this workspace
+                </CardDescription>
               </CardHeader>
               <CardContent>
+                {/* Debug info */}
+                <div className="mb-4 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs">
+                  <div>
+                    <strong>Debug Info:</strong>
+                  </div>
+                  <div>
+                    Total Deposits:{' '}
+                    {workspaceDetails.finances.totalDeposited || '0'}
+                  </div>
+                  <div>
+                    Deposit Count: {workspaceDetails.finances.depositCount || 0}
+                  </div>
+                  <div>
+                    Vault Breakdown exists:{' '}
+                    {workspaceDetails.finances.vaultBreakdown ? 'Yes' : 'No'}
+                  </div>
+                  <div>
+                    Vault Breakdown length:{' '}
+                    {workspaceDetails.finances.vaultBreakdown?.length || 0}
+                  </div>
+                  {workspaceDetails.finances.vaultBreakdown && (
+                    <div className="mt-2">
+                      <strong>Raw data:</strong>
+                      <pre className="text-xs overflow-auto max-h-32">
+                        {JSON.stringify(
+                          workspaceDetails.finances.vaultBreakdown,
+                          null,
+                          2,
+                        )}
+                      </pre>
+                    </div>
+                  )}
+                </div>
+
                 {workspaceDetails.finances.vaultBreakdown &&
                 workspaceDetails.finances.vaultBreakdown.length > 0 ? (
                   <div className="space-y-2">
