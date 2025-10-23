@@ -22,6 +22,10 @@ import {
   RefreshCw,
   ShieldAlert,
   Building2,
+  TrendingUp,
+  Users,
+  CheckCircle2,
+  Loader2,
 } from 'lucide-react';
 import {
   Dialog,
@@ -192,6 +196,77 @@ export default function AdminPage() {
         </div>
       </div>
 
+      {/* Platform Overview Stats - Always Visible */}
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle>Platform Overview</CardTitle>
+          <CardDescription>Key metrics and platform statistics</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <TrendingUp className="h-4 w-4" />
+                <span>Total Deposits</span>
+              </div>
+              <div className="text-2xl font-bold text-gray-400">
+                Coming Soon
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Users className="h-4 w-4" />
+                <span>Total Users</span>
+              </div>
+              {isLoadingUsers ? (
+                <div className="text-xl font-bold text-gray-400">
+                  Loading...
+                </div>
+              ) : (
+                <div className="text-2xl font-bold">
+                  {usersData?.length || 0}
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <CheckCircle2 className="h-4 w-4 text-green-600" />
+                <span>KYC Approved</span>
+              </div>
+              {isLoadingUsers ? (
+                <div className="text-xl font-bold text-gray-400">
+                  Loading...
+                </div>
+              ) : (
+                <div className="text-2xl font-bold text-green-600">
+                  {usersData?.filter((u: any) => u.kycStatus === 'approved')
+                    .length || 0}
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Loader2 className="h-4 w-4 text-yellow-600" />
+                <span>KYC Pending</span>
+              </div>
+              {isLoadingUsers ? (
+                <div className="text-xl font-bold text-gray-400">
+                  Loading...
+                </div>
+              ) : (
+                <div className="text-2xl font-bold text-yellow-600">
+                  {usersData?.filter((u: any) => u.kycStatus === 'pending')
+                    .length || 0}
+                </div>
+              )}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       <Tabs
         value={activeView}
         onValueChange={(v) =>
@@ -199,6 +274,10 @@ export default function AdminPage() {
         }
       >
         <TabsList className="mb-6">
+          <TabsTrigger value="kanban" className="flex items-center gap-2">
+            <LayoutGrid className="h-4 w-4" />
+            KYC Kanban
+          </TabsTrigger>
           <TabsTrigger value="workspaces" className="flex items-center gap-2">
             <Building2 className="h-4 w-4" />
             Workspaces
@@ -207,19 +286,7 @@ export default function AdminPage() {
             <TableIcon className="h-4 w-4" />
             Users
           </TabsTrigger>
-          <TabsTrigger value="kanban" className="flex items-center gap-2">
-            <LayoutGrid className="h-4 w-4" />
-            KYC Kanban
-          </TabsTrigger>
         </TabsList>
-
-        <TabsContent value="workspaces">
-          <WorkspacesPanel />
-        </TabsContent>
-
-        <TabsContent value="table">
-          <AdminPanel />
-        </TabsContent>
 
         <TabsContent value="kanban">
           <KycKanbanBoard
@@ -228,6 +295,14 @@ export default function AdminPage() {
             onUserClick={handleUserClick}
             onRefresh={refetchUsers}
           />
+        </TabsContent>
+
+        <TabsContent value="workspaces">
+          <WorkspacesPanel />
+        </TabsContent>
+
+        <TabsContent value="table">
+          <AdminPanel />
         </TabsContent>
       </Tabs>
 

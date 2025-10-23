@@ -27,6 +27,12 @@ interface AdminUserDisplay {
   kycStatus: string | null;
   kycSubStatus?: string | null;
   kycFlowLink?: string | null;
+  workspaces?: Array<{
+    id: string;
+    name: string;
+    role: string;
+    isPrimary: boolean;
+  }>;
 }
 
 interface KycKanbanBoardProps {
@@ -334,6 +340,50 @@ export default function KycKanbanBoard({
                                 </span>
                               )}
                             </div>
+
+                            {/* Workspace Information */}
+                            {user.workspaces && user.workspaces.length > 0 && (
+                              <div className="mt-2 pt-2 border-t border-gray-200">
+                                <p className="text-xs font-medium text-gray-700 mb-1">
+                                  Workspaces ({user.workspaces.length})
+                                </p>
+                                <div className="space-y-1">
+                                  {user.workspaces
+                                    .slice(0, 2)
+                                    .map((ws, idx) => (
+                                      <div
+                                        key={ws.id}
+                                        className="flex items-center justify-between text-xs"
+                                      >
+                                        <span className="text-gray-600 truncate">
+                                          {ws.name}
+                                        </span>
+                                        <div className="flex items-center gap-1">
+                                          <Badge
+                                            variant="secondary"
+                                            className="text-[10px] h-4 px-1"
+                                          >
+                                            {ws.role}
+                                          </Badge>
+                                          {ws.isPrimary && (
+                                            <span
+                                              className="text-blue-600"
+                                              title="Primary"
+                                            >
+                                              ★
+                                            </span>
+                                          )}
+                                        </div>
+                                      </div>
+                                    ))}
+                                  {user.workspaces.length > 2 && (
+                                    <p className="text-[10px] text-gray-500">
+                                      +{user.workspaces.length - 2} more
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                            )}
 
                             {user.kycFlowLink && (
                               <div className="flex items-center gap-2">
