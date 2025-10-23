@@ -204,6 +204,48 @@ export default function WorkspaceDetailsDialog({
               </CardContent>
             </Card>
 
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Vaults</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {workspaceDetails.finances.vaultBreakdown &&
+                workspaceDetails.finances.vaultBreakdown.length > 0 ? (
+                  <div className="space-y-2">
+                    {workspaceDetails.finances.vaultBreakdown.map(
+                      (vault: any, idx: number) => (
+                        <div
+                          key={idx}
+                          className="flex items-center justify-between p-3 border rounded-md bg-muted/30"
+                        >
+                          <div className="flex-1">
+                            <div className="font-semibold text-base">
+                              {vault.displayName}
+                            </div>
+                            <div className="text-xs text-muted-foreground font-mono mt-1">
+                              {vault.vaultAddress}
+                            </div>
+                          </div>
+                          <div className="text-right ml-4">
+                            <div className="text-xl font-bold text-primary">
+                              ${vault.balanceUsd.toFixed(2)}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              USDC
+                            </div>
+                          </div>
+                        </div>
+                      ),
+                    )}
+                  </div>
+                ) : (
+                  <div className="text-muted-foreground text-sm">
+                    No vault deposits found for this workspace
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
             {workspaceDetails.virtualAccount && (
               <Card>
                 <CardHeader>
@@ -381,44 +423,6 @@ export default function WorkspaceDetailsDialog({
                 </CardContent>
               </Card>
             )}
-
-            {workspaceDetails.finances.vaultBreakdown &&
-              workspaceDetails.finances.vaultBreakdown.length > 0 && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-lg">Vault Breakdown</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2">
-                      {workspaceDetails.finances.vaultBreakdown.map(
-                        (vault: any, idx: number) => (
-                          <div
-                            key={idx}
-                            className="flex items-center justify-between p-3 border rounded-md"
-                          >
-                            <div>
-                              <div className="font-medium">
-                                {vault.displayName}
-                              </div>
-                              <div className="text-xs text-muted-foreground font-mono">
-                                {vault.vaultAddress}
-                              </div>
-                            </div>
-                            <div className="text-right">
-                              <div className="text-lg font-bold">
-                                ${vault.balanceUsd.toFixed(2)}
-                              </div>
-                              <div className="text-xs text-muted-foreground">
-                                {vault.balance} wei
-                              </div>
-                            </div>
-                          </div>
-                        ),
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
 
             <Card>
               <CardHeader>
