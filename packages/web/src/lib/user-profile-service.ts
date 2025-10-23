@@ -1,6 +1,12 @@
 import { ethers } from 'ethers';
 import { db } from '@/db';
-import { userProfilesTable, userWalletsTable, UserProfile, UserWallet, userSafes } from '@/db/schema';
+import {
+  userProfilesTable,
+  userWalletsTable,
+  UserProfile,
+  UserWallet,
+  userSafes,
+} from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
 
 /**
@@ -8,9 +14,15 @@ import { eq, and } from 'drizzle-orm';
  */
 export class UserProfileService {
   /**
-   * Gets user profile by clerk ID, creates it if it doesn't exist
+   * Gets user profile by privy DID, creates it if it doesn't exist
+   * Updates email and wallet addresses on every call to keep data fresh
    */
-  async getOrCreateProfile(privyDid: string, email: string): Promise<UserProfile> {
+  async getOrCreateProfile(
+    privyDid: string,
+    email: string,
+    embeddedWalletAddress?: string | null,
+    smartWalletAddress?: string | null,
+  ): Promise<UserProfile> {
     // Try to find existing user profile
     const existingProfiles = await db
       .select()
@@ -19,20 +31,61 @@ export class UserProfileService {
       .limit(1);
 
     if (existingProfiles.length > 0) {
+      // Profile exists - update email and wallet addresses if provided
+      const updates: Partial<{
+        email: string;
+        paymentAddress: string;
+        updatedAt: Date;
+      }> = {
+        updatedAt: new Date(),
+      };
+
+      // Update email if it has changed
+      if (email && email !== existingProfiles[0].email) {
+        updates.email = email;
+      }
+
+      // Update payment address if we have a smart wallet or embedded wallet
+      // Prefer smart wallet over embedded wallet
+      const newPaymentAddress = smartWalletAddress || embeddedWalletAddress;
+      if (
+        newPaymentAddress &&
+        newPaymentAddress !== existingProfiles[0].paymentAddress
+      ) {
+        updates.paymentAddress = newPaymentAddress;
+      }
+
+      // Only update if there are changes
+      if (Object.keys(updates).length > 1) {
+        // More than just updatedAt
+        const updated = await db
+          .update(userProfilesTable)
+          .set(updates)
+          .where(eq(userProfilesTable.privyDid, privyDid))
+          .returning();
+
+        if (updated.length > 0) {
+          return updated[0];
+        }
+      }
+
       return existingProfiles[0];
     }
 
     // User doesn't exist, let's create a new profile with wallet
     const wallet = await this.createWallet(privyDid);
 
-    // Create the profile
+    // Create the profile with provided wallet addresses or default wallet
+    const paymentAddress =
+      smartWalletAddress || embeddedWalletAddress || wallet.address;
+
     const newProfile = await db
       .insert(userProfilesTable)
       .values({
         privyDid,
         email,
         defaultWalletId: wallet.id,
-        paymentAddress: wallet.address, // Use the wallet address as the default payment address
+        paymentAddress, // Use smart wallet > embedded wallet > default wallet
         skippedOrCompletedOnboardingStepper: false,
       })
       .returning();
@@ -68,7 +121,11 @@ export class UserProfileService {
       throw new Error('Failed to create wallet');
     }
 
-    console.log('0xHypr', `Created new wallet for user ${userId}:`, wallet.address);
+    console.log(
+      '0xHypr',
+      `Created new wallet for user ${userId}:`,
+      wallet.address,
+    );
     return result[0];
   }
 
@@ -83,11 +140,20 @@ export class UserProfileService {
       const existingWallets = await db
         .select()
         .from(userWalletsTable)
-        .where(and(eq(userWalletsTable.userId, userId), eq(userWalletsTable.isDefault, true)))
+        .where(
+          and(
+            eq(userWalletsTable.userId, userId),
+            eq(userWalletsTable.isDefault, true),
+          ),
+        )
         .limit(1);
 
       if (existingWallets.length > 0) {
-        console.log('0xHypr', 'Found existing wallet:', existingWallets[0].address);
+        console.log(
+          '0xHypr',
+          'Found existing wallet:',
+          existingWallets[0].address,
+        );
         return existingWallets[0];
       }
 
@@ -104,7 +170,10 @@ export class UserProfileService {
   /**
    * Updates a user's payment address
    */
-  async updatePaymentAddress(privyDid: string, paymentAddress: string): Promise<UserProfile> {
+  async updatePaymentAddress(
+    privyDid: string,
+    paymentAddress: string,
+  ): Promise<UserProfile> {
     const result = await db
       .update(userProfilesTable)
       .set({ paymentAddress, updatedAt: new Date() })
@@ -141,9 +210,9 @@ export class UserProfileService {
   async completeOnboarding(privyDid: string): Promise<UserProfile> {
     const result = await db
       .update(userProfilesTable)
-      .set({ 
-        skippedOrCompletedOnboardingStepper: true, 
-        updatedAt: new Date() 
+      .set({
+        skippedOrCompletedOnboardingStepper: true,
+        updatedAt: new Date(),
       })
       .where(eq(userProfilesTable.privyDid, privyDid))
       .returning();
@@ -168,8 +237,8 @@ export class UserProfileService {
   async getPaymentAddress(privyDid: string): Promise<string> {
     const profiles = await db
       .select({
-          paymentAddress: userProfilesTable.paymentAddress, // Select specific fields
-          primarySafeAddress: userProfilesTable.primarySafeAddress
+        paymentAddress: userProfilesTable.paymentAddress, // Select specific fields
+        primarySafeAddress: userProfilesTable.primarySafeAddress,
       })
       .from(userProfilesTable)
       .where(eq(userProfilesTable.privyDid, privyDid))
@@ -183,18 +252,27 @@ export class UserProfileService {
 
     // 1. Prefer the explicitly set payment address
     if (profile.paymentAddress) {
-      console.log('0xHypr', `Using explicit paymentAddress for user ${privyDid}: ${profile.paymentAddress}`);
+      console.log(
+        '0xHypr',
+        `Using explicit paymentAddress for user ${privyDid}: ${profile.paymentAddress}`,
+      );
       return profile.paymentAddress;
     }
 
     // 2. Fallback to the primary Safe address stored on the profile
     if (profile.primarySafeAddress) {
-       console.log('0xHypr', `Falling back to primarySafeAddress for user ${privyDid}: ${profile.primarySafeAddress}`);
-       return profile.primarySafeAddress;
+      console.log(
+        '0xHypr',
+        `Falling back to primarySafeAddress for user ${privyDid}: ${profile.primarySafeAddress}`,
+      );
+      return profile.primarySafeAddress;
     }
 
     // 3. If neither is found, throw an error
-    console.error('0xHypr', `No suitable payment address found for user ${privyDid}. Neither paymentAddress nor primarySafeAddress is set.`);
+    console.error(
+      '0xHypr',
+      `No suitable payment address found for user ${privyDid}. Neither paymentAddress nor primarySafeAddress is set.`,
+    );
     throw new Error('No primary payment address configured for the user.');
   }
 }
