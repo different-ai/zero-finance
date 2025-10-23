@@ -35,7 +35,7 @@ export default function AdminPage() {
   const { user, authenticated, login } = usePrivy();
   const [activeView, setActiveView] = useState<
     'workspaces' | 'table' | 'kanban'
-  >('workspaces');
+  >('kanban');
   const [isSyncing, setIsSyncing] = useState(false);
 
   // Check if user is admin
