@@ -209,7 +209,7 @@ export default function AdminPage() {
           <CardDescription>Key metrics and platform statistics</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <div className="space-y-2">
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <TrendingUp className="h-4 w-4" />
@@ -224,6 +224,54 @@ export default function AdminPage() {
                   $
                   {(
                     Number(totalDepositsData.totalDeposited) / 1_000_000
+                  ).toLocaleString('en-US', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
+                </div>
+              ) : (
+                <div className="text-2xl font-bold text-gray-400">—</div>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Building2 className="h-4 w-4" />
+                <span>Value in Safes</span>
+              </div>
+              {isLoadingTotalDeposits ? (
+                <div className="text-xl font-bold text-gray-400">
+                  Loading...
+                </div>
+              ) : totalDepositsData?.breakdown ? (
+                <div className="text-2xl font-bold">
+                  $
+                  {(
+                    Number(totalDepositsData.breakdown.inSafes) / 1_000_000
+                  ).toLocaleString('en-US', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
+                </div>
+              ) : (
+                <div className="text-2xl font-bold text-gray-400">—</div>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <TrendingUp className="h-4 w-4" />
+                <span>Value in Vaults</span>
+              </div>
+              {isLoadingTotalDeposits ? (
+                <div className="text-xl font-bold text-gray-400">
+                  Loading...
+                </div>
+              ) : totalDepositsData?.breakdown ? (
+                <div className="text-2xl font-bold">
+                  $
+                  {(
+                    Number(totalDepositsData.breakdown.inVaults) / 1_000_000
                   ).toLocaleString('en-US', {
                     minimumFractionDigits: 2,
                     maximumFractionDigits: 2,

@@ -1375,6 +1375,90 @@ export const adminRouter = router({
           0n,
         );
 
+        // Get vault breakdown for this workspace
+        let vaultBreakdown: any[] = [];
+        if (safes.length > 0) {
+          try {
+            const { BASE_USDC_VAULTS } = require('@/server/earn/base-vaults');
+            const vaultAddresses = BASE_USDC_VAULTS.map(
+              (vault: any) => vault.address,
+            );
+
+            // Use the first safe for vault breakdown (typically there's only one primary Safe per workspace)
+            const primarySafe = safes[0];
+
+            const vaultStats = await Promise.all(
+              vaultAddresses.map(async (vaultAddress: string) => {
+                try {
+                  // Get deposits for this vault and workspace
+                  const vaultDeposits = earnDepositsList.filter(
+                    (d) => d.vaultAddress === vaultAddress,
+                  );
+
+                  // Get withdrawals for this vault and workspace
+                  const vaultWithdrawals =
+                    await db.query.earnWithdrawals.findMany({
+                      where: and(
+                        eq(
+                          earnWithdrawals.safeAddress,
+                          primarySafe.safeAddress,
+                        ),
+                        eq(earnWithdrawals.vaultAddress, vaultAddress),
+                        eq(earnWithdrawals.workspaceId, workspaceId),
+                      ),
+                    });
+
+                  let totalVaultDeposited = 0n;
+                  for (const deposit of vaultDeposits) {
+                    totalVaultDeposited += BigInt(deposit.assetsDeposited);
+                  }
+
+                  let totalVaultWithdrawn = 0n;
+                  for (const withdrawal of vaultWithdrawals) {
+                    totalVaultWithdrawn += BigInt(withdrawal.assetsWithdrawn);
+                  }
+
+                  const netBalance = totalVaultDeposited - totalVaultWithdrawn;
+
+                  // Find vault info from base vaults
+                  const vaultInfo = BASE_USDC_VAULTS.find(
+                    (vault: any) =>
+                      vault.address.toLowerCase() ===
+                      vaultAddress.toLowerCase(),
+                  );
+
+                  return {
+                    vaultAddress,
+                    vaultName: vaultInfo?.name || 'Unknown Vault',
+                    displayName: vaultInfo?.displayName || 'Unknown Vault',
+                    balance: netBalance.toString(),
+                    balanceUsd: Number(netBalance) / 1_000_000, // Convert from 6-decimal USDC to USD
+                  };
+                } catch (error) {
+                  console.error(
+                    `Error getting vault stats for ${vaultAddress}:`,
+                    error,
+                  );
+                  return {
+                    vaultAddress,
+                    vaultName: 'Error',
+                    displayName: 'Error',
+                    balance: '0',
+                    balanceUsd: 0,
+                  };
+                }
+              }),
+            );
+
+            // Filter out vaults with zero balance
+            vaultBreakdown = vaultStats.filter(
+              (vault) => vault.balance !== '0',
+            );
+          } catch (error) {
+            console.error('Error getting vault breakdown:', error);
+          }
+        }
+
         return {
           workspace: {
             id: workspace.id,
@@ -1420,6 +1504,7 @@ export const adminRouter = router({
             totalDeposited: totalDeposited.toString(),
             depositCount: earnDepositsList.length,
             safeCount: safes.length,
+            vaultBreakdown,
           },
         };
       } catch (error) {
@@ -1656,6 +1741,147 @@ export const adminRouter = router({
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
           message: `Failed to remove admin: ${(error as Error).message}`,
+        });
+      }
+    }),
+
+  getWorkspaceVaultBreakdown: protectedProcedure
+    .input(
+      z.object({
+        workspaceId: z.string().uuid('Invalid workspace ID'),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      if (!ctx.userId) {
+        throw new TRPCError({
+          code: 'UNAUTHORIZED',
+          message: 'User ID not found',
+        });
+      }
+      await requireAdmin(ctx.userId);
+
+      const { workspaceId } = input;
+
+      try {
+        // Get workspace info
+        const workspace = await db.query.workspaces.findFirst({
+          where: eq(workspaces.id, workspaceId),
+        });
+
+        if (!workspace) {
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'Workspace not found',
+          });
+        }
+
+        // Get primary Safe for this workspace by finding any userSafe with this workspaceId
+        const userSafe = await db.query.userSafes.findFirst({
+          where: eq(userSafes.workspaceId, workspaceId),
+        });
+
+        if (!userSafe?.safeAddress) {
+          return {
+            vaultBreakdown: [],
+            totalBalance: '0',
+            workspaceName: workspace.name,
+          };
+        }
+
+        const safeAddress = userSafe.safeAddress;
+
+        // Import base vaults to get vault list and info
+        const { BASE_USDC_VAULTS } = require('@/server/earn/base-vaults');
+        const vaultAddresses = BASE_USDC_VAULTS.map(
+          (vault: any) => vault.address,
+        );
+
+        // Get vault balances for each vault
+        const vaultStats = await Promise.all(
+          vaultAddresses.map(async (vaultAddress: string) => {
+            try {
+              // Get deposits for this vault and workspace
+              const deposits = await db.query.earnDeposits.findMany({
+                where: and(
+                  eq(earnDeposits.safeAddress, safeAddress),
+                  eq(earnDeposits.vaultAddress, vaultAddress),
+                  eq(earnDeposits.workspaceId, workspaceId),
+                ),
+              });
+
+              // Get withdrawals for this vault and workspace
+              const withdrawals = await db.query.earnWithdrawals.findMany({
+                where: and(
+                  eq(earnWithdrawals.safeAddress, safeAddress),
+                  eq(earnWithdrawals.vaultAddress, vaultAddress),
+                  eq(earnWithdrawals.workspaceId, workspaceId),
+                ),
+              });
+
+              let totalDeposited = 0n;
+              let shares = 0n;
+
+              for (const deposit of deposits) {
+                totalDeposited += BigInt(deposit.assetsDeposited);
+                shares += BigInt(deposit.sharesReceived);
+              }
+
+              let totalWithdrawn = 0n;
+              for (const withdrawal of withdrawals) {
+                totalWithdrawn += BigInt(withdrawal.assetsWithdrawn);
+                shares -= BigInt(withdrawal.sharesBurned);
+              }
+
+              const netBalance = totalDeposited - totalWithdrawn;
+
+              // Find vault info from base vaults
+              const vaultInfo = BASE_USDC_VAULTS.find(
+                (vault: any) =>
+                  vault.address.toLowerCase() === vaultAddress.toLowerCase(),
+              );
+
+              return {
+                vaultAddress,
+                vaultName: vaultInfo?.name || 'Unknown Vault',
+                displayName: vaultInfo?.displayName || 'Unknown Vault',
+                balance: netBalance.toString(),
+                shares: shares.toString(),
+              };
+            } catch (error) {
+              console.error(
+                `Error getting vault stats for ${vaultAddress}:`,
+                error,
+              );
+              return {
+                vaultAddress,
+                vaultName: 'Error',
+                displayName: 'Error',
+                balance: '0',
+                shares: '0',
+              };
+            }
+          }),
+        );
+
+        // Filter out vaults with zero balance and calculate totals
+        const nonZeroVaults = vaultStats.filter(
+          (vault) => vault.balance !== '0',
+        );
+        const totalBalance = vaultStats.reduce(
+          (sum, vault) => sum + BigInt(vault.balance),
+          0n,
+        );
+
+        return {
+          vaultBreakdown: nonZeroVaults,
+          totalBalance: totalBalance.toString(),
+          workspaceName: workspace.name,
+        };
+      } catch (error) {
+        console.error('getWorkspaceVaultBreakdown: error', error);
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: `Failed to get vault breakdown: ${(error as Error).message}`,
         });
       }
     }),
