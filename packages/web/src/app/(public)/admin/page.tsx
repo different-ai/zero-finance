@@ -39,7 +39,7 @@ export default function AdminPage() {
   const { user, authenticated, login } = usePrivy();
   const [activeView, setActiveView] = useState<
     'workspaces' | 'table' | 'kanban'
-  >('kanban');
+  >('workspaces');
   const [isSyncing, setIsSyncing] = useState(false);
 
   // Check if user is admin
@@ -342,19 +342,23 @@ export default function AdminPage() {
         }
       >
         <TabsList className="mb-6">
-          <TabsTrigger value="kanban" className="flex items-center gap-2">
-            <LayoutGrid className="h-4 w-4" />
-            KYC Kanban
-          </TabsTrigger>
           <TabsTrigger value="workspaces" className="flex items-center gap-2">
             <Building2 className="h-4 w-4" />
             Workspaces
+          </TabsTrigger>
+          <TabsTrigger value="kanban" className="flex items-center gap-2">
+            <LayoutGrid className="h-4 w-4" />
+            KYC Kanban
           </TabsTrigger>
           <TabsTrigger value="table" className="flex items-center gap-2">
             <TableIcon className="h-4 w-4" />
             Users
           </TabsTrigger>
         </TabsList>
+
+        <TabsContent value="workspaces">
+          <WorkspacesPanel />
+        </TabsContent>
 
         <TabsContent value="kanban">
           <KycKanbanBoard
@@ -363,10 +367,6 @@ export default function AdminPage() {
             onUserClick={handleUserClick}
             onRefresh={refetchUsers}
           />
-        </TabsContent>
-
-        <TabsContent value="workspaces">
-          <WorkspacesPanel />
         </TabsContent>
 
         <TabsContent value="table">

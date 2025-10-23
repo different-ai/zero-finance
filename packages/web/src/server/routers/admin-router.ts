@@ -1459,6 +1459,19 @@ export const adminRouter = router({
           }
         }
 
+        // Get virtual account details if workspace has one
+        let virtualAccount: any = null;
+        if (workspace.alignCustomerId && workspace.alignVirtualAccountId) {
+          try {
+            virtualAccount = await alignApi.getVirtualAccount(
+              workspace.alignCustomerId,
+              workspace.alignVirtualAccountId,
+            );
+          } catch (error) {
+            console.error('Error fetching virtual account details:', error);
+          }
+        }
+
         return {
           workspace: {
             id: workspace.id,
@@ -1506,6 +1519,7 @@ export const adminRouter = router({
             safeCount: safes.length,
             vaultBreakdown,
           },
+          virtualAccount,
         };
       } catch (error) {
         ctx.log.error(
