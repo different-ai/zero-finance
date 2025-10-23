@@ -28,7 +28,7 @@ export default function WorkspacesPanel() {
     data: workspaces,
     isLoading,
     refetch,
-  } = api.admin.listWorkspaces.useQuery();
+  } = api.admin.listWorkspacesWithMembers.useQuery();
 
   const { data: workspaceDetails, isLoading: isLoadingDetails } =
     api.admin.getWorkspaceDetails.useQuery(
@@ -78,7 +78,7 @@ export default function WorkspacesPanel() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {workspaces?.map((workspace) => (
+        {workspaces?.map((workspace: any) => (
           <Card
             key={workspace.id}
             className="cursor-pointer hover:shadow-md transition-shadow"
