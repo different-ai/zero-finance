@@ -63,6 +63,12 @@ export default function AdminPage() {
     retry: false,
   });
 
+  const { data: totalDepositsData, isLoading: isLoadingTotalDeposits } =
+    api.admin.getTotalDeposited.useQuery(undefined, {
+      enabled: isAdmin,
+      retry: false,
+    });
+
   const [selectedUser, setSelectedUser] = useState<any | null>(null);
   const [isUserDetailsOpen, setIsUserDetailsOpen] = useState(false);
 
@@ -209,9 +215,23 @@ export default function AdminPage() {
                 <TrendingUp className="h-4 w-4" />
                 <span>Total Deposits</span>
               </div>
-              <div className="text-2xl font-bold text-gray-400">
-                Coming Soon
-              </div>
+              {isLoadingTotalDeposits ? (
+                <div className="text-xl font-bold text-gray-400">
+                  Loading...
+                </div>
+              ) : totalDepositsData ? (
+                <div className="text-2xl font-bold">
+                  $
+                  {(
+                    Number(totalDepositsData.totalDeposited) / 1_000_000
+                  ).toLocaleString('en-US', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
+                </div>
+              ) : (
+                <div className="text-2xl font-bold text-gray-400">—</div>
+              )}
             </div>
 
             <div className="space-y-2">

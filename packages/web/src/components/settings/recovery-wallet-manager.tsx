@@ -1,57 +1,69 @@
-"use client";
+'use client';
 
 import { useState, useCallback } from 'react';
-import { Address, isAddress, encodeFunctionData, createPublicClient, http } from 'viem';
+import {
+  Address,
+  isAddress,
+  encodeFunctionData,
+  createPublicClient,
+  http,
+} from 'viem';
 import { getBaseRpcUrl } from '@/lib/base-rpc-url';
 import { base } from 'viem/chains';
 import { useSafeRelay } from '@/hooks/use-safe-relay';
+import { usePrivy } from '@privy-io/react-auth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { MetaTransactionData } from '@safe-global/safe-core-sdk-types';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, Wallet, Link2 } from 'lucide-react';
 import { api } from '@/trpc/react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
-// Placeholder ABI - Replace with actual Gnosis Safe L2 ABI if different
 const safeAbi = [
   {
-    "constant": true,
-    "inputs": [],
-    "name": "getThreshold",
-    "outputs": [
+    constant: true,
+    inputs: [],
+    name: 'getThreshold',
+    outputs: [
       {
-        "name": "",
-        "type": "uint256"
-      }
+        name: '',
+        type: 'uint256',
+      },
     ],
-    "payable": false,
-    "stateMutability": "view",
-    "type": "function"
+    payable: false,
+    stateMutability: 'view',
+    type: 'function',
   },
   {
-    "constant": false,
-    "inputs": [
+    constant: false,
+    inputs: [
       {
-        "name": "owner",
-        "type": "address"
+        name: 'owner',
+        type: 'address',
       },
       {
-        "name": "_threshold",
-        "type": "uint256"
-      }
+        name: '_threshold',
+        type: 'uint256',
+      },
     ],
-    "name": "addOwnerWithThreshold",
-    "outputs": [],
-    "payable": false,
-    "stateMutability": "nonpayable",
-    "type": "function"
-  }
-] as const; // Use 'as const' for better type inference with viem
+    name: 'addOwnerWithThreshold',
+    outputs: [],
+    payable: false,
+    stateMutability: 'nonpayable',
+    type: 'function',
+  },
+] as const;
 
-// Define RPC URL - Consider moving to a shared config or env variable access pattern
 const RPC_URL = getBaseRpcUrl();
 const publicClient = createPublicClient({
   chain: base,
@@ -62,85 +74,114 @@ interface RecoveryWalletManagerProps {
   primarySafeAddress: Address | null | undefined;
 }
 
-export function RecoveryWalletManager({ primarySafeAddress }: RecoveryWalletManagerProps) {
+export function RecoveryWalletManager({
+  primarySafeAddress,
+}: RecoveryWalletManagerProps) {
   const [recoveryAddress, setRecoveryAddress] = useState<string>('');
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
-  const { ready: isRelayReady, send: sendSponsoredTx } = useSafeRelay(primarySafeAddress ?? undefined);
+  const [inputMethod, setInputMethod] = useState<'paste' | 'connect'>('paste');
+  const { ready: isRelayReady, send: sendSponsoredTx } = useSafeRelay(
+    primarySafeAddress ?? undefined,
+  );
+  const { connectWallet, user: privyUser } = usePrivy();
 
-  // Check if current user is owner of this Safe
   const { data: safes } = api.settings.userSafes.list.useQuery();
-  const currentSafe = safes?.find((s: { safeAddress: string | null | undefined; isOwner?: boolean }) => s.safeAddress === primarySafeAddress);
-  const isOwner = currentSafe?.isOwner ?? true; // Default to true for backward compatibility
+  const currentSafe = safes?.find(
+    (s: { safeAddress: string | null | undefined; isOwner?: boolean }) =>
+      s.safeAddress === primarySafeAddress,
+  );
+  const isOwner = currentSafe?.isOwner ?? true;
+
+  const handleConnectWallet = useCallback(async () => {
+    try {
+      await connectWallet();
+      // After connecting, check for connected wallets
+      if (privyUser?.wallet?.address) {
+        setRecoveryAddress(privyUser.wallet.address);
+        toast.success('Wallet connected', {
+          description: `Address: ${privyUser.wallet.address.slice(0, 6)}...${privyUser.wallet.address.slice(-4)}`,
+        });
+      } else {
+        toast.info('Wallet connected. Please paste the address manually.');
+      }
+    } catch (error) {
+      console.error('Error connecting wallet:', error);
+      toast.error('Failed to connect wallet');
+    }
+  }, [connectWallet, privyUser]);
 
   const handleAddRecoveryWallet = useCallback(async () => {
     if (!isRelayReady || !primarySafeAddress) {
-      toast.error("Safe relay service not ready or Safe address missing.");
+      toast.error('Safe relay service not ready or Safe address missing.');
       return;
     }
     if (!isAddress(recoveryAddress)) {
-      toast.error("Invalid recovery wallet address provided.");
+      toast.error('Invalid recovery wallet address provided.');
       return;
     }
 
     setIsProcessing(true);
-    const toastId = toast.loading("Preparing transaction...");
+    const toastId = toast.loading('Preparing transaction...');
 
     try {
-      // 1. Get current threshold
-      toast.info("Fetching current Safe threshold...", { id: toastId });
+      toast.info('Fetching current Safe threshold...', { id: toastId });
       const currentThreshold = await publicClient.readContract({
         address: primarySafeAddress,
         abi: safeAbi,
         functionName: 'getThreshold',
       });
 
-      // Keep the threshold the same when adding a recovery owner
       const newThreshold = currentThreshold;
-      toast.info(`Current threshold is ${currentThreshold}. Adding owner with threshold ${newThreshold}.`, { id: toastId });
+      toast.info(
+        `Current threshold is ${currentThreshold}. Adding owner with threshold ${newThreshold}.`,
+        { id: toastId },
+      );
 
-      // 2. Encode addOwnerWithThreshold transaction data
       const txData = encodeFunctionData({
         abi: safeAbi,
         functionName: 'addOwnerWithThreshold',
         args: [recoveryAddress as Address, newThreshold],
       });
 
-      // 3. Prepare transaction for the relay hook
       const transactions: MetaTransactionData[] = [
         {
           to: primarySafeAddress,
-          value: '0', // Value is 0 for this operation
+          value: '0',
           data: txData,
         },
       ];
 
-      // 4. Send the sponsored transaction
-      toast.loading("Sending sponsored transaction via relay...", { id: toastId });
+      toast.loading('Sending sponsored transaction via relay...', {
+        id: toastId,
+      });
       const txHash = await sendSponsoredTx(transactions);
-      toast.success(`Recovery wallet addition submitted! Tx Hash: ${txHash.substring(0,10)}...`, {
-         id: toastId,
-         description: "It may take a moment to confirm onchain.",
-         action: {
+      toast.success(
+        `Recovery wallet addition submitted! Tx Hash: ${txHash.substring(0, 10)}...`,
+        {
+          id: toastId,
+          description: 'It may take a moment to confirm onchain.',
+          action: {
             label: 'View on Explorer',
-            onClick: () => window.open(`https://basescan.org/tx/${txHash}`, '_blank'),
+            onClick: () =>
+              window.open(`https://basescan.org/tx/${txHash}`, '_blank'),
           },
-       });
-      setRecoveryAddress(''); // Clear input on success
-
+        },
+      );
+      setRecoveryAddress('');
     } catch (error: any) {
-      console.error("Error adding recovery wallet:", error);
-      // Attempt to parse privy error
-      let message = "An unknown error occurred.";
-       if (error?.message) {
-         try {
-             // Privy often wraps errors in a JSON string within the message
-             const parsedError = JSON.parse(error.message.substring(error.message.indexOf('{')));
-             message = parsedError.error?.message || parsedError.message || error.message;
-         } catch (parseError) {
-             // If parsing fails, use the original message or a specific part
-              message = error.shortMessage || error.message;
-         }
-       }
+      console.error('Error adding recovery wallet:', error);
+      let message = 'An unknown error occurred.';
+      if (error?.message) {
+        try {
+          const parsedError = JSON.parse(
+            error.message.substring(error.message.indexOf('{')),
+          );
+          message =
+            parsedError.error?.message || parsedError.message || error.message;
+        } catch (parseError) {
+          message = error.shortMessage || error.message;
+        }
+      }
       toast.error(`Failed to add recovery wallet: ${message}`, { id: toastId });
     } finally {
       setIsProcessing(false);
@@ -150,26 +191,28 @@ export function RecoveryWalletManager({ primarySafeAddress }: RecoveryWalletMana
   const isLoading = isProcessing;
 
   if (!primarySafeAddress) {
-    // Don't show the card if no primary safe is detected yet,
-    // let the parent component handle loading/error states for safes.
     return null;
   }
 
-  // Show read-only message if user is not an owner
   if (!isOwner) {
     return (
-      <Card>
+      <Card className="border-[#101010]/10 shadow-[0_2px_8px_rgba(16,16,16,0.04)]">
         <CardHeader>
-          <CardTitle>Recovery Wallet</CardTitle>
-          <CardDescription>Add an additional owner wallet to your Safe.</CardDescription>
+          <CardTitle className="text-[16px] font-medium">
+            Recovery Wallet
+          </CardTitle>
+          <CardDescription className="text-[13px]">
+            Add an additional owner wallet to your Safe
+          </CardDescription>
         </CardHeader>
         <CardContent>
-          <Alert>
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>
-              You don't have permission to modify this Safe. Only Safe owners can add recovery wallets.
+          <Alert className="border-[#ef4444]/20 bg-[#ef4444]/5">
+            <AlertCircle className="h-4 w-4 text-[#ef4444]" />
+            <AlertDescription className="text-[13px] text-[#101010]/70">
+              You don't have permission to modify this Safe. Only Safe owners
+              can add recovery wallets.
               {currentSafe?.createdBy && (
-                <span className="block mt-1 text-xs text-muted-foreground">
+                <span className="block mt-1 text-[12px] text-[#101010]/60">
                   This Safe is owned by another workspace member.
                 </span>
               )}
@@ -181,32 +224,106 @@ export function RecoveryWalletManager({ primarySafeAddress }: RecoveryWalletMana
   }
 
   return (
-    <Card>
+    <Card className="border-[#101010]/10 shadow-[0_2px_8px_rgba(16,16,16,0.04)]">
       <CardHeader>
-        <CardTitle>Recovery Wallet</CardTitle>
-        <CardDescription>Add an additional owner wallet to your Safe. </CardDescription>
+        <CardTitle className="text-[16px] font-medium">
+          Add Recovery Wallet
+        </CardTitle>
+        <CardDescription className="text-[13px]">
+          Add an additional owner to your account for recovery purposes
+        </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="recovery-address">Recovery Wallet Address</Label>
-          <Input
-            id="recovery-address"
-            placeholder="0x..."
-            value={recoveryAddress}
-            onChange={(e) => setRecoveryAddress(e.target.value)}
-            disabled={isLoading}
-          />
-        </div>
+      <CardContent className="space-y-5">
+        <Tabs
+          value={inputMethod}
+          onValueChange={(v) => setInputMethod(v as 'paste' | 'connect')}
+          className="w-full"
+        >
+          <TabsList className="grid w-full grid-cols-2 h-10">
+            <TabsTrigger value="paste" className="text-[13px] gap-2">
+              <Link2 className="h-3.5 w-3.5" />
+              Paste Address
+            </TabsTrigger>
+            <TabsTrigger value="connect" className="text-[13px] gap-2">
+              <Wallet className="h-3.5 w-3.5" />
+              Connect Wallet
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="paste" className="space-y-4 mt-4">
+            <div className="space-y-2">
+              <Label
+                htmlFor="recovery-address"
+                className="text-[13px] font-medium text-[#101010]"
+              >
+                Recovery Wallet Address
+              </Label>
+              <Input
+                id="recovery-address"
+                placeholder="0x..."
+                value={recoveryAddress}
+                onChange={(e) => setRecoveryAddress(e.target.value)}
+                disabled={isLoading}
+                className="h-11 text-[13px] font-mono"
+              />
+              <p className="text-[12px] text-[#101010]/60">
+                Enter the Ethereum address you want to use as a recovery wallet
+              </p>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="connect" className="space-y-4 mt-4">
+            <div className="space-y-3">
+              <p className="text-[13px] text-[#101010]/70 leading-[1.5]">
+                Connect your recovery wallet to automatically fill in the
+                address
+              </p>
+              <Button
+                onClick={handleConnectWallet}
+                variant="outline"
+                className="w-full h-11 text-[13px] gap-2"
+                disabled={isLoading}
+              >
+                <Wallet className="h-4 w-4" />
+                Connect Wallet
+              </Button>
+              {recoveryAddress && (
+                <div className="p-3 bg-[#10b981]/5 border border-[#10b981]/20 rounded-md">
+                  <p className="text-[12px] text-[#101010]/60 mb-1">
+                    Connected Address
+                  </p>
+                  <code className="text-[12px] font-mono text-[#101010]/80 break-all">
+                    {recoveryAddress}
+                  </code>
+                </div>
+              )}
+            </div>
+          </TabsContent>
+        </Tabs>
+
         <Button
           onClick={handleAddRecoveryWallet}
-          disabled={isLoading || !isRelayReady || !recoveryAddress || !isAddress(recoveryAddress)}
+          disabled={
+            isLoading ||
+            !isRelayReady ||
+            !recoveryAddress ||
+            !isAddress(recoveryAddress)
+          }
+          className="w-full h-11 text-[13px] font-medium bg-[#1B29FF] hover:bg-[#1420CC]"
         >
           {isLoading ? 'Processing...' : 'Add Recovery Wallet'}
         </Button>
-         {!isRelayReady && primarySafeAddress && (
-           <p className="text-xs text-destructive">Relay service not available. Ensure Privy wallet is connected and the selected wallet owns the Safe.</p>
-         )}
+
+        {!isRelayReady && primarySafeAddress && (
+          <Alert className="border-[#ef4444]/20 bg-[#ef4444]/5">
+            <AlertCircle className="h-4 w-4 text-[#ef4444]" />
+            <AlertDescription className="text-[12px] text-[#101010]/70">
+              Relay service not available. Ensure Privy wallet is connected and
+              the selected wallet owns the Safe.
+            </AlertDescription>
+          </Alert>
+        )}
       </CardContent>
     </Card>
   );
-} 
+}

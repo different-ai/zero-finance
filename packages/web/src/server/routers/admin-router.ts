@@ -20,7 +20,10 @@ import {
 import { eq, and, sql } from 'drizzle-orm';
 import { customAlphabet } from 'nanoid';
 import { alignApi, AlignCustomer } from '@/server/services/align-api';
-import { getSafeBalance } from '@/server/services/safe.service';
+import {
+  getSafeBalance,
+  getBatchSafeBalances,
+} from '@/server/services/safe.service';
 
 // Custom ID generator
 const generateId = customAlphabet('1234567890abcdefghijklmnopqrstuvwxyz', 10);
@@ -123,27 +126,16 @@ export const adminRouter = router({
 
       const uniqueAddresses = Array.from(
         new Set(safes.map((s) => s.safeAddress).filter(Boolean)),
-      );
+      ) as `0x${string}`[];
 
-      const balanceResults = await Promise.all(
-        uniqueAddresses.map(async (addr) => {
-          try {
-            const bal = await getSafeBalance({
-              safeAddress: addr as `0x${string}`,
-            });
-            return bal?.raw ?? 0n;
-          } catch (err) {
-            console.error(
-              'admin.getTotalDeposited: failed to fetch balance for',
-              addr,
-              err,
-            );
-            return 0n;
-          }
-        }),
-      );
+      const balanceMap = await getBatchSafeBalances({
+        safeAddresses: uniqueAddresses,
+      });
 
-      const totalInSafes = balanceResults.reduce((acc, b) => acc + b, 0n);
+      const totalInSafes = Object.values(balanceMap).reduce(
+        (acc, balance) => acc + (balance?.raw ?? 0n),
+        0n,
+      );
 
       const grandTotal = totalInSafes + netDepositedInVaults;
 
@@ -1262,18 +1254,17 @@ export const adminRouter = router({
             .where(eq(userSafes.workspaceId, workspace.id));
 
           let totalSafeBalance = 0n;
-          for (const safe of safes) {
-            try {
-              const balance = await getSafeBalance({
-                safeAddress: safe.safeAddress as `0x${string}`,
-              });
-              totalSafeBalance += balance?.raw ?? 0n;
-            } catch (err) {
-              console.error(
-                `Failed to fetch balance for safe ${safe.safeAddress}:`,
-                err,
-              );
-            }
+          if (safes.length > 0) {
+            const safeAddresses = safes
+              .map((s) => s.safeAddress)
+              .filter(Boolean) as `0x${string}`[];
+            const balanceMap = await getBatchSafeBalances({
+              safeAddresses,
+            });
+            totalSafeBalance = Object.values(balanceMap).reduce(
+              (sum, balance) => sum + (balance?.raw ?? 0n),
+              0n,
+            );
           }
 
           const deposits = await db
