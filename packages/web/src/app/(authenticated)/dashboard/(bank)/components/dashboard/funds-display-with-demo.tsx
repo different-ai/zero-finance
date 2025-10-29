@@ -174,15 +174,15 @@ export function FundsDisplayWithDemo({
     <div className="bg-white border border-[#101010]/10">
       <div className="p-6 border-b border-[#101010]/10">
         <div className="flex items-start justify-between">
-          <div>
+          <div className="min-w-0 flex-1">
             <p className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60 mb-2">
              Withdrawable Balance
             </p>
-            <div className="font-serif tabular-nums text-[#101010]">
+            <div className="font-serif tabular-nums text-[#101010] overflow-hidden">
               {balanceDisplay.isNegative && (
                 <span className="text-[#FF4444]">-</span>
               )}
-              <span className="text-[36px] leading-[1.1]">
+              <span className="text-[16px] sm:text-[18px] leading-[1.1]">
                 ${parseInt(balanceDisplay.integer).toLocaleString()}.
                 {balanceDisplay.decimal}
               </span>

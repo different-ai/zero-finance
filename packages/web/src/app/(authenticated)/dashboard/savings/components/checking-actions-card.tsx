@@ -119,7 +119,7 @@ export function CheckingActionsCard({
           <p className="uppercase tracking-[0.16em] text-[11px] text-[#101010]/60 mb-2">
             Available Balance
           </p>
-          <p className="text-[44px] sm:text-[56px] font-semibold leading-[0.95] tabular-nums text-[#101010]">
+          <p className="text-[32px] sm:text-[40px] font-semibold leading-[0.95] tabular-nums text-[#101010]">
             {formatUsd(balanceUsd)}
           </p>
           <p className="mt-3 text-[13px] text-[#101010]/60">

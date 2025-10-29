@@ -27,11 +27,11 @@ export function PortfolioOverview({
 }: PortfolioOverviewProps) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-      <div className="bg-white border border-[#101010]/10 rounded-[12px] p-6 sm:p-8">
+      <div className="bg-white border border-[#101010]/10 rounded-[12px] p-6 sm:p-8 overflow-hidden">
         <p className="uppercase tracking-[0.16em] text-[11px] text-[#101010]/60 mb-3">
           Savings Balance
         </p>
-        <p className="font-serif text-[44px] sm:text-[56px] leading-[0.95] tabular-nums text-[#101010]">
+        <p className="font-serif text-[32px] sm:text-[40px] leading-[0.95] tabular-nums text-[#101010]">
           {formatUsd(totalSaved)}
         </p>
         <p className="mt-3 text-[13px] text-[#101010]/60">
@@ -40,11 +40,11 @@ export function PortfolioOverview({
         </p>
       </div>
 
-      <div className="bg-white border border-[#101010]/10 rounded-[12px] p-6 sm:p-8">
+      <div className="bg-white border border-[#101010]/10 rounded-[12px] p-6 sm:p-8 overflow-hidden">
         <p className="uppercase tracking-[0.16em] text-[11px] text-[#101010]/60 mb-3">
           Total Earned
         </p>
-        <p className="font-serif text-[44px] sm:text-[56px] leading-[0.95] tabular-nums text-[#1B29FF]">
+        <p className="font-serif text-[32px] sm:text-[40px] leading-[0.95] tabular-nums text-[#1B29FF]">
           {isDemoMode ? (
             <AnimatedTotalEarned
               initialEarned={animatedInitialEarned}

@@ -51,7 +51,7 @@ export function AnimatedTotalEarned({
 
   const sanitizedEarned = Math.abs(earned) < 1e-9 ? 0 : earned;
   const sign = sanitizedEarned >= 0 ? '+' : '-';
-  const amount = Math.abs(sanitizedEarned).toFixed(9);
+  const amount = Math.abs(sanitizedEarned).toFixed(2);
 
   return <span className={className}>{`${sign}$${amount}`}</span>;
 }
