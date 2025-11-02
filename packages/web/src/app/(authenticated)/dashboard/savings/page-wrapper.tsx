@@ -640,11 +640,6 @@ export default function SavingsPageWrapper({
                         <div className="flex items-start gap-2">
                           <div className="min-w-0">
                             <div className="flex flex-wrap items-center gap-2">
-                              {vault.isAuto && (
-                                <span className="px-1.5 py-0.5 bg-[#1B29FF] text-white text-[9px] uppercase tracking-wider shrink-0">
-                                  Auto
-                                </span>
-                              )}
                               <p className="text-[15px] font-medium text-[#101010] truncate">
                                 {vault.displayName || vault.name}
                               </p>
@@ -843,11 +838,6 @@ export default function SavingsPageWrapper({
                         <div className="flex items-start gap-2">
                           <div className="flex flex-col gap-1">
                             <div className="flex flex-wrap items-center gap-2">
-                              {vault.isAuto && (
-                                <span className="px-1.5 py-0.5 bg-[#1B29FF] text-white text-[9px] uppercase tracking-wider">
-                                  Auto
-                                </span>
-                              )}
                               <p className="text-[15px] font-medium text-[#101010]">
                                 {vault.displayName || vault.name}
                               </p>
