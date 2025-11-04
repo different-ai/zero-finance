@@ -79,11 +79,11 @@ export function SavingsCalculator({
       <div className="space-y-8">
         {/* Large CAD-style Input */}
         <div className="space-y-4">
-          <label className="block text-sm uppercase tracking-widest text-[#00FFFF] font-mono font-bold">
+          <label className="block text-sm uppercase tracking-widest text-[#00FF00]/70 font-mono font-bold">
             [ INPUT: IDLE_CASH_AMOUNT ]
           </label>
           <div className="relative">
-            <div className="absolute left-6 top-1/2 -translate-y-1/2 text-6xl lg:text-8xl font-black text-[#00FFFF]/30 font-mono pointer-events-none">
+            <div className="absolute left-6 top-1/2 -translate-y-1/2 text-6xl lg:text-8xl font-black text-[#00FF00]/20 font-mono pointer-events-none">
               $
             </div>
             <input
@@ -91,24 +91,24 @@ export function SavingsCalculator({
               type="text"
               value={inputValue}
               onChange={handleInputChange}
-              className="w-full bg-black border-4 border-[#00FFFF] px-24 py-8 text-6xl lg:text-8xl font-black text-[#00FFFF] font-mono tracking-tight focus:outline-none focus:border-[#FFFF00] transition-colors placeholder:text-[#00FFFF]/20"
+              className="w-full bg-black border-4 border-[#00FF00] px-24 py-8 text-6xl lg:text-8xl font-black text-[#00FF00] font-mono tracking-tight focus:outline-none focus:border-white transition-colors placeholder:text-[#00FF00]/20"
               placeholder="0"
             />
           </div>
-          <div className="text-sm text-[#00FFFF]/60 font-mono uppercase tracking-wide">
+          <div className="text-sm text-white/50 font-mono uppercase tracking-wide">
             {'>> ENTER_AMOUNT_IN_USD'}
           </div>
         </div>
 
         {/* Primary Output - Raw Amount Earned */}
-        <div className="bg-black border-4 border-[#FFFF00] p-10">
-          <div className="text-xs uppercase tracking-widest text-[#FFFF00]/70 font-mono font-bold mb-3">
+        <div className="bg-black border-4 border-white p-10">
+          <div className="text-xs uppercase tracking-widest text-white/50 font-mono font-bold mb-3">
             [ OUTPUT: ANNUAL_YIELD_DELTA ]
           </div>
-          <div className="text-7xl lg:text-9xl font-black text-[#FFFF00] font-mono tracking-tighter">
+          <div className="text-7xl lg:text-9xl font-black text-white font-mono tracking-tighter">
             {formatCurrency(yearlyDifference)}
           </div>
-          <div className="mt-4 text-lg text-[#FFFF00]/70 font-mono uppercase tracking-wide">
+          <div className="mt-4 text-lg text-white/50 font-mono uppercase tracking-wide">
             {'>> ADDITIONAL_EARNINGS_PER_YEAR'}
           </div>
         </div>
@@ -146,49 +146,49 @@ export function SavingsCalculator({
             </div>
 
             {/* Bank Row */}
-            <div className="grid grid-cols-4 border-b border-[#00FF00]/20 hover:bg-[#FF0000]/10 transition-colors">
-              <div className="p-4 border-r border-[#00FF00]/30 text-base text-[#FF0000] font-mono font-bold uppercase">
+            <div className="grid grid-cols-4 border-b border-[#00FF00]/20 hover:bg-white/5 transition-colors">
+              <div className="p-4 border-r border-[#00FF00]/30 text-base text-white/70 font-mono font-bold uppercase">
                 BANK_AVG
               </div>
-              <div className="p-4 border-r border-[#00FF00]/30 text-xl text-[#FF0000] font-mono text-right tabular-nums">
+              <div className="p-4 border-r border-[#00FF00]/30 text-xl text-white/70 font-mono text-right tabular-nums">
                 {bankRate}%
               </div>
-              <div className="p-4 border-r border-[#00FF00]/30 text-xl text-[#FF0000] font-mono text-right tabular-nums">
+              <div className="p-4 border-r border-[#00FF00]/30 text-xl text-white/70 font-mono text-right tabular-nums">
                 {formatCurrency(yearlyBankReturn)}
               </div>
-              <div className="p-4 text-base text-[#FF0000]/70 font-mono text-right tabular-nums">
+              <div className="p-4 text-base text-white/50 font-mono text-right tabular-nums">
                 {formatCurrency(yearlyBankReturn / 12)}
               </div>
             </div>
 
             {/* Zero Row */}
-            <div className="grid grid-cols-4 border-b border-[#00FF00]/20 hover:bg-[#00FFFF]/10 transition-colors">
-              <div className="p-4 border-r border-[#00FF00]/30 text-base text-[#00FFFF] font-mono font-bold uppercase">
+            <div className="grid grid-cols-4 border-b border-[#00FF00]/20 hover:bg-[#00FF00]/5 transition-colors">
+              <div className="p-4 border-r border-[#00FF00]/30 text-base text-[#00FF00] font-mono font-bold uppercase">
                 ZERO_FINANCE
               </div>
-              <div className="p-4 border-r border-[#00FF00]/30 text-xl text-[#00FFFF] font-mono text-right tabular-nums">
+              <div className="p-4 border-r border-[#00FF00]/30 text-xl text-[#00FF00] font-mono text-right tabular-nums">
                 {zeroRate}%
               </div>
-              <div className="p-4 border-r border-[#00FF00]/30 text-xl text-[#00FFFF] font-mono text-right tabular-nums">
+              <div className="p-4 border-r border-[#00FF00]/30 text-xl text-[#00FF00] font-mono text-right tabular-nums">
                 {formatCurrency(yearlyZeroReturn)}
               </div>
-              <div className="p-4 text-base text-[#00FFFF]/70 font-mono text-right tabular-nums">
+              <div className="p-4 text-base text-[#00FF00]/70 font-mono text-right tabular-nums">
                 {formatCurrency(yearlyZeroReturn / 12)}
               </div>
             </div>
 
             {/* Delta Row (highlighted) */}
-            <div className="grid grid-cols-4 bg-[#FFFF00]/20 border-2 border-[#FFFF00]">
-              <div className="p-4 border-r border-[#FFFF00]/50 text-base text-[#FFFF00] font-mono font-bold uppercase">
+            <div className="grid grid-cols-4 bg-white/10 border-2 border-white">
+              <div className="p-4 border-r border-white/50 text-base text-white font-mono font-bold uppercase">
                 {'>> DELTA'}
               </div>
-              <div className="p-4 border-r border-[#FFFF00]/50 text-xl text-[#FFFF00] font-mono text-right tabular-nums font-bold">
+              <div className="p-4 border-r border-white/50 text-xl text-white font-mono text-right tabular-nums font-bold">
                 +{zeroRate - bankRate}%
               </div>
-              <div className="p-4 border-r border-[#FFFF00]/50 text-xl text-[#FFFF00] font-mono text-right tabular-nums font-bold">
+              <div className="p-4 border-r border-white/50 text-xl text-white font-mono text-right tabular-nums font-bold">
                 +{formatCurrency(yearlyDifference)}
               </div>
-              <div className="p-4 text-base text-[#FFFF00] font-mono text-right tabular-nums font-bold">
+              <div className="p-4 text-base text-white font-mono text-right tabular-nums font-bold">
                 +{formatCurrency(yearlyDifference / 12)}
               </div>
             </div>
