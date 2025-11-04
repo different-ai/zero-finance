@@ -10,17 +10,22 @@
   },
   "dependencies": {
     "@radix-ui/react-slider": "^1.2.4",
+    "@react-three/drei": "^10.7.6",
+    "@react-three/fiber": "9.0.0-alpha.8",
+    "@react-three/postprocessing": "^3.0.4",
     "clsx": "^2.1.1",
     "lucide-react": "^0.399.0",
-    "next": "15.0.0",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0",
-    "tailwind-merge": "^2.3.0"
+    "next": "catalog:",
+    "postprocessing": "^6.35.0",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "tailwind-merge": "^2.3.0",
+    "three": "^0.164.1"
   },
   "devDependencies": {
     "@types/node": "^20",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
     "autoprefixer": "^10.4.19",
     "eslint": "^8",
     "eslint-config-next": "15.0.0",

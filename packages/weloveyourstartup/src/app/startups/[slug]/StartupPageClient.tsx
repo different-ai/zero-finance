@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef, useMemo, Suspense } from "react";
+import React, { useRef, useMemo, Suspense, useState, useEffect } from "react";
 import { Canvas, useFrame, extend } from "@react-three/fiber";
 import { useGLTF, PerspectiveCamera, shaderMaterial } from "@react-three/drei";
 import { EffectComposer, Bloom, ChromaticAberration, Noise } from "@react-three/postprocessing";
@@ -205,7 +205,55 @@ interface StartupPageClientProps {
   company: Company;
 }
 
+// Section definitions for navigation
+const SECTIONS = [
+  { id: 'company', label: 'COMPANY', color: '#00FFFF' },
+  { id: 'mission', label: 'MISSION', color: '#00FF00' },
+  { id: 'funding', label: 'FUNDING', color: '#FFFF00' },
+  { id: 'team', label: 'TEAM', color: '#00FFFF' },
+  { id: 'zero', label: 'ZERO_FINANCE', color: '#FF00FF' },
+] as const;
+
 export function StartupPageClient({ company }: StartupPageClientProps) {
+  const [activeSection, setActiveSection] = useState('company');
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Detect mobile vs desktop
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 1024);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  // Track active section on scroll (mobile) or by click (desktop)
+  useEffect(() => {
+    if (isMobile) {
+      const handleScroll = () => {
+        const sections = SECTIONS.map(s => document.getElementById(s.id));
+        const scrollPosition = window.scrollY + window.innerHeight / 2;
+
+        for (let i = sections.length - 1; i >= 0; i--) {
+          const section = sections[i];
+          if (section && section.offsetTop <= scrollPosition) {
+            setActiveSection(SECTIONS[i].id);
+            break;
+          }
+        }
+      };
+
+      window.addEventListener('scroll', handleScroll);
+      return () => window.removeEventListener('scroll', handleScroll);
+    }
+  }, [isMobile]);
+
+  const navigateToSection = (sectionId: string) => {
+    setActiveSection(sectionId);
+    const element = document.getElementById(sectionId);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
 
   const formatCurrency = (value: number) => {
     if (value >= 1000000) {
@@ -307,300 +355,360 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
   };
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: '#000000' }}>
+    <div className="min-h-screen relative" style={{ backgroundColor: '#000000' }}>
       <CRTEffect />
 
-      {/* Single Scroll Flow - Text + 3D Mixed */}
-      <div className="max-w-6xl mx-auto px-8 py-16 space-y-24">
-
-        {/* Hero Section with Model */}
-        <section className="space-y-8">
-          {company.logo && (
-            <img
-              src={company.logo}
-              alt={company.name}
-              className="h-12 w-auto opacity-80"
-            />
-          )}
-
-          <div className="inline-block px-2 py-0.5 bg-black border border-[#00FF00] text-[11px] text-[#00FF00] mb-4 font-mono font-bold uppercase tracking-wider">
-            CATEGORY: {company.category.toUpperCase()}
-          </div>
-
-          <h1 className="text-8xl lg:text-9xl font-black tracking-tight leading-none max-w-5xl uppercase font-mono"
-            style={{
-              color: '#00FFFF',
-              letterSpacing: '0.05em'
-            }}>
-            {company.name.toUpperCase()}
-          </h1>
-
-          <p className="text-xl lg:text-2xl font-mono max-w-4xl tracking-wide uppercase font-bold text-[#00FF00]/80 mt-4">
-            // {company.tagline.toUpperCase()}
-          </p>
-
-          {/* First 3D Model - Shuttle */}
-          <Model3D modelIndex={0} />
-
-          <div className="max-w-4xl">
-            <div className="text-base font-mono font-bold uppercase tracking-wider text-[#00FFFF] mb-4">
-              DESCRIPTION:
+      {/* AutoCAD-style Right Sidebar Navigation (desktop only) */}
+      {!isMobile && (
+        <div
+          className="fixed right-0 top-0 h-screen w-64 bg-[#0000AA] border-l-2 border-[#00FFFF] z-50 flex flex-col"
+          style={{ fontFamily: 'monospace' }}
+        >
+          {/* Header */}
+          <div className="border-b-2 border-[#00FFFF] p-4 bg-[#0000AA]">
+            <div className="text-[#FFFFFF] text-sm font-bold uppercase tracking-widest">
+              ACAD_INTERFACE
             </div>
-            <p className="text-xl lg:text-2xl text-white/90 leading-relaxed font-mono">
-              {company.description}
-            </p>
+            <div className="text-[#00FF00] text-xs mt-1 uppercase tracking-wide">
+              WE_LOVE_YOUR_STARTUP
+            </div>
           </div>
 
-          <div className="flex flex-wrap gap-3">
-            {company.website && (
-              <a
-                href={company.website}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="px-8 py-4 bg-[#00FF00] text-black font-mono font-bold text-base uppercase tracking-wider hover:bg-[#00FFFF] transition-all"
-              >
-                [LINK: WEBSITE]
-              </a>
-            )}
-            {company.twitter && (
-              <a
-                href={company.twitter}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="px-8 py-4 border-2 border-[#00FFFF] text-[#00FFFF] font-mono font-bold text-base uppercase tracking-wider hover:bg-[#00FFFF]/10 transition-all"
-              >
-                [LINK: TWITTER/X]
-              </a>
-            )}
-          </div>
-        </section>
-
-        {/* Funding Stats */}
-        <section className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-4xl">
-          <div className="bg-black border-2 border-[#00FFFF] p-8">
-            <p className="text-base uppercase tracking-widest text-[#00FFFF] mb-4 font-mono font-bold">
-              [ DATA: FUNDING_AMOUNT ]
-            </p>
-            <p className="text-5xl lg:text-6xl font-black text-[#00FFFF] font-mono tracking-tight">
-              {formatCurrency(company.funding.amount)}
-            </p>
-            <p className="text-base text-[#00FFFF]/70 mt-4 font-mono uppercase tracking-wide">
-              {company.funding.round} / {company.funding.date}
-            </p>
-          </div>
-          <div className="bg-black border-2 border-[#FFFF00] p-8">
-            <p className="text-base uppercase tracking-widest text-[#FFFF00] mb-4 font-mono font-bold">
-              [ CALC: POTENTIAL_YIELD ]
-            </p>
-            <p className="text-5xl lg:text-6xl font-black text-[#FFFF00] font-mono tracking-tight">
-              +{formatCurrency(calculateSavings(company.funding.amount))}
-            </p>
-            <p className="text-base text-[#FFFF00]/70 mt-4 font-mono uppercase tracking-wide">
-              ANNUAL @ 8% APY
-            </p>
-          </div>
-        </section>
-
-        {/* Mission Section with Second Model */}
-        <section className="space-y-6">
-          <div className="text-base uppercase tracking-widest text-[#FF00FF] font-mono font-bold">
-            {'>> SECTION_02: MISSION'}
+          {/* Section Navigation */}
+          <div className="flex-1 overflow-y-auto">
+            <div className="p-2">
+              <div className="text-[#00FFFF] text-xs font-bold uppercase tracking-wider mb-2 px-2">
+                [ SECTIONS ]
+              </div>
+              {SECTIONS.map((section, index) => (
+                <button
+                  key={section.id}
+                  onClick={() => navigateToSection(section.id)}
+                  className={`w-full text-left px-3 py-3 mb-1 font-mono text-sm uppercase tracking-wide transition-all ${
+                    activeSection === section.id
+                      ? 'bg-[#00FFFF] text-[#0000AA] font-bold'
+                      : 'text-[#FFFFFF] hover:bg-[#FFFFFF]/10'
+                  }`}
+                  style={{
+                    borderLeft: activeSection === section.id ? `4px solid ${section.color}` : '4px solid transparent',
+                  }}
+                >
+                  {String(index + 1).padStart(2, '0')} {section.label}
+                </button>
+              ))}
+            </div>
           </div>
 
-          <div className="flex flex-col lg:flex-row gap-8 items-start">
-            <div className="flex-1 space-y-6">
-              <h2 className="text-6xl lg:text-7xl font-black uppercase font-mono tracking-wide"
+          {/* Footer Info */}
+          <div className="border-t-2 border-[#00FFFF] p-4 bg-[#0000AA]">
+            <div className="text-[#00FF00] text-xs uppercase tracking-wide">
+              Orden: _navigate
+            </div>
+            <div className="text-[#FFFFFF]/60 text-xs mt-1">
+              VIEWPORT: {activeSection.toUpperCase()}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Main Content - Full-screen sections on desktop, scrollable on mobile */}
+      <div className={`${!isMobile ? 'lg:pr-64' : ''}`}>
+        <div className={`${!isMobile ? '' : 'max-w-6xl mx-auto px-8 py-16 space-y-24'}`}>
+
+          {/* SECTION 1: COMPANY */}
+          <section
+            id="company"
+            className={`${!isMobile ? 'min-h-screen' : ''} flex flex-col justify-center ${!isMobile ? 'px-16 py-16' : 'space-y-8'}`}
+          >
+            <div className="max-w-5xl">
+              <div className="text-xs uppercase tracking-widest text-[#FF00FF] font-mono font-bold mb-8">
+                {'>> SECTION_01: COMPANY'}
+              </div>
+
+              {company.logo && (
+                <img
+                  src={company.logo}
+                  alt={company.name}
+                  className="h-16 w-auto opacity-80 mb-8 border-2 border-[#00FFFF]"
+                />
+              )}
+
+              <div className="inline-block px-3 py-1 bg-black border-2 border-[#00FF00] text-sm text-[#00FF00] mb-8 font-mono font-bold uppercase tracking-wider">
+                CATEGORY: {company.category.toUpperCase()}
+              </div>
+
+              <h1 className="text-8xl lg:text-9xl font-black tracking-tight leading-none uppercase font-mono mb-6"
                 style={{
-                  color: '#00FFFF'
+                  color: '#00FFFF',
+                  letterSpacing: '0.05em'
                 }}>
-                WHAT_THEY'RE_BUILDING
-              </h2>
+                {company.name.toUpperCase()}
+              </h1>
 
-              {company.whyWeLoveThem && (
-                <div className="bg-black border-2 border-[#00FFFF] p-8">
-                  <p className="text-base uppercase tracking-wider text-[#00FFFF] font-bold mb-4 font-mono">
-                    [ NOTE: WHY_WE_LOVE_{company.name.toUpperCase().replace(/\s+/g, '_')} ]
-                  </p>
-                  <p className="text-white/90 leading-relaxed text-xl lg:text-2xl font-mono">
-                    {company.whyWeLoveThem}
-                  </p>
+              <p className="text-2xl lg:text-3xl font-mono max-w-4xl tracking-wide uppercase font-bold text-[#00FF00] mb-10">
+                // {company.tagline.toUpperCase()}
+              </p>
+
+              <div className="mb-10">
+                <div className="text-sm font-mono font-bold uppercase tracking-wider text-[#FFFF00] mb-3">
+                  [ DESCRIPTION ]
+                </div>
+                <p className="text-xl lg:text-2xl text-white/90 leading-relaxed font-mono max-w-3xl">
+                  {company.description}
+                </p>
+              </div>
+
+              <div className="flex flex-wrap gap-4">
+                {company.website && (
+                  <a
+                    href={company.website}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-10 py-5 bg-[#00FF00] text-black font-mono font-bold text-lg uppercase tracking-wider hover:bg-[#00FFFF] transition-all"
+                  >
+                    [LINK: WEBSITE]
+                  </a>
+                )}
+                {company.twitter && (
+                  <a
+                    href={company.twitter}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-10 py-5 border-2 border-[#00FFFF] text-[#00FFFF] font-mono font-bold text-lg uppercase tracking-wider hover:bg-[#00FFFF]/10 transition-all"
+                  >
+                    [LINK: TWITTER/X]
+                  </a>
+                )}
+              </div>
+            </div>
+          </section>
+
+          {/* SECTION 2: MISSION */}
+          <section
+            id="mission"
+            className={`${!isMobile ? 'min-h-screen' : ''} flex flex-col justify-center ${!isMobile ? 'px-16 py-16' : 'space-y-6'}`}
+          >
+            <div className="text-xs uppercase tracking-widest text-[#FF00FF] font-mono font-bold mb-8">
+              {'>> SECTION_02: MISSION'}
+            </div>
+
+            <div className="flex flex-col lg:flex-row gap-12 items-start">
+              <div className="flex-1 space-y-8 max-w-3xl">
+                <h2 className="text-6xl lg:text-7xl font-black uppercase font-mono tracking-wide"
+                  style={{ color: '#00FFFF' }}>
+                  WHAT_THEY'RE_BUILDING
+                </h2>
+
+                {company.whyWeLoveThem && (
+                  <div className="bg-black border-2 border-[#00FFFF] p-10">
+                    <p className="text-sm uppercase tracking-wider text-[#00FFFF] font-bold mb-6 font-mono">
+                      [ NOTE: WHY_WE_LOVE_{company.name.toUpperCase().replace(/\s+/g, '_')} ]
+                    </p>
+                    <p className="text-white/90 leading-relaxed text-xl lg:text-2xl font-mono">
+                      {company.whyWeLoveThem}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* 3D Model - Apollo Soyuz - on right */}
+              {!isMobile && (
+                <div className="w-full lg:w-[450px] h-[450px] flex-shrink-0">
+                  <div className="w-full h-full relative border-t border-b border-[#00FF00]" style={{ backgroundColor: '#000000' }}>
+                    <Canvas
+                      camera={{ position: [0, 0, 15], fov: 75 }}
+                      dpr={[1, 1.5]}
+                      performance={{ min: 0.5 }}
+                      style={{ backgroundColor: '#000000' }}
+                    >
+                      <PerspectiveCamera makeDefault position={[0, 0, 15]} fov={75} />
+                      <ambientLight intensity={0.2} />
+                      <directionalLight position={[5, 5, 5]} intensity={0.4} />
+                      <Suspense fallback={null}>
+                        <WireframeRocket
+                          scrollProgress={1 / 3}
+                          rotation={{ x: -1.2, y: 0, z: -0.5 }}
+                          scale={0.7}
+                          position={{ x: 0, y: 0, z: 12.0 }}
+                        />
+                      </Suspense>
+                      <EffectComposer>
+                        <primitive object={new DitherWaveEffect()} />
+                        <Bloom intensity={0.4} luminanceThreshold={0.8} radius={0.2} />
+                      </EffectComposer>
+                    </Canvas>
+                  </div>
                 </div>
               )}
             </div>
+          </section>
 
-            {/* Second 3D Model - Apollo Soyuz - smaller on right */}
-            <div className="w-full lg:w-[400px] h-[400px] flex-shrink-0">
-              <div className="w-full h-full relative border-t border-b border-[#00FF00]" style={{ backgroundColor: '#000000' }}>
-                <Canvas
-                  camera={{ position: [0, 0, 15], fov: 75 }}
-                  dpr={[1, 1.5]}
-                  performance={{ min: 0.5 }}
-                  style={{ backgroundColor: '#000000' }}
-                >
-                  <PerspectiveCamera makeDefault position={[0, 0, 15]} fov={75} />
-                  <ambientLight intensity={0.2} />
-                  <directionalLight position={[5, 5, 5]} intensity={0.4} />
-                  <Suspense fallback={null}>
-                    <WireframeRocket
-                      scrollProgress={1 / 3}
-                      rotation={{ x: -1.2, y: 0, z: -0.5 }}
-                      scale={0.7}
-                      position={{ x: 0, y: 0, z: 12.0 }}
-                    />
-                  </Suspense>
-                  <EffectComposer>
-                    <primitive object={new DitherWaveEffect()} />
-                    <Bloom intensity={0.4} luminanceThreshold={0.8} radius={0.2} />
-                  </EffectComposer>
-                </Canvas>
+          {/* SECTION 3: FUNDING */}
+          <section
+            id="funding"
+            className={`${!isMobile ? 'min-h-screen' : ''} flex flex-col justify-center ${!isMobile ? 'px-16 py-16' : 'space-y-6'}`}
+          >
+            <div className="text-xs uppercase tracking-widest text-[#FF00FF] font-mono font-bold mb-8">
+              {'>> SECTION_03: FUNDING'}
+            </div>
+
+            <h2 className="text-6xl lg:text-7xl font-black uppercase font-mono tracking-wide mb-10"
+              style={{ color: '#FFFF00' }}>
+              CAPITAL_RAISED
+            </h2>
+
+            <div className="max-w-3xl">
+              <div className="bg-black border-3 border-[#00FFFF] p-10 border-2">
+                <p className="text-sm uppercase tracking-widest text-[#00FFFF] mb-6 font-mono font-bold">
+                  [ DATA: FUNDING_AMOUNT ]
+                </p>
+                <p className="text-6xl lg:text-7xl font-black text-[#00FFFF] font-mono tracking-tight mb-4">
+                  {formatCurrency(company.funding.amount)}
+                </p>
+                <p className="text-lg text-[#00FFFF]/70 font-mono uppercase tracking-wide">
+                  {company.funding.round} / {company.funding.date}
+                </p>
               </div>
             </div>
-          </div>
-        </section>
+          </section>
 
-        {/* Team Section with Third Model */}
-        <section className="space-y-6">
-          <div className="text-base uppercase tracking-widest text-[#FF00FF] font-mono font-bold">
-            {'>> SECTION_03: TEAM'}
-          </div>
+          {/* SECTION 4: TEAM */}
+          <section
+            id="team"
+            className={`${!isMobile ? 'min-h-screen' : ''} flex flex-col justify-center ${!isMobile ? 'px-16 py-16' : 'space-y-6'}`}
+          >
+            <div className="text-xs uppercase tracking-widest text-[#FF00FF] font-mono font-bold mb-8">
+              {'>> SECTION_04: TEAM'}
+            </div>
 
-          <div className="flex flex-col lg:flex-row gap-8 items-start">
-            <div className="flex-1 space-y-6">
-              <h2 className="text-6xl lg:text-7xl font-black uppercase font-mono tracking-wide"
-                style={{
-                  color: '#00FFFF'
-                }}>
-                THE_BRILLIANT_MINDS
+            <div className="flex flex-col lg:flex-row gap-12 items-start">
+              <div className="flex-1 space-y-8">
+                <h2 className="text-6xl lg:text-7xl font-black uppercase font-mono tracking-wide"
+                  style={{ color: '#00FFFF' }}>
+                  THE_BRILLIANT_MINDS
+                </h2>
+
+                <div className="space-y-5 max-w-2xl">
+                  {company.founders.map((founder, index) => (
+                    <a
+                      key={founder.id}
+                      href={founder.twitter}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-6 p-8 bg-black border-2 border-[#00FF00] hover:bg-[#00FF00]/10 hover:border-[#00FFFF] transition-all group"
+                    >
+                      {founder.avatar && (
+                        <Image
+                          src={founder.avatar}
+                          alt={founder.name}
+                          width={70}
+                          height={70}
+                          className="border-2 border-[#00FF00] group-hover:border-[#00FFFF] transition-all"
+                        />
+                      )}
+                      <div className="flex-1">
+                        <div className="text-xs font-mono font-bold uppercase tracking-wider text-[#00FF00]/70 mb-2">
+                          MEMBER_{(index + 1).toString().padStart(2, '0')}
+                        </div>
+                        <h3 className="text-2xl lg:text-3xl font-black text-white group-hover:text-[#00FFFF] transition-colors font-mono uppercase tracking-wide">
+                          {founder.name.toUpperCase()}
+                        </h3>
+                        <p className="text-[#00FF00] mt-2 text-lg font-mono uppercase tracking-wide">
+                          ROLE: {founder.role.toUpperCase()}
+                        </p>
+                      </div>
+                      <span className="text-2xl opacity-0 group-hover:opacity-100 transition-opacity text-[#00FFFF] font-mono">
+                        [→]
+                      </span>
+                    </a>
+                  ))}
+                </div>
+              </div>
+
+              {/* 3D Model - Space Suit - on right */}
+              {!isMobile && (
+                <div className="w-full lg:w-[450px] h-[450px] flex-shrink-0">
+                  <div className="w-full h-full relative border-t border-b border-[#00FF00]" style={{ backgroundColor: '#000000' }}>
+                    <Canvas
+                      camera={{ position: [0, 0, 15], fov: 75 }}
+                      dpr={[1, 1.5]}
+                      performance={{ min: 0.5 }}
+                      style={{ backgroundColor: '#000000' }}
+                    >
+                      <PerspectiveCamera makeDefault position={[0, 0, 15]} fov={75} />
+                      <ambientLight intensity={0.2} />
+                      <directionalLight position={[5, 5, 5]} intensity={0.4} />
+                      <Suspense fallback={null}>
+                        <WireframeRocket
+                          scrollProgress={2 / 3}
+                          rotation={{ x: -1.2, y: 0, z: -0.5 }}
+                          scale={0.7}
+                          position={{ x: 0, y: 0, z: 12.0 }}
+                        />
+                      </Suspense>
+                      <EffectComposer>
+                        <primitive object={new HologramEffect()} />
+                        <Bloom intensity={1.2} luminanceThreshold={0.5} radius={0.5} />
+                      </EffectComposer>
+                    </Canvas>
+                  </div>
+                </div>
+              )}
+            </div>
+          </section>
+
+          {/* SECTION 5: ZERO_FINANCE (Separate Plug/Shill) */}
+          <section
+            id="zero"
+            className={`${!isMobile ? 'min-h-screen' : ''} flex flex-col justify-center ${!isMobile ? 'px-16 py-16' : 'space-y-8 pb-32'}`}
+          >
+            <div className="text-xs uppercase tracking-widest text-[#FF00FF] font-mono font-bold mb-8">
+              {'>> SECTION_05: ZERO_FINANCE'}
+            </div>
+
+            <div className="max-w-4xl space-y-10">
+              <h2 className="text-6xl lg:text-8xl font-black text-[#FF00FF] uppercase font-mono tracking-tighter leading-tight">
+                MAXIMIZE_YOUR_RUNWAY
               </h2>
 
-              <div className="space-y-4">
-                {company.founders.map((founder, index) => (
-                  <a
-                    key={founder.id}
-                    href={founder.twitter}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-6 p-6 bg-black border-2 border-[#00FF00] hover:bg-[#00FF00]/10 hover:border-[#00FFFF] transition-all group"
-                  >
-                    {founder.avatar && (
-                      <Image
-                        src={founder.avatar}
-                        alt={founder.name}
-                        width={60}
-                        height={60}
-                        className="border-2 border-[#00FF00] group-hover:border-[#00FFFF] transition-all"
-                      />
-                    )}
-                    <div className="flex-1">
-                      <div className="text-sm font-mono font-bold uppercase tracking-wider text-[#00FF00]/70 mb-2">
-                        MEMBER_{(index + 1).toString().padStart(2, '0')}
-                      </div>
-                      <h3 className="text-2xl lg:text-3xl font-black text-white group-hover:text-[#00FFFF] transition-colors font-mono uppercase tracking-wide">
-                        {founder.name.toUpperCase()}
-                      </h3>
-                      <p className="text-[#00FF00]/80 mt-2 text-base font-mono uppercase tracking-wide">
-                        ROLE: {founder.role.toUpperCase()}
-                      </p>
-                    </div>
-                    <span className="text-xl opacity-0 group-hover:opacity-100 transition-opacity text-[#00FFFF] font-mono">
-                      [→]
-                    </span>
-                  </a>
-                ))}
-              </div>
-            </div>
-
-            {/* Third 3D Model - Space Suit - smaller on right */}
-            <div className="w-full lg:w-[400px] h-[400px] flex-shrink-0">
-              <div className="w-full h-full relative border-t border-b border-[#00FF00]" style={{ backgroundColor: '#000000' }}>
-                <Canvas
-                  camera={{ position: [0, 0, 15], fov: 75 }}
-                  dpr={[1, 1.5]}
-                  performance={{ min: 0.5 }}
-                  style={{ backgroundColor: '#000000' }}
+              <div className="bg-black border-2 border-[#00FF00] p-10">
+                <p className="text-white/90 text-xl lg:text-2xl font-mono leading-relaxed mb-8">
+                  Zero Finance helps startups like {company.name} stay leaner, move faster, and hire more by giving them access to banking with double the yield of traditional banks. The funds are insured, always withdrawable, and soon instantly spendable with our new corporate card.
+                </p>
+                <Link
+                  href="https://0.finance"
+                  className="inline-block px-8 py-4 bg-[#00FF00] text-black font-bold font-mono uppercase tracking-wider hover:bg-[#00FFFF] transition-all text-base border-2 border-[#00FF00] hover:border-[#00FFFF]"
                 >
-                  <PerspectiveCamera makeDefault position={[0, 0, 15]} fov={75} />
-                  <ambientLight intensity={0.2} />
-                  <directionalLight position={[5, 5, 5]} intensity={0.4} />
-                  <Suspense fallback={null}>
-                    <WireframeRocket
-                      scrollProgress={2 / 3}
-                      rotation={{ x: -1.2, y: 0, z: -0.5 }}
-                      scale={0.7}
-                      position={{ x: 0, y: 0, z: 12.0 }}
-                    />
-                  </Suspense>
-                  <EffectComposer>
-                    <primitive object={new HologramEffect()} />
-                    <Bloom intensity={1.2} luminanceThreshold={0.5} radius={0.5} />
-                  </EffectComposer>
-                </Canvas>
+                  [ LEARN_HOW ]
+                </Link>
+              </div>
+
+              <div className="space-y-6">
+                <p className="text-xl lg:text-2xl text-[#00FFFF] font-mono uppercase tracking-wide">
+                  This is how much they could save if they put:
+                </p>
+
+                <SavingsCalculator defaultAmount={company.funding.amount} />
+              </div>
+
+              <div className="flex flex-col sm:flex-row gap-5">
+                <Link
+                  href="https://0.finance"
+                  className="flex-1 text-center px-12 py-6 bg-[#00FF00] text-black font-bold font-mono uppercase tracking-wider hover:bg-[#00FFFF] transition-all text-lg border-2 border-[#00FF00] hover:border-[#00FFFF]"
+                >
+                  [ ACTION: START_EARNING_8%_APY ]
+                </Link>
+                <Link
+                  href="/"
+                  className="text-center px-12 py-6 border-2 border-[#00FFFF] text-[#00FFFF] font-mono font-bold uppercase tracking-wider hover:bg-[#00FFFF]/10 transition-all text-lg"
+                >
+                  [ RETURN: BROWSE_MORE_STARTUPS ]
+                </Link>
               </div>
             </div>
-          </div>
-        </section>
+          </section>
 
-        {/* Potential Section with Fourth Model */}
-        <section className="space-y-8 pb-32">
-          <div className="text-base uppercase tracking-widest text-[#FF00FF] font-mono font-bold">
-            {'>> SECTION_04: POTENTIAL'}
-          </div>
-          <h2 className="text-6xl lg:text-8xl font-black text-[#00FFFF] max-w-4xl uppercase font-mono tracking-tighter leading-tight">
-            MAXIMIZE_YOUR_RUNWAY
-          </h2>
-          <p className="text-[#00FF00]/80 text-xl lg:text-2xl max-w-4xl font-mono uppercase tracking-wide">
-            [ ANALYSIS: {company.name.toUpperCase()}_YIELD_PROJECTION @ 8% APY ]
-          </p>
-
-          {/* Fourth 3D Model - ISS */}
-          <Model3D modelIndex={3} />
-
-          <div className="bg-black border-2 border-[#00FF00] p-10 max-w-3xl">
-            <SavingsCalculator defaultAmount={company.funding.amount} />
-          </div>
-
-          <div className="bg-black border-2 border-[#FFFF00] p-8 max-w-3xl">
-            <p className="text-base font-bold text-[#FFFF00] mb-6 uppercase font-mono tracking-wider">
-              [ OUTPUT: YIELD_EQUIVALENTS @ {formatCurrency(company.funding.amount)} CAPITAL ]
-            </p>
-            <ul className="space-y-4 text-white/90 text-lg lg:text-xl font-mono">
-              <li className="flex items-start gap-4">
-                <span className="text-[#00FFFF] font-bold text-xl">{'>'}</span>
-                <span className="uppercase">
-                  COFFEE_BUDGET: {Math.floor(calculateMonthlyYield(company.funding.amount) / 5).toLocaleString()} UNITS/MONTH
-                </span>
-              </li>
-              <li className="flex items-start gap-4">
-                <span className="text-[#00FFFF] font-bold text-xl">{'>'}</span>
-                <span className="uppercase">
-                  MACBOOK_UNITS: {Math.floor(calculateSavings(company.funding.amount) / 3000)} DEVICES/YEAR
-                </span>
-              </li>
-              <li className="flex items-start gap-4">
-                <span className="text-[#00FFFF] font-bold text-xl">{'>'}</span>
-                <span className="uppercase">
-                  TEAM_RETREATS: {Math.floor(calculateMonthlyYield(company.funding.amount) / 5000)} EVENTS/MONTH
-                </span>
-              </li>
-            </ul>
-          </div>
-
-          <div className="flex flex-col sm:flex-row gap-4 max-w-3xl">
-            <Link
-              href="https://0.finance"
-              className="flex-1 text-center px-10 py-6 bg-[#00FF00] text-black font-bold font-mono uppercase tracking-wider hover:bg-[#00FFFF] transition-all text-base lg:text-lg border-2 border-[#00FF00] hover:border-[#00FFFF]"
-            >
-              [ ACTION: START_EARNING_8%_APY ]
-            </Link>
-            <Link
-              href="/"
-              className="text-center px-10 py-6 border-2 border-[#00FF00] text-[#00FF00] font-mono font-bold uppercase tracking-wider hover:bg-[#00FF00]/10 transition-all text-base lg:text-lg"
-            >
-              [ RETURN: BROWSE_MORE ]
-            </Link>
-          </div>
-        </section>
-
+        </div>
       </div>
     </div>
   );
