@@ -489,19 +489,19 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
                 <div className="w-full lg:w-[450px] h-[450px] flex-shrink-0">
                   <div className="w-full h-full relative border-t border-b border-[#00FF00]" style={{ backgroundColor: '#000000' }}>
                     <Canvas
-                      camera={{ position: [0, 0, 100], fov: 75 }}
+                      camera={{ position: [0, 0, 140], fov: 75 }}
                       dpr={[1, 1.5]}
                       performance={{ min: 0.5 }}
                       style={{ backgroundColor: '#000000' }}
                     >
-                      <PerspectiveCamera makeDefault position={[0, 0, 100]} fov={75} />
+                      <PerspectiveCamera makeDefault position={[0, 0, 140]} fov={75} />
                       <ambientLight intensity={0.2} />
                       <directionalLight position={[5, 5, 5]} intensity={0.4} />
                       <Suspense fallback={null}>
                         <WireframeRocket
                           scrollProgress={0}
                           rotation={{ x: -0.80, y: 0.64, z: -2.46 }}
-                          scale={0.12}
+                          scale={0.09}
                           position={{ x: 0, y: 0, z: 0 }}
                         />
                       </Suspense>
