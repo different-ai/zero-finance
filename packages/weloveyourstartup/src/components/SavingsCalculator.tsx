@@ -173,12 +173,12 @@ export function SavingsCalculator({
   }, [defaultAmount]);
 
   return (
-    <div className={`bg-white border border-[#101010]/10 ${className}`}>
+    <div className={`bg-black border-2 border-[#00FF00] ${className}`}>
       <div className="p-6 space-y-6">
         {/* Amount Slider */}
         <div>
-          <label className="block text-[11px] uppercase tracking-[0.14em] text-[#101010]/60 mb-2">
-            💰 Idle Cash Amount
+          <label className="block text-[11px] uppercase tracking-wider text-[#00FF00] mb-3 font-mono font-bold">
+            [ INPUT: IDLE_CASH_AMOUNT ]
           </label>
           <div className="flex items-center gap-4">
             <input
@@ -188,77 +188,77 @@ export function SavingsCalculator({
               step={calculatorConfig.step}
               value={amount}
               onChange={(e) => setAmount(Number(e.target.value))}
-              className="flex-1 accent-primary-blue"
+              className="flex-1 accent-[#00FFFF]"
             />
             <div className="min-w-[120px] text-right">
-              <span className="tabular-nums text-[20px] font-medium text-primary-blue">
+              <span className="tabular-nums text-xl font-black text-[#00FFFF] font-mono">
                 {formatCompactCurrency(amount)}
               </span>
             </div>
           </div>
-          <div className="mt-2 flex justify-between text-[10px] text-[#101010]/40">
+          <div className="mt-2 flex justify-between text-[11px] text-[#00FF00]/60 font-mono">
             <span>{formatCompactCurrency(calculatorConfig.minAmount)}</span>
             <span>{formatCompactCurrency(calculatorConfig.maxAmount)}</span>
           </div>
         </div>
 
         {/* Comparison */}
-        <div className="grid grid-cols-3 gap-3 p-4 bg-bg-cream rounded-md">
+        <div className="grid grid-cols-3 gap-3 p-4 bg-black border border-[#00FF00]/30">
           <div className="text-center">
-            <div className="text-[10px] uppercase tracking-[0.14em] text-[#101010]/50">
-              Bank ({bankRate}%)
+            <div className="text-[11px] uppercase tracking-wider text-[#FF0000] font-mono font-bold">
+              [ BANK: {bankRate}% APY ]
             </div>
-            <div className="mt-1 tabular-nums text-[16px] font-medium text-[#101010]/60">
+            <div className="mt-1 tabular-nums text-[16px] font-medium text-[#FF0000]/80 font-mono">
               {formatCompactCurrency(yearlyBankReturn)}
             </div>
           </div>
           <div className="text-center">
-            <div className="text-[10px] uppercase tracking-[0.14em] text-[#101010]/50">
-              Zero ({zeroRate}%)
+            <div className="text-[11px] uppercase tracking-wider text-[#00FFFF] font-mono font-bold">
+              [ ZERO: {zeroRate}% APY ]
             </div>
-            <div className="mt-1 tabular-nums text-[16px] font-medium text-primary-blue">
+            <div className="mt-1 tabular-nums text-[16px] font-medium text-[#00FFFF] font-mono">
               {formatCompactCurrency(yearlyZeroReturn)}
             </div>
           </div>
-          <div className="text-center bg-primary-blue/10 rounded-md p-2 -m-2">
-            <div className="text-[10px] uppercase tracking-[0.14em] text-primary-blue font-medium">
-              Extra 🎉
+          <div className="text-center bg-[#FFFF00]/10 border border-[#FFFF00] p-2 -m-2">
+            <div className="text-[11px] uppercase tracking-wider text-[#FFFF00] font-medium font-mono font-bold">
+              [ DELTA: ANNUAL ]
             </div>
-            <div className="mt-1 tabular-nums text-[16px] font-bold text-primary-blue">
+            <div className="mt-1 tabular-nums text-[16px] font-bold text-[#FFFF00] font-mono">
               +{formatCompactCurrency(yearlyDifference)}
             </div>
           </div>
         </div>
 
         {/* Mode Toggle */}
-        <div className="flex gap-2 p-1 bg-bg-cream rounded-md">
+        <div className="flex gap-2 p-1 bg-black border border-[#00FF00]/30">
           <button
             onClick={() => setMode('expenses')}
-            className={`flex-1 py-2 px-3 text-[13px] font-medium rounded transition-all ${
+            className={`flex-1 py-2 px-3 text-[11px] font-mono font-bold uppercase tracking-wider transition-all ${
               mode === 'expenses'
-                ? 'bg-white text-primary-blue shadow-sm'
-                : 'text-[#101010]/60 hover:text-[#101010]'
+                ? 'bg-[#00FF00] text-black border-2 border-[#00FF00]'
+                : 'text-[#00FF00] hover:bg-[#00FF00]/10 border-2 border-transparent'
             }`}
           >
-            💳 Cover Expenses
+            [ MODE: EXPENSES ]
           </button>
           <button
             onClick={() => setMode('team')}
-            className={`flex-1 py-2 px-3 text-[13px] font-medium rounded transition-all ${
+            className={`flex-1 py-2 px-3 text-[11px] font-mono font-bold uppercase tracking-wider transition-all ${
               mode === 'team'
-                ? 'bg-white text-primary-blue shadow-sm'
-                : 'text-[#101010]/60 hover:text-[#101010]'
+                ? 'bg-[#00FF00] text-black border-2 border-[#00FF00]'
+                : 'text-[#00FF00] hover:bg-[#00FF00]/10 border-2 border-transparent'
             }`}
           >
-            👥 Build Your Team
+            [ MODE: TEAM_BUILD ]
           </button>
         </div>
 
         {/* Results */}
         {mode === 'expenses' ? (
           <div className="space-y-3">
-            <p className="text-[11px] uppercase tracking-[0.14em] text-[#101010]/60">
-              Your Extra {formatCompactCurrency(monthlyDifference)}/mo Covers:
+            <p className="text-[11px] uppercase tracking-wider text-[#00FFFF] font-mono font-bold">
+              [ OUTPUT: MONTHLY_COVERAGE = {formatCompactCurrency(monthlyDifference)}/MO ]
             </p>
 
             {coveredExpenses.length > 0 ? (
@@ -267,50 +267,49 @@ export function SavingsCalculator({
                   {coveredExpenses.slice(0, 6).map((expense) => (
                     <div
                       key={expense.name}
-                      className="flex items-center gap-2 p-2 bg-primary-blue/5 border border-primary-blue/20 rounded-md"
+                      className="flex items-center gap-2 p-2 bg-black border border-[#00FFFF]/30"
                     >
                       <span className="text-[18px]">{expense.icon}</span>
                       <div className="flex-1">
-                        <div className="text-[12px] font-medium text-[#101010]">
-                          {expense.name}
+                        <div className="text-[11px] font-bold text-white uppercase font-mono">
+                          {expense.name.toUpperCase().replace(/\s+/g, '_')}
                         </div>
-                        <div className="text-[11px] text-[#101010]/60">
-                          {formatCompactCurrency(expense.cost)}/mo
+                        <div className="text-[10px] text-[#00FFFF]/70 font-mono">
+                          {formatCompactCurrency(expense.cost)}/MO
                         </div>
                       </div>
-                      <span className="text-primary-blue text-[14px]">✓</span>
+                      <span className="text-[#00FF00] text-[11px] font-mono font-bold">[OK]</span>
                     </div>
                   ))}
                 </div>
 
                 {coveredExpenses.length > 6 && (
-                  <p className="text-[11px] text-[#101010]/60 text-center">
-                    +{coveredExpenses.length - 6} more expenses covered
+                  <p className="text-[11px] text-[#00FF00]/80 text-center uppercase font-mono">
+                    +{coveredExpenses.length - 6} ADDITIONAL_EXPENSES_COVERED
                   </p>
                 )}
 
                 {remainingBudget > 500 && (
-                  <div className="p-3 bg-gradient-to-r from-[#10B981]/10 to-primary-blue/10 border border-[#10B981]/30 rounded-md">
-                    <p className="text-[16px] font-medium text-[#10B981]">
-                      Plus {formatCompactCurrency(remainingBudget)}/mo left
-                      over! 🎊
+                  <div className="p-3 bg-black border-2 border-[#FFFF00]">
+                    <p className="text-[12px] font-bold text-[#FFFF00] uppercase font-mono">
+                      {'>> SURPLUS: '}{formatCompactCurrency(remainingBudget)}/MO REMAINING
                     </p>
-                    <p className="text-[12px] text-[#101010]/70 mt-1">
-                      That's extra runway or pure profit
+                    <p className="text-[11px] text-[#FFFF00]/70 mt-1 uppercase font-mono">
+                      EXCESS_RUNWAY / PROFIT_MARGIN
                     </p>
                   </div>
                 )}
               </>
             ) : (
-              <p className="text-[13px] text-[#101010]/60">
-                Increase your idle cash to start covering expenses
+              <p className="text-[11px] text-[#FF0000] uppercase font-mono">
+                [ ERROR: INSUFFICIENT_IDLE_CASH ]
               </p>
             )}
           </div>
         ) : (
           <div className="space-y-4">
-            <p className="text-[11px] uppercase tracking-[0.14em] text-[#101010]/60">
-              Your Extra {formatCompactCurrency(yearlyDifference)}/yr Can Fund:
+            <p className="text-[11px] uppercase tracking-wider text-[#00FFFF] font-mono font-bold">
+              [ OUTPUT: ANNUAL_BUDGET = {formatCompactCurrency(yearlyDifference)}/YR ]
             </p>
 
             {teamOptions.teamCombinations.length > 0 ? (
@@ -319,15 +318,15 @@ export function SavingsCalculator({
                 {teamOptions.teamCombinations.map((combo, idx) => (
                   <div
                     key={idx}
-                    className="p-4 bg-gradient-to-r from-primary-blue/5 to-primary-blue/10 border border-primary-blue/20 rounded-md"
+                    className="p-4 bg-black border-2 border-[#00FFFF]"
                   >
                     <div className="flex items-center justify-between mb-3">
-                      <span className="text-[12px] font-medium text-primary-blue">
-                        {combo.description}
+                      <span className="text-[11px] font-bold text-[#00FFFF] uppercase font-mono">
+                        [ STRATEGY_{idx + 1}: {combo.description.toUpperCase().replace(/\s+/g, '_')} ]
                       </span>
                       {combo.remainingBudget > 10000 && (
-                        <span className="text-[10px] text-[#101010]/60">
-                          +{formatCompactCurrency(combo.remainingBudget)} left
+                        <span className="text-[10px] text-[#00FF00] font-mono">
+                          +{formatCompactCurrency(combo.remainingBudget)} SURPLUS
                         </span>
                       )}
                     </div>
@@ -339,21 +338,20 @@ export function SavingsCalculator({
                         >
                           <span className="text-[20px]">{member.icon}</span>
                           <div className="flex-1">
-                            <div className="text-[13px] font-medium text-[#101010]">
-                              {member.role}
+                            <div className="text-[11px] font-bold text-white uppercase font-mono">
+                              MEMBER_{(memberIdx + 1).toString().padStart(2, '0')}: {member.role.toUpperCase().replace(/\s+/g, '_')}
                             </div>
-                            <div className="text-[11px] text-[#101010]/60">
-                              {formatCompactCurrency(member.salary)}/yr
+                            <div className="text-[10px] text-[#00FFFF]/70 font-mono">
+                              COST: {formatCompactCurrency(member.salary)}/YR
                             </div>
                           </div>
                         </div>
                       ))}
                     </div>
                     {combo.members.length > 1 && (
-                      <div className="mt-3 pt-3 border-t border-primary-blue/10">
-                        <div className="text-[11px] text-[#101010]/70">
-                          Total team cost:{' '}
-                          {formatCompactCurrency(combo.totalCost)}/yr
+                      <div className="mt-3 pt-3 border-t border-[#00FFFF]/30">
+                        <div className="text-[11px] text-[#00FF00] uppercase font-mono">
+                          TOTAL_TEAM_COST: {formatCompactCurrency(combo.totalCost)}/YR
                         </div>
                       </div>
                     )}
@@ -362,11 +360,9 @@ export function SavingsCalculator({
 
                 {/* Show how many individual roles they can afford */}
                 {teamOptions.affordableRoles.length > 3 && (
-                  <div className="p-3 bg-[#101010]/5 rounded-md">
-                    <p className="text-[12px] text-[#101010]/70">
-                      🎯 You can afford{' '}
-                      <strong>{teamOptions.affordableRoles.length}</strong>{' '}
-                      different roles individually
+                  <div className="p-3 bg-black border border-[#00FF00]">
+                    <p className="text-[11px] text-[#00FF00] uppercase font-mono font-bold">
+                      [ INFO: AFFORDABLE_ROLES_COUNT = {teamOptions.affordableRoles.length} ]
                     </p>
                     <div className="mt-2 flex flex-wrap gap-1">
                       {teamOptions.affordableRoles.slice(0, 8).map((role) => (
@@ -379,8 +375,8 @@ export function SavingsCalculator({
                         </span>
                       ))}
                       {teamOptions.affordableRoles.length > 8 && (
-                        <span className="text-[11px] text-[#101010]/60">
-                          +{teamOptions.affordableRoles.length - 8}
+                        <span className="text-[10px] text-[#00FF00]/70 font-mono">
+                          +{teamOptions.affordableRoles.length - 8}_MORE
                         </span>
                       )}
                     </div>
@@ -390,44 +386,43 @@ export function SavingsCalculator({
                 {/* Next milestone */}
                 {teamOptions.nextMilestone &&
                   teamOptions.percentageToNext < 90 && (
-                    <div className="p-3 bg-[#FFA500]/10 border border-[#FFA500]/20 rounded-md">
+                    <div className="p-3 bg-black border-2 border-[#FF00FF]">
                       <div className="flex items-center justify-between mb-2">
-                        <span className="text-[12px] font-medium text-[#101010]">
-                          Next: {teamOptions.nextMilestone.role}
+                        <span className="text-[11px] font-bold text-[#FF00FF] uppercase font-mono">
+                          NEXT_MILESTONE: {teamOptions.nextMilestone.role.toUpperCase().replace(/\s+/g, '_')}
                         </span>
-                        <span className="text-[11px] text-[#101010]/60">
-                          {Math.round(teamOptions.percentageToNext)}% there
+                        <span className="text-[10px] text-[#FF00FF]/70 font-mono">
+                          {Math.round(teamOptions.percentageToNext)}% PROGRESS
                         </span>
                       </div>
-                      <div className="h-2 bg-[#101010]/10 rounded-full overflow-hidden">
+                      <div className="h-2 bg-[#FF00FF]/20 overflow-hidden">
                         <div
-                          className="h-full bg-gradient-to-r from-[#FFA500] to-primary-blue transition-all duration-500"
+                          className="h-full bg-[#FF00FF] transition-all duration-500"
                           style={{ width: `${teamOptions.percentageToNext}%` }}
                         />
                       </div>
-                      <p className="mt-2 text-[11px] text-[#101010]/60">
-                        Need{' '}
+                      <p className="mt-2 text-[10px] text-[#FF00FF]/70 uppercase font-mono">
+                        REQUIRED_ADDITIONAL:{' '}
                         {formatCompactCurrency(
                           teamOptions.nextMilestone.salary - yearlyDifference,
-                        )}{' '}
-                        more/yr
+                        )}/YR
                       </p>
                     </div>
                   )}
               </>
             ) : (
-              <div className="p-4 bg-[#101010]/5 rounded-md">
-                <p className="text-[13px] text-[#101010]/60">
-                  💡 Increase your idle cash to start building your team
+              <div className="p-4 bg-black border border-[#FF0000]">
+                <p className="text-[11px] text-[#FF0000] uppercase font-mono">
+                  [ WARNING: INSUFFICIENT_BUDGET_FOR_TEAM ]
                 </p>
                 {teamOptions.nextMilestone && (
                   <div className="mt-3">
-                    <p className="text-[12px] text-[#101010]/70">
-                      With{' '}
+                    <p className="text-[10px] text-[#FF0000]/70 uppercase font-mono">
+                      REQUIRED_IDLE:{' '}
                       {formatCompactCurrency(
                         teamOptions.nextMilestone.salary / 0.04,
                       )}{' '}
-                      idle, you could hire a {teamOptions.nextMilestone.role}
+                      FOR {teamOptions.nextMilestone.role.toUpperCase().replace(/\s+/g, '_')}
                     </p>
                   </div>
                 )}
@@ -436,19 +431,17 @@ export function SavingsCalculator({
 
             {/* Fun milestone messages */}
             {yearlyDifference >= 500000 && (
-              <div className="p-3 bg-[#10B981]/10 border border-[#10B981]/30 rounded-md animate-pulse-slow">
-                <p className="text-[13px] text-[#10B981] font-medium">
-                  🚀 Holy moly! You could build an entire department with just
-                  yield!
+              <div className="p-3 bg-black border-2 border-[#00FF00]">
+                <p className="text-[11px] text-[#00FF00] font-bold uppercase font-mono">
+                  {'>> ALERT: DEPARTMENT_SCALE_FUNDING_ACHIEVED'}
                 </p>
               </div>
             )}
 
             {yearlyDifference >= 200000 && yearlyDifference < 500000 && (
-              <div className="p-3 bg-primary-blue/10 border border-primary-blue/30 rounded-md">
-                <p className="text-[13px] text-primary-blue font-medium">
-                  ✨ You're in founder salary territory! Your yield = a senior
-                  hire!
+              <div className="p-3 bg-black border-2 border-[#00FFFF]">
+                <p className="text-[11px] text-[#00FFFF] font-bold uppercase font-mono">
+                  {'>> STATUS: SENIOR_HIRE_BUDGET_AVAILABLE'}
                 </p>
               </div>
             )}

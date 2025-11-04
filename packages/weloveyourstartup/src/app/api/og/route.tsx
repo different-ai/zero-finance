@@ -51,7 +51,8 @@ export async function GET(request: Request) {
               flexDirection: 'column',
               alignItems: 'center',
               justifyContent: 'center',
-              backgroundColor: '#F7F7F2',
+              backgroundColor: '#000000',
+              fontFamily: 'monospace',
             }}
           >
             <div
@@ -59,6 +60,8 @@ export async function GET(request: Request) {
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
+                border: '3px solid #00FF00',
+                padding: '60px',
               }}
             >
               {zeroLogo && (
@@ -66,23 +69,27 @@ export async function GET(request: Request) {
                   src={zeroLogo}
                   width={60}
                   height={60}
-                  style={{ marginBottom: 20 }}
+                  style={{ marginBottom: 30, border: '2px solid #00FFFF' }}
                 />
               )}
-              {/* make sure this goes to the right */}
+              <div style={{ fontSize: 16, color: '#00FF00', marginBottom: 20, letterSpacing: 2 }}>
+                [ SYSTEM: STARTUP_DIRECTORY ]
+              </div>
               <h1
                 style={{
                   fontSize: 80,
                   fontWeight: 'bold',
-                  color: '#1B29FF',
+                  color: '#00FFFF',
                   lineHeight: 1,
-                  marginBottom: 20,
+                  marginBottom: 30,
+                  textTransform: 'uppercase',
+                  letterSpacing: 3,
                 }}
               >
-                We Love Your Startup
+                WE_LOVE_YOUR_STARTUP
               </h1>
-              <p style={{ fontSize: 30, color: '#101010', opacity: 0.8 }}>
-                {HERO_ONE_LINER}
+              <p style={{ fontSize: 24, color: '#FFFFFF', opacity: 0.9, textAlign: 'center', maxWidth: 800, textTransform: 'uppercase', letterSpacing: 1 }}>
+                {HERO_ONE_LINER.toUpperCase()}
               </p>
             </div>
           </div>
@@ -131,30 +138,43 @@ export async function GET(request: Request) {
             width: '100%',
             display: 'flex',
             flexDirection: 'column',
-            backgroundColor: '#F7F7F2',
+            backgroundColor: '#000000',
             padding: '60px',
+            fontFamily: 'monospace',
           }}
         >
           {/* Header */}
           <div
             style={{
               display: 'flex',
-              justifyContent: 'flex-end',
+              justifyContent: 'space-between',
               alignItems: 'center',
               width: '100%',
-              marginBottom: '32px',
+              marginBottom: '40px',
+              borderBottom: '2px solid #00FF00',
+              paddingBottom: '20px',
             }}
           >
             <span
               style={{
+                fontSize: '16px',
+                color: '#FF00FF',
+                textTransform: 'uppercase',
+                letterSpacing: '2px',
+                fontWeight: 'bold',
+              }}
+            >
+              {'>> STARTUP_PROFILE'}
+            </span>
+            <span
+              style={{
                 fontSize: '14px',
-                color: '#101010',
-                opacity: 0.5,
+                color: '#00FF00',
                 textTransform: 'uppercase',
                 letterSpacing: '2px',
               }}
             >
-              We Love Your Startup
+              WE_LOVE_YOUR_STARTUP
             </span>
           </div>
 
@@ -181,7 +201,7 @@ export async function GET(request: Request) {
                 style={{
                   display: 'flex',
                   flexDirection: 'column',
-                  gap: '28px',
+                  gap: '32px',
                   flex: '1 1 560px',
                   maxWidth: '560px',
                 }}
@@ -189,124 +209,96 @@ export async function GET(request: Request) {
               <div
                 style={{
                   display: 'flex',
-                  alignItems: 'center',
-                  gap: '20px',
-                  flexWrap: 'wrap',
+                  flexDirection: 'column',
+                  gap: '24px',
                 }}
               >
-                {companyLogo ? (
+                <div style={{
+                  fontSize: '14px',
+                  color: '#00FF00',
+                  letterSpacing: '2px',
+                  textTransform: 'uppercase',
+                  border: '2px solid #00FF00',
+                  padding: '8px 16px',
+                  display: 'inline-block',
+                  maxWidth: 'fit-content',
+                }}>
+                  CATEGORY: {company.category.toUpperCase()}
+                </div>
+
+                {companyLogo && (
                   <img
                     src={companyLogo}
-                    width={72}
-                    height={72}
+                    width={60}
+                    height={60}
                     style={{
-                      borderRadius: '16px',
-                      backgroundColor: 'white',
-                      border: '2px solid #1B29FF20',
+                      border: '2px solid #00FFFF',
                     }}
                   />
-                ) : (
-                  <div
-                    style={{
-                      width: '72px',
-                      height: '72px',
-                      backgroundColor: 'white',
-                      borderRadius: '16px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      border: '2px solid #1B29FF20',
-                    }}
-                  >
-                    <span
-                      style={{
-                        fontSize: '36px',
-                        fontWeight: 'bold',
-                        color: '#1B29FF',
-                      }}
-                    >
-                      {company.name[0]}
-                    </span>
-                  </div>
                 )}
+
                 <div
                   style={{
                     display: 'flex',
                     flexDirection: 'column',
-                    gap: '12px',
+                    gap: '16px',
                   }}
                 >
-                  <div
+                  <h1
                     style={{
-                      display: 'flex',
-                      alignItems: 'baseline',
-                      gap: '16px',
-                      flexWrap: 'wrap',
+                      fontSize: '72px',
+                      fontWeight: 'bold',
+                      color: '#00FFFF',
+                      lineHeight: 1,
+                      margin: 0,
+                      textTransform: 'uppercase',
+                      letterSpacing: '2px',
                     }}
                   >
-                    <h1
-                      style={{
-                        fontSize: '64px',
-                        fontWeight: 'bold',
-                        color: '#101010',
-                        lineHeight: 1,
-                        margin: 0,
-                      }}
-                    >
-                      {company.name}
-                    </h1>
-                    <span
-                      style={{
-                        fontSize: '28px',
-                        color: '#101010',
-                        opacity: 0.75,
-                        fontWeight: 500,
-                        maxWidth: '420px',
-                      }}
-                    >
-                      {headline}
-                    </span>
-                  </div>
+                    {company.name.toUpperCase()}
+                  </h1>
                   <span
                     style={{
-                      fontSize: '18px',
-                      color: '#1B29FF',
+                      fontSize: '22px',
+                      color: '#FFFFFF',
+                      opacity: 0.9,
+                      maxWidth: '500px',
+                      textTransform: 'uppercase',
+                      letterSpacing: '1px',
                     }}
                   >
-                    {company.category}
+                    // {headline.toUpperCase()}
                   </span>
                 </div>
               </div>
 
               <div
                 style={{
-                  backgroundColor: 'white',
-                  borderRadius: '16px',
-                  padding: '24px',
-                  border: '2px solid #1B29FF20',
+                  backgroundColor: '#000000',
+                  padding: '28px',
+                  border: '3px solid #FFFF00',
                   display: 'flex',
                   flexDirection: 'column',
                   maxWidth: '420px',
-                  boxShadow: '0 10px 30px rgba(27, 41, 255, 0.08)',
                 }}
               >
                 <span
                   style={{
-                    fontSize: '12px',
-                    color: '#101010',
-                    opacity: 0.5,
-                    marginBottom: '8px',
+                    fontSize: '14px',
+                    color: '#FFFF00',
+                    marginBottom: '12px',
                     textTransform: 'uppercase',
-                    letterSpacing: '1px',
+                    letterSpacing: '2px',
+                    fontWeight: 'bold',
                   }}
                 >
-                  💰 Raised
+                  [ DATA: FUNDING_AMOUNT ]
                 </span>
                 <span
                   style={{
-                    fontSize: '48px',
+                    fontSize: '56px',
                     fontWeight: 'bold',
-                    color: '#1B29FF',
+                    color: '#FFFF00',
                     lineHeight: 1,
                   }}
                 >
@@ -314,13 +306,14 @@ export async function GET(request: Request) {
                 </span>
                 <span
                   style={{
-                    fontSize: '14px',
-                    color: '#101010',
-                    opacity: 0.6,
-                    marginTop: '6px',
+                    fontSize: '16px',
+                    color: '#FFFF00',
+                    opacity: 0.7,
+                    marginTop: '12px',
+                    textTransform: 'uppercase',
                   }}
                 >
-                  {company.funding.round} • {company.funding.date}
+                  {company.funding.round.toUpperCase()} / {company.funding.date}
                 </span>
               </div>
               </div>

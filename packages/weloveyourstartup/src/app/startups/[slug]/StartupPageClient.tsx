@@ -5,6 +5,9 @@ import { Canvas, useFrame, extend } from "@react-three/fiber";
 import { useGLTF, PerspectiveCamera, shaderMaterial } from "@react-three/drei";
 import { EffectComposer, Bloom, ChromaticAberration, Noise } from "@react-three/postprocessing";
 import { GlitchEffect } from "@/effects/GlitchEffect";
+import { BlueNoiseHalftoneEffect } from "@/effects/BlueNoiseHalftoneEffect";
+import { HologramEffect } from "@/effects/HologramEffect";
+import { DitherWaveEffect } from "@/effects/DitherWaveEffect";
 import * as THREE from "three";
 import Link from 'next/link';
 import Image from 'next/image';
@@ -244,12 +247,12 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
         };
 
     return (
-      <div className="w-full h-[600px] relative border border-gray-200 rounded-2xl overflow-hidden" style={{ backgroundColor: '#F7F7F2' }}>
+      <div className="w-full h-[600px] relative border-t border-b border-[#00FF00]" style={{ backgroundColor: '#000000' }}>
         <Canvas
           camera={{ position: modelCamera.position, fov: modelCamera.fov }}
           dpr={[1, 1.5]} // Limit pixel ratio for performance
           performance={{ min: 0.5 }} // Allow frame skipping if needed
-          style={{ backgroundColor: '#F7F7F2' }}
+          style={{ backgroundColor: '#000000' }}
         >
           <PerspectiveCamera makeDefault position={modelCamera.position} fov={modelCamera.fov} />
 
@@ -266,11 +269,37 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
           </Suspense>
 
           <EffectComposer>
-            {/* Glitch effect + bloom like playground */}
-            <Bloom intensity={0.6} luminanceThreshold={0.7} radius={0.3} />
-            <primitive object={new GlitchEffect()} />
-            <ChromaticAberration offset={[0.005, 0.005]} />
-            <Noise opacity={0.05} />
+            {/* Different effect per model */}
+            {modelIndex === 0 && (
+              <>
+                {/* Shuttle: Glitch effect */}
+                <Bloom intensity={0.6} luminanceThreshold={0.7} radius={0.3} />
+                <primitive object={new GlitchEffect()} />
+                <ChromaticAberration offset={[0.005, 0.005]} />
+                <Noise opacity={0.05} />
+              </>
+            )}
+            {modelIndex === 1 && (
+              <>
+                {/* Apollo/Soyuz: Dither Wave */}
+                <primitive object={new DitherWaveEffect()} />
+                <Bloom intensity={0.4} luminanceThreshold={0.8} radius={0.2} />
+              </>
+            )}
+            {modelIndex === 2 && (
+              <>
+                {/* Space Suit: Hologram effect */}
+                <primitive object={new HologramEffect()} />
+                <Bloom intensity={1.2} luminanceThreshold={0.5} radius={0.5} />
+              </>
+            )}
+            {modelIndex === 3 && (
+              <>
+                {/* ISS: Dither Wave */}
+                <primitive object={new DitherWaveEffect()} />
+                <Bloom intensity={0.4} luminanceThreshold={0.8} radius={0.2} />
+              </>
+            )}
           </EffectComposer>
         </Canvas>
       </div>
@@ -278,7 +307,7 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
   };
 
   return (
-    <div className="min-h-screen text-gray-900" style={{ backgroundColor: '#F7F7F2' }}>
+    <div className="min-h-screen" style={{ backgroundColor: '#000000' }}>
       <CRTEffect />
 
       {/* Single Scroll Flow - Text + 3D Mixed */}
@@ -294,38 +323,43 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
             />
           )}
 
-          <div className="inline-block px-3 py-1 bg-[#1B29FF]/10 border border-[#1B29FF]/30 rounded text-xs text-[#1B29FF] mb-6 font-mono font-bold uppercase tracking-widest">
-            {company.category}
+          <div className="inline-block px-2 py-0.5 bg-black border border-[#00FF00] text-[11px] text-[#00FF00] mb-4 font-mono font-bold uppercase tracking-wider">
+            CATEGORY: {company.category.toUpperCase()}
           </div>
 
-          <h1 className="text-7xl lg:text-8xl font-black tracking-tighter leading-none max-w-4xl uppercase font-mono"
+          <h1 className="text-8xl lg:text-9xl font-black tracking-tight leading-none max-w-5xl uppercase font-mono"
             style={{
-              color: '#1B29FF',
-              textShadow: '3px 3px 0px rgba(255, 61, 91, 0.4)'
+              color: '#00FFFF',
+              letterSpacing: '0.05em'
             }}>
-            {company.name}
+            {company.name.toUpperCase()}
           </h1>
 
-          <p className="text-3xl lg:text-4xl font-mono max-w-3xl tracking-tight" style={{ color: '#1B29FF' }}>
-            {company.tagline}
+          <p className="text-xl lg:text-2xl font-mono max-w-4xl tracking-wide uppercase font-bold text-[#00FF00]/80 mt-4">
+            // {company.tagline.toUpperCase()}
           </p>
 
           {/* First 3D Model - Shuttle */}
           <Model3D modelIndex={0} />
 
-          <p className="text-xl text-gray-700 leading-relaxed max-w-3xl">
-            {company.description}
-          </p>
+          <div className="max-w-4xl">
+            <div className="text-base font-mono font-bold uppercase tracking-wider text-[#00FFFF] mb-4">
+              DESCRIPTION:
+            </div>
+            <p className="text-xl lg:text-2xl text-white/90 leading-relaxed font-mono">
+              {company.description}
+            </p>
+          </div>
 
-          <div className="flex flex-wrap gap-4">
+          <div className="flex flex-wrap gap-3">
             {company.website && (
               <a
                 href={company.website}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="px-8 py-4 bg-[#1B29FF] text-white font-bold rounded-lg hover:bg-[#FF3D5B] transition-all text-lg"
+                className="px-8 py-4 bg-[#00FF00] text-black font-mono font-bold text-base uppercase tracking-wider hover:bg-[#00FFFF] transition-all"
               >
-                Visit Website →
+                [LINK: WEBSITE]
               </a>
             )}
             {company.twitter && (
@@ -333,161 +367,219 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
                 href={company.twitter}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="px-8 py-4 border-2 border-[#1B29FF] text-[#1B29FF] font-bold rounded-lg hover:bg-[#1B29FF]/10 transition-all text-lg"
+                className="px-8 py-4 border-2 border-[#00FFFF] text-[#00FFFF] font-mono font-bold text-base uppercase tracking-wider hover:bg-[#00FFFF]/10 transition-all"
               >
-                Follow on X
+                [LINK: TWITTER/X]
               </a>
             )}
           </div>
         </section>
 
         {/* Funding Stats */}
-        <section className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl">
-          <div className="bg-white border border-[#1B29FF]/20 rounded-lg p-8">
-            <p className="text-xs uppercase tracking-widest text-[#1B29FF]/60 mb-2 font-mono font-bold">
-              FUNDING
+        <section className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-4xl">
+          <div className="bg-black border-2 border-[#00FFFF] p-8">
+            <p className="text-base uppercase tracking-widest text-[#00FFFF] mb-4 font-mono font-bold">
+              [ DATA: FUNDING_AMOUNT ]
             </p>
-            <p className="text-5xl font-black text-[#1B29FF] font-mono tracking-tight">
+            <p className="text-5xl lg:text-6xl font-black text-[#00FFFF] font-mono tracking-tight">
               {formatCurrency(company.funding.amount)}
             </p>
-            <p className="text-sm text-gray-500 mt-2 font-mono">
-              {company.funding.round} • {company.funding.date}
+            <p className="text-base text-[#00FFFF]/70 mt-4 font-mono uppercase tracking-wide">
+              {company.funding.round} / {company.funding.date}
             </p>
           </div>
-          <div className="bg-white border border-[#FF3D5B]/20 rounded-lg p-8">
-            <p className="text-xs uppercase tracking-widest text-[#FF3D5B]/60 mb-2 font-mono font-bold">
-              POTENTIAL EARNINGS
+          <div className="bg-black border-2 border-[#FFFF00] p-8">
+            <p className="text-base uppercase tracking-widest text-[#FFFF00] mb-4 font-mono font-bold">
+              [ CALC: POTENTIAL_YIELD ]
             </p>
-            <p className="text-5xl font-black text-[#FF3D5B] font-mono tracking-tight">
+            <p className="text-5xl lg:text-6xl font-black text-[#FFFF00] font-mono tracking-tight">
               +{formatCurrency(calculateSavings(company.funding.amount))}
             </p>
-            <p className="text-sm text-gray-500 mt-2 font-mono">
-              per year at 8% APY
+            <p className="text-base text-[#FFFF00]/70 mt-4 font-mono uppercase tracking-wide">
+              ANNUAL @ 8% APY
             </p>
           </div>
         </section>
 
         {/* Mission Section with Second Model */}
-        <section className="space-y-8">
-          <div className="text-xs uppercase tracking-widest text-[#FF3D5B] font-mono font-bold">
-            The Mission
+        <section className="space-y-6">
+          <div className="text-base uppercase tracking-widest text-[#FF00FF] font-mono font-bold">
+            {'>> SECTION_02: MISSION'}
           </div>
-          <h2 className="text-5xl lg:text-6xl font-black max-w-3xl uppercase font-mono tracking-tighter"
-            style={{
-              color: '#1B29FF',
-              textShadow: '2px 2px 0px rgba(255, 61, 91, 0.3)'
-            }}>
-            What They're Building
-          </h2>
 
-          {/* Second 3D Model - Apollo Soyuz */}
-          <Model3D modelIndex={1} />
+          <div className="flex flex-col lg:flex-row gap-8 items-start">
+            <div className="flex-1 space-y-6">
+              <h2 className="text-6xl lg:text-7xl font-black uppercase font-mono tracking-wide"
+                style={{
+                  color: '#00FFFF'
+                }}>
+                WHAT_THEY'RE_BUILDING
+              </h2>
 
-          {company.whyWeLoveThem && (
-            <div className="bg-white border border-[#1B29FF]/20 rounded-2xl p-10 max-w-3xl">
-              <p className="text-xs uppercase tracking-wider text-[#1B29FF] font-bold mb-4">
-                Why We Love {company.name}
-              </p>
-              <p className="text-gray-700 leading-relaxed text-2xl">
-                {company.whyWeLoveThem}
-              </p>
+              {company.whyWeLoveThem && (
+                <div className="bg-black border-2 border-[#00FFFF] p-8">
+                  <p className="text-base uppercase tracking-wider text-[#00FFFF] font-bold mb-4 font-mono">
+                    [ NOTE: WHY_WE_LOVE_{company.name.toUpperCase().replace(/\s+/g, '_')} ]
+                  </p>
+                  <p className="text-white/90 leading-relaxed text-xl lg:text-2xl font-mono">
+                    {company.whyWeLoveThem}
+                  </p>
+                </div>
+              )}
             </div>
-          )}
+
+            {/* Second 3D Model - Apollo Soyuz - smaller on right */}
+            <div className="w-full lg:w-[400px] h-[400px] flex-shrink-0">
+              <div className="w-full h-full relative border-t border-b border-[#00FF00]" style={{ backgroundColor: '#000000' }}>
+                <Canvas
+                  camera={{ position: [0, 0, 15], fov: 75 }}
+                  dpr={[1, 1.5]}
+                  performance={{ min: 0.5 }}
+                  style={{ backgroundColor: '#000000' }}
+                >
+                  <PerspectiveCamera makeDefault position={[0, 0, 15]} fov={75} />
+                  <ambientLight intensity={0.2} />
+                  <directionalLight position={[5, 5, 5]} intensity={0.4} />
+                  <Suspense fallback={null}>
+                    <WireframeRocket
+                      scrollProgress={1 / 3}
+                      rotation={{ x: -1.2, y: 0, z: -0.5 }}
+                      scale={0.7}
+                      position={{ x: 0, y: 0, z: 12.0 }}
+                    />
+                  </Suspense>
+                  <EffectComposer>
+                    <primitive object={new DitherWaveEffect()} />
+                    <Bloom intensity={0.4} luminanceThreshold={0.8} radius={0.2} />
+                  </EffectComposer>
+                </Canvas>
+              </div>
+            </div>
+          </div>
         </section>
 
         {/* Team Section with Third Model */}
-        <section className="space-y-8">
-          <div className="text-xs uppercase tracking-widest text-[#FF3D5B] font-mono font-bold">
-            The Team
+        <section className="space-y-6">
+          <div className="text-base uppercase tracking-widest text-[#FF00FF] font-mono font-bold">
+            {'>> SECTION_03: TEAM'}
           </div>
-          <h2 className="text-5xl lg:text-6xl font-black max-w-3xl uppercase font-mono tracking-tighter"
-            style={{
-              color: '#1B29FF',
-              textShadow: '2px 2px 0px rgba(255, 61, 91, 0.3)'
-            }}>
-            The Brilliant Minds
-          </h2>
 
-          {/* Third 3D Model - Space Suit */}
-          <Model3D modelIndex={2} />
+          <div className="flex flex-col lg:flex-row gap-8 items-start">
+            <div className="flex-1 space-y-6">
+              <h2 className="text-6xl lg:text-7xl font-black uppercase font-mono tracking-wide"
+                style={{
+                  color: '#00FFFF'
+                }}>
+                THE_BRILLIANT_MINDS
+              </h2>
 
-          <div className="space-y-6 max-w-3xl">
-            {company.founders.map((founder) => (
-              <a
-                key={founder.id}
-                href={founder.twitter}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-8 p-8 bg-white border border-gray-200 rounded-2xl hover:bg-gray-50 hover:border-[#1B29FF]/30 transition-all group"
-              >
-                {founder.avatar && (
-                  <Image
-                    src={founder.avatar}
-                    alt={founder.name}
-                    width={80}
-                    height={80}
-                    className="rounded-full border-2 border-gray-200 group-hover:border-[#1B29FF]/50 transition-all"
-                  />
-                )}
-                <div className="flex-1">
-                  <h3 className="text-2xl font-bold text-gray-900 group-hover:text-[#1B29FF] transition-colors">
-                    {founder.name}
-                  </h3>
-                  <p className="text-gray-600 mt-2 text-lg">
-                    {founder.role}
-                  </p>
-                </div>
-                <span className="text-2xl opacity-0 group-hover:opacity-100 transition-opacity text-[#67E2FF]">
-                  →
-                </span>
-              </a>
-            ))}
+              <div className="space-y-4">
+                {company.founders.map((founder, index) => (
+                  <a
+                    key={founder.id}
+                    href={founder.twitter}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-6 p-6 bg-black border-2 border-[#00FF00] hover:bg-[#00FF00]/10 hover:border-[#00FFFF] transition-all group"
+                  >
+                    {founder.avatar && (
+                      <Image
+                        src={founder.avatar}
+                        alt={founder.name}
+                        width={60}
+                        height={60}
+                        className="border-2 border-[#00FF00] group-hover:border-[#00FFFF] transition-all"
+                      />
+                    )}
+                    <div className="flex-1">
+                      <div className="text-sm font-mono font-bold uppercase tracking-wider text-[#00FF00]/70 mb-2">
+                        MEMBER_{(index + 1).toString().padStart(2, '0')}
+                      </div>
+                      <h3 className="text-2xl lg:text-3xl font-black text-white group-hover:text-[#00FFFF] transition-colors font-mono uppercase tracking-wide">
+                        {founder.name.toUpperCase()}
+                      </h3>
+                      <p className="text-[#00FF00]/80 mt-2 text-base font-mono uppercase tracking-wide">
+                        ROLE: {founder.role.toUpperCase()}
+                      </p>
+                    </div>
+                    <span className="text-xl opacity-0 group-hover:opacity-100 transition-opacity text-[#00FFFF] font-mono">
+                      [→]
+                    </span>
+                  </a>
+                ))}
+              </div>
+            </div>
+
+            {/* Third 3D Model - Space Suit - smaller on right */}
+            <div className="w-full lg:w-[400px] h-[400px] flex-shrink-0">
+              <div className="w-full h-full relative border-t border-b border-[#00FF00]" style={{ backgroundColor: '#000000' }}>
+                <Canvas
+                  camera={{ position: [0, 0, 15], fov: 75 }}
+                  dpr={[1, 1.5]}
+                  performance={{ min: 0.5 }}
+                  style={{ backgroundColor: '#000000' }}
+                >
+                  <PerspectiveCamera makeDefault position={[0, 0, 15]} fov={75} />
+                  <ambientLight intensity={0.2} />
+                  <directionalLight position={[5, 5, 5]} intensity={0.4} />
+                  <Suspense fallback={null}>
+                    <WireframeRocket
+                      scrollProgress={2 / 3}
+                      rotation={{ x: -1.2, y: 0, z: -0.5 }}
+                      scale={0.7}
+                      position={{ x: 0, y: 0, z: 12.0 }}
+                    />
+                  </Suspense>
+                  <EffectComposer>
+                    <primitive object={new HologramEffect()} />
+                    <Bloom intensity={1.2} luminanceThreshold={0.5} radius={0.5} />
+                  </EffectComposer>
+                </Canvas>
+              </div>
+            </div>
           </div>
         </section>
 
         {/* Potential Section with Fourth Model */}
         <section className="space-y-8 pb-32">
-          <div className="text-xs uppercase tracking-widest text-[#FF3D5B] font-mono font-bold">
-            The Potential
+          <div className="text-base uppercase tracking-widest text-[#FF00FF] font-mono font-bold">
+            {'>> SECTION_04: POTENTIAL'}
           </div>
-          <h2 className="text-5xl lg:text-6xl font-black text-white max-w-3xl uppercase font-mono tracking-tighter"
-            style={{
-              textShadow: '2px 2px 0px rgba(27, 41, 255, 0.4)'
-            }}>
-            Maximize Your Runway
+          <h2 className="text-6xl lg:text-8xl font-black text-[#00FFFF] max-w-4xl uppercase font-mono tracking-tighter leading-tight">
+            MAXIMIZE_YOUR_RUNWAY
           </h2>
-          <p className="text-white/50 text-xl max-w-3xl">
-            See how {company.name} could earn more with 8% APY
+          <p className="text-[#00FF00]/80 text-xl lg:text-2xl max-w-4xl font-mono uppercase tracking-wide">
+            [ ANALYSIS: {company.name.toUpperCase()}_YIELD_PROJECTION @ 8% APY ]
           </p>
 
           {/* Fourth 3D Model - ISS */}
           <Model3D modelIndex={3} />
 
-          <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-10 max-w-3xl">
+          <div className="bg-black border-2 border-[#00FF00] p-10 max-w-3xl">
             <SavingsCalculator defaultAmount={company.funding.amount} />
           </div>
 
-          <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-8 max-w-3xl">
-            <p className="text-lg font-bold text-white/90 mb-6">
-              💡 With {formatCurrency(company.funding.amount)} at 8% APY:
+          <div className="bg-black border-2 border-[#FFFF00] p-8 max-w-3xl">
+            <p className="text-base font-bold text-[#FFFF00] mb-6 uppercase font-mono tracking-wider">
+              [ OUTPUT: YIELD_EQUIVALENTS @ {formatCurrency(company.funding.amount)} CAPITAL ]
             </p>
-            <ul className="space-y-4 text-white/60 text-lg">
-              <li className="flex items-center gap-4">
-                <span className="text-2xl">☕</span>
-                <span>
-                  {Math.floor(calculateMonthlyYield(company.funding.amount) / 5).toLocaleString()} coffees/month
+            <ul className="space-y-4 text-white/90 text-lg lg:text-xl font-mono">
+              <li className="flex items-start gap-4">
+                <span className="text-[#00FFFF] font-bold text-xl">{'>'}</span>
+                <span className="uppercase">
+                  COFFEE_BUDGET: {Math.floor(calculateMonthlyYield(company.funding.amount) / 5).toLocaleString()} UNITS/MONTH
                 </span>
               </li>
-              <li className="flex items-center gap-4">
-                <span className="text-2xl">💻</span>
-                <span>
-                  {Math.floor(calculateSavings(company.funding.amount) / 3000)} MacBooks/year
+              <li className="flex items-start gap-4">
+                <span className="text-[#00FFFF] font-bold text-xl">{'>'}</span>
+                <span className="uppercase">
+                  MACBOOK_UNITS: {Math.floor(calculateSavings(company.funding.amount) / 3000)} DEVICES/YEAR
                 </span>
               </li>
-              <li className="flex items-center gap-4">
-                <span className="text-2xl">🏖️</span>
-                <span>
-                  {Math.floor(calculateMonthlyYield(company.funding.amount) / 5000)} team retreats/month
+              <li className="flex items-start gap-4">
+                <span className="text-[#00FFFF] font-bold text-xl">{'>'}</span>
+                <span className="uppercase">
+                  TEAM_RETREATS: {Math.floor(calculateMonthlyYield(company.funding.amount) / 5000)} EVENTS/MONTH
                 </span>
               </li>
             </ul>
@@ -496,15 +588,15 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
           <div className="flex flex-col sm:flex-row gap-4 max-w-3xl">
             <Link
               href="https://0.finance"
-              className="flex-1 text-center px-10 py-5 bg-[#AFFF5A] text-black font-bold rounded-xl hover:bg-[#FFF46B] transition-all text-lg"
+              className="flex-1 text-center px-10 py-6 bg-[#00FF00] text-black font-bold font-mono uppercase tracking-wider hover:bg-[#00FFFF] transition-all text-base lg:text-lg border-2 border-[#00FF00] hover:border-[#00FFFF]"
             >
-              Start Earning 8% APY →
+              [ ACTION: START_EARNING_8%_APY ]
             </Link>
             <Link
               href="/"
-              className="text-center px-10 py-5 border border-white/10 text-white font-medium rounded-xl hover:bg-white/5 transition-all text-lg"
+              className="text-center px-10 py-6 border-2 border-[#00FF00] text-[#00FF00] font-mono font-bold uppercase tracking-wider hover:bg-[#00FF00]/10 transition-all text-base lg:text-lg"
             >
-              ← Browse More
+              [ RETURN: BROWSE_MORE ]
             </Link>
           </div>
         </section>
