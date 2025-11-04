@@ -427,14 +427,6 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
 
             <div className="flex flex-col lg:flex-row gap-12 items-start">
               <div className="flex-1 max-w-3xl">
-                {company.logo && (
-                  <img
-                    src={company.logo}
-                    alt={company.name}
-                    className="h-16 w-auto opacity-80 mb-8 border-2 border-[#00FFFF]"
-                  />
-                )}
-
                 <div className="inline-block px-3 py-1 bg-black border-2 border-[#00FF00] text-sm text-[#00FF00] mb-8 font-mono font-bold uppercase tracking-wider">
                   CATEGORY: {company.category.toUpperCase()}
                 </div>
