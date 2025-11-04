@@ -226,26 +226,27 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  // Track active section on scroll (mobile) or by click (desktop)
+  // Track active section on scroll (both mobile and desktop)
   useEffect(() => {
-    if (isMobile) {
-      const handleScroll = () => {
-        const sections = SECTIONS.map(s => document.getElementById(s.id));
-        const scrollPosition = window.scrollY + window.innerHeight / 2;
+    const handleScroll = () => {
+      const sections = SECTIONS.map(s => document.getElementById(s.id));
+      const scrollPosition = window.scrollY + window.innerHeight / 2;
 
-        for (let i = sections.length - 1; i >= 0; i--) {
-          const section = sections[i];
-          if (section && section.offsetTop <= scrollPosition) {
-            setActiveSection(SECTIONS[i].id);
-            break;
-          }
+      for (let i = sections.length - 1; i >= 0; i--) {
+        const section = sections[i];
+        if (section && section.offsetTop <= scrollPosition) {
+          setActiveSection(SECTIONS[i].id);
+          break;
         }
-      };
+      }
+    };
 
-      window.addEventListener('scroll', handleScroll);
-      return () => window.removeEventListener('scroll', handleScroll);
-    }
-  }, [isMobile]);
+    // Run once on mount
+    handleScroll();
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   const navigateToSection = (sectionId: string) => {
     setActiveSection(sectionId);
@@ -420,66 +421,100 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
             id="company"
             className={`${!isMobile ? 'min-h-screen' : ''} flex flex-col justify-center ${!isMobile ? 'px-16 py-16' : 'space-y-8'}`}
           >
-            <div className="max-w-5xl">
-              <div className="text-xs uppercase tracking-widest text-[#FF00FF] font-mono font-bold mb-8">
-                {'>> SECTION_01: COMPANY'}
-              </div>
+            <div className="text-xs uppercase tracking-widest text-[#FF00FF] font-mono font-bold mb-8">
+              {'>> SECTION_01: COMPANY'}
+            </div>
 
-              {company.logo && (
-                <img
-                  src={company.logo}
-                  alt={company.name}
-                  className="h-16 w-auto opacity-80 mb-8 border-2 border-[#00FFFF]"
-                />
-              )}
+            <div className="flex flex-col lg:flex-row gap-12 items-start">
+              <div className="flex-1 max-w-3xl">
+                {company.logo && (
+                  <img
+                    src={company.logo}
+                    alt={company.name}
+                    className="h-16 w-auto opacity-80 mb-8 border-2 border-[#00FFFF]"
+                  />
+                )}
 
-              <div className="inline-block px-3 py-1 bg-black border-2 border-[#00FF00] text-sm text-[#00FF00] mb-8 font-mono font-bold uppercase tracking-wider">
-                CATEGORY: {company.category.toUpperCase()}
-              </div>
-
-              <h1 className="text-8xl lg:text-9xl font-black tracking-tight leading-none uppercase font-mono mb-6"
-                style={{
-                  color: '#00FFFF',
-                  letterSpacing: '0.05em'
-                }}>
-                {company.name.toUpperCase()}
-              </h1>
-
-              <p className="text-2xl lg:text-3xl font-mono max-w-4xl tracking-wide uppercase font-bold text-[#00FF00] mb-10">
-                // {company.tagline.toUpperCase()}
-              </p>
-
-              <div className="mb-10">
-                <div className="text-sm font-mono font-bold uppercase tracking-wider text-[#FFFF00] mb-3">
-                  [ DESCRIPTION ]
+                <div className="inline-block px-3 py-1 bg-black border-2 border-[#00FF00] text-sm text-[#00FF00] mb-8 font-mono font-bold uppercase tracking-wider">
+                  CATEGORY: {company.category.toUpperCase()}
                 </div>
-                <p className="text-xl lg:text-2xl text-white/90 leading-relaxed font-mono max-w-3xl">
-                  {company.description}
+
+                <h1 className="text-8xl lg:text-9xl font-black tracking-tight leading-none uppercase font-mono mb-6"
+                  style={{
+                    color: '#00FFFF',
+                    letterSpacing: '0.05em'
+                  }}>
+                  {company.name.toUpperCase()}
+                </h1>
+
+                <p className="text-2xl lg:text-3xl font-mono max-w-4xl tracking-wide uppercase font-bold text-[#00FF00] mb-10">
+                  // {company.tagline.toUpperCase()}
                 </p>
+
+                <div className="mb-10">
+                  <div className="text-sm font-mono font-bold uppercase tracking-wider text-[#FFFF00] mb-3">
+                    [ DESCRIPTION ]
+                  </div>
+                  <p className="text-xl lg:text-2xl text-white/90 leading-relaxed font-mono">
+                    {company.description}
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap gap-4">
+                  {company.website && (
+                    <a
+                      href={company.website}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-10 py-5 bg-[#00FF00] text-black font-mono font-bold text-lg uppercase tracking-wider hover:bg-[#00FFFF] transition-all"
+                    >
+                      [LINK: WEBSITE]
+                    </a>
+                  )}
+                  {company.twitter && (
+                    <a
+                      href={company.twitter}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-10 py-5 border-2 border-[#00FFFF] text-[#00FFFF] font-mono font-bold text-lg uppercase tracking-wider hover:bg-[#00FFFF]/10 transition-all"
+                    >
+                      [LINK: TWITTER/X]
+                    </a>
+                  )}
+                </div>
               </div>
 
-              <div className="flex flex-wrap gap-4">
-                {company.website && (
-                  <a
-                    href={company.website}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="px-10 py-5 bg-[#00FF00] text-black font-mono font-bold text-lg uppercase tracking-wider hover:bg-[#00FFFF] transition-all"
-                  >
-                    [LINK: WEBSITE]
-                  </a>
-                )}
-                {company.twitter && (
-                  <a
-                    href={company.twitter}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="px-10 py-5 border-2 border-[#00FFFF] text-[#00FFFF] font-mono font-bold text-lg uppercase tracking-wider hover:bg-[#00FFFF]/10 transition-all"
-                  >
-                    [LINK: TWITTER/X]
-                  </a>
-                )}
-              </div>
+              {/* Shuttle 3D Model - on right */}
+              {!isMobile && (
+                <div className="w-full lg:w-[450px] h-[450px] flex-shrink-0">
+                  <div className="w-full h-full relative border-t border-b border-[#00FF00]" style={{ backgroundColor: '#000000' }}>
+                    <Canvas
+                      camera={{ position: [0, 0, 100], fov: 75 }}
+                      dpr={[1, 1.5]}
+                      performance={{ min: 0.5 }}
+                      style={{ backgroundColor: '#000000' }}
+                    >
+                      <PerspectiveCamera makeDefault position={[0, 0, 100]} fov={75} />
+                      <ambientLight intensity={0.2} />
+                      <directionalLight position={[5, 5, 5]} intensity={0.4} />
+                      <Suspense fallback={null}>
+                        <WireframeRocket
+                          scrollProgress={0}
+                          rotation={{ x: -0.80, y: 0.64, z: -2.46 }}
+                          scale={0.12}
+                          position={{ x: 0, y: 0, z: 0 }}
+                        />
+                      </Suspense>
+                      <EffectComposer>
+                        <Bloom intensity={0.6} luminanceThreshold={0.7} radius={0.3} />
+                        <primitive object={new GlitchEffect()} />
+                        <ChromaticAberration offset={[0.005, 0.005]} />
+                        <Noise opacity={0.05} />
+                      </EffectComposer>
+                    </Canvas>
+                  </div>
+                </div>
+              )}
             </div>
           </section>
 

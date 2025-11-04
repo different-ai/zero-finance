@@ -131,7 +131,7 @@
     }
   ],
   "calculatorConfig": {
-    "bankRate": 4,
+    "bankRate": 2,
     "zeroRate": 8,
     "defaultAmount": 2800000,
     "minAmount": 100000,

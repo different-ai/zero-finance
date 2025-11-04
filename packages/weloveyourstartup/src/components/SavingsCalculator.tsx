@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { data } from '@/lib/data';
 
 interface CalculatorProps {
@@ -15,6 +15,8 @@ export function SavingsCalculator({
   const { calculatorConfig } = data;
   const [amount, setAmount] = useState(defaultAmount);
   const [inputValue, setInputValue] = useState(defaultAmount.toLocaleString());
+  const inputRef = useRef<HTMLInputElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const bankRate = calculatorConfig.bankRate;
   const zeroRate = calculatorConfig.zeroRate;
 
@@ -44,8 +46,36 @@ export function SavingsCalculator({
     setInputValue(defaultAmount.toLocaleString());
   }, [defaultAmount]);
 
+  // Auto-focus input when calculator comes into view
+  useEffect(() => {
+    if (!containerRef.current || !inputRef.current) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting && inputRef.current) {
+            // Small delay to ensure smooth scroll
+            setTimeout(() => {
+              inputRef.current?.focus();
+              // Select all text for easy editing
+              inputRef.current?.select();
+            }, 300);
+          }
+        });
+      },
+      {
+        threshold: 0.5, // Trigger when 50% of calculator is visible
+        rootMargin: '-100px', // Offset to trigger slightly before fully visible
+      }
+    );
+
+    observer.observe(containerRef.current);
+
+    return () => observer.disconnect();
+  }, []);
+
   return (
-    <div className={className}>
+    <div ref={containerRef} className={className}>
       <div className="space-y-8">
         {/* Large CAD-style Input */}
         <div className="space-y-4">
@@ -57,6 +87,7 @@ export function SavingsCalculator({
               $
             </div>
             <input
+              ref={inputRef}
               type="text"
               value={inputValue}
               onChange={handleInputChange}
