@@ -30,7 +30,21 @@
       "Bash(npm install)",
       "Bash(pnpm install:*)",
       "Bash(cat:*)",
-      "Bash(pnpm run build:*)"
+      "Bash(pnpm run build:*)",
+      "Bash(git push:*)",
+      "WebFetch(domain:bitcoinlava.xyz)",
+      "WebFetch(domain:x.com)",
+      "WebFetch(domain:www.lava.xyz)",
+      "Bash(curl:*)",
+      "WebFetch(domain:sites.lava.xyz)",
+      "WebFetch(domain:www.linkedin.com)",
+      "mcp__notion__notion-create-pages",
+      "WebSearch",
+      "WebFetch(domain:getparallel.com)",
+      "WebFetch(domain:www.crunchbase.com)",
+      "WebFetch(domain:blog.getparallel.com)",
+      "WebFetch(domain:theorg.com)",
+      "Bash(python3:*)"
     ],
     "deny": [],
     "ask": []

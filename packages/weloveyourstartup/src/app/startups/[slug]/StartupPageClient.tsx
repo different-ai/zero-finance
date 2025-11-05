@@ -207,11 +207,11 @@ interface StartupPageClientProps {
 
 // Section definitions for navigation
 const SECTIONS = [
-  { id: 'company', label: 'COMPANY', color: '#00FFFF' },
-  { id: 'mission', label: 'MISSION', color: '#00FF00' },
-  { id: 'funding', label: 'FUNDING', color: '#FFFF00' },
-  { id: 'team', label: 'TEAM', color: '#00FFFF' },
-  { id: 'zero', label: 'ZERO_FINANCE', color: '#FF00FF' },
+  { id: 'company', label: 'COMPANY', shortLabel: 'INFO', color: '#00FFFF' },
+  { id: 'mission', label: 'MISSION', shortLabel: 'MISSION', color: '#00FF00' },
+  { id: 'funding', label: 'FUNDING', shortLabel: 'FUNDING', color: '#FFFF00' },
+  { id: 'team', label: 'TEAM', shortLabel: 'TEAM', color: '#00FFFF' },
+  { id: 'zero', label: 'ZERO_FINANCE', shortLabel: 'CALC', color: '#FF00FF' },
 ] as const;
 
 export function StartupPageClient({ company }: StartupPageClientProps) {
@@ -229,30 +229,70 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
   // Track active section on scroll (both mobile and desktop)
   useEffect(() => {
     const handleScroll = () => {
-      const sections = SECTIONS.map(s => document.getElementById(s.id));
-      const scrollPosition = window.scrollY + window.innerHeight / 2;
+      if (isMobile) {
+        // Mobile: sections are inside scrollable div
+        const scrollContainer = document.querySelector('.flex-1.bg-black.overflow-y-auto');
+        if (!scrollContainer) return;
 
-      for (let i = sections.length - 1; i >= 0; i--) {
-        const section = sections[i];
-        if (section && section.offsetTop <= scrollPosition) {
-          setActiveSection(SECTIONS[i].id);
-          break;
+        const sections = SECTIONS.map(s => document.getElementById(s.id));
+        const scrollTop = scrollContainer.scrollTop;
+        const containerHeight = scrollContainer.clientHeight;
+
+        for (let i = sections.length - 1; i >= 0; i--) {
+          const section = sections[i];
+          if (section) {
+            const sectionTop = section.offsetTop;
+            if (sectionTop <= scrollTop + containerHeight / 2) {
+              setActiveSection(SECTIONS[i].id);
+              break;
+            }
+          }
+        }
+      } else {
+        // Desktop: sections are in window scroll
+        const sections = SECTIONS.map(s => document.getElementById(s.id));
+        const scrollPosition = window.scrollY + window.innerHeight / 2;
+
+        for (let i = sections.length - 1; i >= 0; i--) {
+          const section = sections[i];
+          if (section && section.offsetTop <= scrollPosition) {
+            setActiveSection(SECTIONS[i].id);
+            break;
+          }
         }
       }
     };
 
     // Run once on mount
-    handleScroll();
+    setTimeout(handleScroll, 100);
 
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+    if (isMobile) {
+      const scrollContainer = document.querySelector('.flex-1.bg-black.overflow-y-auto');
+      if (scrollContainer) {
+        scrollContainer.addEventListener('scroll', handleScroll);
+        return () => scrollContainer.removeEventListener('scroll', handleScroll);
+      }
+    } else {
+      window.addEventListener('scroll', handleScroll);
+      return () => window.removeEventListener('scroll', handleScroll);
+    }
+  }, [isMobile]);
 
   const navigateToSection = (sectionId: string) => {
     setActiveSection(sectionId);
     const element = document.getElementById(sectionId);
     if (element) {
-      element.scrollIntoView({ behavior: 'smooth' });
+      if (isMobile) {
+        // On mobile, scroll the container
+        const scrollContainer = document.querySelector('.flex-1.bg-black.overflow-y-auto');
+        if (scrollContainer) {
+          const elementTop = element.offsetTop;
+          scrollContainer.scrollTo({ top: elementTop, behavior: 'smooth' });
+        }
+      } else {
+        // On desktop, scroll the window
+        element.scrollIntoView({ behavior: 'smooth' });
+      }
     }
   };
 
@@ -359,6 +399,338 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
     <div className="min-h-screen relative" style={{ backgroundColor: '#000000' }}>
       <CRTEffect />
 
+      {/* Mobile: CAD Interface */}
+      {isMobile && (
+        <div className="lg:hidden fixed inset-0 bg-black flex flex-col overflow-hidden z-40">
+          {/* CAD-style Header Bar */}
+          <div className="bg-[#0000AA] text-white font-mono text-[10px] sm:text-xs px-2 py-1 flex items-center justify-between border-b border-[#00FFFF]/30 flex-shrink-0">
+            <span className="tracking-wider truncate flex-1 mr-2">ACAD v12 - {company.name.toUpperCase().substring(0, 12)}.DWG</span>
+            <span className="text-[#00FFFF] flex-shrink-0">SECT: {SECTIONS.findIndex(s => s.id === activeSection) + 1}/5</span>
+          </div>
+
+          {/* 3D Viewport - Top Section */}
+          <div className="h-[35vh] bg-black border-b border-[#00FF00]/30 relative flex-shrink-0">
+            <Canvas
+              key={activeSection}
+              camera={{
+                position: activeSection === 'company' ? [0, 0, 140] : [0, 0, 15],
+                fov: 75
+              }}
+              dpr={[1, 1.5]}
+              performance={{ min: 0.5 }}
+              style={{ backgroundColor: '#000000' }}
+            >
+              <PerspectiveCamera
+                makeDefault
+                position={activeSection === 'company' ? [0, 0, 140] : [0, 0, 15]}
+                fov={75}
+              />
+              <ambientLight intensity={0.2} />
+              <directionalLight position={[5, 5, 5]} intensity={0.4} />
+              <Suspense fallback={null}>
+                <WireframeRocket
+                  scrollProgress={SECTIONS.findIndex(s => s.id === activeSection) / 4}
+                  rotation={
+                    activeSection === 'company'
+                      ? { x: -0.80, y: 0.64, z: -2.46 }
+                      : { x: -1.2, y: 0, z: -0.5 }
+                  }
+                  scale={
+                    activeSection === 'company'
+                      ? 0.09
+                      : 0.7
+                  }
+                  position={
+                    activeSection === 'company'
+                      ? { x: 0, y: 0, z: 0 }
+                      : { x: 0, y: 0, z: 12.0 }
+                  }
+                />
+              </Suspense>
+              <EffectComposer>
+                {activeSection === 'company' && (
+                  <>
+                    <Bloom intensity={0.6} luminanceThreshold={0.7} radius={0.3} />
+                    <primitive object={new GlitchEffect()} />
+                  </>
+                )}
+                {activeSection === 'mission' && (
+                  <>
+                    <primitive object={new DitherWaveEffect()} />
+                    <Bloom intensity={0.4} luminanceThreshold={0.8} radius={0.2} />
+                  </>
+                )}
+                {activeSection === 'team' && (
+                  <>
+                    <primitive object={new HologramEffect()} />
+                    <Bloom intensity={1.2} luminanceThreshold={0.5} radius={0.5} />
+                  </>
+                )}
+                {(activeSection === 'funding' || activeSection === 'zero') && (
+                  <>
+                    <primitive object={new DitherWaveEffect()} />
+                    <Bloom intensity={0.4} luminanceThreshold={0.8} radius={0.2} />
+                  </>
+                )}
+              </EffectComposer>
+            </Canvas>
+
+            {/* Viewport Label */}
+            <div className="absolute top-1 left-1 sm:top-2 sm:left-2 font-mono text-[8px] sm:text-[9px] text-[#00FFFF] uppercase tracking-wider">
+              [3D WIREFRAME]
+            </div>
+
+            {/* Section Info */}
+            <div className="absolute top-1 right-1 sm:top-2 sm:right-2 font-mono text-[8px] sm:text-[9px] text-[#00FF00] space-y-0.5 text-right">
+              <div>LAYER: {activeSection.toUpperCase()}</div>
+            </div>
+
+            {/* Section Navigation Buttons */}
+            <div className="absolute bottom-1 left-1 right-1 sm:bottom-2 sm:left-2 sm:right-2 flex gap-0.5 sm:gap-1">
+              {SECTIONS.map((s) => (
+                <button
+                  key={s.id}
+                  onClick={() => navigateToSection(s.id)}
+                  className={`flex-1 py-1 sm:py-1.5 transition-all border font-mono text-[8px] sm:text-[9px] font-bold uppercase ${
+                    s.id === activeSection
+                      ? 'bg-[#00FF00] border-[#00FF00] text-black'
+                      : 'bg-black/80 border-[#00FF00]/30 text-[#00FF00] hover:border-[#00FFFF] hover:text-[#00FFFF]'
+                  }`}
+                >
+                  {s.shortLabel}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Scrollable Content Area */}
+          <div className="flex-1 bg-black overflow-y-auto border-t-2 border-[#00FF00] min-h-0">
+            <div className="p-3 sm:p-4 space-y-4">
+
+              {/* SECTION 1: COMPANY */}
+              <div id="company" className="scroll-mt-4">
+                <div className="border border-[#00FFFF]/30 bg-[#0000AA]/20 p-2 mb-3">
+                  <div className="font-mono text-[9px] sm:text-[10px] text-[#FF00FF] uppercase tracking-wider">
+                    &gt;&gt; SECT_01: COMPANY
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <div className="inline-block px-2 py-1 bg-black border border-[#00FF00] text-[9px] sm:text-[10px] text-[#00FF00] font-mono font-bold uppercase tracking-wider">
+                    CAT: {company.category.toUpperCase()}
+                  </div>
+
+                  <h1 className="text-3xl sm:text-4xl font-black tracking-tight leading-none uppercase font-mono text-[#00FFFF] break-words">
+                    {company.name.toUpperCase()}
+                  </h1>
+
+                  <p className="text-sm sm:text-base font-mono tracking-wide uppercase font-bold text-[#00FF00] break-words">
+                    // {company.tagline.toUpperCase()}
+                  </p>
+
+                  <div className="border-2 border-[#00FFFF] bg-[#0000AA]/10 p-3">
+                    <div className="text-[9px] font-mono font-bold uppercase tracking-wider text-[#FFFF00] mb-2">
+                      [ DESCRIPTION ]
+                    </div>
+                    <p className="text-xs sm:text-sm text-white/90 leading-relaxed font-mono break-words">
+                      {company.description}
+                    </p>
+                  </div>
+
+                  <div className="flex flex-col gap-2">
+                    {company.website && (
+                      <a
+                        href={company.website}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-4 py-2.5 bg-[#00FF00] text-black font-mono font-bold text-[10px] sm:text-xs uppercase tracking-wider hover:bg-[#00FFFF] transition-all text-center"
+                      >
+                        [LINK: WEBSITE]
+                      </a>
+                    )}
+                    {company.twitter && (
+                      <a
+                        href={company.twitter}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-4 py-2.5 border-2 border-[#00FFFF] text-[#00FFFF] font-mono font-bold text-[10px] sm:text-xs uppercase tracking-wider hover:bg-[#00FFFF]/10 transition-all text-center"
+                      >
+                        [LINK: TWITTER/X]
+                      </a>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* SECTION 2: MISSION */}
+              <div id="mission" className="scroll-mt-4">
+                <div className="border border-[#00FFFF]/30 bg-[#0000AA]/20 p-2 mb-3">
+                  <div className="font-mono text-[9px] sm:text-[10px] text-[#FF00FF] uppercase tracking-wider">
+                    &gt;&gt; SECT_02: MISSION
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <h2 className="text-2xl sm:text-3xl font-black uppercase font-mono tracking-wide text-[#00FFFF] break-words">
+                    WHAT_THEY'RE_BUILDING
+                  </h2>
+
+                  {company.whyWeLoveThem && (
+                    <div className="bg-black border-2 border-[#00FFFF] p-3">
+                      <p className="text-[9px] sm:text-[10px] uppercase tracking-wider text-[#00FFFF] font-bold mb-2 font-mono">
+                        [ WHY_WE_LOVE_{company.name.toUpperCase().replace(/\s+/g, '_')} ]
+                      </p>
+                      <p className="text-white/90 leading-relaxed text-xs sm:text-sm font-mono break-words">
+                        {company.whyWeLoveThem}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* SECTION 3: FUNDING */}
+              <div id="funding" className="scroll-mt-4">
+                <div className="border border-[#00FFFF]/30 bg-[#0000AA]/20 p-2 mb-3">
+                  <div className="font-mono text-[9px] sm:text-[10px] text-[#FF00FF] uppercase tracking-wider">
+                    &gt;&gt; SECT_03: FUNDING
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <h2 className="text-2xl sm:text-3xl font-black uppercase font-mono tracking-wide text-[#FFFF00] break-words">
+                    CAPITAL_RAISED
+                  </h2>
+
+                  <div className="bg-black border-2 border-[#00FFFF] p-4">
+                    <p className="text-[9px] sm:text-[10px] uppercase tracking-widest text-[#00FFFF] mb-2 font-mono font-bold">
+                      [ DATA: FUNDING_AMT ]
+                    </p>
+                    <p className="text-3xl sm:text-4xl font-black text-[#00FFFF] font-mono tracking-tight mb-2">
+                      {formatCurrency(company.funding.amount)}
+                    </p>
+                    <p className="text-[10px] sm:text-xs text-[#00FFFF]/70 font-mono uppercase tracking-wide">
+                      {company.funding.round} / {company.funding.date}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* SECTION 4: TEAM */}
+              <div id="team" className="scroll-mt-4">
+                <div className="border border-[#00FFFF]/30 bg-[#0000AA]/20 p-2 mb-3">
+                  <div className="font-mono text-[9px] sm:text-[10px] text-[#FF00FF] uppercase tracking-wider">
+                    &gt;&gt; SECT_04: TEAM
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <h2 className="text-2xl sm:text-3xl font-black uppercase font-mono tracking-wide text-[#00FFFF] break-words">
+                    THE_MINDS
+                  </h2>
+
+                  <div className="space-y-2">
+                    {company.founders.map((founder, index) => (
+                      <a
+                        key={founder.id}
+                        href={founder.twitter}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-3 p-3 bg-black border border-[#00FF00] hover:bg-[#00FF00]/10 hover:border-[#00FFFF] transition-all group"
+                      >
+                        {founder.avatar && (
+                          <Image
+                            src={founder.avatar}
+                            alt={founder.name}
+                            width={50}
+                            height={50}
+                            className="border border-[#00FF00] group-hover:border-[#00FFFF] transition-all flex-shrink-0"
+                          />
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <div className="text-[8px] sm:text-[9px] font-mono font-bold uppercase tracking-wider text-[#00FF00]/70 mb-1">
+                            MEM_{(index + 1).toString().padStart(2, '0')}
+                          </div>
+                          <h3 className="text-sm sm:text-base font-black text-white group-hover:text-[#00FFFF] transition-colors font-mono uppercase tracking-wide truncate">
+                            {founder.name.toUpperCase()}
+                          </h3>
+                          <p className="text-[#00FF00] text-[9px] sm:text-[10px] font-mono uppercase tracking-wide truncate">
+                            {founder.role.toUpperCase()}
+                          </p>
+                        </div>
+                        <span className="text-lg opacity-0 group-hover:opacity-100 transition-opacity text-[#00FFFF] font-mono flex-shrink-0">
+                          →
+                        </span>
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* SECTION 5: ZERO_FINANCE */}
+              <div id="zero" className="scroll-mt-4 pb-4">
+                <div className="border border-[#00FFFF]/30 bg-[#0000AA]/20 p-2 mb-3">
+                  <div className="font-mono text-[9px] sm:text-[10px] text-[#FF00FF] uppercase tracking-wider">
+                    &gt;&gt; SECT_05: ZERO_FINANCE
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <h2 className="text-2xl sm:text-3xl font-black text-[#FF00FF] uppercase font-mono tracking-tight leading-tight break-words">
+                    MAX_RUNWAY
+                  </h2>
+
+                  <div className="bg-black border-2 border-[#00FF00] p-3">
+                    <p className="text-white/90 text-xs sm:text-sm font-mono leading-relaxed mb-3 break-words">
+                      Zero Finance helps startups like {company.name} stay leaner, move faster by giving them 8% APY on cash. Insured, withdrawable, spendable.
+                    </p>
+                    <Link
+                      href="https://0.finance"
+                      className="inline-block px-4 py-2.5 bg-[#00FF00] text-black font-bold font-mono uppercase tracking-wider hover:bg-[#00FFFF] transition-all text-[10px] sm:text-xs border border-[#00FF00] hover:border-[#00FFFF]"
+                    >
+                      [ LEARN_HOW ]
+                    </Link>
+                  </div>
+
+                  <div className="space-y-3">
+                    <p className="text-sm sm:text-base text-[#00FFFF] font-mono uppercase tracking-wide">
+                      Savings on {formatCurrency(company.funding.amount)}:
+                    </p>
+
+                    <SavingsCalculator defaultAmount={company.funding.amount} />
+                  </div>
+
+                  <div className="flex flex-col gap-2">
+                    <Link
+                      href="https://0.finance"
+                      className="text-center px-4 py-3 bg-[#00FF00] text-black font-bold font-mono uppercase tracking-wider hover:bg-[#00FFFF] transition-all text-[10px] sm:text-xs border border-[#00FF00] hover:border-[#00FFFF]"
+                    >
+                      [ START_EARNING_8%_APY ]
+                    </Link>
+                    <Link
+                      href="/"
+                      className="text-center px-4 py-3 border border-[#00FFFF] text-[#00FFFF] font-mono font-bold uppercase tracking-wider hover:bg-[#00FFFF]/10 transition-all text-[10px] sm:text-xs"
+                    >
+                      [ BROWSE_MORE ]
+                    </Link>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+          {/* CAD Command Line Footer */}
+          <div className="bg-[#0000AA] text-white font-mono text-[8px] sm:text-[9px] px-2 py-1 sm:py-1.5 border-t border-[#00FFFF]/30 space-y-0.5 flex-shrink-0">
+            <div className="truncate">
+              <span className="text-[#00FFFF]">Orden:</span> <span className="text-white">_VIEW_{activeSection.toUpperCase()}</span>
+            </div>
+            <div className="text-[#FFFFFF]/70 truncate">
+              {company.name} - Viewport {SECTIONS.findIndex(s => s.id === activeSection) + 1} of {SECTIONS.length}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* AutoCAD-style Right Sidebar Navigation (desktop only) */}
       {!isMobile && (
         <div
@@ -412,14 +784,15 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
         </div>
       )}
 
-      {/* Main Content - Full-screen sections on desktop, scrollable on mobile */}
-      <div className={`${!isMobile ? 'lg:pr-64' : ''}`}>
-        <div className={`${!isMobile ? '' : 'max-w-6xl mx-auto px-8 py-16 space-y-24'}`}>
+      {/* Main Content - Full-screen sections on desktop only */}
+      {!isMobile && (
+        <div className="lg:pr-64">
+          <div>
 
           {/* SECTION 1: COMPANY */}
           <section
             id="company"
-            className={`${!isMobile ? 'min-h-screen' : ''} flex flex-col justify-center ${!isMobile ? 'px-16 py-16' : 'space-y-8'}`}
+            className="min-h-screen flex flex-col justify-center px-16 py-16"
           >
             <div className="text-xs uppercase tracking-widest text-[#FF00FF] font-mono font-bold mb-8">
               {'>> SECTION_01: COMPANY'}
@@ -513,7 +886,7 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
           {/* SECTION 2: MISSION */}
           <section
             id="mission"
-            className={`${!isMobile ? 'min-h-screen' : ''} flex flex-col justify-center ${!isMobile ? 'px-16 py-16' : 'space-y-6'}`}
+            className="min-h-screen flex flex-col justify-center px-16 py-16"
           >
             <div className="text-xs uppercase tracking-widest text-[#FF00FF] font-mono font-bold mb-8">
               {'>> SECTION_02: MISSION'}
@@ -573,7 +946,7 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
           {/* SECTION 3: FUNDING */}
           <section
             id="funding"
-            className={`${!isMobile ? 'min-h-screen' : ''} flex flex-col justify-center ${!isMobile ? 'px-16 py-16' : 'space-y-6'}`}
+            className="min-h-screen flex flex-col justify-center px-16 py-16"
           >
             <div className="text-xs uppercase tracking-widest text-[#FF00FF] font-mono font-bold mb-8">
               {'>> SECTION_03: FUNDING'}
@@ -602,7 +975,7 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
           {/* SECTION 4: TEAM */}
           <section
             id="team"
-            className={`${!isMobile ? 'min-h-screen' : ''} flex flex-col justify-center ${!isMobile ? 'px-16 py-16' : 'space-y-6'}`}
+            className="min-h-screen flex flex-col justify-center px-16 py-16"
           >
             <div className="text-xs uppercase tracking-widest text-[#FF00FF] font-mono font-bold mb-8">
               {'>> SECTION_04: TEAM'}
@@ -687,7 +1060,7 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
           {/* SECTION 5: ZERO_FINANCE (Separate Plug/Shill) */}
           <section
             id="zero"
-            className={`${!isMobile ? 'min-h-screen' : ''} flex flex-col justify-center ${!isMobile ? 'px-16 py-16' : 'space-y-8 pb-32'}`}
+            className="min-h-screen flex flex-col justify-center px-16 py-16"
           >
             <div className="text-xs uppercase tracking-widest text-[#FF00FF] font-mono font-bold mb-8">
               {'>> SECTION_05: ZERO_FINANCE'}
@@ -735,8 +1108,9 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
             </div>
           </section>
 
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

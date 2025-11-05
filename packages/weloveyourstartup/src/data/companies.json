@@ -183,6 +183,96 @@
         "featured": true,
         "order": 3
       }
+    },
+    {
+      "publishedDate": "2025-10-09",
+      "featuredOrder": 4,
+      "id": "parallel",
+      "name": "Parallel",
+      "tagline": "AI-native FP&A platform for startups",
+      "description": "The AI CFO that makes it obvious to founders what their runway looks like and what levers they can pull to extend runway or invest more into growth.",
+      "longDescription": "Parallel is the AI-native forecasting platform that gives VC-backed founders CFO-level insight without building a finance team. Parallel delivers a complete solution that connects to QuickBooks and Puzzle to stand up a live, auditable forecast, with embedded AI agents that clean and map data, run scenarios, and draft board materials, overseen by a dedicated fractional CFO. Built for B2B SaaS companies from pre-seed through Series A and beyond, Parallel transforms how startups manage their largest expense: headcount.",
+      "logo": "/images/companies/parallel-logo.svg",
+      "website": "https://getparallel.com",
+      "twitter": "https://x.com/_renatov",
+      "category": "FP&A / Finance Software",
+      "whyWeLoveThem": "Parallel bridges the gap between early-stage startups that can't afford a full-time CFO and the critical financial insights they need to scale confidently. While most finance tools are just dashboards, Parallel combines AI automation with fractional CFO oversight to deliver live, audit-ready forecasts that keep founders informed and investors confident. Their focus on headcount planning - the biggest cost driver for startups - shows deep understanding of what early-stage companies actually need.",
+      "funFact": "Parallel raised their pre-seed ($1.85M) and seed ($2.4M) rounds just 13 months apart - proof that their AI-native approach resonates with both customers and top-tier VCs from Night Capital to Penny Jar Capital!",
+      "funding": {
+        "amount": 2400000,
+        "round": "Seed",
+        "date": "2025-10-09",
+        "valuation": null,
+        "leadInvestors": [
+          "Night Capital",
+          "K5 Tokyo Black"
+        ],
+        "participatingInvestors": [
+          "Penny Jar Capital",
+          "Background Capital",
+          "Mintaka VC",
+          "Path Ventures"
+        ],
+        "angels": [
+          "Alex Bean (Co-founder, Divvy)",
+          "Jared Rodman (Co-founder, Weave)",
+          "Jeron Paul (Founder, Spiff)",
+          "Colin Zima (Founder, Omni)",
+          "Jeremy Yap",
+          "Brian Pokorny"
+        ],
+        "announcement": "We raised $2.4M to launch the AI-native finance team for startups."
+      },
+      "founders": [
+        {
+          "id": "renato-villanueva",
+          "name": "Renato Villanueva",
+          "role": "Founder & CEO",
+          "twitter": "https://x.com/_renatov",
+          "linkedin": "https://www.linkedin.com/in/renato-villanueva-ceo",
+          "avatar": "/images/founders/renato-villanueva.png",
+          "bio": "Former Finance & Strategy Manager at Divvy building the AI CFO for startups. Immigrant from Peru who identified a critical gap in budget collaboration tools."
+        },
+        {
+          "id": "tyler-slater",
+          "name": "Tyler Slater",
+          "role": "Co-founder & CTO",
+          "linkedin": "https://www.linkedin.com/in/tyler-slater/",
+          "avatar": "/images/founders/tyler-slater.png",
+          "bio": "Former Engineering Manager at MX and ex-CTO at Beam. Building the technical infrastructure for AI-powered financial forecasting."
+        },
+        {
+          "id": "clint-savage",
+          "name": "Clint Savage",
+          "role": "VP of Product",
+          "linkedin": "https://www.linkedin.com/in/clint-savage/",
+          "avatar": "/images/founders/clint-savage.png",
+          "bio": "Product leader with 10+ years in Product & Design. Previously at Clozd, Lendio, and Google. Employee #3 at Parallel."
+        },
+        {
+          "id": "rick-saboia",
+          "name": "Rick Sabóia",
+          "role": "Co-founder & Sales Director",
+          "linkedin": "https://www.linkedin.com/in/riquesaboia/",
+          "avatar": "/images/founders/rick-saboia.png",
+          "bio": "Building automated finance solutions for startups. Focused on making financial forecasting accessible to every founder."
+        }
+      ],
+      "metrics": {
+        "targetCustomers": "B2B SaaS companies from pre-seed through Series A+",
+        "integrations": "QuickBooks, Puzzle",
+        "service": "AI agents + fractional CFO oversight",
+        "deliverables": "Live, auditable forecasts and board materials",
+        "teamSize": "6-10 employees",
+        "headquarters": "Lehi, Utah"
+      },
+      "showcase": {
+        "primaryColor": "#4F46E5",
+        "gradient": "from-indigo-500 to-purple-600",
+        "emoji": "📊",
+        "featured": true,
+        "order": 4
+      }
     }
   ],
   "calculatorConfig": {
