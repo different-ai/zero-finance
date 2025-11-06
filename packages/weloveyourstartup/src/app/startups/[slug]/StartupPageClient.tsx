@@ -6,7 +6,7 @@ import { useGLTF, PerspectiveCamera, shaderMaterial } from "@react-three/drei";
 import { EffectComposer, Bloom, ChromaticAberration, Noise } from "@react-three/postprocessing";
 import { GlitchEffect } from "@/effects/GlitchEffect";
 import { BlueNoiseHalftoneEffect } from "@/effects/BlueNoiseHalftoneEffect";
-import { DitherWaveEffect } from "@/effects/DitherWaveEffect";
+import { WireframeDrawEffect } from "@/effects/WireframeDrawEffect";
 import * as THREE from "three";
 import Link from 'next/link';
 import Image from 'next/image';
@@ -657,7 +657,10 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
                     customModels={customModels}
                   />
                 </Suspense>
-                <EffectComposer>
+                <EffectComposer key={`effects-${activeSection}`}>
+                  {/* Progressive wireframe drawing effect (80s AutoCAD style) */}
+                  <primitive object={new WireframeDrawEffect({ duration: 1.2 })} />
+
                   {activeSection === 'company' && (
                     <>
                       {/* First: Glitch effect */}
@@ -1053,6 +1056,8 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
                       />
                     </Suspense>
                     <EffectComposer>
+                      {/* Progressive wireframe drawing effect (80s AutoCAD style) */}
+                      <primitive object={new WireframeDrawEffect({ duration: 1.2 })} />
                       <Bloom intensity={0.6} luminanceThreshold={0.7} radius={0.3} />
                       <primitive object={new GlitchEffect()} />
                       <ChromaticAberration offset={[0.005, 0.005]} />
@@ -1117,7 +1122,10 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
                         customModels={customModels}
                       />
                     </Suspense>
-                    {/* No effects for MODEL_02 */}
+                    <EffectComposer>
+                      {/* Progressive wireframe drawing effect (80s AutoCAD style) */}
+                      <primitive object={new WireframeDrawEffect({ duration: 1.2 })} />
+                    </EffectComposer>
                   </Canvas>
                 </CADViewport>
               )}
@@ -1231,7 +1239,10 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
                         customModels={customModels}
                       />
                     </Suspense>
-                    {/* No effects for TEAM section - model appears immediately */}
+                    <EffectComposer>
+                      {/* Progressive wireframe drawing effect (80s AutoCAD style) */}
+                      <primitive object={new WireframeDrawEffect({ duration: 1.2 })} />
+                    </EffectComposer>
                   </Canvas>
                 </CADViewport>
               )}
