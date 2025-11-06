@@ -75,6 +75,15 @@ interface Company {
   description: string;
   category: string;
   logo?: string;
+  model3d?: string; // Single model (legacy support)
+  models3d?: string[]; // Array of 4 models for each section
+  modelConfigs?: Array<{
+    cameraPosition: [number, number, number];
+    cameraFov: number;
+    rotation: { x: number; y: number; z: number };
+    scale: number;
+    position: { x: number; y: number; z: number };
+  }>;
   website?: string;
   twitter?: string;
   whyWeLoveThem?: string;
@@ -111,12 +120,13 @@ interface WireframeRocketProps {
   rotation: { x: number; y: number; z: number };
   scale: number;
   position: { x: number; y: number; z: number };
+  customModels?: string[]; // Optional custom model path
 }
 
-function WireframeRocket({ scrollProgress, rotation, scale, position }: WireframeRocketProps) {
+function WireframeRocket({ scrollProgress, rotation, scale, position, customModels }: WireframeRocketProps) {
   // Determine which model to show based on scroll progress
   const modelIndex = Math.min(Math.floor(scrollProgress * 4), 3);
-  const modelPath = MODELS[modelIndex];
+  const modelPath = customModels ? customModels[modelIndex] : MODELS[modelIndex];
 
   const { scene } = useGLTF(modelPath);
   const groupRef = useRef<THREE.Group>(null);
@@ -201,6 +211,75 @@ function CRTEffect() {
   );
 }
 
+// CAD Viewport - AutoCAD-style viewport with corner brackets and technical annotations
+interface CADViewportProps {
+  children: React.ReactNode;
+  label?: string;
+  viewType?: string;
+  className?: string;
+}
+
+function CADViewport({ children, label = "VIEWPORT_3D", viewType = "PERSPECTIVE", className = "" }: CADViewportProps) {
+  return (
+    <div className={`relative ${className}`} style={{ backgroundColor: '#000000' }}>
+      {/* Main content */}
+      <div className="w-full h-full relative">
+        {children}
+      </div>
+
+      {/* Corner brackets - L-shaped lines at each corner */}
+      {/* Top-left corner */}
+      <div className="absolute top-0 left-0 w-6 h-6 pointer-events-none">
+        <div className="absolute top-0 left-0 w-full h-[2px] bg-[#00FF00]"></div>
+        <div className="absolute top-0 left-0 w-[2px] h-full bg-[#00FF00]"></div>
+      </div>
+      {/* Top-right corner */}
+      <div className="absolute top-0 right-0 w-6 h-6 pointer-events-none">
+        <div className="absolute top-0 right-0 w-full h-[2px] bg-[#00FF00]"></div>
+        <div className="absolute top-0 right-0 w-[2px] h-full bg-[#00FF00]"></div>
+      </div>
+      {/* Bottom-left corner */}
+      <div className="absolute bottom-0 left-0 w-6 h-6 pointer-events-none">
+        <div className="absolute bottom-0 left-0 w-full h-[2px] bg-[#00FF00]"></div>
+        <div className="absolute bottom-0 left-0 w-[2px] h-full bg-[#00FF00]"></div>
+      </div>
+      {/* Bottom-right corner */}
+      <div className="absolute bottom-0 right-0 w-6 h-6 pointer-events-none">
+        <div className="absolute bottom-0 right-0 w-full h-[2px] bg-[#00FF00]"></div>
+        <div className="absolute bottom-0 right-0 w-[2px] h-full bg-[#00FF00]"></div>
+      </div>
+
+      {/* Technical annotations */}
+      <div className="absolute top-1 left-8 font-mono text-[9px] text-[#00FF00] tracking-wider pointer-events-none uppercase">
+        [ {label} ]
+      </div>
+      <div className="absolute top-1 right-8 font-mono text-[9px] text-[#00FFFF] tracking-wider pointer-events-none uppercase">
+        {viewType}
+      </div>
+
+      {/* Grid coordinates - bottom left */}
+      <div className="absolute bottom-1 left-8 font-mono text-[8px] text-[#00FF00]/60 tracking-wider pointer-events-none">
+        GRID: ENABLED
+      </div>
+
+      {/* Viewport info - bottom right */}
+      <div className="absolute bottom-1 right-8 font-mono text-[8px] text-[#00FFFF]/60 tracking-wider pointer-events-none">
+        RENDER: WIREFRAME
+      </div>
+
+      {/* Subtle grid overlay */}
+      <div className="absolute inset-0 pointer-events-none opacity-[0.08]"
+        style={{
+          backgroundImage: `
+            repeating-linear-gradient(0deg, transparent, transparent 19px, #00FF00 19px, #00FF00 20px),
+            repeating-linear-gradient(90deg, transparent, transparent 19px, #00FF00 19px, #00FF00 20px)
+          `
+        }}
+      />
+    </div>
+  );
+}
+
 interface StartupPageClientProps {
   company: Company;
 }
@@ -214,9 +293,111 @@ const SECTIONS = [
   { id: 'zero', label: 'ZERO_FINANCE', shortLabel: 'CALC', color: '#FF00FF' },
 ] as const;
 
+// Model controls state for debugging
+interface ModelControls {
+  cameraPosition: [number, number, number];
+  cameraFov: number;
+  rotation: { x: number; y: number; z: number };
+  scale: number;
+  position: { x: number; y: number; z: number };
+}
+
 export function StartupPageClient({ company }: StartupPageClientProps) {
   const [activeSection, setActiveSection] = useState('company');
   const [isMobile, setIsMobile] = useState(false);
+  const [showControls, setShowControls] = useState(false);
+  const [currentModelIndex, setCurrentModelIndex] = useState(0);
+
+  // Model controls for each of the 4 models - use company configs if available
+  const [modelControls, setModelControls] = useState<ModelControls[]>(
+    company.modelConfigs || [
+      // Default Model 0 (Section 1 - COMPANY)
+      {
+        cameraPosition: [0, 0, 140],
+        cameraFov: 75,
+        rotation: { x: -0.80, y: 0.64, z: -2.46 },
+        scale: 0.09,
+        position: { x: 0, y: 0, z: 0 }
+      },
+      // Default Model 1 (Section 2 - MISSION)
+      {
+        cameraPosition: [0, 0, 15],
+        cameraFov: 75,
+        rotation: { x: -1.2, y: 0, z: -0.5 },
+        scale: 0.7,
+        position: { x: 0, y: 0, z: 12.0 }
+      },
+      // Default Model 2 (Section 3 - FUNDING)
+      {
+        cameraPosition: [0, 0, 15],
+        cameraFov: 75,
+        rotation: { x: -1.2, y: 0, z: -0.5 },
+        scale: 0.7,
+        position: { x: 0, y: 0, z: 12.0 }
+      },
+      // Default Model 3 (Section 4 - TEAM)
+      {
+        cameraPosition: [0, 0, 15],
+        cameraFov: 75,
+        rotation: { x: -1.2, y: 0, z: -0.5 },
+        scale: 0.7,
+        position: { x: 0, y: 0, z: 12.0 }
+      }
+    ]
+  );
+
+  // Compute models array from company data
+  const customModels = useMemo(() => {
+    if (company.models3d) {
+      return company.models3d; // Use models3d if available
+    } else if (company.model3d) {
+      // Convert single model to array of 4
+      return [company.model3d, company.model3d, company.model3d, company.model3d];
+    }
+    return undefined; // Use default models
+  }, [company.model3d, company.models3d]);
+
+  // Preload custom models if available
+  useEffect(() => {
+    if (customModels) {
+      customModels.forEach(model => useGLTF.preload(model));
+    }
+  }, [customModels]);
+
+  // Toggle controls with Ctrl+Shift+D
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.shiftKey && e.key === 'D') {
+        e.preventDefault();
+        setShowControls(prev => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  // Update control value
+  const updateControl = (index: number, field: keyof ModelControls, value: any) => {
+    setModelControls(prev => {
+      const newControls = [...prev];
+      newControls[index] = { ...newControls[index], [field]: value };
+      return newControls;
+    });
+  };
+
+  // Copy current model settings to clipboard
+  const copySettings = () => {
+    const settings = modelControls[currentModelIndex];
+    const output = {
+      company: company.name,
+      modelIndex: currentModelIndex,
+      modelLabel: `MODEL_${(currentModelIndex + 1).toString().padStart(2, '0')}`,
+      settings: settings
+    };
+    const text = JSON.stringify(output, null, 2);
+    navigator.clipboard.writeText(text);
+    alert(`Settings copied for ${company.name} - Model #${currentModelIndex + 1}!`);
+  };
 
   // Detect mobile vs desktop
   useEffect(() => {
@@ -317,7 +498,7 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
     // Per-model camera settings (completely independent)
     const modelCamera = isShuttle
       ? { position: [0, 0, 100] as [number, number, number], fov: 75 }
-      : { position: [0, 0, 15] as [number, number, number], fov: 75 };
+      : { position: [0, 0, 12] as [number, number, number], fov: 75 };
 
     // Per-model transform settings
     const modelTransform = isShuttle
@@ -328,12 +509,16 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
         }
       : {
           rotation: { x: -1.2, y: 0, z: -0.5 },
-          scale: 0.7,
-          position: { x: 0, y: 0, z: 12.0 }
+          scale: 0.9,
+          position: { x: 0, y: 0, z: 5.0 }
         };
 
     return (
-      <div className="w-full h-[600px] relative border-t border-b border-[#00FF00]" style={{ backgroundColor: '#000000' }}>
+      <CADViewport
+        label={`MODEL_0${modelIndex + 1}`}
+        viewType="PERSPECTIVE"
+        className="w-full h-[600px]"
+      >
         <Canvas
           camera={{ position: modelCamera.position, fov: modelCamera.fov }}
           dpr={[1, 1.5]} // Limit pixel ratio for performance
@@ -388,7 +573,7 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
             )}
           </EffectComposer>
         </Canvas>
-      </div>
+      </CADViewport>
     );
   };
 
@@ -406,84 +591,69 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
           </div>
 
           {/* 3D Viewport - Top Section */}
-          <div className="h-[35vh] bg-black border-b border-[#00FF00]/30 relative flex-shrink-0">
-            <Canvas
-              key={activeSection}
-              camera={{
-                position: activeSection === 'company' ? [0, 0, 140] : [0, 0, 15],
-                fov: 75
-              }}
-              dpr={[1, 1.5]}
-              performance={{ min: 0.5 }}
-              style={{ backgroundColor: '#000000' }}
+          <div className="h-[35vh] border-b border-[#00FF00]/30 relative flex-shrink-0">
+            <CADViewport
+              label={`MODEL_0${SECTIONS.findIndex(s => s.id === activeSection) + 1}`}
+              viewType="PERSPECTIVE"
+              className="w-full h-full"
             >
-              <PerspectiveCamera
-                makeDefault
-                position={activeSection === 'company' ? [0, 0, 140] : [0, 0, 15]}
-                fov={75}
-              />
-              <ambientLight intensity={0.2} />
-              <directionalLight position={[5, 5, 5]} intensity={0.4} />
-              <Suspense fallback={null}>
-                <WireframeRocket
-                  scrollProgress={SECTIONS.findIndex(s => s.id === activeSection) / 4}
-                  rotation={
-                    activeSection === 'company'
-                      ? { x: -0.80, y: 0.64, z: -2.46 }
-                      : { x: -1.2, y: 0, z: -0.5 }
-                  }
-                  scale={
-                    activeSection === 'company'
-                      ? 0.09
-                      : 0.7
-                  }
-                  position={
-                    activeSection === 'company'
-                      ? { x: 0, y: 0, z: 0 }
-                      : { x: 0, y: 0, z: 12.0 }
-                  }
+              <Canvas
+                key={activeSection}
+                camera={{
+                  position: modelControls[SECTIONS.findIndex(s => s.id === activeSection)].cameraPosition,
+                  fov: modelControls[SECTIONS.findIndex(s => s.id === activeSection)].cameraFov
+                }}
+                dpr={[1, 1.5]}
+                performance={{ min: 0.5 }}
+                style={{ backgroundColor: '#000000' }}
+              >
+                <PerspectiveCamera
+                  makeDefault
+                  position={modelControls[SECTIONS.findIndex(s => s.id === activeSection)].cameraPosition}
+                  fov={modelControls[SECTIONS.findIndex(s => s.id === activeSection)].cameraFov}
                 />
-              </Suspense>
-              <EffectComposer>
-                {activeSection === 'company' && (
-                  <>
-                    <Bloom intensity={0.6} luminanceThreshold={0.7} radius={0.3} />
-                    <primitive object={new GlitchEffect()} />
-                  </>
-                )}
-                {activeSection === 'mission' && (
-                  <>
-                    <primitive object={new DitherWaveEffect()} />
-                    <Bloom intensity={0.4} luminanceThreshold={0.8} radius={0.2} />
-                  </>
-                )}
-                {activeSection === 'team' && (
-                  <>
-                    <primitive object={new HologramEffect()} />
-                    <Bloom intensity={1.2} luminanceThreshold={0.5} radius={0.5} />
-                  </>
-                )}
-                {(activeSection === 'funding' || activeSection === 'zero') && (
-                  <>
-                    <primitive object={new DitherWaveEffect()} />
-                    <Bloom intensity={0.4} luminanceThreshold={0.8} radius={0.2} />
-                  </>
-                )}
-              </EffectComposer>
-            </Canvas>
-
-            {/* Viewport Label */}
-            <div className="absolute top-1 left-1 sm:top-2 sm:left-2 font-mono text-[8px] sm:text-[9px] text-[#00FFFF] uppercase tracking-wider">
-              [3D WIREFRAME]
-            </div>
-
-            {/* Section Info */}
-            <div className="absolute top-1 right-1 sm:top-2 sm:right-2 font-mono text-[8px] sm:text-[9px] text-[#00FF00] space-y-0.5 text-right">
-              <div>LAYER: {activeSection.toUpperCase()}</div>
-            </div>
+                <ambientLight intensity={0.2} />
+                <directionalLight position={[5, 5, 5]} intensity={0.4} />
+                <Suspense fallback={null}>
+                  <WireframeRocket
+                    scrollProgress={SECTIONS.findIndex(s => s.id === activeSection) / 4}
+                    rotation={modelControls[SECTIONS.findIndex(s => s.id === activeSection)].rotation}
+                    scale={modelControls[SECTIONS.findIndex(s => s.id === activeSection)].scale}
+                    position={modelControls[SECTIONS.findIndex(s => s.id === activeSection)].position}
+                    customModels={customModels}
+                  />
+                </Suspense>
+                <EffectComposer>
+                  {activeSection === 'company' && (
+                    <>
+                      <Bloom intensity={0.6} luminanceThreshold={0.7} radius={0.3} />
+                      <primitive object={new GlitchEffect()} />
+                    </>
+                  )}
+                  {activeSection === 'mission' && (
+                    <>
+                      <primitive object={new DitherWaveEffect()} />
+                      <Bloom intensity={0.4} luminanceThreshold={0.8} radius={0.2} />
+                    </>
+                  )}
+                  {activeSection === 'team' && (
+                    <>
+                      <primitive object={new HologramEffect()} />
+                      <Bloom intensity={1.2} luminanceThreshold={0.5} radius={0.5} />
+                    </>
+                  )}
+                  {(activeSection === 'funding' || activeSection === 'zero') && (
+                    <>
+                      <primitive object={new DitherWaveEffect()} />
+                      <Bloom intensity={0.4} luminanceThreshold={0.8} radius={0.2} />
+                    </>
+                  )}
+                </EffectComposer>
+              </Canvas>
+            </CADViewport>
 
             {/* Section Navigation Buttons */}
-            <div className="absolute bottom-1 left-1 right-1 sm:bottom-2 sm:left-2 sm:right-2 flex gap-0.5 sm:gap-1">
+            <div className="absolute bottom-1 left-1 right-1 sm:bottom-2 sm:left-2 sm:right-2 flex gap-0.5 sm:gap-1 z-10">
               {SECTIONS.map((s) => (
                 <button
                   key={s.id}
@@ -834,34 +1004,37 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
 
               {/* Shuttle 3D Model - on right */}
               {!isMobile && (
-                <div className="w-full lg:w-[450px] h-[450px] flex-shrink-0">
-                  <div className="w-full h-full relative border-t border-b border-[#00FF00]" style={{ backgroundColor: '#000000' }}>
-                    <Canvas
-                      camera={{ position: [0, 0, 140], fov: 75 }}
-                      dpr={[1, 1.5]}
-                      performance={{ min: 0.5 }}
-                      style={{ backgroundColor: '#000000' }}
-                    >
-                      <PerspectiveCamera makeDefault position={[0, 0, 140]} fov={75} />
-                      <ambientLight intensity={0.2} />
-                      <directionalLight position={[5, 5, 5]} intensity={0.4} />
-                      <Suspense fallback={null}>
-                        <WireframeRocket
-                          scrollProgress={0}
-                          rotation={{ x: -0.80, y: 0.64, z: -2.46 }}
-                          scale={0.09}
-                          position={{ x: 0, y: 0, z: 0 }}
-                        />
-                      </Suspense>
-                      <EffectComposer>
-                        <Bloom intensity={0.6} luminanceThreshold={0.7} radius={0.3} />
-                        <primitive object={new GlitchEffect()} />
-                        <ChromaticAberration offset={[0.005, 0.005]} />
-                        <Noise opacity={0.05} />
-                      </EffectComposer>
-                    </Canvas>
-                  </div>
-                </div>
+                <CADViewport
+                  label="MODEL_01"
+                  viewType="PERSPECTIVE"
+                  className="w-full lg:w-[450px] h-[450px] flex-shrink-0"
+                >
+                  <Canvas
+                    camera={{ position: modelControls[0].cameraPosition, fov: modelControls[0].cameraFov }}
+                    dpr={[1, 1.5]}
+                    performance={{ min: 0.5 }}
+                    style={{ backgroundColor: '#000000' }}
+                  >
+                    <PerspectiveCamera makeDefault position={modelControls[0].cameraPosition} fov={modelControls[0].cameraFov} />
+                    <ambientLight intensity={0.2} />
+                    <directionalLight position={[5, 5, 5]} intensity={0.4} />
+                    <Suspense fallback={null}>
+                      <WireframeRocket
+                        scrollProgress={0}
+                        rotation={modelControls[0].rotation}
+                        scale={modelControls[0].scale}
+                        position={modelControls[0].position}
+                        customModels={customModels}
+                      />
+                    </Suspense>
+                    <EffectComposer>
+                      <Bloom intensity={0.6} luminanceThreshold={0.7} radius={0.3} />
+                      <primitive object={new GlitchEffect()} />
+                      <ChromaticAberration offset={[0.005, 0.005]} />
+                      <Noise opacity={0.05} />
+                    </EffectComposer>
+                  </Canvas>
+                </CADViewport>
               )}
             </div>
           </section>
@@ -896,32 +1069,35 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
 
               {/* 3D Model - Apollo Soyuz - on right */}
               {!isMobile && (
-                <div className="w-full lg:w-[450px] h-[450px] flex-shrink-0">
-                  <div className="w-full h-full relative border-t border-b border-[#00FF00]" style={{ backgroundColor: '#000000' }}>
-                    <Canvas
-                      camera={{ position: [0, 0, 15], fov: 75 }}
-                      dpr={[1, 1.5]}
-                      performance={{ min: 0.5 }}
-                      style={{ backgroundColor: '#000000' }}
-                    >
-                      <PerspectiveCamera makeDefault position={[0, 0, 15]} fov={75} />
-                      <ambientLight intensity={0.2} />
-                      <directionalLight position={[5, 5, 5]} intensity={0.4} />
-                      <Suspense fallback={null}>
-                        <WireframeRocket
-                          scrollProgress={1 / 3}
-                          rotation={{ x: -1.2, y: 0, z: -0.5 }}
-                          scale={0.7}
-                          position={{ x: 0, y: 0, z: 12.0 }}
-                        />
-                      </Suspense>
-                      <EffectComposer>
-                        <primitive object={new DitherWaveEffect()} />
-                        <Bloom intensity={0.4} luminanceThreshold={0.8} radius={0.2} />
-                      </EffectComposer>
-                    </Canvas>
-                  </div>
-                </div>
+                <CADViewport
+                  label="MODEL_02"
+                  viewType="PERSPECTIVE"
+                  className="w-full lg:w-[450px] h-[450px] flex-shrink-0"
+                >
+                  <Canvas
+                    camera={{ position: modelControls[1].cameraPosition, fov: modelControls[1].cameraFov }}
+                    dpr={[1, 1.5]}
+                    performance={{ min: 0.5 }}
+                    style={{ backgroundColor: '#000000' }}
+                  >
+                    <PerspectiveCamera makeDefault position={modelControls[1].cameraPosition} fov={modelControls[1].cameraFov} />
+                    <ambientLight intensity={0.2} />
+                    <directionalLight position={[5, 5, 5]} intensity={0.4} />
+                    <Suspense fallback={null}>
+                      <WireframeRocket
+                        scrollProgress={1 / 3}
+                        rotation={modelControls[1].rotation}
+                        scale={modelControls[1].scale}
+                        position={modelControls[1].position}
+                        customModels={customModels}
+                      />
+                    </Suspense>
+                    <EffectComposer>
+                      <primitive object={new DitherWaveEffect()} />
+                      <Bloom intensity={0.4} luminanceThreshold={0.8} radius={0.2} />
+                    </EffectComposer>
+                  </Canvas>
+                </CADViewport>
               )}
             </div>
           </section>
@@ -1010,32 +1186,35 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
 
               {/* 3D Model - Space Suit - on right */}
               {!isMobile && (
-                <div className="w-full lg:w-[450px] h-[450px] flex-shrink-0">
-                  <div className="w-full h-full relative border-t border-b border-[#00FF00]" style={{ backgroundColor: '#000000' }}>
-                    <Canvas
-                      camera={{ position: [0, 0, 15], fov: 75 }}
-                      dpr={[1, 1.5]}
-                      performance={{ min: 0.5 }}
-                      style={{ backgroundColor: '#000000' }}
-                    >
-                      <PerspectiveCamera makeDefault position={[0, 0, 15]} fov={75} />
-                      <ambientLight intensity={0.2} />
-                      <directionalLight position={[5, 5, 5]} intensity={0.4} />
-                      <Suspense fallback={null}>
-                        <WireframeRocket
-                          scrollProgress={2 / 3}
-                          rotation={{ x: -1.2, y: 0, z: -0.5 }}
-                          scale={0.7}
-                          position={{ x: 0, y: 0, z: 12.0 }}
-                        />
-                      </Suspense>
-                      <EffectComposer>
-                        <primitive object={new HologramEffect()} />
-                        <Bloom intensity={1.2} luminanceThreshold={0.5} radius={0.5} />
-                      </EffectComposer>
-                    </Canvas>
-                  </div>
-                </div>
+                <CADViewport
+                  label="MODEL_04"
+                  viewType="PERSPECTIVE"
+                  className="w-full lg:w-[450px] h-[450px] flex-shrink-0"
+                >
+                  <Canvas
+                    camera={{ position: modelControls[3].cameraPosition, fov: modelControls[3].cameraFov }}
+                    dpr={[1, 1.5]}
+                    performance={{ min: 0.5 }}
+                    style={{ backgroundColor: '#000000' }}
+                  >
+                    <PerspectiveCamera makeDefault position={modelControls[3].cameraPosition} fov={modelControls[3].cameraFov} />
+                    <ambientLight intensity={0.2} />
+                    <directionalLight position={[5, 5, 5]} intensity={0.4} />
+                    <Suspense fallback={null}>
+                      <WireframeRocket
+                        scrollProgress={2 / 3}
+                        rotation={modelControls[3].rotation}
+                        scale={modelControls[3].scale}
+                        position={modelControls[3].position}
+                        customModels={customModels}
+                      />
+                    </Suspense>
+                    <EffectComposer>
+                      <primitive object={new HologramEffect()} />
+                      <Bloom intensity={1.2} luminanceThreshold={0.5} radius={0.5} />
+                    </EffectComposer>
+                  </Canvas>
+                </CADViewport>
               )}
             </div>
           </section>
@@ -1077,6 +1256,168 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
             </div>
           </section>
 
+          </div>
+        </div>
+      )}
+
+      {/* Model Controls HUD - Toggle with Ctrl+Shift+D */}
+      {showControls && (
+        <div className="fixed top-4 left-4 w-96 bg-black/95 border-2 border-[#00FF00] p-4 font-mono text-xs z-[100] max-h-[90vh] overflow-y-auto">
+          <div className="flex justify-between items-center mb-4 pb-2 border-b border-[#00FF00]">
+            <h3 className="text-[#00FFFF] font-bold uppercase tracking-wider">3D Model Controls</h3>
+            <button
+              onClick={() => setShowControls(false)}
+              className="text-[#FF0000] hover:text-[#FF5555] font-bold"
+            >
+              ✕
+            </button>
+          </div>
+
+          {/* Model Selector */}
+          <div className="mb-4">
+            <label className="text-[#FFFF00] block mb-2">SELECT MODEL:</label>
+            <div className="grid grid-cols-4 gap-1">
+              {[0, 1, 2, 3].map(idx => (
+                <button
+                  key={idx}
+                  onClick={() => setCurrentModelIndex(idx)}
+                  className={`py-2 px-3 border ${
+                    currentModelIndex === idx
+                      ? 'bg-[#00FF00] text-black border-[#00FF00]'
+                      : 'bg-black text-[#00FF00] border-[#00FF00] hover:bg-[#00FF00]/20'
+                  } font-bold`}
+                >
+                  #{idx + 1}
+                </button>
+              ))}
+            </div>
+            <div className="text-[#00FFFF] mt-2 text-[10px]">
+              Section: {['COMPANY', 'MISSION', 'FUNDING', 'TEAM'][currentModelIndex]}
+            </div>
+          </div>
+
+          {/* Camera Position */}
+          <div className="mb-4 pb-4 border-b border-[#00FFFF]/30">
+            <label className="text-[#FFFF00] block mb-2">CAMERA POSITION:</label>
+            {['x', 'y', 'z'].map((axis, i) => (
+              <div key={axis} className="mb-2">
+                <div className="flex justify-between text-[#00FFFF]">
+                  <span>{axis.toUpperCase()}:</span>
+                  <span>{modelControls[currentModelIndex].cameraPosition[i].toFixed(1)}</span>
+                </div>
+                <input
+                  type="range"
+                  min="-200"
+                  max="200"
+                  step="1"
+                  value={modelControls[currentModelIndex].cameraPosition[i]}
+                  onChange={(e) => {
+                    const newPos = [...modelControls[currentModelIndex].cameraPosition] as [number, number, number];
+                    newPos[i] = parseFloat(e.target.value);
+                    updateControl(currentModelIndex, 'cameraPosition', newPos);
+                  }}
+                  className="w-full"
+                />
+              </div>
+            ))}
+          </div>
+
+          {/* Camera FOV */}
+          <div className="mb-4 pb-4 border-b border-[#00FFFF]/30">
+            <div className="flex justify-between text-[#FFFF00] mb-2">
+              <span>CAMERA FOV:</span>
+              <span className="text-[#00FFFF]">{modelControls[currentModelIndex].cameraFov}</span>
+            </div>
+            <input
+              type="range"
+              min="20"
+              max="120"
+              step="1"
+              value={modelControls[currentModelIndex].cameraFov}
+              onChange={(e) => updateControl(currentModelIndex, 'cameraFov', parseFloat(e.target.value))}
+              className="w-full"
+            />
+          </div>
+
+          {/* Model Rotation */}
+          <div className="mb-4 pb-4 border-b border-[#00FFFF]/30">
+            <label className="text-[#FFFF00] block mb-2">MODEL ROTATION:</label>
+            {['x', 'y', 'z'].map((axis) => (
+              <div key={axis} className="mb-2">
+                <div className="flex justify-between text-[#00FFFF]">
+                  <span>{axis.toUpperCase()}:</span>
+                  <span>{modelControls[currentModelIndex].rotation[axis as keyof typeof modelControls[0]['rotation']].toFixed(2)}</span>
+                </div>
+                <input
+                  type="range"
+                  min="-6.28"
+                  max="6.28"
+                  step="0.01"
+                  value={modelControls[currentModelIndex].rotation[axis as keyof typeof modelControls[0]['rotation']]}
+                  onChange={(e) => {
+                    const newRot = { ...modelControls[currentModelIndex].rotation };
+                    newRot[axis as keyof typeof newRot] = parseFloat(e.target.value);
+                    updateControl(currentModelIndex, 'rotation', newRot);
+                  }}
+                  className="w-full"
+                />
+              </div>
+            ))}
+          </div>
+
+          {/* Model Scale */}
+          <div className="mb-4 pb-4 border-b border-[#00FFFF]/30">
+            <div className="flex justify-between text-[#FFFF00] mb-2">
+              <span>MODEL SCALE:</span>
+              <span className="text-[#00FFFF]">{modelControls[currentModelIndex].scale.toFixed(2)}</span>
+            </div>
+            <input
+              type="range"
+              min="0.01"
+              max="2"
+              step="0.01"
+              value={modelControls[currentModelIndex].scale}
+              onChange={(e) => updateControl(currentModelIndex, 'scale', parseFloat(e.target.value))}
+              className="w-full"
+            />
+          </div>
+
+          {/* Model Position */}
+          <div className="mb-4 pb-4 border-b border-[#00FFFF]/30">
+            <label className="text-[#FFFF00] block mb-2">MODEL POSITION:</label>
+            {['x', 'y', 'z'].map((axis) => (
+              <div key={axis} className="mb-2">
+                <div className="flex justify-between text-[#00FFFF]">
+                  <span>{axis.toUpperCase()}:</span>
+                  <span>{modelControls[currentModelIndex].position[axis as keyof typeof modelControls[0]['position']].toFixed(1)}</span>
+                </div>
+                <input
+                  type="range"
+                  min="-50"
+                  max="50"
+                  step="0.1"
+                  value={modelControls[currentModelIndex].position[axis as keyof typeof modelControls[0]['position']]}
+                  onChange={(e) => {
+                    const newPos = { ...modelControls[currentModelIndex].position };
+                    newPos[axis as keyof typeof newPos] = parseFloat(e.target.value);
+                    updateControl(currentModelIndex, 'position', newPos);
+                  }}
+                  className="w-full"
+                />
+              </div>
+            ))}
+          </div>
+
+          {/* Copy Button */}
+          <button
+            onClick={copySettings}
+            className="w-full py-3 bg-[#00FF00] text-black font-bold uppercase tracking-wider hover:bg-[#00FFFF] transition-all"
+          >
+            📋 COPY SETTINGS
+          </button>
+
+          <div className="mt-2 text-[10px] text-[#00FFFF]/70 text-center">
+            Press Ctrl+Shift+D to close
           </div>
         </div>
       )}

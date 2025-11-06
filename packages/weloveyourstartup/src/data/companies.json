@@ -138,6 +138,42 @@
       "description": "The world's first bitcoin-backed line of credit. Access dollars in real time without selling your bitcoin — now at just 5%.",
       "longDescription": "The same way Zero Finance gives companies access to 8% yield on insured USDC, Lava finally makes it possible to lend your BTC and earn 5%! Lava offers the world's first bitcoin-backed line of credit, enabling users to unlock their bitcoin's purchasing power instantly, flexibly, and securely without selling. With a 5% interest rate (plus 2% capital charge on largest outstanding yearly balance), Lava provides global access to dollar liquidity backed by Bitcoin. Using self-custodial Discreet Log Contracts (DLCs), borrowers maintain full control of their Bitcoin while accessing dollar liquidity from $100 to $1B+ with sub-second processing.",
       "logo": "/images/companies/lava-logo.svg",
+      "models3d": [
+        "/CloudSat (A).glb",
+        "/Aeronomy of Ice in the Mesosphere.glb",
+        "/Advanced Crew Escape Suit.glb",
+        "/International Space Station (ISS) (A).glb"
+      ],
+      "modelConfigs": [
+        {
+          "cameraPosition": [0, 0, 200],
+          "cameraFov": 63,
+          "rotation": { "x": -1.47, "y": -2.42, "z": -3.94 },
+          "scale": 0.03,
+          "position": { "x": -50, "y": 32.9, "z": -50 }
+        },
+        {
+          "cameraPosition": [0, 0, 15],
+          "cameraFov": 75,
+          "rotation": { "x": -1.2, "y": 0, "z": -0.5 },
+          "scale": 0.7,
+          "position": { "x": 0, "y": 0, "z": 12.0 }
+        },
+        {
+          "cameraPosition": [0, 0, 15],
+          "cameraFov": 75,
+          "rotation": { "x": -1.2, "y": 0, "z": -0.5 },
+          "scale": 0.7,
+          "position": { "x": 0, "y": 0, "z": 12.0 }
+        },
+        {
+          "cameraPosition": [0, 0, 15],
+          "cameraFov": 75,
+          "rotation": { "x": -1.2, "y": 0, "z": -0.5 },
+          "scale": 0.7,
+          "position": { "x": 0, "y": 0, "z": 12.0 }
+        }
+      ],
       "website": "https://www.lava.xyz",
       "twitter": "https://x.com/lava_xyz",
       "category": "Bitcoin Finance",
@@ -193,6 +229,42 @@
       "description": "The AI CFO that makes it obvious to founders what their runway looks like and what levers they can pull to extend runway or invest more into growth.",
       "longDescription": "Parallel is the AI-native forecasting platform that gives VC-backed founders CFO-level insight without building a finance team. Parallel delivers a complete solution that connects to QuickBooks and Puzzle to stand up a live, auditable forecast, with embedded AI agents that clean and map data, run scenarios, and draft board materials, overseen by a dedicated fractional CFO. Built for B2B SaaS companies from pre-seed through Series A and beyond, Parallel transforms how startups manage their largest expense: headcount.",
       "logo": "/images/companies/parallel-logo.svg",
+      "models3d": [
+        "/parallel-model.glb",
+        "/CloudSat (A).glb",
+        "/Aeronomy of Ice in the Mesosphere.glb",
+        "/International Space Station (ISS) (A).glb"
+      ],
+      "modelConfigs": [
+        {
+          "cameraPosition": [0, 0, 1],
+          "cameraFov": 77,
+          "rotation": { "x": -0.8, "y": 0.64, "z": -2.46 },
+          "scale": 1.88,
+          "position": { "x": 0, "y": 0, "z": 0 }
+        },
+        {
+          "cameraPosition": [20, 6, -14],
+          "cameraFov": 120,
+          "rotation": { "x": -4.72, "y": 5.45, "z": 1.67 },
+          "scale": 0.01,
+          "position": { "x": 0, "y": 0, "z": -47.8 }
+        },
+        {
+          "cameraPosition": [0, 0, 15],
+          "cameraFov": 75,
+          "rotation": { "x": -1.2, "y": 0, "z": -0.5 },
+          "scale": 0.7,
+          "position": { "x": 0, "y": 0, "z": 12.0 }
+        },
+        {
+          "cameraPosition": [0, 0, 15],
+          "cameraFov": 75,
+          "rotation": { "x": -1.2, "y": 0, "z": -0.5 },
+          "scale": 0.7,
+          "position": { "x": 0, "y": 0, "z": 12.0 }
+        }
+      ],
       "website": "https://getparallel.com",
       "twitter": "https://x.com/_renatov",
       "category": "FP&A / Finance Software",

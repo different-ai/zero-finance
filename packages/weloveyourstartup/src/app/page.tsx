@@ -101,8 +101,9 @@ export default function Home() {
                       <img
                         src={company.logo}
                         alt={`${company.name} Logo`}
-                        width={48}
-                        height={48}
+                        // 120x120
+                        width={120}
+                        height={120}
                         className="border-2 border-[#00FF00]"
                         style={{ color: 'transparent' }}
                       />
