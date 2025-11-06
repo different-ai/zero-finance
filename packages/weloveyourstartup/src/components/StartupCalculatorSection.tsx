@@ -115,7 +115,7 @@ export function StartupCalculatorSection({
               [ ZERO_FINANCE: THE 8% APY SAVINGS ACCOUNT ]
             </div>
             <div className="text-xl lg:text-2xl text-white/90 font-mono leading-relaxed mb-6">
-              Traditional banks pay ~2% on idle cash. Zero Finance pays <span className="text-[#00FF00] font-bold">8% APY</span> — that's <span className="text-[#00FF00] font-bold">4x more interest</span> on your startup's runway. Fully FDIC insured, always withdrawable, zero lock-ups.
+              Traditional banks pay ~2% on idle cash. Zero Finance pays <span className="text-[#00FF00] font-bold">8% APY</span> — that's <span className="text-[#00FF00] font-bold">4x more interest</span> on your startup's runway. Self-custodial, insured against DeFi hacks, always withdrawable, zero lock-ups.
             </div>
 
             <div className="grid grid-cols-2 gap-6 mb-6">
