@@ -167,11 +167,11 @@
           "position": { "x": 0, "y": 0, "z": 12.0 }
         },
         {
-          "cameraPosition": [0, 0, 15],
+          "cameraPosition": [0, 6, -8],
           "cameraFov": 75,
-          "rotation": { "x": -1.2, "y": 0, "z": -0.5 },
-          "scale": 0.7,
-          "position": { "x": 0, "y": 0, "z": 12.0 }
+          "rotation": { "x": -0.98, "y": -0.9, "z": -0.37 },
+          "scale": 1.76,
+          "position": { "x": -0.9, "y": 0, "z": -4.4 }
         },
         {
           "cameraPosition": [0, 0, 15],
