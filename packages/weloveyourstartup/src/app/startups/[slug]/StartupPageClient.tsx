@@ -585,30 +585,36 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
 
   return (
     <div className="min-h-screen relative" style={{ backgroundColor: '#000000' }}>
-      {/* CAD-style page transition flicker overlay */}
+      {/* CAD-style vertical wipe transition overlay */}
       {isTransitioning && (
         <>
           <div
-            className="fixed inset-0 z-[9999] pointer-events-none"
+            className="fixed inset-0 z-[9999] pointer-events-none bg-black"
             style={{
-              background: '#000000',
-              animation: 'cadFlicker 150ms ease-in-out'
+              animation: 'wipeDown 150ms linear'
             }}
           />
           <style>{`
-            @keyframes cadFlicker {
-              0% { opacity: 0; }
-              25% { opacity: 1; }
-              50% { opacity: 0.3; }
-              75% { opacity: 1; }
-              100% { opacity: 1; }
+            @keyframes wipeDown {
+              0% {
+                clip-path: polygon(0 0, 100% 0, 100% 0, 0 0);
+              }
+              100% {
+                clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
+              }
             }
-            @keyframes cadRedraw {
-              0% { opacity: 0; transform: translateY(2px); }
-              100% { opacity: 1; transform: translateY(0); }
+            @keyframes scanlineReveal {
+              0% {
+                clip-path: inset(0 0 100% 0);
+                filter: brightness(1.2);
+              }
+              100% {
+                clip-path: inset(0 0 0 0);
+                filter: brightness(1);
+              }
             }
             .cad-redraw {
-              animation: cadRedraw 200ms ease-out;
+              animation: scanlineReveal 200ms linear;
             }
           `}</style>
         </>
