@@ -11,7 +11,7 @@ import { DitherWaveEffect } from "@/effects/DitherWaveEffect";
 import * as THREE from "three";
 import Link from 'next/link';
 import Image from 'next/image';
-import { SavingsCalculator } from '@/components/SavingsCalculator';
+import { StartupCalculatorSection } from '@/components/StartupCalculatorSection';
 
 // 4-color CAD palette - direction-binned, discrete hues
 const COLORS = {
@@ -309,9 +309,6 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
       maximumFractionDigits: 0,
     }).format(value);
   };
-
-  const calculateSavings = (amount: number) => amount * 0.08 - amount * 0.04;
-  const calculateMonthlyYield = (amount: number) => (amount * 0.08) / 12;
 
   // Independent 3D viewer - each model has its own Canvas, camera, and settings
   const Model3D = ({ modelIndex }: { modelIndex: number }) => {
@@ -679,25 +676,11 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
                     MAX_RUNWAY
                   </h2>
 
-                  <div className="bg-black border-2 border-[#00FF00] p-3">
-                    <p className="text-white/90 text-xs sm:text-sm font-mono leading-relaxed mb-3 break-words">
-                      Zero Finance helps startups like {company.name} stay leaner, move faster by giving them 8% APY on cash. Insured, withdrawable, spendable.
-                    </p>
-                    <Link
-                      href="https://0.finance"
-                      className="inline-block px-4 py-2.5 bg-[#00FF00] text-black font-bold font-mono uppercase tracking-wider hover:bg-[#00FFFF] transition-all text-[10px] sm:text-xs border border-[#00FF00] hover:border-[#00FFFF]"
-                    >
-                      [ LEARN_HOW ]
-                    </Link>
-                  </div>
-
-                  <div className="space-y-3">
-                    <p className="text-sm sm:text-base text-[#00FFFF] font-mono uppercase tracking-wide">
-                      Savings on {formatCurrency(company.funding.amount)}:
-                    </p>
-
-                    <SavingsCalculator defaultAmount={company.funding.amount} />
-                  </div>
+                  <StartupCalculatorSection
+                    companyName={company.name}
+                    fundingAmount={company.funding.amount}
+                    isMobile={true}
+                  />
 
                   <div className="flex flex-col gap-2">
                     <Link
@@ -1071,25 +1054,11 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
                 MAXIMIZE_YOUR_RUNWAY
               </h2>
 
-              <div className="bg-black border-2 border-[#00FF00] p-10">
-                <p className="text-white/90 text-xl lg:text-2xl font-mono leading-relaxed mb-8">
-                  Zero Finance helps startups like {company.name} stay leaner, move faster, and hire more by giving them access to banking with double the yield of traditional banks. The funds are insured, always withdrawable, and soon instantly spendable with our new corporate card.
-                </p>
-                <Link
-                  href="https://0.finance"
-                  className="inline-block px-8 py-4 bg-[#00FF00] text-black font-bold font-mono uppercase tracking-wider hover:bg-[#00FFFF] transition-all text-base border-2 border-[#00FF00] hover:border-[#00FFFF]"
-                >
-                  [ LEARN_HOW ]
-                </Link>
-              </div>
-
-              <div className="space-y-6">
-                <p className="text-xl lg:text-2xl text-[#00FFFF] font-mono uppercase tracking-wide">
-                  This is how much they could save if they put:
-                </p>
-
-                <SavingsCalculator defaultAmount={company.funding.amount} />
-              </div>
+              <StartupCalculatorSection
+                companyName={company.name}
+                fundingAmount={company.funding.amount}
+                isMobile={false}
+              />
 
               <div className="flex flex-col sm:flex-row gap-5">
                 <Link
