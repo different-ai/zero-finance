@@ -44,7 +44,14 @@
       "WebFetch(domain:www.crunchbase.com)",
       "WebFetch(domain:blog.getparallel.com)",
       "WebFetch(domain:theorg.com)",
-      "Bash(python3:*)"
+      "Bash(python3:*)",
+      "WebFetch(domain:ventureburn.com)",
+      "WebFetch(domain:www.chaincatcher.com)",
+      "WebFetch(domain:coinpaprika.com)",
+      "WebFetch(domain:codepen.io)",
+      "WebFetch(domain:aleclownes.com)",
+      "WebFetch(domain:tympanus.net)",
+      "WebFetch(domain:github.com)"
     ],
     "deny": [],
     "ask": []
