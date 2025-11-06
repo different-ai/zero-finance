@@ -6,7 +6,6 @@ import { useGLTF, PerspectiveCamera, shaderMaterial } from "@react-three/drei";
 import { EffectComposer, Bloom, ChromaticAberration, Noise } from "@react-three/postprocessing";
 import { GlitchEffect } from "@/effects/GlitchEffect";
 import { BlueNoiseHalftoneEffect } from "@/effects/BlueNoiseHalftoneEffect";
-import { HologramEffect } from "@/effects/HologramEffect";
 import { DitherWaveEffect } from "@/effects/DitherWaveEffect";
 import * as THREE from "three";
 import Link from 'next/link';
@@ -551,30 +550,17 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
             {/* Different effect per model */}
             {modelIndex === 0 && (
               <>
-                {/* Shuttle: Glitch effect */}
+                {/* First: Glitch effect */}
                 <Bloom intensity={0.6} luminanceThreshold={0.7} radius={0.3} />
                 <primitive object={new GlitchEffect()} />
                 <ChromaticAberration offset={[0.005, 0.005]} />
                 <Noise opacity={0.05} />
               </>
             )}
-            {modelIndex === 1 && (
-              <>
-                {/* Apollo/Soyuz: Dither Wave - Slower animation */}
-                <primitive object={new DitherWaveEffect({ duration: 6.0 })} />
-                <Bloom intensity={0.4} luminanceThreshold={0.8} radius={0.2} />
-              </>
-            )}
-            {modelIndex === 2 && (
-              <>
-                {/* Space Suit: Hologram effect */}
-                <primitive object={new HologramEffect()} />
-                <Bloom intensity={1.2} luminanceThreshold={0.5} radius={0.5} />
-              </>
-            )}
+            {/* modelIndex 1 and 2: No effects */}
             {modelIndex === 3 && (
               <>
-                {/* ISS: Dither Wave - Slower animation */}
+                {/* Last: Dither Wave - Slower animation */}
                 <primitive object={new DitherWaveEffect({ duration: 6.0 })} />
                 <Bloom intensity={0.4} luminanceThreshold={0.8} radius={0.2} />
               </>
@@ -634,28 +620,20 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
                 <EffectComposer>
                   {activeSection === 'company' && (
                     <>
+                      {/* First: Glitch effect */}
                       <Bloom intensity={0.6} luminanceThreshold={0.7} radius={0.3} />
                       <primitive object={new GlitchEffect()} />
                     </>
                   )}
-                  {activeSection === 'mission' && (
-                    <>
-                      <primitive object={new DitherWaveEffect({ duration: 6.0 })} />
-                      <Bloom intensity={0.4} luminanceThreshold={0.8} radius={0.2} />
-                    </>
-                  )}
+                  {/* mission and funding: No effects */}
                   {activeSection === 'team' && (
                     <>
-                      <primitive object={new HologramEffect()} />
-                      <Bloom intensity={1.2} luminanceThreshold={0.5} radius={0.5} />
-                    </>
-                  )}
-                  {(activeSection === 'funding' || activeSection === 'zero') && (
-                    <>
+                      {/* Last: Wave effect */}
                       <primitive object={new DitherWaveEffect({ duration: 6.0 })} />
                       <Bloom intensity={0.4} luminanceThreshold={0.8} radius={0.2} />
                     </>
                   )}
+                  {/* zero: No effects */}
                 </EffectComposer>
               </Canvas>
             </CADViewport>
@@ -1100,10 +1078,7 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
                         customModels={customModels}
                       />
                     </Suspense>
-                    <EffectComposer>
-                      <primitive object={new DitherWaveEffect({ duration: 6.0 })} />
-                      <Bloom intensity={0.4} luminanceThreshold={0.8} radius={0.2} />
-                    </EffectComposer>
+                    {/* No effects for MODEL_02 */}
                   </Canvas>
                 </CADViewport>
               )}
@@ -1218,8 +1193,9 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
                       />
                     </Suspense>
                     <EffectComposer>
-                      <primitive object={new HologramEffect()} />
-                      <Bloom intensity={1.2} luminanceThreshold={0.5} radius={0.5} />
+                      {/* Last: Wave effect */}
+                      <primitive object={new DitherWaveEffect({ duration: 6.0 })} />
+                      <Bloom intensity={0.4} luminanceThreshold={0.8} radius={0.2} />
                     </EffectComposer>
                   </Canvas>
                 </CADViewport>
