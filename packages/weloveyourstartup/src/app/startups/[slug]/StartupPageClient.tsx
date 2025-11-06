@@ -306,6 +306,7 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
   const [isMobile, setIsMobile] = useState(false);
   const [showControls, setShowControls] = useState(false);
   const [currentModelIndex, setCurrentModelIndex] = useState(0);
+  const [isTransitioning, setIsTransitioning] = useState(false);
 
   // Model controls for each of the 5 models - use company configs if available
   const [modelControls, setModelControls] = useState<ModelControls[]>(
@@ -467,21 +468,32 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
   }, [isMobile]);
 
   const navigateToSection = (sectionId: string) => {
-    setActiveSection(sectionId);
-    const element = document.getElementById(sectionId);
-    if (element) {
-      if (isMobile) {
-        // On mobile, scroll the container
-        const scrollContainer = document.querySelector('.flex-1.bg-black.overflow-y-auto');
-        if (scrollContainer) {
-          const elementTop = element.offsetTop;
-          scrollContainer.scrollTo({ top: elementTop, behavior: 'smooth' });
+    // CAD-style page transition: flicker, then instant jump, then redraw
+    setIsTransitioning(true);
+
+    // Wait for flicker animation (150ms), then jump to section
+    setTimeout(() => {
+      setActiveSection(sectionId);
+      const element = document.getElementById(sectionId);
+      if (element) {
+        if (isMobile) {
+          // On mobile, scroll the container instantly
+          const scrollContainer = document.querySelector('.flex-1.bg-black.overflow-y-auto');
+          if (scrollContainer) {
+            const elementTop = element.offsetTop;
+            scrollContainer.scrollTo({ top: elementTop, behavior: 'auto' }); // instant jump
+          }
+        } else {
+          // On desktop, scroll the window instantly
+          element.scrollIntoView({ behavior: 'auto' }); // instant jump
         }
-      } else {
-        // On desktop, scroll the window
-        element.scrollIntoView({ behavior: 'smooth' });
       }
-    }
+
+      // End transition after redraw animation completes (350ms total)
+      setTimeout(() => {
+        setIsTransitioning(false);
+      }, 200);
+    }, 150);
   };
 
   const formatCurrency = (value: number) => {
@@ -573,6 +585,35 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
 
   return (
     <div className="min-h-screen relative" style={{ backgroundColor: '#000000' }}>
+      {/* CAD-style page transition flicker overlay */}
+      {isTransitioning && (
+        <>
+          <div
+            className="fixed inset-0 z-[9999] pointer-events-none"
+            style={{
+              background: '#000000',
+              animation: 'cadFlicker 150ms ease-in-out'
+            }}
+          />
+          <style>{`
+            @keyframes cadFlicker {
+              0% { opacity: 0; }
+              25% { opacity: 1; }
+              50% { opacity: 0.3; }
+              75% { opacity: 1; }
+              100% { opacity: 1; }
+            }
+            @keyframes cadRedraw {
+              0% { opacity: 0; transform: translateY(2px); }
+              100% { opacity: 1; transform: translateY(0); }
+            }
+            .cad-redraw {
+              animation: cadRedraw 200ms ease-out;
+            }
+          `}</style>
+        </>
+      )}
+
       <CRTEffect />
 
       {/* Mobile: CAD Interface */}
@@ -658,7 +699,10 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
 
           {/* Scrollable Content Area */}
           <div className="flex-1 bg-black overflow-y-auto border-t-2 border-[#00FF00] min-h-0">
-            <div className="p-3 sm:p-4 space-y-4">
+            <div
+              key={`content-${activeSection}-${isTransitioning}`}
+              className={`p-3 sm:p-4 space-y-4 ${!isTransitioning ? 'cad-redraw' : ''}`}
+            >
 
               {/* SECTION 1: COMPANY */}
               <div id="company" className="scroll-mt-4">
@@ -926,7 +970,10 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
       {/* Main Content - Full-screen sections on desktop only */}
       {!isMobile && (
         <div className="lg:pr-64">
-          <div>
+          <div
+            key={`desktop-content-${activeSection}-${isTransitioning}`}
+            className={!isTransitioning ? 'cad-redraw' : ''}
+          >
 
           {/* SECTION 1: COMPANY */}
           <section
