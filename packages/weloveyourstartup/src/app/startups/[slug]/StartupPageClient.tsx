@@ -1072,7 +1072,7 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
               {'>> SECTION_02: MISSION'}
             </div>
 
-            <div className="flex flex-col lg:flex-row gap-12 items-start">
+            <div className="flex flex-col lg:flex-row gap-12 items-end">
               <div className="flex-1 space-y-8 max-w-3xl">
                 <h2 className="text-6xl lg:text-7xl font-black uppercase font-mono tracking-wide"
                   style={{ color: '#00FFFF' }}>
@@ -1091,7 +1091,7 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
                 )}
               </div>
 
-              {/* 3D Model - Apollo Soyuz - on right */}
+              {/* 3D Model - Apollo Soyuz - on right, aligned with text box */}
               {!isMobile && (
                 <CADViewport
                   label="MODEL_02"
