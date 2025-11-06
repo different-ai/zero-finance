@@ -468,10 +468,10 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
   }, [isMobile]);
 
   const navigateToSection = (sectionId: string) => {
-    // CAD-style page transition: flicker, then instant jump, then redraw
+    // CAD-style page transition: vertical wipe down, then instant jump, then scanline reveal
     setIsTransitioning(true);
 
-    // Wait for flicker animation (150ms), then jump to section
+    // Wait for wipe down animation (400ms), then jump to section
     setTimeout(() => {
       setActiveSection(sectionId);
       const element = document.getElementById(sectionId);
@@ -489,11 +489,11 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
         }
       }
 
-      // End transition after redraw animation completes (350ms total)
+      // End transition after redraw animation completes (500ms total)
       setTimeout(() => {
         setIsTransitioning(false);
-      }, 200);
-    }, 150);
+      }, 100);
+    }, 400);
   };
 
   const formatCurrency = (value: number) => {
@@ -591,7 +591,7 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
           <div
             className="fixed inset-0 z-[9999] pointer-events-none bg-black"
             style={{
-              animation: 'wipeDown 150ms linear'
+              animation: 'wipeDown 400ms linear'
             }}
           />
           <style>{`
@@ -614,7 +614,7 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
               }
             }
             .cad-redraw {
-              animation: scanlineReveal 200ms linear;
+              animation: scanlineReveal 100ms linear;
             }
           `}</style>
         </>
