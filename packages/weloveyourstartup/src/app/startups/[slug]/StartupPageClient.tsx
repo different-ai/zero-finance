@@ -569,14 +569,7 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
                 <Noise opacity={0.05} />
               </>
             )}
-            {/* modelIndex 1 and 2: No effects */}
-            {modelIndex === 3 && (
-              <>
-                {/* Last: Dither Wave - Slower animation */}
-                <primitive object={new DitherWaveEffect({ duration: 6.0 })} />
-                <Bloom intensity={0.4} luminanceThreshold={0.8} radius={0.2} />
-              </>
-            )}
+            {/* modelIndex 1, 2, and 3: No effects */}
           </EffectComposer>
         </Canvas>
       </CADViewport>
@@ -672,14 +665,7 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
                       <primitive object={new GlitchEffect()} />
                     </>
                   )}
-                  {/* mission and funding: No effects */}
-                  {activeSection === 'team' && (
-                    <>
-                      {/* Last: Wave effect */}
-                      <primitive object={new DitherWaveEffect({ duration: 6.0 })} />
-                      <Bloom intensity={0.4} luminanceThreshold={0.8} radius={0.2} />
-                    </>
-                  )}
+                  {/* mission, funding, team: No effects */}
                   {/* zero: No effects */}
                 </EffectComposer>
               </Canvas>
@@ -1245,11 +1231,7 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
                         customModels={customModels}
                       />
                     </Suspense>
-                    <EffectComposer>
-                      {/* Last: Wave effect */}
-                      <primitive object={new DitherWaveEffect({ duration: 6.0 })} />
-                      <Bloom intensity={0.4} luminanceThreshold={0.8} radius={0.2} />
-                    </EffectComposer>
+                    {/* No effects for TEAM section - model appears immediately */}
                   </Canvas>
                 </CADViewport>
               )}
