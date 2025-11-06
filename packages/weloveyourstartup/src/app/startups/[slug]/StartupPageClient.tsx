@@ -308,7 +308,7 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
   const [showControls, setShowControls] = useState(false);
   const [currentModelIndex, setCurrentModelIndex] = useState(0);
 
-  // Model controls for each of the 4 models - use company configs if available
+  // Model controls for each of the 5 models - use company configs if available
   const [modelControls, setModelControls] = useState<ModelControls[]>(
     company.modelConfigs || [
       // Default Model 0 (Section 1 - COMPANY)
@@ -336,6 +336,14 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
         position: { x: 0, y: 0, z: 12.0 }
       },
       // Default Model 3 (Section 4 - TEAM)
+      {
+        cameraPosition: [0, 0, 15],
+        cameraFov: 75,
+        rotation: { x: -1.2, y: 0, z: -0.5 },
+        scale: 0.7,
+        position: { x: 0, y: 0, z: 12.0 }
+      },
+      // Default Model 4 (Section 5 - ZERO_FINANCE)
       {
         cameraPosition: [0, 0, 15],
         cameraFov: 75,
@@ -552,8 +560,8 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
             )}
             {modelIndex === 1 && (
               <>
-                {/* Apollo/Soyuz: Dither Wave */}
-                <primitive object={new DitherWaveEffect()} />
+                {/* Apollo/Soyuz: Dither Wave - Slower animation */}
+                <primitive object={new DitherWaveEffect({ duration: 6.0 })} />
                 <Bloom intensity={0.4} luminanceThreshold={0.8} radius={0.2} />
               </>
             )}
@@ -566,8 +574,8 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
             )}
             {modelIndex === 3 && (
               <>
-                {/* ISS: Dither Wave */}
-                <primitive object={new DitherWaveEffect()} />
+                {/* ISS: Dither Wave - Slower animation */}
+                <primitive object={new DitherWaveEffect({ duration: 6.0 })} />
                 <Bloom intensity={0.4} luminanceThreshold={0.8} radius={0.2} />
               </>
             )}
@@ -632,7 +640,7 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
                   )}
                   {activeSection === 'mission' && (
                     <>
-                      <primitive object={new DitherWaveEffect()} />
+                      <primitive object={new DitherWaveEffect({ duration: 6.0 })} />
                       <Bloom intensity={0.4} luminanceThreshold={0.8} radius={0.2} />
                     </>
                   )}
@@ -644,7 +652,7 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
                   )}
                   {(activeSection === 'funding' || activeSection === 'zero') && (
                     <>
-                      <primitive object={new DitherWaveEffect()} />
+                      <primitive object={new DitherWaveEffect({ duration: 6.0 })} />
                       <Bloom intensity={0.4} luminanceThreshold={0.8} radius={0.2} />
                     </>
                   )}
@@ -1093,7 +1101,7 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
                       />
                     </Suspense>
                     <EffectComposer>
-                      <primitive object={new DitherWaveEffect()} />
+                      <primitive object={new DitherWaveEffect({ duration: 6.0 })} />
                       <Bloom intensity={0.4} luminanceThreshold={0.8} radius={0.2} />
                     </EffectComposer>
                   </Canvas>

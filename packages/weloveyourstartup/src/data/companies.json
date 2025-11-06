@@ -172,6 +172,13 @@
           "rotation": { "x": -1.2, "y": 0, "z": -0.5 },
           "scale": 0.7,
           "position": { "x": 0, "y": 0, "z": 12.0 }
+        },
+        {
+          "cameraPosition": [0, 0, 15],
+          "cameraFov": 75,
+          "rotation": { "x": -1.2, "y": 0, "z": -0.5 },
+          "scale": 0.7,
+          "position": { "x": 0, "y": 0, "z": 12.0 }
         }
       ],
       "website": "https://www.lava.xyz",
@@ -249,6 +256,13 @@
           "rotation": { "x": -4.72, "y": 5.45, "z": 1.67 },
           "scale": 0.01,
           "position": { "x": 0, "y": 0, "z": -47.8 }
+        },
+        {
+          "cameraPosition": [0, 0, 15],
+          "cameraFov": 75,
+          "rotation": { "x": -1.2, "y": 0, "z": -0.5 },
+          "scale": 0.7,
+          "position": { "x": 0, "y": 0, "z": 12.0 }
         },
         {
           "cameraPosition": [0, 0, 15],
