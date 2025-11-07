@@ -122,12 +122,12 @@ export function CrossChainDepositCard({
   const fetchAllowance = async () => {
     if (!safeAddress) return;
     try {
-      const spokePool = ACROSS_SPOKE_POOLS[8453]; // Base
+      const spokePoolBase = ACROSS_SPOKE_POOLS[8453]; // Base
       const currentAllowance = await publicClient.readContract({
         address: USDC_ADDRESS,
         abi: erc20Abi,
         functionName: 'allowance',
-        args: [safeAddress, spokePool],
+        args: [safeAddress, spokePoolBase],
       });
       setAllowance(currentAllowance);
     } catch (error) {
@@ -167,15 +167,16 @@ export function CrossChainDepositCard({
         );
       }
 
+      const spokePoolBase = ACROSS_SPOKE_POOLS[8453]; // Base SpokePool
+
       // Step 1: Approve Across SpokePool if needed
       if (needsApproval) {
         setTransactionState({ step: 'approving' });
 
-        const spokePool = ACROSS_SPOKE_POOLS[8453]; // Base
         const approveData = encodeFunctionData({
           abi: erc20Abi,
           functionName: 'approve',
-          args: [spokePool, amountInSmallestUnit],
+          args: [spokePoolBase, amountInSmallestUnit],
         });
 
         const approvalTxHash = await sendTxViaRelay(
@@ -201,12 +202,11 @@ export function CrossChainDepositCard({
         await fetchAllowance();
 
         // Verify approval
-        const spokePool = ACROSS_SPOKE_POOLS[8453]; // Base
         const newAllowance = await publicClient.readContract({
           address: USDC_ADDRESS,
           abi: erc20Abi,
           functionName: 'allowance',
-          args: [safeAddress, spokePool],
+          args: [safeAddress, spokePoolBase],
         });
 
         if (newAllowance < amountInSmallestUnit) {
