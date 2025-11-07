@@ -1,0 +1,69 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.23;
+
+import {IERC20} from "forge-std/interfaces/IERC20.sol";
+import {IERC4626} from "forge-std/interfaces/IERC4626.sol";
+
+/**
+ * @title MinimalCrossChainVault
+ * @notice Minimal receiver for Across Protocol cross-chain vault deposits
+ * @dev This is the ONLY contract you need to deploy (on Arbitrum)
+ * 
+ * How it works:
+ * 1. User's Safe on Base calls Across SpokePool with message
+ * 2. Across bridges USDC and calls this contract on Arbitrum
+ * 3. This contract deposits USDC to vault
+ * 4. Vault shares are minted to user's Safe address on Arbitrum
+ * 5. User can withdraw anytime by deploying their Safe on Arbitrum
+ */
+contract MinimalCrossChainVault {
+    /// @notice Across SpokePool that will call us
+    address public immutable ACROSS_SPOKE_POOL;
+    
+    /// @notice Allowed vault for deposits (Morpho Gauntlet USDC Core)
+    address public immutable VAULT;
+    
+    /// @notice Emitted when deposit completes
+    event DepositComplete(
+        address indexed userSafe,
+        uint256 assets,
+        uint256 shares
+    );
+    
+    error Unauthorized();
+    error DepositFailed();
+    
+    constructor(address _acrossSpokePool, address _vault) {
+        ACROSS_SPOKE_POOL = _acrossSpokePool;
+        VAULT = _vault;
+    }
+    
+    /**
+     * @notice Called by Across when relaying cross-chain message
+     * @param token The token received (USDC on Arbitrum)
+     * @param amount Amount received
+     * @param message Encoded user Safe address
+     */
+    function handleV3AcrossMessage(
+        address token,
+        uint256 amount,
+        address, // relayer (unused)
+        bytes memory message
+    ) external {
+        // Only Across can call this
+        if (msg.sender != ACROSS_SPOKE_POOL) revert Unauthorized();
+        
+        // Decode user's Safe address from message
+        address userSafe = abi.decode(message, (address));
+        
+        // Approve vault to spend USDC
+        IERC20(token).approve(VAULT, amount);
+        
+        // Deposit to vault - shares minted to user's Safe address
+        uint256 shares = IERC4626(VAULT).deposit(amount, userSafe);
+        
+        if (shares == 0) revert DepositFailed();
+        
+        emit DepositComplete(userSafe, amount, shares);
+    }
+}

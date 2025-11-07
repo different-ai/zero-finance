@@ -21,6 +21,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Address } from 'viem';
 import { BASE_USDC_VAULTS } from '@/server/earn/base-vaults';
+import { CROSS_CHAIN_VAULTS } from '@/server/earn/cross-chain-vaults';
 import { AnimatedYieldCounter } from '@/components/animated-yield-counter';
 import { toast } from 'sonner';
 import Image from 'next/image';
@@ -29,6 +30,10 @@ import { CheckingActionsCard } from './components/checking-actions-card';
 import { InsuranceContactPanel } from './components/insurance-contact-panel';
 import { PortfolioOverview } from './components/portfolio-overview';
 import { AutoSavingsStatus } from './components/auto-savings-status';
+import { CrossChainDepositCard } from './components/cross-chain-deposit-card';
+import { CrossChainWithdrawCard } from './components/cross-chain-withdraw-card';
+import { HLPDepositCard } from './components/hlp-deposit-card';
+import { HLPWithdrawCard } from './components/hlp-withdraw-card';
 import {
   ZERO_LOGO_SRC,
   INSURED_VAULT_IDS,
@@ -194,11 +199,14 @@ export default function SavingsPageWrapper({
 
   const vaultStats = isDemoMode ? demoVaultStats : realVaultStats.data;
 
-  // Base vaults configuration
-  const BASE_VAULTS = BASE_USDC_VAULTS;
+  // All vaults configuration - Base + Cross-chain
+  const ALL_VAULTS = useMemo(() => {
+    return [...BASE_USDC_VAULTS, ...CROSS_CHAIN_VAULTS];
+  }, []);
+  
   const baseVaultAddresses = useMemo(
-    () => BASE_VAULTS.map((v) => v.address),
-    [BASE_VAULTS],
+    () => BASE_USDC_VAULTS.map((v) => v.address),
+    [],
   );
 
   // Fetch multi-vault stats
@@ -335,16 +343,43 @@ export default function SavingsPageWrapper({
     });
   }, [isDemoMode, safeAddress]);
 
-  const vaultsVM = useMemo(
-    () =>
-      calculateVaultViewModels(
-        BASE_VAULTS,
-        vaultStatsMany ?? undefined,
-        userPositions ?? undefined,
-        userIsInsured,
-      ),
-    [BASE_VAULTS, vaultStatsMany, userPositions, userIsInsured],
-  );
+  const vaultsVM = useMemo(() => {
+    // Base vaults with real stats
+    const baseVaults = calculateVaultViewModels(
+      BASE_USDC_VAULTS,
+      vaultStatsMany ?? undefined,
+      userPositions ?? undefined,
+      userIsInsured,
+    );
+    
+    // Cross-chain vaults with mock stats (manual deposits only)
+    const crossChainVaults = CROSS_CHAIN_VAULTS.map((vault) => ({
+      id: vault.id,
+      name: vault.name,
+      displayName: vault.displayName,
+      risk: vault.risk,
+      curator: vault.curator,
+      address: vault.address,
+      appUrl: vault.appUrl,
+      chainId: vault.chainId,
+      chainName: vault.chainName,
+      apy: vault.id === 'hlp-main' ? 25 : 10, // HLP ~25%, Morpho Arb ~10%
+      balanceUsd: 0, // Manual tracking
+      earnedUsd: 0,
+      principalUsd: 0,
+      recordedPrincipalUsd: 0,
+      rawEarnedUsd: 0,
+      isAuto: false,
+      instantApy: vault.id === 'hlp-main' ? 0.25 : 0.10,
+      isInsured: false,
+      isContactOnly: false,
+      yieldCorrectionReason: null,
+      isCrossChain: true,
+      type: vault.type,
+    }));
+    
+    return [...baseVaults, ...crossChainVaults];
+  }, [vaultStatsMany, userPositions, userIsInsured]);
 
   // Calculate totals
   const insuredVaultEntry = useMemo(
@@ -778,19 +813,53 @@ export default function SavingsPageWrapper({
                             {expandedAction === 'insure' && isSelected ? (
                               <InsuranceContactPanel />
                             ) : expandedAction === 'deposit' && isSelected ? (
-                              <DepositEarnCard
-                                key={`deposit-${vault.address}`}
-                                safeAddress={safeAddress as Address}
-                                vaultAddress={vault.address as Address}
-                                onDepositSuccess={handleDepositSuccess}
-                              />
+                              // Check if cross-chain vault
+                              'isCrossChain' in vault && vault.isCrossChain ? (
+                                'type' in vault && vault.type === 'hlp' ? (
+                                  <HLPDepositCard
+                                    key={`deposit-hlp-${vault.address}`}
+                                    safeAddress={safeAddress as Address}
+                                    onDepositSuccess={handleDepositSuccess}
+                                  />
+                                ) : (
+                                  <CrossChainDepositCard
+                                    key={`deposit-cc-${vault.address}`}
+                                    vault={vault as any}
+                                    safeAddress={safeAddress as Address}
+                                    onDepositSuccess={handleDepositSuccess}
+                                  />
+                                )
+                              ) : (
+                                <DepositEarnCard
+                                  key={`deposit-${vault.address}`}
+                                  safeAddress={safeAddress as Address}
+                                  vaultAddress={vault.address as Address}
+                                  onDepositSuccess={handleDepositSuccess}
+                                />
+                              )
                             ) : expandedAction === 'withdraw' && isSelected ? (
-                              <WithdrawEarnCard
-                                key={`withdraw-${vault.address}`}
-                                safeAddress={safeAddress as Address}
-                                vaultAddress={vault.address as Address}
-                                onWithdrawSuccess={handleWithdrawSuccess}
-                              />
+                              // Check if cross-chain vault
+                              'isCrossChain' in vault && vault.isCrossChain ? (
+                                'type' in vault && vault.type === 'hlp' ? (
+                                  <HLPWithdrawCard
+                                    key={`withdraw-hlp-${vault.address}`}
+                                    safeAddress={safeAddress as Address}
+                                  />
+                                ) : (
+                                  <CrossChainWithdrawCard
+                                    key={`withdraw-cc-${vault.address}`}
+                                    vault={vault as any}
+                                    safeAddress={safeAddress as Address}
+                                  />
+                                )
+                              ) : (
+                                <WithdrawEarnCard
+                                  key={`withdraw-${vault.address}`}
+                                  safeAddress={safeAddress as Address}
+                                  vaultAddress={vault.address as Address}
+                                  onWithdrawSuccess={handleWithdrawSuccess}
+                                />
+                              )
                             ) : null}
                           </div>
                         </div>
@@ -978,20 +1047,54 @@ export default function SavingsPageWrapper({
                               {expandedAction === 'insure' && isSelected ? (
                                 <InsuranceContactPanel />
                               ) : expandedAction === 'deposit' && isSelected ? (
-                                <DepositEarnCard
-                                  key={`deposit-mobile-${vault.address}`}
-                                  safeAddress={safeAddress as Address}
-                                  vaultAddress={vault.address as Address}
-                                  onDepositSuccess={handleDepositSuccess}
-                                />
+                                // Check if cross-chain vault
+                                'isCrossChain' in vault && vault.isCrossChain ? (
+                                  'type' in vault && vault.type === 'hlp' ? (
+                                    <HLPDepositCard
+                                      key={`deposit-mobile-hlp-${vault.address}`}
+                                      safeAddress={safeAddress as Address}
+                                      onDepositSuccess={handleDepositSuccess}
+                                    />
+                                  ) : (
+                                    <CrossChainDepositCard
+                                      key={`deposit-mobile-cc-${vault.address}`}
+                                      vault={vault as any}
+                                      safeAddress={safeAddress as Address}
+                                      onDepositSuccess={handleDepositSuccess}
+                                    />
+                                  )
+                                ) : (
+                                  <DepositEarnCard
+                                    key={`deposit-mobile-${vault.address}`}
+                                    safeAddress={safeAddress as Address}
+                                    vaultAddress={vault.address as Address}
+                                    onDepositSuccess={handleDepositSuccess}
+                                  />
+                                )
                               ) : expandedAction === 'withdraw' &&
                                 isSelected ? (
-                                <WithdrawEarnCard
-                                  key={`withdraw-mobile-${vault.address}`}
-                                  safeAddress={safeAddress as Address}
-                                  vaultAddress={vault.address as Address}
-                                  onWithdrawSuccess={handleWithdrawSuccess}
-                                />
+                                // Check if cross-chain vault
+                                'isCrossChain' in vault && vault.isCrossChain ? (
+                                  'type' in vault && vault.type === 'hlp' ? (
+                                    <HLPWithdrawCard
+                                      key={`withdraw-mobile-hlp-${vault.address}`}
+                                      safeAddress={safeAddress as Address}
+                                    />
+                                  ) : (
+                                    <CrossChainWithdrawCard
+                                      key={`withdraw-mobile-cc-${vault.address}`}
+                                      vault={vault as any}
+                                      safeAddress={safeAddress as Address}
+                                    />
+                                  )
+                                ) : (
+                                  <WithdrawEarnCard
+                                    key={`withdraw-mobile-${vault.address}`}
+                                    safeAddress={safeAddress as Address}
+                                    vaultAddress={vault.address as Address}
+                                    onWithdrawSuccess={handleWithdrawSuccess}
+                                  />
+                                )
                               ) : null}
                             </div>
                           </div>

@@ -1,0 +1,249 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.23;
+
+import {IERC20} from "forge-std/interfaces/IERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+
+/**
+ * @title IAcrossSpokePool
+ * @notice Interface for Across Protocol V3 SpokePool
+ */
+interface IAcrossSpokePool {
+    function depositV3(
+        address depositor,
+        address recipient,
+        address inputToken,
+        address outputToken,
+        uint256 inputAmount,
+        uint256 outputAmount,
+        uint256 destinationChainId,
+        address exclusiveRelayer,
+        uint32 quoteTimestamp,
+        uint32 fillDeadline,
+        uint32 exclusivityDeadline,
+        bytes calldata message
+    ) external payable;
+}
+
+/**
+ * @title CrossChainVaultManager
+ * @notice Manages cross-chain vault deposits via Across Protocol
+ * @dev Deployed on source chain (Base)
+ * @author 0 Finance
+ * 
+ * Flow:
+ * 1. User's Safe calls initiateDeposit with vault details
+ * 2. This contract pulls USDC from the Safe
+ * 3. Calls Across SpokePool to bridge USDC with message data
+ * 4. Across relays to destination chain's CrossChainVaultReceiver
+ * 5. Receiver deposits into vault and mints shares to user's Safe
+ */
+contract CrossChainVaultManager {
+    using SafeERC20 for IERC20;
+    
+    /// @notice Across SpokePool address on Base
+    address public immutable ACROSS_SPOKE_POOL_BASE;
+    
+    /// @notice Contract owner
+    address public owner;
+    
+    /// @notice Destination chain receiver contracts
+    /// @dev chainId => CrossChainVaultReceiver address
+    mapping(uint256 => address) public chainReceivers;
+    
+    /// @notice Maximum allowed deposit per transaction (safety limit)
+    uint256 public maxDepositAmount;
+    
+    /// @notice Emitted when a cross-chain deposit is initiated
+    event CrossChainDepositInitiated(
+        address indexed userSafe,
+        address indexed token,
+        uint256 amount,
+        uint256 destinationChainId,
+        address vaultAddress,
+        bytes32 indexed depositId
+    );
+    
+    /// @notice Emitted when a receiver address is updated
+    event ChainReceiverSet(uint256 indexed chainId, address receiver);
+    
+    /// @notice Emitted when max deposit amount is updated
+    event MaxDepositAmountSet(uint256 newMaxAmount);
+    
+    /// @notice Emitted when ownership is transferred
+    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
+    
+    /// @notice Caller is not authorized
+    error UnauthorizedCaller();
+    
+    /// @notice No receiver configured for target chain
+    error InvalidReceiver();
+    
+    /// @notice Token transfer failed
+    error TransferFailed();
+    
+    /// @notice Invalid parameters provided
+    error InvalidParameters();
+    
+    /// @notice Deposit amount exceeds maximum
+    error AmountTooLarge();
+    
+    /**
+     * @notice Constructor
+     * @param _acrossSpokePool Across SpokePool address on Base
+     * @param _owner Initial owner address
+     */
+    constructor(address _acrossSpokePool, address _owner) {
+        if (_acrossSpokePool == address(0) || _owner == address(0)) {
+            revert InvalidParameters();
+        }
+        ACROSS_SPOKE_POOL_BASE = _acrossSpokePool;
+        owner = _owner;
+        maxDepositAmount = 1_000_000e6; // 1M USDC default limit
+    }
+    
+    /// @notice Restrict to owner
+    modifier onlyOwner() {
+        if (msg.sender != owner) revert UnauthorizedCaller();
+        _;
+    }
+    
+    /**
+     * @notice Initiate cross-chain vault deposit
+     * @dev Called by user's Safe to start deposit flow
+     * @param token Token to bridge (USDC)
+     * @param amount Amount to deposit (in token's smallest unit)
+     * @param destinationChainId Target chain (e.g., 42161 for Arbitrum)
+     * @param vaultAddress Vault address on destination chain
+     * @param minSharesOut Minimum shares to receive (slippage protection)
+     * @return depositId Unique identifier for this deposit
+     */
+    function initiateDeposit(
+        address token,
+        uint256 amount,
+        uint256 destinationChainId,
+        address vaultAddress,
+        uint256 minSharesOut
+    ) external returns (bytes32 depositId) {
+        // Validate inputs
+        if (token == address(0) || vaultAddress == address(0) || amount == 0) {
+            revert InvalidParameters();
+        }
+        
+        if (amount > maxDepositAmount) {
+            revert AmountTooLarge();
+        }
+        
+        address userSafe = msg.sender;
+        address receiver = chainReceivers[destinationChainId];
+        
+        if (receiver == address(0)) revert InvalidReceiver();
+        
+        // Transfer tokens from Safe to this contract
+        // Safe must have approved this contract first
+        IERC20(token).safeTransferFrom(userSafe, address(this), amount);
+        
+        // Approve Across SpokePool to spend tokens
+        IERC20(token).forceApprove(ACROSS_SPOKE_POOL_BASE, amount);
+        
+        // Encode message for destination contract
+        // This will be passed to CrossChainVaultReceiver.handleV3AcrossMessage
+        bytes memory message = abi.encode(userSafe, vaultAddress, minSharesOut);
+        
+        // Calculate timestamps for Across
+        // quoteTimestamp: recent block time for fee calculation
+        // fillDeadline: how long relayer has to fill (1 hour)
+        // exclusivityDeadline: no exclusivity period
+        uint32 quoteTimestamp = uint32(block.timestamp - 60); // 1 min ago for safety
+        uint32 fillDeadline = uint32(block.timestamp + 3600); // 1 hour from now
+        uint32 exclusivityDeadline = 0; // No exclusivity
+        
+        // Call Across SpokePool to initiate bridge
+        IAcrossSpokePool(ACROSS_SPOKE_POOL_BASE).depositV3(
+            address(this),           // depositor (this contract)
+            receiver,                 // recipient (CrossChainVaultReceiver)
+            token,                    // inputToken (USDC on Base)
+            token,                    // outputToken (USDC on Arbitrum)
+            amount,                   // inputAmount
+            amount,                   // outputAmount (1:1, fees handled by Across)
+            destinationChainId,       // destinationChainId
+            address(0),               // exclusiveRelayer (none)
+            quoteTimestamp,           // quoteTimestamp
+            fillDeadline,             // fillDeadline
+            exclusivityDeadline,      // exclusivityDeadline
+            message                   // message (encoded call data)
+        );
+        
+        // Generate unique deposit ID for tracking
+        depositId = keccak256(
+            abi.encodePacked(
+                block.chainid,
+                userSafe,
+                token,
+                amount,
+                destinationChainId,
+                vaultAddress,
+                block.number,
+                block.timestamp
+            )
+        );
+        
+        emit CrossChainDepositInitiated(
+            userSafe,
+            token,
+            amount,
+            destinationChainId,
+            vaultAddress,
+            depositId
+        );
+    }
+    
+    /**
+     * @notice Set receiver contract for a destination chain
+     * @dev Only owner can call this
+     * @param chainId Destination chain ID
+     * @param receiver CrossChainVaultReceiver address on that chain
+     */
+    function setChainReceiver(
+        uint256 chainId,
+        address receiver
+    ) external onlyOwner {
+        if (chainId == 0 || receiver == address(0)) {
+            revert InvalidParameters();
+        }
+        chainReceivers[chainId] = receiver;
+        emit ChainReceiverSet(chainId, receiver);
+    }
+    
+    /**
+     * @notice Set maximum deposit amount
+     * @dev Only owner can call this - safety mechanism
+     * @param newMaxAmount New maximum amount in token's smallest unit
+     */
+    function setMaxDepositAmount(uint256 newMaxAmount) external onlyOwner {
+        if (newMaxAmount == 0) revert InvalidParameters();
+        maxDepositAmount = newMaxAmount;
+        emit MaxDepositAmountSet(newMaxAmount);
+    }
+    
+    /**
+     * @notice Transfer ownership to a new address
+     * @param newOwner The new owner address
+     */
+    function transferOwnership(address newOwner) external onlyOwner {
+        if (newOwner == address(0)) revert InvalidParameters();
+        address oldOwner = owner;
+        owner = newOwner;
+        emit OwnershipTransferred(oldOwner, newOwner);
+    }
+    
+    /**
+     * @notice Emergency withdrawal (owner only)
+     * @dev Should only be used if tokens get stuck
+     * @param token Token to withdraw
+     * @param amount Amount to withdraw
+     */
+    function emergencyWithdraw(address token, uint256 amount) external onlyOwner {
+        IERC20(token).safeTransfer(owner, amount);
+    }
+}

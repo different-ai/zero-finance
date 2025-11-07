@@ -4,25 +4,65 @@
     "exa": {
       "type": "remote",
       "url": "https://mcp.exa.ai/mcp",
-      "headers": {}
+      "headers": {},
+      "enabled": true,
+      "timeout": 10000
     },
     "notion": {
       "type": "local",
-      "command": ["npx", "-y", "mcp-remote", "https://mcp.notion.com/mcp"]
+      "command": ["npx", "-y", "mcp-remote", "https://mcp.notion.com/mcp"],
+      "enabled": true,
+      "timeout": 10000
     }
   },
   "agent": {
+    "notion-company-intel": {
+      "description": "Specialized in searching and extracting information from Notion workspace for company data, metrics, outreach activities, investor information, and business intelligence.",
+      "mode": "subagent",
+      "model": "anthropic/claude-sonnet-4-20250514",
+      "tools": {
+        "notion_notion-search": true,
+        "notion_notion-fetch": true,
+        "notion_notion-get-comments": true,
+        "notion_notion-get-users": true,
+        "notion_notion-list-agents": true,
+        "write": true,
+        "read": true,
+        "edit": true,
+        "bash": false,
+        "list": true,
+        "glob": false,
+        "grep": false
+      }
+    },
+    "startup-funding-researcher": {
+      "description": "Elite startup intelligence researcher specializing in VC funding data. Researches startups' latest funding rounds using Exa and maintains companies.json records.",
+      "mode": "subagent",
+      "model": "anthropic/claude-sonnet-4-20250514",
+      "tools": {
+        "exa_web_search_exa": true,
+        "exa_get_code_context_exa": true,
+        "webfetch": true,
+        "bash": true,
+        "read": true,
+        "write": true,
+        "edit": true,
+        "list": true,
+        "glob": true,
+        "grep": true
+      }
+    },
     "notion-intel": {
       "description": "Specialized in searching and extracting information from Notion workspace. Use for product context, messaging, GTM strategy, investor materials, and company documentation.",
       "mode": "subagent",
       "model": "anthropic/claude-sonnet-4-20250514",
       "prompt": "You are a Notion intelligence specialist. Your job is to search the company's Notion workspace and extract relevant information. Use semantic search to find documents, then fetch full content when needed. Always provide specific quotes and page URLs. Focus on: product messaging, GTM strategy, investor materials, team context, and strategic decisions.",
       "tools": {
-        "notion_notion_search": true,
-        "notion_notion_fetch": true,
-        "notion_notion_get_comments": true,
-        "notion_notion_get_users": true,
-        "notion_notion_list_agents": true,
+        "notion_notion-search": true,
+        "notion_notion-fetch": true,
+        "notion_notion-get-comments": true,
+        "notion_notion-get-users": true,
+        "notion_notion-list-agents": true,
         "write": true,
         "read": true,
         "bash": false,
