@@ -50,6 +50,27 @@ export function getUSDCAddress(chainId: number): Address | undefined {
 }
 
 /**
+ * Across Protocol MulticallHandler addresses
+ * These handler contracts execute arbitrary calls on the destination chain
+ * See: https://docs.across.to/reference/contract-addresses
+ */
+export const ACROSS_MULTICALL_HANDLERS = {
+  42161: '0x924a9f036260DdD5808007E1AA95f08eD08aA569' as Address, // Arbitrum
+  10: '0x924a9f036260DdD5808007E1AA95f08eD08aA569' as Address, // Optimism
+  137: '0x924a9f036260DdD5808007E1AA95f08eD08aA569' as Address, // Polygon
+  8453: '0x924a9f036260DdD5808007E1AA95f08eD08aA569' as Address, // Base
+} as const;
+
+/**
+ * Get MulticallHandler address for a chain
+ */
+export function getMulticallHandler(chainId: number): Address | undefined {
+  return ACROSS_MULTICALL_HANDLERS[
+    chainId as keyof typeof ACROSS_MULTICALL_HANDLERS
+  ];
+}
+
+/**
  * Check if Across Protocol is supported on a chain
  */
 export function isAcrossSupported(chainId: number): boolean {

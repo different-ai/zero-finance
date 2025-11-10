@@ -227,12 +227,33 @@ export default function SavingsPageWrapper({
     },
   );
 
+  // Fetch cross-chain positions (Arbitrum, Hyperliquid, etc.)
+  const realCrossChainPositions = trpc.earn.getCrossChainPositions.useQuery(
+    { safeAddress: safeAddress! },
+    {
+      enabled: !!safeAddress && !isDemoMode,
+      refetchInterval: 30000, // 30s refresh for cross-chain
+    },
+  );
+
   const vaultStatsMany = isDemoMode ? demoVaultStats : realVaultStatsMany.data;
   const userPositions = isDemoMode ? demoUserPositions : realUserPositions.data;
+  const crossChainPositions = isDemoMode ? [] : realCrossChainPositions.data;
+
+  // Debug logging for cross-chain positions
+  useEffect(() => {
+    if (crossChainPositions && !isDemoMode) {
+      console.log('[Savings Page] Cross-chain positions loaded:', crossChainPositions);
+      crossChainPositions.forEach((pos) => {
+        console.log(`[Savings Page] ${pos.vaultId}: $${pos.balanceUsd} (${pos.shares} shares, ${pos.assets} assets)`);
+      });
+    }
+  }, [crossChainPositions, isDemoMode]);
 
   const { refetch: refetchVaultStats } = realVaultStats;
   const { refetch: refetchVaultsMany } = realVaultStatsMany;
   const { refetch: refetchUserPositions } = realUserPositions;
+  const { refetch: refetchCrossChainPositions } = realCrossChainPositions;
 
   // State for vault action modals with transition support
   const [selectedVault, setSelectedVault] = useState<{
@@ -303,6 +324,7 @@ export default function SavingsPageWrapper({
       void refetchVaultStats();
       void refetchVaultsMany();
       void refetchUserPositions();
+      void refetchCrossChainPositions();
     };
 
     runRefetches();
@@ -324,6 +346,7 @@ export default function SavingsPageWrapper({
     refetchUserPositions,
     refetchVaultStats,
     refetchVaultsMany,
+    refetchCrossChainPositions,
     safeAddress,
   ]);
 
@@ -352,34 +375,39 @@ export default function SavingsPageWrapper({
       userIsInsured,
     );
     
-    // Cross-chain vaults with mock stats (manual deposits only)
-    const crossChainVaults = CROSS_CHAIN_VAULTS.map((vault) => ({
-      id: vault.id,
-      name: vault.name,
-      displayName: vault.displayName,
-      risk: vault.risk,
-      curator: vault.curator,
-      address: vault.address,
-      appUrl: vault.appUrl,
-      chainId: vault.chainId,
-      chainName: vault.chainName,
-      apy: vault.id === 'hlp-main' ? 25 : 10, // HLP ~25%, Morpho Arb ~10%
-      balanceUsd: 0, // Manual tracking
-      earnedUsd: 0,
-      principalUsd: 0,
-      recordedPrincipalUsd: 0,
-      rawEarnedUsd: 0,
-      isAuto: false,
-      instantApy: vault.id === 'hlp-main' ? 0.25 : 0.10,
-      isInsured: false,
-      isContactOnly: false,
-      yieldCorrectionReason: null,
-      isCrossChain: true,
-      type: vault.type,
-    }));
+    // Cross-chain vaults with real balances from RPC queries
+    const crossChainVaults = CROSS_CHAIN_VAULTS.map((vault) => {
+      const position = crossChainPositions?.find((p) => p.vaultId === vault.id);
+      const balanceUsd = position?.balanceUsd ?? 0;
+      
+      return {
+        id: vault.id,
+        name: vault.name,
+        displayName: vault.displayName,
+        risk: vault.risk,
+        curator: vault.curator,
+        address: vault.address,
+        appUrl: vault.appUrl,
+        chainId: vault.chainId,
+        chainName: vault.chainName,
+        apy: vault.id === 'hlp-main' ? 25 : 10, // HLP ~25%, Morpho Arb ~10%
+        balanceUsd, // Real balance from cross-chain query!
+        earnedUsd: 0, // TODO: Calculate yield from deposits
+        principalUsd: 0, // TODO: Track deposits from earn_deposits table
+        recordedPrincipalUsd: 0,
+        rawEarnedUsd: 0,
+        isAuto: false,
+        instantApy: vault.id === 'hlp-main' ? 0.25 : 0.10,
+        isInsured: false,
+        isContactOnly: false,
+        yieldCorrectionReason: null,
+        isCrossChain: true,
+        type: vault.type,
+      };
+    });
     
     return [...baseVaults, ...crossChainVaults];
-  }, [vaultStatsMany, userPositions, userIsInsured]);
+  }, [vaultStatsMany, userPositions, userIsInsured, crossChainPositions]);
 
   // Calculate totals
   const insuredVaultEntry = useMemo(

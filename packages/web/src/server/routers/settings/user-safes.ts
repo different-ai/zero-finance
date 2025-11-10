@@ -250,6 +250,35 @@ export const userSafesRouter = router({
           `Successfully inserted ${safeType} safe (ID: ${insertedSafe.id}) into DB for user DID: ${privyDid}`,
         );
 
+        // 6. For primary safes, also initialize in the multi-chain safes table
+        // Note: safeType is constrained to 'liquidity' | 'yield', but we check for 'primary' here
+        // to future-proof if primary becomes an allowed type
+        if (workspaceId && (safeType as string) === 'primary') {
+          try {
+            const { initializePrimarySafe } = await import(
+              '@/server/services/safe-multi-chain.service'
+            );
+
+            await initializePrimarySafe({
+              workspaceId,
+              safeAddress: newSafeAddress as Address,
+              owners: owners as Address[],
+              threshold,
+              saltNonce: saltNonce ? BigInt(saltNonce) : 0n,
+            });
+
+            console.log(
+              `Successfully initialized primary Safe in multi-chain tracking for workspace ${workspaceId}`,
+            );
+          } catch (multiChainError) {
+            // Log error but don't fail the entire operation
+            console.error(
+              'Failed to initialize primary Safe in multi-chain tracking:',
+              multiChainError,
+            );
+          }
+        }
+
         return {
           message: `${safeType.charAt(0).toUpperCase() + safeType.slice(1)} safe created successfully.`,
           data: insertedSafe,

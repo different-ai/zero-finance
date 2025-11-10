@@ -12,7 +12,7 @@ This is a Next.js application with smart contract automation for savings managem
 
 ## External Resources & Knowledge Bases
 
-### Notion MCP - Product Context & Messaging
+### Notion MCP - Product Context, Messaging & Investor Relations
 
 Use **Notion MCP tools** to access company documentation for:
 
@@ -20,8 +20,20 @@ Use **Notion MCP tools** to access company documentation for:
 - **Value propositions and pitching** - Find product positioning documents, sales decks, and marketing materials
 - **Feature specifications** - Retrieve detailed product requirements and user stories
 - **Brand guidelines** - Access style guides, terminology, and communication standards
+- **Investor relations** - Access the MCP Skills page (page_id: `2a78ed524fef80b698c8ee7401793722`) which documents:
+  - **Investor Cheat Sheet** - Talking points, metrics, value props for investor conversations
+  - **Investor CRM** - Database of investor contacts, firms, thesis, relationship status
+  - **Outreach Tracking** - Communication logs, follow-up schedules, interaction history
 
-Primary tools: `notion_notion_search` for semantic search, `notion_notion_fetch` for specific page/database content.
+Primary tools: `notion_API-retrieve-a-page`, `notion_API-post-search`, `notion_API-post-database-query`
+
+**For investor-related tasks**, use the **outreach-tracker** agent which is specifically designed to:
+
+- Log investor communications and schedule follow-ups
+- Update and query the Investor CRM database
+- Pull context from the Investor Cheat Sheet before meetings
+- Find follow-up opportunities and prioritize outreach
+- The agent always references the MCP Skills page first to understand data structure and usage patterns
 
 ### Design Language - Visual & UI Standards
 
@@ -48,6 +60,28 @@ Use **Exa MCP tools** for technical implementation when:
 Primary tools: `exa_get_code_context_exa` for programming context, `exa_web_search_exa` for general technical research.
 
 **Workflow**: Check DESIGN-LANGUAGE.md first for UI/visual decisions, Notion for product/messaging context, then Exa for technical implementation details not well-covered in existing codebase or documentation.
+
+## Documentation & Research
+
+### Research Directory
+
+**All research documents, debugging guides, and exploratory work should be saved to the `research/` directory.**
+
+This includes:
+- Cross-chain implementation research and debugging guides
+- Vault integration documentation
+- Smart wallet standards analysis
+- Investor outreach documents and prospect lists
+- Platform fixes and migration guides
+- Admin panel research
+- Any exploratory `.md` files created during development
+
+The `research/` directory is gitignored to keep the repository clean and focused on production code and essential documentation.
+
+**Root directory should only contain:**
+- `README.md` - Main project readme
+- `CODE_OF_CONDUCT.md` - Code of conduct
+- `AGENTS.md` - This file (agent guidelines)
 
 # Repository Guidelines
 

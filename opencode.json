@@ -10,9 +10,12 @@
     },
     "notion": {
       "type": "local",
-      "command": ["npx", "-y", "mcp-remote", "https://mcp.notion.com/mcp"],
+      "command": ["npx", "-y", "@notionhq/notion-mcp-server"],
       "enabled": true,
-      "timeout": 10000
+      "timeout": 10000,
+      "environment": {
+        "NOTION_TOKEN": "{env:NOTION_TOKEN}"
+      }
     }
   },
   "agent": {

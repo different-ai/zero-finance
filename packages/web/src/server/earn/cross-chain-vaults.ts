@@ -25,11 +25,11 @@ export type CrossChainVault = {
 export const ARBITRUM_MORPHO_VAULTS: CrossChainVault[] = [
   {
     id: 'morpho-arb-gauntlet',
-    name: 'Gauntlet USDC Core (Arbitrum)',
-    displayName: 'Arbitrum High-Yield',
+    name: 'Gauntlet USDC Core (Arbitrum)', // Technical name (hidden)
+    displayName: 'High-Yield Savings', // Banking-friendly name (visible)
     address: '0x7e97fa6893871A2751B5fE961978DCCb2c201E65',
     risk: 'Optimized',
-    curator: 'Morpho × Gauntlet',
+    curator: '0 Finance', // Hide external curators per progressive disclosure
     appUrl:
       'https://app.morpho.org/vault?vault=0x7e97fa6893871A2751B5fE961978DCCb2c201E65&network=arbitrum',
     chainId: ARBITRUM_CHAIN_ID,

@@ -52,7 +52,21 @@
       "WebFetch(domain:aleclownes.com)",
       "WebFetch(domain:tympanus.net)",
       "WebFetch(domain:github.com)",
-      "Bash(claude mcp add:*)"
+      "Bash(claude mcp add:*)",
+      "mcp__notion__notion-get-self",
+      "Bash(echo:*)",
+      "Bash(claude mcp prompt:*)",
+      "Bash(claude mcp --help:*)",
+      "Bash(claude mcp list:*)",
+      "Bash(pnpm db:generate:local:*)",
+      "Bash(pnpm typecheck:*)",
+      "Bash(pnpm --filter @zero-finance/web typecheck:*)",
+      "Bash(git worktree:*)",
+      "Bash(pnpm --filter @zero-finance/web list:*)",
+      "Bash(pnpm list:*)",
+      "Bash(git branch:*)",
+      "Bash(git checkout:*)",
+      "Bash(tee:*)"
     ],
     "deny": [],
     "ask": []

@@ -21,7 +21,11 @@ import {
 import { base } from 'viem/chains';
 import { useSafeRelay } from '@/hooks/use-safe-relay';
 import { USDC_ADDRESS, USDC_DECIMALS } from '@/lib/constants';
-import { ACROSS_SPOKE_POOLS, USDC_ADDRESSES } from '@/lib/constants/across';
+import {
+  ACROSS_SPOKE_POOLS,
+  USDC_ADDRESSES,
+  getMulticallHandler,
+} from '@/lib/constants/across';
 import { type CrossChainVault } from '@/server/earn/cross-chain-vaults';
 
 interface CrossChainDepositCardProps {
@@ -56,11 +60,11 @@ const ACROSS_ABI = [
 
 type TransactionStep =
   | 'idle'
-  | 'checking'
+  | 'preparing'
   | 'approving'
   | 'waiting-approval'
-  | 'bridging'
-  | 'waiting-bridge'
+  | 'transferring'
+  | 'waiting-transfer'
   | 'complete'
   | 'error';
 
@@ -158,7 +162,7 @@ export function CrossChainDepositCard({
     });
 
     try {
-      setTransactionState({ step: 'checking' });
+      setTransactionState({ step: 'preparing' });
 
       // Check balance
       if (amountInSmallestUnit > usdcBalance) {
@@ -166,6 +170,11 @@ export function CrossChainDepositCard({
           `Insufficient balance. You have ${formatUnits(usdcBalance, USDC_DECIMALS)} USDC`
         );
       }
+
+      // Note: Safe doesn't need to exist on destination chain for deposits
+      // The vault shares will be credited to safeAddress on Arbitrum
+      // User can deploy Safe on Arbitrum later when they want to withdraw
+      console.log('[CrossChainDeposit] Preparing cross-chain deposit...');
 
       const spokePoolBase = ACROSS_SPOKE_POOLS[8453]; // Base SpokePool
 
@@ -214,8 +223,8 @@ export function CrossChainDepositCard({
         }
       }
 
-      // Step 2: Bridge via Across Protocol
-      setTransactionState({ step: 'bridging' });
+      // Step 2: Transfer to vault
+      setTransactionState({ step: 'transferring' });
 
       const now = Math.floor(Date.now() / 1000);
       const fillDeadline = now + 3600; // 1 hour
@@ -227,12 +236,84 @@ export function CrossChainDepositCard({
         throw new Error(`USDC not supported on chain ${vault.chainId}`);
       }
 
+      // Get MulticallHandler address for destination chain
+      const multicallHandler = getMulticallHandler(vault.chainId);
+      if (!multicallHandler) {
+        throw new Error(`MulticallHandler not deployed on chain ${vault.chainId}`);
+      }
+
+      // Encode calls for automatic vault deposit
+      // Call 1: Approve USDC for vault
+      const approveCall = encodeFunctionData({
+        abi: erc20Abi,
+        functionName: 'approve',
+        args: [vault.address, outputAmount],
+      });
+
+      // Call 2: Deposit to vault
+      const depositCall = encodeFunctionData({
+        abi: [
+          {
+            name: 'deposit',
+            type: 'function',
+            stateMutability: 'nonpayable',
+            inputs: [
+              { name: 'assets', type: 'uint256' },
+              { name: 'receiver', type: 'address' },
+            ],
+            outputs: [{ name: 'shares', type: 'uint256' }],
+          },
+        ] as const,
+        functionName: 'deposit',
+        args: [outputAmount, safeAddress],
+      });
+
+      // Encode multicall message for Across MulticallHandler
+      // Format: Call[] where Call = {target, callData, value}
+      // See: https://docs.across.to/developer-quickstart/embedded-crosschain-actions
+      const calls = [
+        { target: outputToken, callData: approveCall, value: 0n },
+        { target: vault.address, callData: depositCall, value: 0n },
+      ];
+
+      const message = encodeFunctionData({
+        abi: [
+          {
+            name: 'multicall',
+            type: 'function',
+            inputs: [
+              {
+                name: 'calls',
+                type: 'tuple[]',
+                components: [
+                  { name: 'target', type: 'address' },
+                  { name: 'callData', type: 'bytes' },
+                  { name: 'value', type: 'uint256' },
+                ],
+              },
+            ],
+            outputs: [],
+          },
+        ] as const,
+        functionName: 'multicall',
+        args: [calls],
+      });
+
+      console.log('[CrossChainDeposit] Encoded automatic deposit message:', {
+        multicallHandler,
+        outputToken,
+        vaultAddress: vault.address,
+        outputAmount: outputAmount.toString(),
+        callsCount: calls.length,
+        messageLength: message.length,
+      });
+
       const bridgeData = encodeFunctionData({
         abi: ACROSS_ABI,
         functionName: 'depositV3',
         args: [
-          safeAddress, // depositor
-          safeAddress, // recipient (same address on destination chain!)
+          safeAddress, // depositor (who is sending the tokens)
+          multicallHandler, // recipient (MulticallHandler will receive tokens + execute message)
           USDC_ADDRESS, // inputToken (USDC on Base)
           outputToken, // outputToken (USDC on destination)
           amountInSmallestUnit, // inputAmount
@@ -242,7 +323,7 @@ export function CrossChainDepositCard({
           now, // quoteTimestamp
           fillDeadline, // fillDeadline
           exclusivityDeadline, // exclusivityDeadline
-          '0x' as `0x${string}`, // message (empty)
+          message as `0x${string}`, // message (multicall: approve + deposit to vault)
         ],
       });
 
@@ -257,14 +338,14 @@ export function CrossChainDepositCard({
         500_000n
       );
 
-      if (!bridgeTxHash) throw new Error('Bridge transaction failed');
+      if (!bridgeTxHash) throw new Error('Transfer failed');
 
       setTransactionState({
-        step: 'waiting-bridge',
+        step: 'waiting-transfer',
         txHash: bridgeTxHash,
       });
 
-      // Wait for bridge
+      // Wait for transfer to complete
       await new Promise((resolve) => setTimeout(resolve, 7000));
 
       // Success!
@@ -284,21 +365,21 @@ export function CrossChainDepositCard({
     } catch (error) {
       console.error('[CrossChainDeposit] Error:', error);
 
-      let errorMessage = 'Bridge failed';
-      if (error instanceof Error) {
-        if (error.message.includes('Insufficient')) {
-          errorMessage = error.message;
-        } else if (error.message.includes('denied') || error.message.includes('rejected')) {
-          errorMessage = 'Transaction was cancelled';
-        } else {
-          errorMessage = error.message;
+        let errorMessage = 'Deposit failed';
+        if (error instanceof Error) {
+          if (error.message.includes('Insufficient')) {
+            errorMessage = error.message;
+          } else if (error.message.includes('denied') || error.message.includes('rejected')) {
+            errorMessage = 'Deposit was cancelled';
+          } else {
+            errorMessage = error.message;
+          }
         }
-      }
 
-      setTransactionState({
-        step: 'error',
-        errorMessage,
-      });
+        setTransactionState({
+          step: 'error',
+          errorMessage,
+        });
     }
   };
 
@@ -340,16 +421,16 @@ export function CrossChainDepositCard({
   ) {
     const getProgress = () => {
       switch (transactionState.step) {
-        case 'checking':
-          return 10;
+        case 'preparing':
+          return 15;
         case 'approving':
-          return 25;
+          return 35;
         case 'waiting-approval':
-          return 40;
-        case 'bridging':
-          return 60;
-        case 'waiting-bridge':
-          return 80;
+          return 50;
+        case 'transferring':
+          return 70;
+        case 'waiting-transfer':
+          return 90;
         default:
           return 0;
       }
@@ -359,7 +440,7 @@ export function CrossChainDepositCard({
       <div className="space-y-4">
         <div className="bg-white border border-[#101010]/10 p-4 space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-[14px] text-[#101010]">Bridging to {vault.chainName}</span>
+            <span className="text-[14px] text-[#101010]">Processing deposit...</span>
             <Loader2 className="h-4 w-4 animate-spin text-[#1B29FF]" />
           </div>
 
@@ -371,10 +452,10 @@ export function CrossChainDepositCard({
           </div>
 
           <div className="space-y-2">
-            {transactionState.step === 'checking' && (
+            {transactionState.step === 'preparing' && (
               <div className="flex items-center gap-2 text-[12px] text-[#101010]/60">
                 <Clock className="h-3 w-3" />
-                Checking requirements...
+                Preparing deposit...
               </div>
             )}
 
@@ -383,7 +464,7 @@ export function CrossChainDepositCard({
               <div className="space-y-2">
                 <div className="flex items-center gap-2 text-[12px] text-[#101010]">
                   <div className="h-2 w-2 rounded-full bg-[#FFA500] animate-pulse" />
-                  Step 1 of 2: Approving USDC for Across Protocol
+                  Step 1 of 2: Approving transfer
                 </div>
                 {transactionState.txHash && (
                   <a
@@ -399,15 +480,15 @@ export function CrossChainDepositCard({
               </div>
             )}
 
-            {(transactionState.step === 'bridging' ||
-              transactionState.step === 'waiting-bridge') && (
+            {(transactionState.step === 'transferring' ||
+              transactionState.step === 'waiting-transfer') && (
               <div className="space-y-2">
                 <div className="flex items-center gap-2 text-[12px] text-[#101010]">
                   <div className="h-2 w-2 rounded-full bg-[#1B29FF] animate-pulse" />
-                  Step 2 of 2: Bridging USDC to {vault.chainName}
+                  Step 2 of 2: Completing deposit
                 </div>
                 <p className="text-[11px] text-[#101010]/60">
-                  Relayers will deliver your USDC in ~20 seconds
+                  Your funds will start earning in ~30 seconds
                 </p>
                 {transactionState.txHash && (
                   <a
@@ -441,10 +522,10 @@ export function CrossChainDepositCard({
             <CheckCircle className="h-4 w-4 text-[#10B981] flex-shrink-0 mt-0.5" />
             <div className="space-y-2">
               <div className="text-[14px] font-medium text-[#101010]">
-                Successfully bridged {transactionState.bridgedAmount} USDC to {vault.chainName}
+                Deposit successful
               </div>
               <div className="text-[12px] text-[#101010]/70">
-                Your USDC will arrive on {vault.chainName} in ~20 seconds.
+                ${transactionState.bridgedAmount} deposited. Your funds will start earning in ~30 seconds.
               </div>
               {transactionState.txHash && (
                 <a
@@ -461,21 +542,16 @@ export function CrossChainDepositCard({
           </div>
         </div>
 
-        <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg space-y-3">
-          <p className="text-sm font-medium text-blue-900">Next Steps:</p>
-          <ol className="text-xs text-blue-800 space-y-2 list-decimal list-inside">
-            <li>Wait ~20 seconds for USDC to arrive on {vault.chainName}</li>
-            <li>Switch to {vault.chainName} network in your wallet</li>
-            <li>Visit Morpho app to complete your deposit</li>
-          </ol>
-          <a
-            href={vault.appUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 text-xs text-blue-600 hover:text-blue-700 font-medium"
-          >
-            Open Morpho App on {vault.chainName} <ExternalLink className="h-3 w-3" />
-          </a>
+        <div className="p-4 bg-[#F7F7F2] border border-[#10B981]/20">
+          <div className="space-y-2">
+            <p className="text-[12px] font-medium text-[#101010]">Deposit in Progress</p>
+            <p className="text-[11px] text-[#101010]/70">
+              Your deposit is processing. This typically takes 20-30 seconds.
+            </p>
+            <p className="text-[11px] text-[#101010]/60">
+              Your balance will update automatically when complete.
+            </p>
+          </div>
         </div>
 
         <div className="flex gap-2">
@@ -483,7 +559,7 @@ export function CrossChainDepositCard({
             onClick={resetTransaction}
             className="flex-1 px-3 py-2 text-[13px] text-[#101010] bg-white border border-[#101010]/10 hover:bg-[#F7F7F2] transition-colors"
           >
-            Bridge More
+            Deposit More
           </button>
           <button
             onClick={() => {
@@ -507,7 +583,7 @@ export function CrossChainDepositCard({
           <div className="flex gap-3">
             <AlertCircle className="h-4 w-4 text-[#FFA500] flex-shrink-0 mt-0.5" />
             <div className="space-y-1">
-              <div className="text-[14px] font-medium text-[#101010]">Bridge Failed</div>
+              <div className="text-[14px] font-medium text-[#101010]">Deposit Failed</div>
               <div className="text-[12px] text-[#101010]/70">
                 {transactionState.errorMessage}
               </div>
@@ -584,45 +660,32 @@ export function CrossChainDepositCard({
         </div>
       </div>
 
-      {/* Bridge Details */}
+      {/* Deposit Summary */}
       {amount && (
         <div className="p-3 bg-[#F7F7F2] rounded-lg space-y-2 text-xs">
           <div className="flex justify-between">
-            <span className="text-[#101010]/60">Bridge from:</span>
-            <span className="font-medium">Base</span>
+            <span className="text-[#101010]/60">Amount deposited:</span>
+            <span className="font-medium text-[#101010]">~${estimatedReceived}</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-[#101010]/60">Bridge to:</span>
-            <span className="font-medium">{vault.chainName}</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-[#101010]/60">Estimated fee:</span>
-            <span className="font-medium text-[#FFA500]">~${estimatedFee} (0.5%)</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-[#101010]/60">You will receive:</span>
-            <span className="font-medium text-[#10B981]">~${estimatedReceived}</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-[#101010]/60">Estimated time:</span>
-            <span className="font-medium">~20 seconds</span>
+            <span className="text-[#101010]/60">Transfer fee:</span>
+            <span className="font-medium text-[#101010]/60">~${estimatedFee}</span>
           </div>
         </div>
       )}
 
-      {/* Warning */}
-      <div className="flex items-start gap-2 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-        <AlertCircle className="h-4 w-4 text-yellow-600 mt-0.5 flex-shrink-0" />
-        <div className="text-xs text-yellow-800">
-          <p className="font-medium">Manual deposit required</p>
-          <p className="mt-1 text-yellow-700">
-            After bridging, you'll need to manually deposit to the vault on {vault.chainName} using
-            the Morpho app.
+      {/* Info about automatic deposit */}
+      <div className="flex items-start gap-2 p-3 bg-[#F7F7F2] border border-[#1B29FF]/20">
+        <CheckCircle className="h-4 w-4 text-[#1B29FF] mt-0.5 flex-shrink-0" />
+        <div className="text-xs text-[#101010]">
+          <p className="font-medium">Automatic deposit</p>
+          <p className="mt-1 text-[#101010]/70">
+            Your funds will be automatically deposited and start earning immediately.
           </p>
         </div>
       </div>
 
-      {/* Bridge Button */}
+      {/* Deposit Button */}
       <button
         onClick={handleBridge}
         disabled={
@@ -635,7 +698,7 @@ export function CrossChainDepositCard({
         className="w-full px-4 py-2.5 text-[14px] font-medium text-white bg-[#1B29FF] hover:bg-[#1420CC] disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
       >
         <ArrowRight className="h-4 w-4" />
-        {needsApproval ? `Approve & Bridge to ${vault.chainName}` : `Bridge to ${vault.chainName}`}
+        {needsApproval ? 'Approve & Deposit' : 'Deposit'}
       </button>
 
       {/* No balance warning */}
@@ -652,7 +715,7 @@ export function CrossChainDepositCard({
 
       {/* Help text */}
       <p className="text-[11px] text-[#101010]/50 text-center">
-        Powered by Across Protocol • Funds arrive in ~20 seconds
+        Deposits complete in ~30 seconds
       </p>
     </div>
   );
