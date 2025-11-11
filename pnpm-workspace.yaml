@@ -9,23 +9,23 @@ catalog:
   # React ecosystem
   react: ^19.0.0
   react-dom: ^19.0.0
-  "@radix-ui/react-tabs": ^1.1.3
-  "@radix-ui/react-separator": ^1.1.2
-  "@types/react": ^18.2.0
-  "@types/react-dom": ^18.2.0
-  next: ^15.3.5
-  eslint-config-next: ^15.3.3
+  '@radix-ui/react-tabs': ^1.1.3
+  '@radix-ui/react-separator': ^1.1.2
+  '@types/react': ^19.0.0
+  '@types/react-dom': ^19.0.0
+  next: ^16.0.0
+  eslint-config-next: ^16.0.0
 
   # Testing
-  "@playwright/test": ^1.51.0
+  '@playwright/test': ^1.51.0
 
-# Forms
+  # Forms
   react-hook-form: ^7.53.0
-  "@hookform/resolvers": ^3.9.0
+  '@hookform/resolvers': ^3.9.0
 
   # Auth
-  "@auth/core": ^0.37.2
-  "@auth/drizzle-adapter": ^1.7.4
+  '@auth/core': ^0.37.2
+  '@auth/drizzle-adapter': ^1.7.4
   next-auth: ^5.0.0-beta.25
 
   # Development tools
@@ -37,23 +37,23 @@ catalog:
   autoprefixer: ^10.4.20
 
   # Tanstack & tRPC
-  "@tanstack/react-query": ^5.25.0
-  "@trpc/client": ^11.0.0
-  "@trpc/server": ^11.0.0
-  "@trpc/react-query": ^11.0.0
-  "@trpc/next": ^11.0.0
-  "@trpc/tanstack-react-query": ^11.0.0
+  '@tanstack/react-query': ^5.25.0
+  '@trpc/client': ^11.0.0
+  '@trpc/server': ^11.0.0
+  '@trpc/react-query': ^11.0.0
+  '@trpc/next': ^11.0.0
+  '@trpc/tanstack-react-query': ^11.0.0
 
   # UI Components
   class-variance-authority: ^0.7.1
-  "@radix-ui/react-dialog": ^1.1.2
-  "@radix-ui/react-label": ^2.1.0
-  "@radix-ui/react-slot": ^1.1.2
-  "@radix-ui/react-tooltip": ^1.1.3
+  '@radix-ui/react-dialog': ^1.1.2
+  '@radix-ui/react-label': ^2.1.0
+  '@radix-ui/react-slot': ^1.1.2
+  '@radix-ui/react-tooltip': ^1.1.3
   # The user's selection indicates multiple versions of dropdown menu, let's pin it here
-  "@radix-ui/react-dropdown-menu": ^2.1.6 
+  '@radix-ui/react-dropdown-menu': ^2.1.6
   # The user's selection indicates multiple versions of select, let's pin it here
-  "@radix-ui/react-select": ^2.1.1 # Adding select as it seems to be causing issues based on the error log
+  '@radix-ui/react-select': ^2.1.1 # Adding select as it seems to be causing issues based on the error log
   framer-motion: ^11.3.19
   geist: ^1.3.1
   lucide-react: ^0.476.0
@@ -62,12 +62,12 @@ catalog:
   tailwind-merge: ^3.0.2
 
   # AI SDK v5 Canary (Beta)
-  "@ai-sdk/react": "^2.0.0-canary"
-  "@ai-sdk/openai": "^2.0.0-canary"
-  ai: "^5.0.0-canary"
+  '@ai-sdk/react': '^2.0.0-canary'
+  '@ai-sdk/openai': '^2.0.0-canary'
+  ai: '^5.0.0-canary'
 
   # Database & Storage
-  "@vercel/blob": ^0.27.3
+  '@vercel/blob': ^0.27.3
   dotenv: ^16.4.7
   drizzle-orm: ^0.38.3
   drizzle-kit: ^0.30.1
@@ -76,23 +76,23 @@ catalog:
   zod: ^3.25.0
   zustand: ^5.0.3
   tsx: ^4.19.2
-  "@types/node": ^22.10.10
+  '@types/node': ^22.10.10
 
 # Named catalogs
 catalogs:
   # Request Network dependencies
   request:
-    "@requestnetwork/epk-cipher": ^0.9.0
-    "@requestnetwork/epk-signature": ^0.9.9
-    "@requestnetwork/payment-processor": ^0.56.0
-    "@requestnetwork/request-client.js": ^0.58.0
-    "@requestnetwork/types": ^0.53.0
-    "@requestnetwork/utils": ^0.53.0
-    "@requestnetwork/web3-signature": ^0.8.9
+    '@requestnetwork/epk-cipher': ^0.9.0
+    '@requestnetwork/epk-signature': ^0.9.9
+    '@requestnetwork/payment-processor': ^0.56.0
+    '@requestnetwork/request-client.js': ^0.58.0
+    '@requestnetwork/types': ^0.53.0
+    '@requestnetwork/utils': ^0.53.0
+    '@requestnetwork/web3-signature': ^0.8.9
 
   # React 18 for packages that need it (like weloveyourstartup with react-three-fiber)
   react18:
     react: ^18.3.1
     react-dom: ^18.3.1
-    "@types/react": ^18.3.0
-    "@types/react-dom": ^18.3.0
+    '@types/react': ^18.3.0
+    '@types/react-dom': ^18.3.0
