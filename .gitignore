@@ -69,3 +69,6 @@ data/
 # Claude settings
 .claude/settings.local.json
 **/settings.local.json
+
+# Research documentation
+research/
