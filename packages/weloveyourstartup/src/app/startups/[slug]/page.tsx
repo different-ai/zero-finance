@@ -5,9 +5,9 @@ import Script from 'next/script';
 import { StartupPageClient } from './StartupPageClient';
 
 interface PageProps {
-  params: {
+  params: Promise<{
     slug: string;
-  };
+  }>;
 }
 
 export async function generateStaticParams() {
@@ -19,7 +19,8 @@ export async function generateStaticParams() {
 export async function generateMetadata({
   params,
 }: PageProps): Promise<Metadata> {
-  const company = getCompanyById(params.slug);
+  const { slug } = await params;
+  const company = getCompanyById(slug);
 
   if (!company) {
     return {
@@ -52,11 +53,11 @@ export async function generateMetadata({
     openGraph: {
       title: `${company.name} - ${company.tagline}`,
       description: company.description,
-      url: `https://weloveyourstartup.com/startups/${params.slug}`,
+      url: `https://weloveyourstartup.com/startups/${slug}`,
       siteName: company.name,
       images: [
         {
-          url: `https://weloveyourstartup.com/api/og?company=${params.slug}`,
+          url: `https://weloveyourstartup.com/api/og?company=${slug}`,
           width: 1200,
           height: 630,
           alt: `${company.name}`,
@@ -69,16 +70,17 @@ export async function generateMetadata({
       card: 'summary_large_image',
       title: `${company.name} - ${company.tagline}`,
       description: company.description,
-      images: [`https://weloveyourstartup.com/api/og?company=${params.slug}`],
+      images: [`https://weloveyourstartup.com/api/og?company=${slug}`],
     },
     alternates: {
-      canonical: `https://weloveyourstartup.com/startups/${params.slug}`,
+      canonical: `https://weloveyourstartup.com/startups/${slug}`,
     },
   };
 }
 
-export default function StartupPage({ params }: PageProps) {
-  const company = getCompanyById(params.slug);
+export default async function StartupPage({ params }: PageProps) {
+  const { slug } = await params;
+  const company = getCompanyById(slug);
 
   if (!company) {
     notFound();
