@@ -87,3 +87,11 @@ Primary tools: `exa_get_code_context_exa` for programming context, `exa_web_sear
 - Keep secrets in `.env.local`, `.env.lite`, or `.env.test`; never commit them. Document new variables in `packages/web/ENV_DEPENDENCIES_REPORT.md`.
 - Lite mode spawns local Postgres and Privy mocks; shut it down with `pnpm lite:stop` or reset volumes with `pnpm lite:clean`.
 - Coordinate contract or vault changes with the on-chain owners and reflect updates in both `packages/fluidkey-earn-module` and the deployment manifests.
+
+## Research Documentation Guidelines
+
+- **All research documents** (integration analyses, upgrade guides, technical investigations) should be placed in the `research/` directory at the project root.
+- The `research/` directory is gitignored to keep the repository clean while preserving local documentation.
+- Only keep essential documentation in the root: `README.md`, `CODE_OF_CONDUCT.md`, and this `AGENTS.md` file.
+- When creating new research docs (e.g., `THIRDWEB_INTEGRATION_RESEARCH.md`, `NEXTJS_16_UPGRADE.md`), place them directly in `research/` or move them there before committing.
+- This keeps the root directory focused on actionable project files while maintaining comprehensive research locally.
