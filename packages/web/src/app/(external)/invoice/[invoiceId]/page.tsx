@@ -17,7 +17,7 @@ type ParsedInvoiceDetails = z.infer<typeof invoiceDataSchema> & {
 };
 type Params = Promise<{ invoiceId: string }>;
 
-export default async function ExternalInvoicePage(props: { params: Params }) {
+export default async function ExternalInvoicePage(props: { params: Promise<Params> }) {
   const params = await props.params;
   const { invoiceId } = params;
 

@@ -59,11 +59,12 @@ type DashboardSearchParams = {
   [key: string]: string | string[] | undefined;
 };
 
-export default async function DashboardPage({
-  searchParams,
-}: {
-  searchParams?: Promise<DashboardSearchParams>;
-}) {
+export default async function DashboardPage(
+  props: {
+    searchParams?: Promise<DashboardSearchParams>;
+  }
+) {
+  const searchParams = await props.searchParams;
   const userId = await getUserId();
 
   // Redirect if no user
