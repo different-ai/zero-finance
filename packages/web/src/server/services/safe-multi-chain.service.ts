@@ -15,10 +15,7 @@ import type { Address, Hex } from 'viem';
 import {
   checkSafeExists,
   getSafeConfiguration,
-  deploySafeOnChain,
-  predictSafeAddress,
   BASE_CHAIN_ID,
-  type SafeConfiguration,
 } from '@/lib/safe-multi-chain';
 
 /**
@@ -55,9 +52,7 @@ export async function getPrimarySafe(
   const [safe] = await db
     .select()
     .from(safes)
-    .where(
-      and(eq(safes.workspaceId, workspaceId), eq(safes.isPrimary, true)),
-    )
+    .where(and(eq(safes.workspaceId, workspaceId), eq(safes.isPrimary, true)))
     .limit(1);
 
   return safe;
@@ -219,45 +214,15 @@ export async function ensureSafeOnChain({
     };
   }
 
-  // 3. Safe doesn't exist - need to deploy
+  // 3. Safe doesn't exist - return error indicating client-side deployment needed
   console.log(
-    `[Safe Multi-Chain Service] Safe doesn't exist on chain ${destinationChainId}, deploying...`,
+    `[Safe Multi-Chain Service] Safe doesn't exist on chain ${destinationChainId}. Client must deploy it.`,
   );
 
-  // Get configuration from source chain
-  const config = await getSafeConfiguration(safeAddress, sourceChainId);
-
-  // Deploy Safe
-  const { hash, safeAddress: deployedAddress } = await deploySafeOnChain(
-    config,
-    destinationChainId,
-    saltNonce,
+  // Throw error telling client to deploy the Safe themselves
+  throw new Error(
+    `SAFE_NOT_DEPLOYED: Safe ${safeAddress} needs to be deployed on chain ${destinationChainId}. Please deploy using your wallet first.`,
   );
-
-  // 4. Persist to database
-  safeRecord = await upsertSafeRecord({
-    workspaceId,
-    address: deployedAddress,
-    chainId: destinationChainId,
-    owners: config.owners,
-    threshold: config.threshold,
-    salt: `0x${saltNonce.toString(16).padStart(64, '0')}`,
-    isPrimary: destinationChainId === BASE_CHAIN_ID,
-    deploymentTx: hash,
-    deployedAt: new Date(),
-    deployedBy: process.env.RELAYER_ADDRESS as Address | undefined,
-  });
-
-  console.log(
-    `[Safe Multi-Chain Service] ✅ Safe deployed and tracked in database`,
-  );
-
-  return {
-    exists: true,
-    deployed: true,
-    hash,
-    safeRecord,
-  };
 }
 
 /**

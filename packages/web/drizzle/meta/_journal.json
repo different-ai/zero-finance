@@ -799,6 +799,20 @@
       "when": 1762807774714,
       "tag": "0113_illegal_shinobi_shaw",
       "breakpoints": true
+    },
+    {
+      "idx": 114,
+      "version": "7",
+      "when": 1762816249849,
+      "tag": "0114_nappy_makkari",
+      "breakpoints": true
+    },
+    {
+      "idx": 115,
+      "version": "7",
+      "when": 1762816688681,
+      "tag": "0115_late_doorman",
+      "breakpoints": true
     }
   ]
 }

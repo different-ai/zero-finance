@@ -1,7 +1,4 @@
 import {
-  createWalletClient,
-  createPublicClient,
-  http,
   encodeFunctionData,
   parseAbi,
   type Address,
@@ -10,10 +7,7 @@ import {
   keccak256,
   encodePacked,
 } from 'viem';
-import { base, arbitrum } from 'viem/chains';
-import { privateKeyToAccount } from 'viem/accounts';
-import { getPublicClient, getArbitrumRpcUrl } from './multi-chain-clients';
-import { getBaseRpcUrl } from './base-rpc-url';
+import { getPublicClient } from './multi-chain-clients';
 
 // Safe canonical addresses (same on all EVM chains)
 // These MUST be checksummed correctly for viem validation
@@ -54,7 +48,7 @@ export type SafeConfiguration = {
  */
 export async function checkSafeExists(
   safeAddress: Address,
-  chainId: number
+  chainId: number,
 ): Promise<boolean> {
   try {
     const client = getPublicClient(chainId);
@@ -66,7 +60,7 @@ export async function checkSafeExists(
   } catch (error) {
     console.error(
       `[Safe Multi-Chain] Error checking Safe existence on chain ${chainId}:`,
-      error
+      error,
     );
     return false;
   }
@@ -77,14 +71,14 @@ export async function checkSafeExists(
  */
 export async function getSafeConfiguration(
   safeAddress: Address,
-  sourceChainId: number = BASE_CHAIN_ID
+  sourceChainId: number = BASE_CHAIN_ID,
 ): Promise<SafeConfiguration> {
   const client = getPublicClient(sourceChainId);
 
   const normalizedAddress = getAddress(safeAddress);
 
   console.log(
-    `[Safe Multi-Chain] Fetching Safe config for ${normalizedAddress} on chain ${sourceChainId}`
+    `[Safe Multi-Chain] Fetching Safe config for ${normalizedAddress} on chain ${sourceChainId}`,
   );
 
   const [owners, threshold] = await Promise.all([
@@ -102,11 +96,11 @@ export async function getSafeConfiguration(
 
   // CRITICAL: Sort owners to ensure deterministic address
   const sortedOwners = [...owners].sort((a, b) =>
-    a.toLowerCase().localeCompare(b.toLowerCase())
+    a.toLowerCase().localeCompare(b.toLowerCase()),
   ) as Address[];
 
   console.log(
-    `[Safe Multi-Chain] Config: ${sortedOwners.length} owners, threshold ${threshold}`
+    `[Safe Multi-Chain] Config: ${sortedOwners.length} owners, threshold ${threshold}`,
   );
 
   return {
@@ -122,11 +116,11 @@ export async function getSafeConfiguration(
 export function predictSafeAddress(
   owners: Address[],
   threshold: number,
-  saltNonce: bigint = 0n
+  saltNonce: bigint = 0n,
 ): Address {
   // Sort owners to ensure deterministic result
   const sortedOwners = [...owners].sort((a, b) =>
-    a.toLowerCase().localeCompare(b.toLowerCase())
+    a.toLowerCase().localeCompare(b.toLowerCase()),
   );
 
   // Encode initializer data
@@ -147,7 +141,10 @@ export function predictSafeAddress(
 
   // Calculate salt
   const salt = keccak256(
-    encodePacked(['bytes32', 'uint256'], [keccak256(initializerData), saltNonce])
+    encodePacked(
+      ['bytes32', 'uint256'],
+      [keccak256(initializerData), saltNonce],
+    ),
   );
 
   // Proxy creation code (minimal proxy bytecode)
@@ -157,15 +154,15 @@ export function predictSafeAddress(
   // Encode deployment data (proxy creation code + singleton address)
   const deploymentData = encodePacked(
     ['bytes', 'uint256'],
-    [PROXY_CREATION_CODE as Hex, BigInt(SAFE_SINGLETON_141)]
+    [PROXY_CREATION_CODE as Hex, BigInt(SAFE_SINGLETON_141)],
   );
 
   // Calculate CREATE2 address
   const hash = keccak256(
     encodePacked(
       ['bytes1', 'address', 'bytes32', 'bytes32'],
-      ['0xff', SAFE_PROXY_FACTORY, salt, keccak256(deploymentData)]
-    )
+      ['0xff', SAFE_PROXY_FACTORY, salt, keccak256(deploymentData)],
+    ),
   );
 
   // Take last 20 bytes
@@ -175,37 +172,36 @@ export function predictSafeAddress(
 }
 
 /**
- * Deploy Safe on destination chain with same configuration
+ * Generate Safe deployment transaction data (for user to sign)
+ * Returns the transaction that needs to be sent to deploy the Safe
  */
-export async function deploySafeOnChain(
+export function generateSafeDeploymentTransaction(
   config: SafeConfiguration,
   destinationChainId: number,
-  saltNonce: bigint = 0n
-): Promise<{ hash: Hex; safeAddress: Address }> {
+  saltNonce: bigint = 0n,
+): { to: Address; data: Hex; value: bigint } {
   console.log(
-    `[Safe Multi-Chain] Deploying Safe on chain ${destinationChainId}...`
+    `[Safe Multi-Chain] Generating deployment transaction for chain ${destinationChainId}...`,
   );
   console.log(
-    `[Safe Multi-Chain] Owners: ${config.owners.join(', ')}, Threshold: ${config.threshold}`
+    `[Safe Multi-Chain] Owners: ${config.owners.join(', ')}, Threshold: ${config.threshold}`,
   );
 
   // 1. Predict address for verification
   const predictedAddress = predictSafeAddress(
     config.owners,
     config.threshold,
-    saltNonce
+    saltNonce,
   );
   console.log(`[Safe Multi-Chain] Predicted address: ${predictedAddress}`);
 
   // 2. Verify it matches the expected address
-  if (
-    predictedAddress.toLowerCase() !== config.safeAddress.toLowerCase()
-  ) {
+  if (predictedAddress.toLowerCase() !== config.safeAddress.toLowerCase()) {
     console.warn(
-      `[Safe Multi-Chain] WARNING: Predicted address ${predictedAddress} doesn't match expected ${config.safeAddress}`
+      `[Safe Multi-Chain] WARNING: Predicted address ${predictedAddress} doesn't match expected ${config.safeAddress}`,
     );
     console.warn(
-      `[Safe Multi-Chain] This might happen if saltNonce is different. Proceeding anyway...`
+      `[Safe Multi-Chain] This might happen if saltNonce is different. Proceeding anyway...`,
     );
   }
 
@@ -225,110 +221,59 @@ export async function deploySafeOnChain(
     ],
   });
 
-  // 4. Get relayer account
-  const relayerPk = process.env.RELAYER_PK;
-  if (!relayerPk) {
-    throw new Error(
-      'RELAYER_PK environment variable not set. Cannot deploy Safe.'
-    );
-  }
-
-  // Ensure private key starts with 0x
-  const formattedPk = relayerPk.startsWith('0x') ? relayerPk : `0x${relayerPk}`;
-  const relayerAccount = privateKeyToAccount(formattedPk as Hex);
-  console.log(`[Safe Multi-Chain] Deploying from relayer: ${relayerAccount.address}`);
-
-  // 5. Create wallet client for destination chain
-  const chain = destinationChainId === ARBITRUM_CHAIN_ID ? arbitrum : base;
-  const rpcUrl =
-    destinationChainId === ARBITRUM_CHAIN_ID
-      ? getArbitrumRpcUrl()
-      : getBaseRpcUrl();
-
-  const walletClient = createWalletClient({
-    account: relayerAccount,
-    chain,
-    transport: http(rpcUrl),
-  });
-
-  // 6. Deploy Safe via ProxyFactory
-  console.log(`[Safe Multi-Chain] Sending deployment transaction...`);
-
-  const hash = await walletClient.writeContract({
-    address: SAFE_PROXY_FACTORY,
+  // 4. Encode the createProxyWithNonce call
+  const deploymentData = encodeFunctionData({
     abi: SAFE_PROXY_FACTORY_ABI,
     functionName: 'createProxyWithNonce',
     args: [SAFE_SINGLETON_141, initializerData, saltNonce],
   });
 
-  console.log(`[Safe Multi-Chain] Deployment tx hash: ${hash}`);
-
-  // 7. Wait for confirmation
-  const publicClient = createPublicClient({
-    chain,
-    transport: http(rpcUrl),
-  });
-
-  const receipt = await publicClient.waitForTransactionReceipt({
-    hash,
-    confirmations: 1,
-  });
-
-  console.log(
-    `[Safe Multi-Chain] Deployment confirmed in block ${receipt.blockNumber}`
-  );
-
-  // 8. Verify Safe exists
-  const exists = await checkSafeExists(config.safeAddress, destinationChainId);
-  if (!exists) {
-    throw new Error(
-      `Safe deployment succeeded but Safe doesn't exist at ${config.safeAddress}`
-    );
-  }
-
-  console.log(
-    `[Safe Multi-Chain] ✅ Safe deployed successfully at ${config.safeAddress} on chain ${destinationChainId}`
-  );
+  console.log(`[Safe Multi-Chain] Generated deployment transaction data`);
 
   return {
-    hash,
-    safeAddress: config.safeAddress,
+    to: SAFE_PROXY_FACTORY,
+    data: deploymentData,
+    value: 0n,
   };
 }
 
 /**
- * Ensure Safe exists on destination chain (deploy if needed)
+ * Check if Safe needs deployment and get deployment transaction
+ * Returns null if Safe already exists, otherwise returns the deployment transaction
  */
-export async function ensureSafeOnChain(
+export async function getSafeDeploymentTransaction(
   safeAddress: Address,
   sourceChainId: number,
-  destinationChainId: number
-): Promise<{ exists: boolean; deployed: boolean; hash?: Hex }> {
+  destinationChainId: number,
+  saltNonce: bigint = 0n,
+): Promise<{ to: Address; data: Hex; value: bigint } | null> {
   console.log(
-    `[Safe Multi-Chain] Ensuring Safe ${safeAddress} exists on chain ${destinationChainId}...`
+    `[Safe Multi-Chain] Checking if Safe ${safeAddress} needs deployment on chain ${destinationChainId}...`,
   );
 
   // 1. Check if Safe already exists
   const exists = await checkSafeExists(safeAddress, destinationChainId);
 
   if (exists) {
-    console.log(`[Safe Multi-Chain] Safe already exists on chain ${destinationChainId}`);
-    return { exists: true, deployed: false };
+    console.log(
+      `[Safe Multi-Chain] Safe already exists on chain ${destinationChainId}`,
+    );
+    return null;
   }
 
   console.log(
-    `[Safe Multi-Chain] Safe doesn't exist on chain ${destinationChainId}, deploying...`
+    `[Safe Multi-Chain] Safe doesn't exist on chain ${destinationChainId}, generating deployment transaction...`,
   );
 
   // 2. Get Safe configuration from source chain
   const config = await getSafeConfiguration(safeAddress, sourceChainId);
 
-  // 3. Deploy Safe on destination chain
-  const result = await deploySafeOnChain(config, destinationChainId);
+  // 3. Generate deployment transaction for user to sign
+  const deploymentTx = generateSafeDeploymentTransaction(
+    config,
+    destinationChainId,
+    saltNonce,
+  );
 
-  return {
-    exists: true,
-    deployed: true,
-    hash: result.hash,
-  };
+  return deploymentTx;
 }

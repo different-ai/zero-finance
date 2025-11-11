@@ -9,7 +9,7 @@ import {
   Clock,
   ArrowRight,
 } from 'lucide-react';
-import type { Address } from 'viem';
+import type { Address, Hex } from 'viem';
 import {
   formatUnits,
   parseUnits,
@@ -18,8 +18,9 @@ import {
   http,
   erc20Abi,
 } from 'viem';
-import { base } from 'viem/chains';
+import { base, arbitrum } from 'viem/chains';
 import { useSafeRelay } from '@/hooks/use-safe-relay';
+import { useSmartWallets } from '@privy-io/react-auth/smart-wallets';
 import { USDC_ADDRESS, USDC_DECIMALS } from '@/lib/constants';
 import {
   ACROSS_SPOKE_POOLS,
@@ -27,6 +28,7 @@ import {
   getMulticallHandler,
 } from '@/lib/constants/across';
 import { type CrossChainVault } from '@/server/earn/cross-chain-vaults';
+import { getSafeDeploymentTransaction } from '@/lib/safe-multi-chain';
 
 interface CrossChainDepositCardProps {
   vault: CrossChainVault;
@@ -61,6 +63,8 @@ const ACROSS_ABI = [
 type TransactionStep =
   | 'idle'
   | 'preparing'
+  | 'deploying-safe'
+  | 'waiting-safe-deployment'
   | 'approving'
   | 'waiting-approval'
   | 'transferring'
@@ -73,6 +77,7 @@ interface TransactionState {
   txHash?: string;
   errorMessage?: string;
   bridgedAmount?: string;
+  safeDeployed?: boolean;
 }
 
 export function CrossChainDepositCard({
@@ -83,10 +88,12 @@ export function CrossChainDepositCard({
   const [amount, setAmount] = useState('');
   const [transactionState, setTransactionState] = useState<TransactionState>({
     step: 'idle',
+    safeDeployed: false,
   });
 
   const { ready: isRelayReady, send: sendTxViaRelay } =
     useSafeRelay(safeAddress);
+  const { client: smartWalletClient, getClientForChain } = useSmartWallets();
   const publicClient = createPublicClient({
     chain: base,
     transport: http(process.env.NEXT_PUBLIC_BASE_RPC_URL),
@@ -167,14 +174,115 @@ export function CrossChainDepositCard({
       // Check balance
       if (amountInSmallestUnit > usdcBalance) {
         throw new Error(
-          `Insufficient balance. You have ${formatUnits(usdcBalance, USDC_DECIMALS)} USDC`
+          `Insufficient balance. You have ${formatUnits(usdcBalance, USDC_DECIMALS)} USDC`,
         );
       }
 
-      // Note: Safe doesn't need to exist on destination chain for deposits
-      // The vault shares will be credited to safeAddress on Arbitrum
-      // User can deploy Safe on Arbitrum later when they want to withdraw
-      console.log('[CrossChainDeposit] Preparing cross-chain deposit...');
+      // Check if Safe exists on destination chain, deploy if needed
+      console.log(
+        '[CrossChainDeposit] Checking Safe deployment on destination chain...',
+      );
+
+      const destinationClient = createPublicClient({
+        chain: arbitrum,
+        transport: http(
+          process.env.NEXT_PUBLIC_ARBITRUM_RPC_URL ||
+            'https://arb1.arbitrum.io/rpc',
+        ),
+      });
+
+      const safeCode = await destinationClient.getCode({
+        address: safeAddress,
+      });
+
+      let safeWasDeployed = false;
+      if (!safeCode || safeCode === '0x') {
+        // Safe doesn't exist - deploy it using user's smart wallet on Arbitrum
+        console.log(
+          '[CrossChainDeposit] Safe not found on Arbitrum, deploying via user wallet...',
+        );
+        setTransactionState({ step: 'deploying-safe', safeDeployed: false });
+
+        // Get wallet client for Arbitrum chain
+        // Arbitrum chain ID is 42161
+        console.log('[CrossChainDeposit] Getting Arbitrum wallet client...');
+        let arbitrumWalletClient;
+        try {
+          arbitrumWalletClient = await getClientForChain({
+            id: 42161, // Arbitrum One
+          });
+        } catch (error) {
+          console.error(
+            '[CrossChainDeposit] Error getting Arbitrum client:',
+            error,
+          );
+          throw new Error(
+            'Unable to get Arbitrum wallet client. Your wallet may not support Arbitrum yet. Please contact support.',
+          );
+        }
+
+        if (!arbitrumWalletClient) {
+          throw new Error(
+            'Arbitrum wallet client not available. Please ensure your wallet supports Arbitrum.',
+          );
+        }
+
+        console.log(
+          '[CrossChainDeposit] Successfully obtained Arbitrum wallet client',
+        );
+
+        // Generate deployment transaction
+        const deployTx = await getSafeDeploymentTransaction(
+          safeAddress,
+          8453, // Base chain ID (source)
+          vault.chainId, // Destination chain ID (Arbitrum)
+        );
+
+        if (!deployTx) {
+          throw new Error('Safe already exists on destination chain');
+        }
+
+        console.log(
+          '[CrossChainDeposit] Sending Safe deployment transaction to Arbitrum...',
+        );
+
+        // Send deployment transaction using user's smart wallet on Arbitrum
+        const deployTxHash = await arbitrumWalletClient.sendTransaction({
+          to: deployTx.to,
+          data: deployTx.data,
+          value: deployTx.value,
+          chain: arbitrum,
+        });
+
+        console.log(
+          '[CrossChainDeposit] ✅ Safe deployment tx sent:',
+          deployTxHash,
+        );
+        setTransactionState({
+          step: 'waiting-safe-deployment',
+          safeDeployed: true,
+        });
+
+        // Wait for deployment to be mined
+        console.log(
+          '[CrossChainDeposit] Waiting for Safe deployment confirmation...',
+        );
+
+        await destinationClient.waitForTransactionReceipt({
+          hash: deployTxHash as Hex,
+          confirmations: 1,
+        });
+
+        console.log('[CrossChainDeposit] ✅ Safe deployed successfully');
+        safeWasDeployed = true;
+
+        // Wait a bit for deployment to settle
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+      }
+
+      console.log(
+        '[CrossChainDeposit] Safe verified on Arbitrum, preparing deposit...',
+      );
 
       const spokePoolBase = ACROSS_SPOKE_POOLS[8453]; // Base SpokePool
 
@@ -196,7 +304,7 @@ export function CrossChainDepositCard({
               data: approveData,
             },
           ],
-          300_000n
+          300_000n,
         );
 
         if (!approvalTxHash) throw new Error('Approval transaction failed');
@@ -230,8 +338,9 @@ export function CrossChainDepositCard({
       const fillDeadline = now + 3600; // 1 hour
       const exclusivityDeadline = 0; // No exclusivity
 
-      const outputToken = USDC_ADDRESSES[vault.chainId as keyof typeof USDC_ADDRESSES];
-      
+      const outputToken =
+        USDC_ADDRESSES[vault.chainId as keyof typeof USDC_ADDRESSES];
+
       if (!outputToken) {
         throw new Error(`USDC not supported on chain ${vault.chainId}`);
       }
@@ -239,7 +348,9 @@ export function CrossChainDepositCard({
       // Get MulticallHandler address for destination chain
       const multicallHandler = getMulticallHandler(vault.chainId);
       if (!multicallHandler) {
-        throw new Error(`MulticallHandler not deployed on chain ${vault.chainId}`);
+        throw new Error(
+          `MulticallHandler not deployed on chain ${vault.chainId}`,
+        );
       }
 
       // Encode calls for automatic vault deposit
@@ -335,10 +446,29 @@ export function CrossChainDepositCard({
             data: bridgeData,
           },
         ],
-        500_000n
+        500_000n,
       );
 
       if (!bridgeTxHash) throw new Error('Transfer failed');
+
+      console.log(
+        '[CrossChainDeposit] ✅ Bridge transaction sent on Base:',
+        bridgeTxHash,
+      );
+      console.log('[CrossChainDeposit] 📊 Deposit summary:');
+      console.log(`  - Amount: $${amount} USDC`);
+      console.log(
+        `  - Input (Base): $${formatUnits(amountInSmallestUnit, USDC_DECIMALS)}`,
+      );
+      console.log(
+        `  - Output (Arbitrum): $${formatUnits(outputAmount, USDC_DECIMALS)}`,
+      );
+      console.log(`  - Bridge fee: $${estimatedFee}`);
+      console.log(`  - Destination vault: ${vault.address}`);
+      console.log(`  - Your Safe: ${safeAddress}`);
+      console.log(
+        '[CrossChainDeposit] ⏳ Waiting for Across bridge to settle (~20-60 seconds)...',
+      );
 
       setTransactionState({
         step: 'waiting-transfer',
@@ -349,10 +479,22 @@ export function CrossChainDepositCard({
       await new Promise((resolve) => setTimeout(resolve, 7000));
 
       // Success!
+      console.log('[CrossChainDeposit] ✅ Deposit complete!');
+      console.log('[CrossChainDeposit] 🔍 To check your Arbitrum balance:');
+      console.log(`  1. Open browser console`);
+      console.log(`  2. Look for "[CrossChainWithdraw] Assets value" logs`);
+      console.log(`  3. Click "Refresh" button in the withdraw card`);
+      console.log(`  4. Wait 20-60 seconds if balance still shows $0`);
+      console.log(
+        '[CrossChainDeposit] 📍 Check Arbiscan:',
+        `https://arbiscan.io/address/${safeAddress}`,
+      );
+
       setTransactionState({
         step: 'complete',
         txHash: bridgeTxHash,
         bridgedAmount: amount,
+        safeDeployed: safeWasDeployed,
       });
 
       setAmount('');
@@ -365,21 +507,24 @@ export function CrossChainDepositCard({
     } catch (error) {
       console.error('[CrossChainDeposit] Error:', error);
 
-        let errorMessage = 'Deposit failed';
-        if (error instanceof Error) {
-          if (error.message.includes('Insufficient')) {
-            errorMessage = error.message;
-          } else if (error.message.includes('denied') || error.message.includes('rejected')) {
-            errorMessage = 'Deposit was cancelled';
-          } else {
-            errorMessage = error.message;
-          }
+      let errorMessage = 'Deposit failed';
+      if (error instanceof Error) {
+        if (error.message.includes('Insufficient')) {
+          errorMessage = error.message;
+        } else if (
+          error.message.includes('denied') ||
+          error.message.includes('rejected')
+        ) {
+          errorMessage = 'Deposit was cancelled';
+        } else {
+          errorMessage = error.message;
         }
+      }
 
-        setTransactionState({
-          step: 'error',
-          errorMessage,
-        });
+      setTransactionState({
+        step: 'error',
+        errorMessage,
+      });
     }
   };
 
@@ -393,10 +538,13 @@ export function CrossChainDepositCard({
   };
 
   const availableBalance = formatUnits(usdcBalance, USDC_DECIMALS);
-  const displayBalance = parseFloat(availableBalance).toLocaleString(undefined, {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 6,
-  });
+  const displayBalance = parseFloat(availableBalance).toLocaleString(
+    undefined,
+    {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 6,
+    },
+  );
 
   const amountInSmallestUnit = amount ? parseUnits(amount, USDC_DECIMALS) : 0n;
   const needsApproval = amountInSmallestUnit > allowance;
@@ -422,13 +570,17 @@ export function CrossChainDepositCard({
     const getProgress = () => {
       switch (transactionState.step) {
         case 'preparing':
-          return 15;
+          return 10;
+        case 'deploying-safe':
+          return 20;
+        case 'waiting-safe-deployment':
+          return 30;
         case 'approving':
-          return 35;
+          return 45;
         case 'waiting-approval':
-          return 50;
+          return 60;
         case 'transferring':
-          return 70;
+          return 75;
         case 'waiting-transfer':
           return 90;
         default:
@@ -440,7 +592,9 @@ export function CrossChainDepositCard({
       <div className="space-y-4">
         <div className="bg-white border border-[#101010]/10 p-4 space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-[14px] text-[#101010]">Processing deposit...</span>
+            <span className="text-[14px] text-[#101010]">
+              Processing deposit...
+            </span>
             <Loader2 className="h-4 w-4 animate-spin text-[#1B29FF]" />
           </div>
 
@@ -459,12 +613,26 @@ export function CrossChainDepositCard({
               </div>
             )}
 
+            {(transactionState.step === 'deploying-safe' ||
+              transactionState.step === 'waiting-safe-deployment') && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-[12px] text-[#101010]">
+                  <div className="h-2 w-2 rounded-full bg-[#1B29FF] animate-pulse" />
+                  Step 1 of 3: Setting up your account on Arbitrum
+                </div>
+                <p className="text-[11px] text-[#101010]/60">
+                  Deploying your Safe account on Arbitrum. This is a one-time
+                  setup (~10-30 seconds).
+                </p>
+              </div>
+            )}
+
             {(transactionState.step === 'approving' ||
               transactionState.step === 'waiting-approval') && (
               <div className="space-y-2">
                 <div className="flex items-center gap-2 text-[12px] text-[#101010]">
                   <div className="h-2 w-2 rounded-full bg-[#FFA500] animate-pulse" />
-                  Step 1 of 2: Approving transfer
+                  Step 2 of 3: Approving transfer
                 </div>
                 {transactionState.txHash && (
                   <a
@@ -485,7 +653,7 @@ export function CrossChainDepositCard({
               <div className="space-y-2">
                 <div className="flex items-center gap-2 text-[12px] text-[#101010]">
                   <div className="h-2 w-2 rounded-full bg-[#1B29FF] animate-pulse" />
-                  Step 2 of 2: Completing deposit
+                  Step 3 of 3: Completing deposit
                 </div>
                 <p className="text-[11px] text-[#101010]/60">
                   Your funds will start earning in ~30 seconds
@@ -522,10 +690,14 @@ export function CrossChainDepositCard({
             <CheckCircle className="h-4 w-4 text-[#10B981] flex-shrink-0 mt-0.5" />
             <div className="space-y-2">
               <div className="text-[14px] font-medium text-[#101010]">
-                Deposit successful
+                {transactionState.safeDeployed
+                  ? 'Account setup complete!'
+                  : 'Deposit successful'}
               </div>
               <div className="text-[12px] text-[#101010]/70">
-                ${transactionState.bridgedAmount} deposited. Your funds will start earning in ~30 seconds.
+                {transactionState.safeDeployed
+                  ? `Your account has been set up on Arbitrum and $${transactionState.bridgedAmount} has been deposited. Your funds will start earning in ~30 seconds.`
+                  : `$${transactionState.bridgedAmount} deposited. Your funds will start earning in ~30 seconds.`}
               </div>
               {transactionState.txHash && (
                 <a
@@ -544,7 +716,9 @@ export function CrossChainDepositCard({
 
         <div className="p-4 bg-[#F7F7F2] border border-[#10B981]/20">
           <div className="space-y-2">
-            <p className="text-[12px] font-medium text-[#101010]">Deposit in Progress</p>
+            <p className="text-[12px] font-medium text-[#101010]">
+              Deposit in Progress
+            </p>
             <p className="text-[11px] text-[#101010]/70">
               Your deposit is processing. This typically takes 20-30 seconds.
             </p>
@@ -583,7 +757,9 @@ export function CrossChainDepositCard({
           <div className="flex gap-3">
             <AlertCircle className="h-4 w-4 text-[#FFA500] flex-shrink-0 mt-0.5" />
             <div className="space-y-1">
-              <div className="text-[14px] font-medium text-[#101010]">Deposit Failed</div>
+              <div className="text-[14px] font-medium text-[#101010]">
+                Deposit Failed
+              </div>
               <div className="text-[12px] text-[#101010]/70">
                 {transactionState.errorMessage}
               </div>
@@ -630,7 +806,10 @@ export function CrossChainDepositCard({
 
       {/* Amount Input */}
       <div className="space-y-2">
-        <label htmlFor="bridge-amount" className="text-[12px] font-medium text-[#101010]">
+        <label
+          htmlFor="bridge-amount"
+          className="text-[12px] font-medium text-[#101010]"
+        >
           Amount to Bridge
         </label>
         <div className="relative">
@@ -665,11 +844,15 @@ export function CrossChainDepositCard({
         <div className="p-3 bg-[#F7F7F2] rounded-lg space-y-2 text-xs">
           <div className="flex justify-between">
             <span className="text-[#101010]/60">Amount deposited:</span>
-            <span className="font-medium text-[#101010]">~${estimatedReceived}</span>
+            <span className="font-medium text-[#101010]">
+              ~${estimatedReceived}
+            </span>
           </div>
           <div className="flex justify-between">
             <span className="text-[#101010]/60">Transfer fee:</span>
-            <span className="font-medium text-[#101010]/60">~${estimatedFee}</span>
+            <span className="font-medium text-[#101010]/60">
+              ~${estimatedFee}
+            </span>
           </div>
         </div>
       )}
@@ -680,7 +863,8 @@ export function CrossChainDepositCard({
         <div className="text-xs text-[#101010]">
           <p className="font-medium">Automatic deposit</p>
           <p className="mt-1 text-[#101010]/70">
-            Your funds will be automatically deposited and start earning immediately.
+            Your funds will be automatically deposited and start earning
+            immediately.
           </p>
         </div>
       </div>
