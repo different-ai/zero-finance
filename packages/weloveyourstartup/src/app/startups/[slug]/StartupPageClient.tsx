@@ -121,6 +121,26 @@ interface WireframeRocketProps {
   customModels?: string[]; // Optional custom model path
 }
 
+// Subtle camera drift component
+function CameraDrift() {
+  useFrame((state) => {
+    if (state.camera) {
+      // Very subtle camera position drift
+      state.camera.position.x += Math.sin(state.clock.elapsedTime * 0.1) * 0.002;
+      state.camera.position.y += Math.cos(state.clock.elapsedTime * 0.08) * 0.002;
+
+      // Make camera look at center with subtle variation
+      const target = new THREE.Vector3(
+        Math.sin(state.clock.elapsedTime * 0.05) * 0.1,
+        Math.cos(state.clock.elapsedTime * 0.07) * 0.1,
+        0
+      );
+      state.camera.lookAt(target);
+    }
+  });
+  return null;
+}
+
 function WireframeRocket({ scrollProgress, rotation, scale, position, customModels }: WireframeRocketProps) {
   // Determine which model to show based on scroll progress
   const modelIndex = Math.min(Math.floor(scrollProgress * 4), 3);
@@ -156,10 +176,19 @@ function WireframeRocket({ scrollProgress, rotation, scale, position, customMode
     return lines;
   }, [scene, colorPalette, modelPath]);
 
-  useFrame(() => {
+  useFrame((state) => {
     if (groupRef.current) {
       // Slow rotation based on scroll
       groupRef.current.rotation.y = scrollProgress * Math.PI * 2;
+
+      // Add subtle continuous rotation (very slow)
+      groupRef.current.rotation.y += 0.001;
+
+      // Add subtle oscillation on X axis
+      groupRef.current.rotation.x = rotation.x + Math.sin(state.clock.elapsedTime * 0.2) * 0.05;
+
+      // Add subtle oscillation on Z axis
+      groupRef.current.rotation.z = rotation.z + Math.cos(state.clock.elapsedTime * 0.15) * 0.03;
     }
   });
 
@@ -645,6 +674,7 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
                   position={modelControls[SECTIONS.findIndex(s => s.id === activeSection)].cameraPosition}
                   fov={modelControls[SECTIONS.findIndex(s => s.id === activeSection)].cameraFov}
                 />
+                <CameraDrift />
                 <ambientLight intensity={0.2} />
                 <directionalLight position={[5, 5, 5]} intensity={0.4} />
                 <Suspense fallback={null}>
@@ -1040,6 +1070,7 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
                     style={{ backgroundColor: '#000000' }}
                   >
                     <PerspectiveCamera makeDefault position={modelControls[0].cameraPosition} fov={modelControls[0].cameraFov} />
+                    <CameraDrift />
                     <ambientLight intensity={0.2} />
                     <directionalLight position={[5, 5, 5]} intensity={0.4} />
                     <Suspense fallback={null}>
@@ -1105,6 +1136,7 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
                     style={{ backgroundColor: '#000000' }}
                   >
                     <PerspectiveCamera makeDefault position={modelControls[1].cameraPosition} fov={modelControls[1].cameraFov} />
+                    <CameraDrift />
                     <ambientLight intensity={0.2} />
                     <directionalLight position={[5, 5, 5]} intensity={0.4} />
                     <Suspense fallback={null}>
@@ -1219,6 +1251,7 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
                     style={{ backgroundColor: '#000000' }}
                   >
                     <PerspectiveCamera makeDefault position={modelControls[3].cameraPosition} fov={modelControls[3].cameraFov} />
+                    <CameraDrift />
                     <ambientLight intensity={0.2} />
                     <directionalLight position={[5, 5, 5]} intensity={0.4} />
                     <Suspense fallback={null}>
