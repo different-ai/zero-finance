@@ -1,23 +1,28 @@
-"use client";
+'use client';
 
-import React, { useRef, useMemo, Suspense, useState, useEffect } from "react";
-import { Canvas, useFrame, extend } from "@react-three/fiber";
-import { useGLTF, PerspectiveCamera, shaderMaterial } from "@react-three/drei";
-import { EffectComposer, Bloom, ChromaticAberration, Noise } from "@react-three/postprocessing";
-import { GlitchEffect } from "@/effects/GlitchEffect";
-import { BlueNoiseHalftoneEffect } from "@/effects/BlueNoiseHalftoneEffect";
-import * as THREE from "three";
+import React, { useRef, useMemo, Suspense, useState, useEffect } from 'react';
+import { Canvas, useFrame, extend } from '@react-three/fiber';
+import { useGLTF, PerspectiveCamera, shaderMaterial } from '@react-three/drei';
+import {
+  EffectComposer,
+  Bloom,
+  ChromaticAberration,
+  Noise,
+} from '@react-three/postprocessing';
+import { GlitchEffect } from '@/effects/GlitchEffect';
+import { BlueNoiseHalftoneEffect } from '@/effects/BlueNoiseHalftoneEffect';
+import * as THREE from 'three';
 import Link from 'next/link';
 import Image from 'next/image';
 import { StartupCalculatorSection } from '@/components/StartupCalculatorSection';
 
 // 4-color CAD palette - direction-binned, discrete hues
 const COLORS = {
-  YELLOW: new THREE.Color(0xFFF46B),
-  YELLOW_GREEN: new THREE.Color(0xAFFF5A),
-  CYAN: new THREE.Color(0x67E2FF),
-  BLUE: new THREE.Color(0x3D5BFF),
-  RED: new THREE.Color(0xFF5A62), // accent for seams
+  YELLOW: new THREE.Color(0xfff46b),
+  YELLOW_GREEN: new THREE.Color(0xafff5a),
+  CYAN: new THREE.Color(0x67e2ff),
+  BLUE: new THREE.Color(0x3d5bff),
+  RED: new THREE.Color(0xff5a62), // accent for seams
 };
 
 // UV Panel Grid Shader - CAD-style orthogonal panels
@@ -25,7 +30,7 @@ const UVGridMaterial = shaderMaterial(
   {
     uFrequency: new THREE.Vector2(24, 36), // spanwise/chordwise panels
     uLineWidth: 0.014,
-    uColor: new THREE.Color(0xF3FF6A), // yellow-green tint
+    uColor: new THREE.Color(0xf3ff6a), // yellow-green tint
   },
   // Vertex shader
   `
@@ -53,7 +58,7 @@ const UVGridMaterial = shaderMaterial(
       vec3 finalColor = mix(vec3(1.0), uColor, 0.15);
       gl_FragColor = vec4(finalColor, 1.0);
     }
-  `
+  `,
 );
 
 extend({ UVGridMaterial });
@@ -64,7 +69,6 @@ declare module '@react-three/fiber' {
     uVGridMaterial: any;
   }
 }
-
 
 interface Company {
   id: string;
@@ -104,10 +108,10 @@ interface Company {
 
 // Model paths for each section
 const MODELS = [
-  "/GL Transmission Format - Binary.glb", // Section 1: Intro - Shuttle
-  "/Apollo Soyuz.glb", // Section 2: Mission - Apollo Soyuz
-  "/Extravehicular Mobility Unit.glb", // Section 3: Team - Space Suit
-  "/International Space Station (ISS) (A).glb", // Section 4: Potential - ISS
+  '/GL Transmission Format - Binary.glb', // Section 1: Intro - Shuttle
+  '/Apollo Soyuz.glb', // Section 2: Mission - Apollo Soyuz
+  '/Extravehicular Mobility Unit.glb', // Section 3: Team - Space Suit
+  '/International Space Station (ISS) (A).glb', // Section 4: Potential - ISS
 ];
 
 // Preload all models
@@ -126,14 +130,16 @@ function CameraDrift() {
   useFrame((state) => {
     if (state.camera) {
       // Very subtle camera position drift
-      state.camera.position.x += Math.sin(state.clock.elapsedTime * 0.1) * 0.002;
-      state.camera.position.y += Math.cos(state.clock.elapsedTime * 0.08) * 0.002;
+      state.camera.position.x +=
+        Math.sin(state.clock.elapsedTime * 0.1) * 0.002;
+      state.camera.position.y +=
+        Math.cos(state.clock.elapsedTime * 0.08) * 0.002;
 
       // Make camera look at center with subtle variation
       const target = new THREE.Vector3(
         Math.sin(state.clock.elapsedTime * 0.05) * 0.1,
         Math.cos(state.clock.elapsedTime * 0.07) * 0.1,
-        0
+        0,
       );
       state.camera.lookAt(target);
     }
@@ -141,19 +147,30 @@ function CameraDrift() {
   return null;
 }
 
-function WireframeRocket({ scrollProgress, rotation, scale, position, customModels }: WireframeRocketProps) {
+function WireframeRocket({
+  scrollProgress,
+  rotation,
+  scale,
+  position,
+  customModels,
+}: WireframeRocketProps) {
   // Determine which model to show based on scroll progress
   const modelIndex = Math.min(Math.floor(scrollProgress * 4), 3);
-  const modelPath = customModels ? customModels[modelIndex] : MODELS[modelIndex];
+  const modelPath = customModels
+    ? customModels[modelIndex]
+    : MODELS[modelIndex];
 
   const { scene } = useGLTF(modelPath);
   const groupRef = useRef<THREE.Group>(null);
 
   // Exact copy from PlaygroundClient.tsx - 2-color alternating wireframe
-  const colorPalette = useMemo(() => [
-    0x1B29FF, // primary blue
-    0xFF3D5B, // risograph red
-  ], []);
+  const colorPalette = useMemo(
+    () => [
+      0x1b29ff, // primary blue
+      0xff3d5b, // risograph red
+    ],
+    [],
+  );
 
   const edgeLines = useMemo(() => {
     const lines: JSX.Element[] = [];
@@ -167,8 +184,13 @@ function WireframeRocket({ scrollProgress, rotation, scale, position, customMode
 
         lines.push(
           <lineSegments key={child.uuid} geometry={edges}>
-            <lineBasicMaterial color={color} transparent opacity={1.0} linewidth={1.5} />
-          </lineSegments>
+            <lineBasicMaterial
+              color={color}
+              transparent
+              opacity={1.0}
+              linewidth={1.5}
+            />
+          </lineSegments>,
         );
       }
     });
@@ -185,10 +207,12 @@ function WireframeRocket({ scrollProgress, rotation, scale, position, customMode
       groupRef.current.rotation.y += 0.001;
 
       // Add subtle oscillation on X axis
-      groupRef.current.rotation.x = rotation.x + Math.sin(state.clock.elapsedTime * 0.2) * 0.05;
+      groupRef.current.rotation.x =
+        rotation.x + Math.sin(state.clock.elapsedTime * 0.2) * 0.05;
 
       // Add subtle oscillation on Z axis
-      groupRef.current.rotation.z = rotation.z + Math.cos(state.clock.elapsedTime * 0.15) * 0.03;
+      groupRef.current.rotation.z =
+        rotation.z + Math.cos(state.clock.elapsedTime * 0.15) * 0.03;
     }
   });
 
@@ -221,7 +245,8 @@ function CRTEffect() {
       <div
         className="absolute inset-0 opacity-[0.15]"
         style={{
-          backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 1px, rgba(255,255,255,0.03) 1px, rgba(255,255,255,0.03) 2px)',
+          backgroundImage:
+            'repeating-linear-gradient(0deg, transparent, transparent 1px, rgba(255,255,255,0.03) 1px, rgba(255,255,255,0.03) 2px)',
         }}
       />
       {/* Cross-shaped subpixel mask - very subtle */}
@@ -246,13 +271,19 @@ interface CADViewportProps {
   className?: string;
 }
 
-function CADViewport({ children, label = "VIEWPORT_3D", viewType = "PERSPECTIVE", className = "" }: CADViewportProps) {
+function CADViewport({
+  children,
+  label = 'VIEWPORT_3D',
+  viewType = 'PERSPECTIVE',
+  className = '',
+}: CADViewportProps) {
   return (
-    <div className={`relative ${className}`} style={{ backgroundColor: '#000000' }}>
+    <div
+      className={`relative ${className}`}
+      style={{ backgroundColor: '#000000' }}
+    >
       {/* Main content */}
-      <div className="w-full h-full relative">
-        {children}
-      </div>
+      <div className="w-full h-full relative">{children}</div>
 
       {/* Corner brackets - L-shaped lines at each corner */}
       {/* Top-left corner */}
@@ -295,12 +326,13 @@ function CADViewport({ children, label = "VIEWPORT_3D", viewType = "PERSPECTIVE"
       </div>
 
       {/* Subtle grid overlay */}
-      <div className="absolute inset-0 pointer-events-none opacity-[0.08]"
+      <div
+        className="absolute inset-0 pointer-events-none opacity-[0.08]"
         style={{
           backgroundImage: `
             repeating-linear-gradient(0deg, transparent, transparent 19px, #00FF00 19px, #00FF00 20px),
             repeating-linear-gradient(90deg, transparent, transparent 19px, #00FF00 19px, #00FF00 20px)
-          `
+          `,
         }}
       />
     </div>
@@ -343,9 +375,9 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
       {
         cameraPosition: [0, 0, 140],
         cameraFov: 75,
-        rotation: { x: -0.80, y: 0.64, z: -2.46 },
+        rotation: { x: -0.8, y: 0.64, z: -2.46 },
         scale: 0.09,
-        position: { x: 0, y: 0, z: 0 }
+        position: { x: 0, y: 0, z: 0 },
       },
       // Default Model 1 (Section 2 - MISSION)
       {
@@ -353,7 +385,7 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
         cameraFov: 75,
         rotation: { x: -1.2, y: 0, z: -0.5 },
         scale: 0.7,
-        position: { x: 0, y: 0, z: 12.0 }
+        position: { x: 0, y: 0, z: 12.0 },
       },
       // Default Model 2 (Section 3 - FUNDING)
       {
@@ -361,7 +393,7 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
         cameraFov: 75,
         rotation: { x: -1.2, y: 0, z: -0.5 },
         scale: 0.7,
-        position: { x: 0, y: 0, z: 12.0 }
+        position: { x: 0, y: 0, z: 12.0 },
       },
       // Default Model 3 (Section 4 - TEAM)
       {
@@ -369,7 +401,7 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
         cameraFov: 75,
         rotation: { x: -1.2, y: 0, z: -0.5 },
         scale: 0.7,
-        position: { x: 0, y: 0, z: 12.0 }
+        position: { x: 0, y: 0, z: 12.0 },
       },
       // Default Model 4 (Section 5 - ZERO_FINANCE)
       {
@@ -377,9 +409,9 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
         cameraFov: 75,
         rotation: { x: -1.2, y: 0, z: -0.5 },
         scale: 0.7,
-        position: { x: 0, y: 0, z: 12.0 }
-      }
-    ]
+        position: { x: 0, y: 0, z: 12.0 },
+      },
+    ],
   );
 
   // Compute models array from company data
@@ -388,7 +420,12 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
       return company.models3d; // Use models3d if available
     } else if (company.model3d) {
       // Convert single model to array of 4
-      return [company.model3d, company.model3d, company.model3d, company.model3d];
+      return [
+        company.model3d,
+        company.model3d,
+        company.model3d,
+        company.model3d,
+      ];
     }
     return undefined; // Use default models
   }, [company.model3d, company.models3d]);
@@ -396,7 +433,7 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
   // Preload custom models if available
   useEffect(() => {
     if (customModels) {
-      customModels.forEach(model => useGLTF.preload(model));
+      customModels.forEach((model) => useGLTF.preload(model));
     }
   }, [customModels]);
 
@@ -405,7 +442,7 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.ctrlKey && e.shiftKey && e.key === 'D') {
         e.preventDefault();
-        setShowControls(prev => !prev);
+        setShowControls((prev) => !prev);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -413,8 +450,12 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
   }, []);
 
   // Update control value
-  const updateControl = (index: number, field: keyof ModelControls, value: any) => {
-    setModelControls(prev => {
+  const updateControl = (
+    index: number,
+    field: keyof ModelControls,
+    value: any,
+  ) => {
+    setModelControls((prev) => {
       const newControls = [...prev];
       newControls[index] = { ...newControls[index], [field]: value };
       return newControls;
@@ -428,11 +469,13 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
       company: company.name,
       modelIndex: currentModelIndex,
       modelLabel: `MODEL_${(currentModelIndex + 1).toString().padStart(2, '0')}`,
-      settings: settings
+      settings: settings,
     };
     const text = JSON.stringify(output, null, 2);
     navigator.clipboard.writeText(text);
-    alert(`Settings copied for ${company.name} - Model #${currentModelIndex + 1}!`);
+    alert(
+      `Settings copied for ${company.name} - Model #${currentModelIndex + 1}!`,
+    );
   };
 
   // Detect mobile vs desktop
@@ -448,10 +491,12 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
     const handleScroll = () => {
       if (isMobile) {
         // Mobile: sections are inside scrollable div
-        const scrollContainer = document.querySelector('.flex-1.bg-black.overflow-y-auto');
+        const scrollContainer = document.querySelector(
+          '.flex-1.bg-black.overflow-y-auto',
+        );
         if (!scrollContainer) return;
 
-        const sections = SECTIONS.map(s => document.getElementById(s.id));
+        const sections = SECTIONS.map((s) => document.getElementById(s.id));
         const scrollTop = scrollContainer.scrollTop;
         const containerHeight = scrollContainer.clientHeight;
 
@@ -467,7 +512,7 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
         }
       } else {
         // Desktop: sections are in window scroll
-        const sections = SECTIONS.map(s => document.getElementById(s.id));
+        const sections = SECTIONS.map((s) => document.getElementById(s.id));
         const scrollPosition = window.scrollY + window.innerHeight / 2;
 
         for (let i = sections.length - 1; i >= 0; i--) {
@@ -484,10 +529,13 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
     setTimeout(handleScroll, 100);
 
     if (isMobile) {
-      const scrollContainer = document.querySelector('.flex-1.bg-black.overflow-y-auto');
+      const scrollContainer = document.querySelector(
+        '.flex-1.bg-black.overflow-y-auto',
+      );
       if (scrollContainer) {
         scrollContainer.addEventListener('scroll', handleScroll);
-        return () => scrollContainer.removeEventListener('scroll', handleScroll);
+        return () =>
+          scrollContainer.removeEventListener('scroll', handleScroll);
       }
     } else {
       window.addEventListener('scroll', handleScroll);
@@ -506,7 +554,9 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
       if (element) {
         if (isMobile) {
           // On mobile, scroll the container instantly
-          const scrollContainer = document.querySelector('.flex-1.bg-black.overflow-y-auto');
+          const scrollContainer = document.querySelector(
+            '.flex-1.bg-black.overflow-y-auto',
+          );
           if (scrollContainer) {
             const elementTop = element.offsetTop;
             scrollContainer.scrollTo({ top: elementTop, behavior: 'auto' }); // instant jump
@@ -550,14 +600,14 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
     // Per-model transform settings
     const modelTransform = isShuttle
       ? {
-          rotation: { x: -0.80, y: 0.64, z: -2.46 },
+          rotation: { x: -0.8, y: 0.64, z: -2.46 },
           scale: 0.12,
-          position: { x: 0, y: 0, z: 0 }
+          position: { x: 0, y: 0, z: 0 },
         }
       : {
           rotation: { x: -1.2, y: 0, z: -0.5 },
           scale: 0.9,
-          position: { x: 0, y: 0, z: 5.0 }
+          position: { x: 0, y: 0, z: 5.0 },
         };
 
     return (
@@ -572,7 +622,11 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
           performance={{ min: 0.5 }} // Allow frame skipping if needed
           style={{ backgroundColor: '#000000' }}
         >
-          <PerspectiveCamera makeDefault position={modelCamera.position} fov={modelCamera.fov} />
+          <PerspectiveCamera
+            makeDefault
+            position={modelCamera.position}
+            fov={modelCamera.fov}
+          />
 
           <ambientLight intensity={0.2} />
           <directionalLight position={[5, 5, 5]} intensity={0.4} />
@@ -605,14 +659,17 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
   };
 
   return (
-    <div className="min-h-screen relative" style={{ backgroundColor: '#000000' }}>
+    <div
+      className="min-h-screen relative"
+      style={{ backgroundColor: '#000000' }}
+    >
       {/* CAD-style vertical wipe transition overlay */}
       {isTransitioning && (
         <>
           <div
             className="fixed inset-0 z-[9999] pointer-events-none bg-black"
             style={{
-              animation: 'wipeDown 400ms linear'
+              animation: 'wipeDown 400ms linear',
             }}
           />
           <style>{`
@@ -648,22 +705,31 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
         <div className="lg:hidden fixed inset-0 bg-black flex flex-col overflow-hidden z-40">
           {/* CAD-style Header Bar */}
           <div className="bg-[#0000AA] text-white font-mono text-[10px] sm:text-xs px-2 py-1 flex items-center justify-between border-b border-[#00FFFF]/30 flex-shrink-0">
-            <span className="tracking-wider truncate flex-1 mr-2">ACAD v12 - {company.name.toUpperCase().substring(0, 12)}.DWG</span>
-            <span className="text-[#00FFFF] flex-shrink-0">SECT: {SECTIONS.findIndex(s => s.id === activeSection) + 1}/5</span>
+            <span className="tracking-wider truncate flex-1 mr-2">
+              ACAD v12 - {company.name.toUpperCase().substring(0, 12)}.DWG
+            </span>
+            <span className="text-[#00FFFF] flex-shrink-0">
+              SECT: {SECTIONS.findIndex((s) => s.id === activeSection) + 1}/5
+            </span>
           </div>
 
           {/* 3D Viewport - Top Section */}
           <div className="h-[35vh] border-b border-[#00FF00]/30 relative flex-shrink-0">
             <CADViewport
-              label={`MODEL_0${SECTIONS.findIndex(s => s.id === activeSection) + 1}`}
+              label={`MODEL_0${SECTIONS.findIndex((s) => s.id === activeSection) + 1}`}
               viewType="PERSPECTIVE"
               className="w-full h-full"
             >
               <Canvas
                 key={activeSection}
                 camera={{
-                  position: modelControls[SECTIONS.findIndex(s => s.id === activeSection)].cameraPosition,
-                  fov: modelControls[SECTIONS.findIndex(s => s.id === activeSection)].cameraFov
+                  position:
+                    modelControls[
+                      SECTIONS.findIndex((s) => s.id === activeSection)
+                    ].cameraPosition,
+                  fov: modelControls[
+                    SECTIONS.findIndex((s) => s.id === activeSection)
+                  ].cameraFov,
                 }}
                 dpr={[1, 1.5]}
                 performance={{ min: 0.5 }}
@@ -671,18 +737,40 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
               >
                 <PerspectiveCamera
                   makeDefault
-                  position={modelControls[SECTIONS.findIndex(s => s.id === activeSection)].cameraPosition}
-                  fov={modelControls[SECTIONS.findIndex(s => s.id === activeSection)].cameraFov}
+                  position={
+                    modelControls[
+                      SECTIONS.findIndex((s) => s.id === activeSection)
+                    ].cameraPosition
+                  }
+                  fov={
+                    modelControls[
+                      SECTIONS.findIndex((s) => s.id === activeSection)
+                    ].cameraFov
+                  }
                 />
                 <CameraDrift />
                 <ambientLight intensity={0.2} />
                 <directionalLight position={[5, 5, 5]} intensity={0.4} />
                 <Suspense fallback={null}>
                   <WireframeRocket
-                    scrollProgress={SECTIONS.findIndex(s => s.id === activeSection) / 4}
-                    rotation={modelControls[SECTIONS.findIndex(s => s.id === activeSection)].rotation}
-                    scale={modelControls[SECTIONS.findIndex(s => s.id === activeSection)].scale}
-                    position={modelControls[SECTIONS.findIndex(s => s.id === activeSection)].position}
+                    scrollProgress={
+                      SECTIONS.findIndex((s) => s.id === activeSection) / 4
+                    }
+                    rotation={
+                      modelControls[
+                        SECTIONS.findIndex((s) => s.id === activeSection)
+                      ].rotation
+                    }
+                    scale={
+                      modelControls[
+                        SECTIONS.findIndex((s) => s.id === activeSection)
+                      ].scale
+                    }
+                    position={
+                      modelControls[
+                        SECTIONS.findIndex((s) => s.id === activeSection)
+                      ].position
+                    }
                     customModels={customModels}
                   />
                 </Suspense>
@@ -690,7 +778,11 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
                   {activeSection === 'company' && (
                     <>
                       {/* First: Glitch effect */}
-                      <Bloom intensity={0.6} luminanceThreshold={0.7} radius={0.3} />
+                      <Bloom
+                        intensity={0.6}
+                        luminanceThreshold={0.7}
+                        radius={0.3}
+                      />
                       <primitive object={new GlitchEffect()} />
                     </>
                   )}
@@ -724,7 +816,6 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
               key={`content-${activeSection}-${isTransitioning}`}
               className={`p-3 sm:p-4 space-y-4 ${!isTransitioning ? 'cad-redraw' : ''}`}
             >
-
               {/* SECTION 1: COMPANY */}
               <div id="company" className="scroll-mt-4">
                 <div className="border border-[#00FFFF]/30 bg-[#0000AA]/20 p-2 mb-3">
@@ -790,13 +881,14 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
 
                 <div className="space-y-3">
                   <h2 className="text-2xl sm:text-3xl font-black uppercase font-mono tracking-wide text-[#00FFFF] break-words">
-                    WHAT_THEY'RE_BUILDING
+                    The Product
                   </h2>
 
                   {company.whyWeLoveThem && (
                     <div className="bg-black border-2 border-[#00FFFF] p-3">
                       <p className="text-[9px] sm:text-[10px] uppercase tracking-wider text-[#00FFFF] font-bold mb-2 font-mono">
-                        [ WHY_WE_LOVE_{company.name.toUpperCase().replace(/\s+/g, '_')} ]
+                        [ WHY_WE_LOVE_
+                        {company.name.toUpperCase().replace(/\s+/g, '_')} ]
                       </p>
                       <p className="text-white/90 leading-relaxed text-xs sm:text-sm font-mono break-words">
                         {company.whyWeLoveThem}
@@ -919,17 +1011,21 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
                   </div>
                 </div>
               </div>
-
             </div>
           </div>
 
           {/* CAD Command Line Footer */}
           <div className="bg-[#0000AA] text-white font-mono text-[8px] sm:text-[9px] px-2 py-1 sm:py-1.5 border-t border-[#00FFFF]/30 space-y-0.5 flex-shrink-0">
             <div className="truncate">
-              <span className="text-[#00FFFF]">Orden:</span> <span className="text-white">_VIEW_{activeSection.toUpperCase()}</span>
+              <span className="text-[#00FFFF]">Orden:</span>{' '}
+              <span className="text-white">
+                _VIEW_{activeSection.toUpperCase()}
+              </span>
             </div>
             <div className="text-[#FFFFFF]/70 truncate">
-              {company.name} - Viewport {SECTIONS.findIndex(s => s.id === activeSection) + 1} of {SECTIONS.length}
+              {company.name} - Viewport{' '}
+              {SECTIONS.findIndex((s) => s.id === activeSection) + 1} of{' '}
+              {SECTIONS.length}
             </div>
           </div>
         </div>
@@ -967,7 +1063,10 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
                       : 'text-[#FFFFFF] hover:bg-[#FFFFFF]/10'
                   }`}
                   style={{
-                    borderLeft: activeSection === section.id ? `4px solid ${section.color}` : '4px solid transparent',
+                    borderLeft:
+                      activeSection === section.id
+                        ? `4px solid ${section.color}`
+                        : '4px solid transparent',
                   }}
                 >
                   {String(index + 1).padStart(2, '0')} {section.label}
@@ -995,318 +1094,350 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
             key={`desktop-content-${activeSection}-${isTransitioning}`}
             className={!isTransitioning ? 'cad-redraw' : ''}
           >
-
-          {/* SECTION 1: COMPANY */}
-          <section
-            id="company"
-            className="min-h-screen flex flex-col justify-center px-16 py-16"
-          >
-            <div className="text-xs uppercase tracking-widest text-[#FF00FF] font-mono font-bold mb-8">
-              {'>> SECTION_01: COMPANY'}
-            </div>
-
-            <div className="flex flex-col lg:flex-row gap-12 items-start">
-              <div className="flex-1 max-w-3xl">
-                <div className="inline-block px-3 py-1 bg-black border-2 border-[#00FF00] text-sm text-[#00FF00] mb-8 font-mono font-bold uppercase tracking-wider">
-                  CATEGORY: {company.category.toUpperCase()}
-                </div>
-
-                <h1 className="text-8xl lg:text-9xl font-black tracking-tight leading-none uppercase font-mono mb-6"
-                  style={{
-                    color: '#00FFFF',
-                    letterSpacing: '0.05em'
-                  }}>
-                  {company.name.toUpperCase()}
-                </h1>
-
-                <p className="text-2xl lg:text-3xl font-mono max-w-4xl tracking-wide uppercase font-bold text-[#00FF00] mb-10">
-                  // {company.tagline.toUpperCase()}
-                </p>
-
-                <div className="mb-10">
-                  <div className="text-sm font-mono font-bold uppercase tracking-wider text-[#FFFF00] mb-3">
-                    [ DESCRIPTION ]
-                  </div>
-                  <p className="text-xl lg:text-2xl text-white/90 leading-relaxed font-mono">
-                    {company.description}
-                  </p>
-                </div>
-
-                <div className="flex flex-wrap gap-4">
-                  {company.website && (
-                    <a
-                      href={company.website}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="px-10 py-5 bg-[#00FF00] text-black font-mono font-bold text-lg uppercase tracking-wider hover:bg-[#00FFFF] transition-all"
-                    >
-                      [LINK: WEBSITE]
-                    </a>
-                  )}
-                  {company.twitter && (
-                    <a
-                      href={company.twitter}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="px-10 py-5 border-2 border-[#00FFFF] text-[#00FFFF] font-mono font-bold text-lg uppercase tracking-wider hover:bg-[#00FFFF]/10 transition-all"
-                    >
-                      [LINK: TWITTER/X]
-                    </a>
-                  )}
-                </div>
+            {/* SECTION 1: COMPANY */}
+            <section
+              id="company"
+              className="min-h-screen flex flex-col justify-center px-16 py-16"
+            >
+              <div className="text-xs uppercase tracking-widest text-[#FF00FF] font-mono font-bold mb-8">
+                {'>> SECTION_01: COMPANY'}
               </div>
 
-              {/* Shuttle 3D Model - on right */}
-              {!isMobile && (
-                <CADViewport
-                  label="MODEL_01"
-                  viewType="PERSPECTIVE"
-                  className="w-full lg:w-[450px] h-[450px] flex-shrink-0"
-                >
-                  <Canvas
-                    camera={{ position: modelControls[0].cameraPosition, fov: modelControls[0].cameraFov }}
-                    dpr={[1, 1.5]}
-                    performance={{ min: 0.5 }}
-                    style={{ backgroundColor: '#000000' }}
+              <div className="flex flex-col lg:flex-row gap-12 items-start">
+                <div className="flex-1 max-w-3xl">
+                  <div className="inline-block px-3 py-1 bg-black border-2 border-[#00FF00] text-sm text-[#00FF00] mb-8 font-mono font-bold uppercase tracking-wider">
+                    CATEGORY: {company.category.toUpperCase()}
+                  </div>
+
+                  <h1
+                    className="text-8xl lg:text-9xl font-black tracking-tight leading-none uppercase font-mono mb-6"
+                    style={{
+                      color: '#00FFFF',
+                      letterSpacing: '0.05em',
+                    }}
                   >
-                    <PerspectiveCamera makeDefault position={modelControls[0].cameraPosition} fov={modelControls[0].cameraFov} />
-                    <CameraDrift />
-                    <ambientLight intensity={0.2} />
-                    <directionalLight position={[5, 5, 5]} intensity={0.4} />
-                    <Suspense fallback={null}>
-                      <WireframeRocket
-                        scrollProgress={0}
-                        rotation={modelControls[0].rotation}
-                        scale={modelControls[0].scale}
-                        position={modelControls[0].position}
-                        customModels={customModels}
-                      />
-                    </Suspense>
-                    <EffectComposer>
-                      <Bloom intensity={0.6} luminanceThreshold={0.7} radius={0.3} />
-                      <primitive object={new GlitchEffect()} />
-                      <ChromaticAberration offset={[0.005, 0.005]} />
-                      <Noise opacity={0.05} />
-                    </EffectComposer>
-                  </Canvas>
-                </CADViewport>
-              )}
-            </div>
-          </section>
+                    {company.name.toUpperCase()}
+                  </h1>
 
-          {/* SECTION 2: MISSION */}
-          <section
-            id="mission"
-            className="min-h-screen flex flex-col justify-center px-16 py-16"
-          >
-            <div className="text-xs uppercase tracking-widest text-[#FF00FF] font-mono font-bold mb-8">
-              {'>> SECTION_02: MISSION'}
-            </div>
+                  <p className="text-2xl lg:text-3xl font-mono max-w-4xl tracking-wide uppercase font-bold text-[#00FF00] mb-10">
+                    // {company.tagline.toUpperCase()}
+                  </p>
 
-            <div className="flex flex-col lg:flex-row gap-12 items-end">
-              <div className="flex-1 space-y-8 max-w-3xl">
-                <h2 className="text-6xl lg:text-7xl font-black uppercase font-mono tracking-wide"
-                  style={{ color: '#00FFFF' }}>
-                  WHAT_THEY'RE_BUILDING
-                </h2>
-
-                {company.whyWeLoveThem && (
-                  <div className="bg-black border-2 border-[#00FFFF] p-10">
-                    <p className="text-sm uppercase tracking-wider text-[#00FFFF] font-bold mb-6 font-mono">
-                      [ NOTE: WHY_WE_LOVE_{company.name.toUpperCase().replace(/\s+/g, '_')} ]
-                    </p>
-                    <p className="text-white/90 leading-relaxed text-xl lg:text-2xl font-mono">
-                      {company.whyWeLoveThem}
+                  <div className="mb-10">
+                    <div className="text-sm font-mono font-bold uppercase tracking-wider text-[#FFFF00] mb-3">
+                      [ DESCRIPTION ]
+                    </div>
+                    <p className="text-xl lg:text-2xl text-white/90 leading-relaxed font-mono">
+                      {company.description}
                     </p>
                   </div>
+
+                  <div className="flex flex-wrap gap-4">
+                    {company.website && (
+                      <a
+                        href={company.website}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-10 py-5 bg-[#00FF00] text-black font-mono font-bold text-lg uppercase tracking-wider hover:bg-[#00FFFF] transition-all"
+                      >
+                        [LINK: WEBSITE]
+                      </a>
+                    )}
+                    {company.twitter && (
+                      <a
+                        href={company.twitter}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-10 py-5 border-2 border-[#00FFFF] text-[#00FFFF] font-mono font-bold text-lg uppercase tracking-wider hover:bg-[#00FFFF]/10 transition-all"
+                      >
+                        [LINK: TWITTER/X]
+                      </a>
+                    )}
+                  </div>
+                </div>
+
+                {/* Shuttle 3D Model - on right */}
+                {!isMobile && (
+                  <CADViewport
+                    label="MODEL_01"
+                    viewType="PERSPECTIVE"
+                    className="w-full lg:w-[450px] h-[450px] flex-shrink-0"
+                  >
+                    <Canvas
+                      camera={{
+                        position: modelControls[0].cameraPosition,
+                        fov: modelControls[0].cameraFov,
+                      }}
+                      dpr={[1, 1.5]}
+                      performance={{ min: 0.5 }}
+                      style={{ backgroundColor: '#000000' }}
+                    >
+                      <PerspectiveCamera
+                        makeDefault
+                        position={modelControls[0].cameraPosition}
+                        fov={modelControls[0].cameraFov}
+                      />
+                      <CameraDrift />
+                      <ambientLight intensity={0.2} />
+                      <directionalLight position={[5, 5, 5]} intensity={0.4} />
+                      <Suspense fallback={null}>
+                        <WireframeRocket
+                          scrollProgress={0}
+                          rotation={modelControls[0].rotation}
+                          scale={modelControls[0].scale}
+                          position={modelControls[0].position}
+                          customModels={customModels}
+                        />
+                      </Suspense>
+                      <EffectComposer>
+                        <Bloom
+                          intensity={0.6}
+                          luminanceThreshold={0.7}
+                          radius={0.3}
+                        />
+                        <primitive object={new GlitchEffect()} />
+                        <ChromaticAberration offset={[0.005, 0.005]} />
+                        <Noise opacity={0.05} />
+                      </EffectComposer>
+                    </Canvas>
+                  </CADViewport>
                 )}
               </div>
+            </section>
 
-              {/* 3D Model - Apollo Soyuz - on right, aligned with text box */}
-              {!isMobile && (
-                <CADViewport
-                  label="MODEL_02"
-                  viewType="PERSPECTIVE"
-                  className="w-full lg:w-[450px] h-[450px] flex-shrink-0"
-                >
-                  <Canvas
-                    camera={{ position: modelControls[1].cameraPosition, fov: modelControls[1].cameraFov }}
-                    dpr={[1, 1.5]}
-                    performance={{ min: 0.5 }}
-                    style={{ backgroundColor: '#000000' }}
-                  >
-                    <PerspectiveCamera makeDefault position={modelControls[1].cameraPosition} fov={modelControls[1].cameraFov} />
-                    <CameraDrift />
-                    <ambientLight intensity={0.2} />
-                    <directionalLight position={[5, 5, 5]} intensity={0.4} />
-                    <Suspense fallback={null}>
-                      <WireframeRocket
-                        scrollProgress={1 / 3}
-                        rotation={modelControls[1].rotation}
-                        scale={modelControls[1].scale}
-                        position={modelControls[1].position}
-                        customModels={customModels}
-                      />
-                    </Suspense>
-                    {/* No effects for MISSION section */}
-                  </Canvas>
-                </CADViewport>
-              )}
-            </div>
-          </section>
-
-          {/* SECTION 3: FUNDING */}
-          <section
-            id="funding"
-            className="min-h-screen flex flex-col justify-center px-16 py-16"
-          >
-            <div className="text-xs uppercase tracking-widest text-[#FF00FF] font-mono font-bold mb-8">
-              {'>> SECTION_03: FUNDING'}
-            </div>
-
-            <h2 className="text-6xl lg:text-7xl font-black uppercase font-mono tracking-wide mb-10"
-              style={{ color: '#FFFF00' }}>
-              CAPITAL_RAISED
-            </h2>
-
-            <div className="max-w-3xl">
-              <div className="bg-black border-3 border-[#00FFFF] p-10 border-2">
-                <p className="text-sm uppercase tracking-widest text-[#00FFFF] mb-6 font-mono font-bold">
-                  [ DATA: FUNDING_AMOUNT ]
-                </p>
-                <p className="text-6xl lg:text-7xl font-black text-[#00FFFF] font-mono tracking-tight mb-4">
-                  {formatCurrency(company.funding.amount)}
-                </p>
-                <p className="text-lg text-[#00FFFF]/70 font-mono uppercase tracking-wide">
-                  {company.funding.round} / {company.funding.date}
-                </p>
+            {/* SECTION 2: MISSION */}
+            <section
+              id="mission"
+              className="min-h-screen flex flex-col justify-center px-16 py-16"
+            >
+              <div className="text-xs uppercase tracking-widest text-[#FF00FF] font-mono font-bold mb-8">
+                {'>> SECTION_02: MISSION'}
               </div>
-            </div>
-          </section>
 
-          {/* SECTION 4: TEAM */}
-          <section
-            id="team"
-            className="min-h-screen flex flex-col justify-center px-16 py-16"
-          >
-            <div className="text-xs uppercase tracking-widest text-[#FF00FF] font-mono font-bold mb-8">
-              {'>> SECTION_04: TEAM'}
-            </div>
+              <div className="flex flex-col lg:flex-row gap-12 items-end">
+                <div className="flex-1 space-y-8 max-w-3xl">
+                  <h2
+                    className="text-6xl lg:text-7xl font-black uppercase font-mono tracking-wide"
+                    style={{ color: '#00FFFF' }}
+                  >
+                    The Product
+                  </h2>
 
-            <div className="flex flex-col lg:flex-row gap-12 items-start">
-              <div className="flex-1 space-y-8">
-                <h2 className="text-6xl lg:text-7xl font-black uppercase font-mono tracking-wide"
-                  style={{ color: '#00FFFF' }}>
-                  THE_BRILLIANT_MINDS
-                </h2>
-
-                <div className="space-y-5 max-w-2xl">
-                  {company.founders.map((founder, index) => (
-                    <a
-                      key={founder.id}
-                      href={founder.twitter}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-6 p-8 bg-black border-2 border-[#00FF00] hover:bg-[#00FF00]/10 hover:border-[#00FFFF] transition-all group"
-                    >
-                      {founder.avatar && (
-                        <Image
-                          src={founder.avatar}
-                          alt={founder.name}
-                          width={70}
-                          height={70}
-                          className="border-2 border-[#00FF00] group-hover:border-[#00FFFF] transition-all"
-                        />
-                      )}
-                      <div className="flex-1">
-                        <div className="text-xs font-mono font-bold uppercase tracking-wider text-[#00FF00]/70 mb-2">
-                          MEMBER_{(index + 1).toString().padStart(2, '0')}
-                        </div>
-                        <h3 className="text-2xl lg:text-3xl font-black text-white group-hover:text-[#00FFFF] transition-colors font-mono uppercase tracking-wide">
-                          {founder.name.toUpperCase()}
-                        </h3>
-                        <p className="text-[#00FF00] mt-2 text-lg font-mono uppercase tracking-wide">
-                          ROLE: {founder.role.toUpperCase()}
-                        </p>
-                      </div>
-                      <span className="text-2xl opacity-0 group-hover:opacity-100 transition-opacity text-[#00FFFF] font-mono">
-                        [→]
-                      </span>
-                    </a>
-                  ))}
+                  {company.whyWeLoveThem && (
+                    <div className="bg-black border-2 border-[#00FFFF] p-10">
+                      <p className="text-sm uppercase tracking-wider text-[#00FFFF] font-bold mb-6 font-mono">
+                        [ NOTE: WHY_WE_LOVE_
+                        {company.name.toUpperCase().replace(/\s+/g, '_')} ]
+                      </p>
+                      <p className="text-white/90 leading-relaxed text-xl lg:text-2xl font-mono">
+                        {company.whyWeLoveThem}
+                      </p>
+                    </div>
+                  )}
                 </div>
+
+                {/* 3D Model - Apollo Soyuz - on right, aligned with text box */}
+                {!isMobile && (
+                  <CADViewport
+                    label="MODEL_02"
+                    viewType="PERSPECTIVE"
+                    className="w-full lg:w-[450px] h-[450px] flex-shrink-0"
+                  >
+                    <Canvas
+                      camera={{
+                        position: modelControls[1].cameraPosition,
+                        fov: modelControls[1].cameraFov,
+                      }}
+                      dpr={[1, 1.5]}
+                      performance={{ min: 0.5 }}
+                      style={{ backgroundColor: '#000000' }}
+                    >
+                      <PerspectiveCamera
+                        makeDefault
+                        position={modelControls[1].cameraPosition}
+                        fov={modelControls[1].cameraFov}
+                      />
+                      <CameraDrift />
+                      <ambientLight intensity={0.2} />
+                      <directionalLight position={[5, 5, 5]} intensity={0.4} />
+                      <Suspense fallback={null}>
+                        <WireframeRocket
+                          scrollProgress={1 / 3}
+                          rotation={modelControls[1].rotation}
+                          scale={modelControls[1].scale}
+                          position={modelControls[1].position}
+                          customModels={customModels}
+                        />
+                      </Suspense>
+                      {/* No effects for MISSION section */}
+                    </Canvas>
+                  </CADViewport>
+                )}
+              </div>
+            </section>
+
+            {/* SECTION 3: FUNDING */}
+            <section
+              id="funding"
+              className="min-h-screen flex flex-col justify-center px-16 py-16"
+            >
+              <div className="text-xs uppercase tracking-widest text-[#FF00FF] font-mono font-bold mb-8">
+                {'>> SECTION_03: FUNDING'}
               </div>
 
-              {/* 3D Model - Space Suit - on right */}
-              {!isMobile && (
-                <CADViewport
-                  label="MODEL_04"
-                  viewType="PERSPECTIVE"
-                  className="w-full lg:w-[450px] h-[450px] flex-shrink-0"
-                >
-                  <Canvas
-                    camera={{ position: modelControls[3].cameraPosition, fov: modelControls[3].cameraFov }}
-                    dpr={[1, 1.5]}
-                    performance={{ min: 0.5 }}
-                    style={{ backgroundColor: '#000000' }}
-                  >
-                    <PerspectiveCamera makeDefault position={modelControls[3].cameraPosition} fov={modelControls[3].cameraFov} />
-                    <CameraDrift />
-                    <ambientLight intensity={0.2} />
-                    <directionalLight position={[5, 5, 5]} intensity={0.4} />
-                    <Suspense fallback={null}>
-                      <WireframeRocket
-                        scrollProgress={2 / 3}
-                        rotation={modelControls[3].rotation}
-                        scale={modelControls[3].scale}
-                        position={modelControls[3].position}
-                        customModels={customModels}
-                      />
-                    </Suspense>
-                    {/* No effects for TEAM section */}
-                  </Canvas>
-                </CADViewport>
-              )}
-            </div>
-          </section>
-
-          {/* SECTION 5: ZERO_FINANCE (Separate Plug/Shill) */}
-          <section
-            id="zero"
-            className="min-h-screen flex flex-col justify-center px-16 py-16"
-          >
-            <div className="text-xs uppercase tracking-widest text-[#FF00FF] font-mono font-bold mb-8">
-              {'>> SECTION_05: ZERO_FINANCE'}
-            </div>
-
-            <div className="max-w-4xl space-y-10">
-              <h2 className="text-6xl lg:text-8xl font-black text-[#FF00FF] uppercase font-mono tracking-tighter leading-tight">
-                MAXIMIZE_YOUR_RUNWAY
+              <h2
+                className="text-6xl lg:text-7xl font-black uppercase font-mono tracking-wide mb-10"
+                style={{ color: '#FFFF00' }}
+              >
+                CAPITAL_RAISED
               </h2>
 
-              <StartupCalculatorSection
-                companyName={company.name}
-                fundingAmount={company.funding.amount}
-                isMobile={false}
-              />
-
-              <div className="flex flex-col sm:flex-row gap-5">
-                <Link
-                  href="https://0.finance"
-                  className="flex-1 text-center px-12 py-6 bg-[#00FF00] text-black font-bold font-mono uppercase tracking-wider hover:bg-[#00FFFF] transition-all text-lg border-2 border-[#00FF00] hover:border-[#00FFFF]"
-                >
-                  [ ACTION: START_EARNING_8%_APY ]
-                </Link>
-                <Link
-                  href="/"
-                  className="text-center px-12 py-6 border-2 border-[#00FFFF] text-[#00FFFF] font-mono font-bold uppercase tracking-wider hover:bg-[#00FFFF]/10 transition-all text-lg"
-                >
-                  [ RETURN: BROWSE_MORE_STARTUPS ]
-                </Link>
+              <div className="max-w-3xl">
+                <div className="bg-black border-3 border-[#00FFFF] p-10 border-2">
+                  <p className="text-sm uppercase tracking-widest text-[#00FFFF] mb-6 font-mono font-bold">
+                    [ DATA: FUNDING_AMOUNT ]
+                  </p>
+                  <p className="text-6xl lg:text-7xl font-black text-[#00FFFF] font-mono tracking-tight mb-4">
+                    {formatCurrency(company.funding.amount)}
+                  </p>
+                  <p className="text-lg text-[#00FFFF]/70 font-mono uppercase tracking-wide">
+                    {company.funding.round} / {company.funding.date}
+                  </p>
+                </div>
               </div>
-            </div>
-          </section>
+            </section>
 
+            {/* SECTION 4: TEAM */}
+            <section
+              id="team"
+              className="min-h-screen flex flex-col justify-center px-16 py-16"
+            >
+              <div className="text-xs uppercase tracking-widest text-[#FF00FF] font-mono font-bold mb-8">
+                {'>> SECTION_04: TEAM'}
+              </div>
+
+              <div className="flex flex-col lg:flex-row gap-12 items-start">
+                <div className="flex-1 space-y-8">
+                  <h2
+                    className="text-6xl lg:text-7xl font-black uppercase font-mono tracking-wide"
+                    style={{ color: '#00FFFF' }}
+                  >
+                    THE_BRILLIANT_MINDS
+                  </h2>
+
+                  <div className="space-y-5 max-w-2xl">
+                    {company.founders.map((founder, index) => (
+                      <a
+                        key={founder.id}
+                        href={founder.twitter}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-6 p-8 bg-black border-2 border-[#00FF00] hover:bg-[#00FF00]/10 hover:border-[#00FFFF] transition-all group"
+                      >
+                        {founder.avatar && (
+                          <Image
+                            src={founder.avatar}
+                            alt={founder.name}
+                            width={70}
+                            height={70}
+                            className="border-2 border-[#00FF00] group-hover:border-[#00FFFF] transition-all"
+                          />
+                        )}
+                        <div className="flex-1">
+                          <div className="text-xs font-mono font-bold uppercase tracking-wider text-[#00FF00]/70 mb-2">
+                            MEMBER_{(index + 1).toString().padStart(2, '0')}
+                          </div>
+                          <h3 className="text-2xl lg:text-3xl font-black text-white group-hover:text-[#00FFFF] transition-colors font-mono uppercase tracking-wide">
+                            {founder.name.toUpperCase()}
+                          </h3>
+                          <p className="text-[#00FF00] mt-2 text-lg font-mono uppercase tracking-wide">
+                            ROLE: {founder.role.toUpperCase()}
+                          </p>
+                        </div>
+                        <span className="text-2xl opacity-0 group-hover:opacity-100 transition-opacity text-[#00FFFF] font-mono">
+                          [→]
+                        </span>
+                      </a>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 3D Model - Space Suit - on right */}
+                {!isMobile && (
+                  <CADViewport
+                    label="MODEL_04"
+                    viewType="PERSPECTIVE"
+                    className="w-full lg:w-[450px] h-[450px] flex-shrink-0"
+                  >
+                    <Canvas
+                      camera={{
+                        position: modelControls[3].cameraPosition,
+                        fov: modelControls[3].cameraFov,
+                      }}
+                      dpr={[1, 1.5]}
+                      performance={{ min: 0.5 }}
+                      style={{ backgroundColor: '#000000' }}
+                    >
+                      <PerspectiveCamera
+                        makeDefault
+                        position={modelControls[3].cameraPosition}
+                        fov={modelControls[3].cameraFov}
+                      />
+                      <CameraDrift />
+                      <ambientLight intensity={0.2} />
+                      <directionalLight position={[5, 5, 5]} intensity={0.4} />
+                      <Suspense fallback={null}>
+                        <WireframeRocket
+                          scrollProgress={2 / 3}
+                          rotation={modelControls[3].rotation}
+                          scale={modelControls[3].scale}
+                          position={modelControls[3].position}
+                          customModels={customModels}
+                        />
+                      </Suspense>
+                      {/* No effects for TEAM section */}
+                    </Canvas>
+                  </CADViewport>
+                )}
+              </div>
+            </section>
+
+            {/* SECTION 5: ZERO_FINANCE (Separate Plug/Shill) */}
+            <section
+              id="zero"
+              className="min-h-screen flex flex-col justify-center px-16 py-16"
+            >
+              <div className="text-xs uppercase tracking-widest text-[#FF00FF] font-mono font-bold mb-8">
+                {'>> SECTION_05: ZERO_FINANCE'}
+              </div>
+
+              <div className="max-w-4xl space-y-10">
+                <h2 className="text-6xl lg:text-8xl font-black text-[#FF00FF] uppercase font-mono tracking-tighter leading-tight">
+                  MAXIMIZE_YOUR_RUNWAY
+                </h2>
+
+                <StartupCalculatorSection
+                  companyName={company.name}
+                  fundingAmount={company.funding.amount}
+                  isMobile={false}
+                />
+
+                <div className="flex flex-col sm:flex-row gap-5">
+                  <Link
+                    href="https://0.finance"
+                    className="flex-1 text-center px-12 py-6 bg-[#00FF00] text-black font-bold font-mono uppercase tracking-wider hover:bg-[#00FFFF] transition-all text-lg border-2 border-[#00FF00] hover:border-[#00FFFF]"
+                  >
+                    [ ACTION: START_EARNING_8%_APY ]
+                  </Link>
+                  <Link
+                    href="/"
+                    className="text-center px-12 py-6 border-2 border-[#00FFFF] text-[#00FFFF] font-mono font-bold uppercase tracking-wider hover:bg-[#00FFFF]/10 transition-all text-lg"
+                  >
+                    [ RETURN: BROWSE_MORE_STARTUPS ]
+                  </Link>
+                </div>
+              </div>
+            </section>
           </div>
         </div>
       )}
@@ -1315,7 +1446,9 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
       {showControls && (
         <div className="fixed top-4 left-4 w-96 bg-black/95 border-2 border-[#00FF00] p-4 font-mono text-xs z-[100] max-h-[90vh] overflow-y-auto">
           <div className="flex justify-between items-center mb-4 pb-2 border-b border-[#00FF00]">
-            <h3 className="text-[#00FFFF] font-bold uppercase tracking-wider">3D Model Controls</h3>
+            <h3 className="text-[#00FFFF] font-bold uppercase tracking-wider">
+              3D Model Controls
+            </h3>
             <button
               onClick={() => setShowControls(false)}
               className="text-[#FF0000] hover:text-[#FF5555] font-bold"
@@ -1328,7 +1461,7 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
           <div className="mb-4">
             <label className="text-[#FFFF00] block mb-2">SELECT MODEL:</label>
             <div className="grid grid-cols-4 gap-1">
-              {[0, 1, 2, 3].map(idx => (
+              {[0, 1, 2, 3].map((idx) => (
                 <button
                   key={idx}
                   onClick={() => setCurrentModelIndex(idx)}
@@ -1343,18 +1476,25 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
               ))}
             </div>
             <div className="text-[#00FFFF] mt-2 text-[10px]">
-              Section: {['COMPANY', 'MISSION', 'FUNDING', 'TEAM'][currentModelIndex]}
+              Section:{' '}
+              {['COMPANY', 'MISSION', 'FUNDING', 'TEAM'][currentModelIndex]}
             </div>
           </div>
 
           {/* Camera Position */}
           <div className="mb-4 pb-4 border-b border-[#00FFFF]/30">
-            <label className="text-[#FFFF00] block mb-2">CAMERA POSITION:</label>
+            <label className="text-[#FFFF00] block mb-2">
+              CAMERA POSITION:
+            </label>
             {['x', 'y', 'z'].map((axis, i) => (
               <div key={axis} className="mb-2">
                 <div className="flex justify-between text-[#00FFFF]">
                   <span>{axis.toUpperCase()}:</span>
-                  <span>{modelControls[currentModelIndex].cameraPosition[i].toFixed(1)}</span>
+                  <span>
+                    {modelControls[currentModelIndex].cameraPosition[i].toFixed(
+                      1,
+                    )}
+                  </span>
                 </div>
                 <input
                   type="range"
@@ -1363,7 +1503,9 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
                   step="1"
                   value={modelControls[currentModelIndex].cameraPosition[i]}
                   onChange={(e) => {
-                    const newPos = [...modelControls[currentModelIndex].cameraPosition] as [number, number, number];
+                    const newPos = [
+                      ...modelControls[currentModelIndex].cameraPosition,
+                    ] as [number, number, number];
                     newPos[i] = parseFloat(e.target.value);
                     updateControl(currentModelIndex, 'cameraPosition', newPos);
                   }}
@@ -1377,7 +1519,9 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
           <div className="mb-4 pb-4 border-b border-[#00FFFF]/30">
             <div className="flex justify-between text-[#FFFF00] mb-2">
               <span>CAMERA FOV:</span>
-              <span className="text-[#00FFFF]">{modelControls[currentModelIndex].cameraFov}</span>
+              <span className="text-[#00FFFF]">
+                {modelControls[currentModelIndex].cameraFov}
+              </span>
             </div>
             <input
               type="range"
@@ -1385,7 +1529,13 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
               max="120"
               step="1"
               value={modelControls[currentModelIndex].cameraFov}
-              onChange={(e) => updateControl(currentModelIndex, 'cameraFov', parseFloat(e.target.value))}
+              onChange={(e) =>
+                updateControl(
+                  currentModelIndex,
+                  'cameraFov',
+                  parseFloat(e.target.value),
+                )
+              }
               className="w-full"
             />
           </div>
@@ -1397,17 +1547,29 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
               <div key={axis} className="mb-2">
                 <div className="flex justify-between text-[#00FFFF]">
                   <span>{axis.toUpperCase()}:</span>
-                  <span>{modelControls[currentModelIndex].rotation[axis as keyof typeof modelControls[0]['rotation']].toFixed(2)}</span>
+                  <span>
+                    {modelControls[currentModelIndex].rotation[
+                      axis as keyof (typeof modelControls)[0]['rotation']
+                    ].toFixed(2)}
+                  </span>
                 </div>
                 <input
                   type="range"
                   min="-6.28"
                   max="6.28"
                   step="0.01"
-                  value={modelControls[currentModelIndex].rotation[axis as keyof typeof modelControls[0]['rotation']]}
+                  value={
+                    modelControls[currentModelIndex].rotation[
+                      axis as keyof (typeof modelControls)[0]['rotation']
+                    ]
+                  }
                   onChange={(e) => {
-                    const newRot = { ...modelControls[currentModelIndex].rotation };
-                    newRot[axis as keyof typeof newRot] = parseFloat(e.target.value);
+                    const newRot = {
+                      ...modelControls[currentModelIndex].rotation,
+                    };
+                    newRot[axis as keyof typeof newRot] = parseFloat(
+                      e.target.value,
+                    );
                     updateControl(currentModelIndex, 'rotation', newRot);
                   }}
                   className="w-full"
@@ -1420,7 +1582,9 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
           <div className="mb-4 pb-4 border-b border-[#00FFFF]/30">
             <div className="flex justify-between text-[#FFFF00] mb-2">
               <span>MODEL SCALE:</span>
-              <span className="text-[#00FFFF]">{modelControls[currentModelIndex].scale.toFixed(2)}</span>
+              <span className="text-[#00FFFF]">
+                {modelControls[currentModelIndex].scale.toFixed(2)}
+              </span>
             </div>
             <input
               type="range"
@@ -1428,7 +1592,13 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
               max="2"
               step="0.01"
               value={modelControls[currentModelIndex].scale}
-              onChange={(e) => updateControl(currentModelIndex, 'scale', parseFloat(e.target.value))}
+              onChange={(e) =>
+                updateControl(
+                  currentModelIndex,
+                  'scale',
+                  parseFloat(e.target.value),
+                )
+              }
               className="w-full"
             />
           </div>
@@ -1440,17 +1610,29 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
               <div key={axis} className="mb-2">
                 <div className="flex justify-between text-[#00FFFF]">
                   <span>{axis.toUpperCase()}:</span>
-                  <span>{modelControls[currentModelIndex].position[axis as keyof typeof modelControls[0]['position']].toFixed(1)}</span>
+                  <span>
+                    {modelControls[currentModelIndex].position[
+                      axis as keyof (typeof modelControls)[0]['position']
+                    ].toFixed(1)}
+                  </span>
                 </div>
                 <input
                   type="range"
                   min="-50"
                   max="50"
                   step="0.1"
-                  value={modelControls[currentModelIndex].position[axis as keyof typeof modelControls[0]['position']]}
+                  value={
+                    modelControls[currentModelIndex].position[
+                      axis as keyof (typeof modelControls)[0]['position']
+                    ]
+                  }
                   onChange={(e) => {
-                    const newPos = { ...modelControls[currentModelIndex].position };
-                    newPos[axis as keyof typeof newPos] = parseFloat(e.target.value);
+                    const newPos = {
+                      ...modelControls[currentModelIndex].position,
+                    };
+                    newPos[axis as keyof typeof newPos] = parseFloat(
+                      e.target.value,
+                    );
                     updateControl(currentModelIndex, 'position', newPos);
                   }}
                   className="w-full"
