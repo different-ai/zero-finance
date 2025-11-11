@@ -50,17 +50,17 @@ const nextConfig = {
     ];
   },
   skipTrailingSlashRedirect: true,
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
+
   reactStrictMode: true,
   typescript: {
     tsconfigPath: './tsconfig.next.json',
   },
   experimental: {
-    webpackMemoryOptimizations: true,
     optimizePackageImports: ['lucide-react', '@radix-ui/react-icons'],
   },
+  // Empty turbopack config to acknowledge we're aware of the webpack config
+  // TODO: Migrate webpack customizations to turbopack when needed
+  turbopack: {},
   outputFileTracingRoot: path.join(__dirname, '../../'),
   staticPageGenerationTimeout: 180,
   webpack: (config, { webpack, isServer }) => {

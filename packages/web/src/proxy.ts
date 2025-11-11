@@ -3,7 +3,6 @@ import type { NextRequest } from 'next/server';
 
 // Force Node.js runtime to support Privy server-auth crypto module
 export const config = {
-  runtime: 'nodejs',
   matcher: [
     /*
      * Match all request paths except for the ones starting with:
@@ -14,11 +13,11 @@ export const config = {
      * - login (if you had a dedicated login page)
      */
     '/((?!api|_next/static|_next/image|favicon.ico|login).*)',
-  ],
+  ]
 };
 
 // This function can be marked `async` if using `await` inside
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Skip auth checks for demo route
