@@ -1,7 +1,8 @@
-'use client';
-
 import React from 'react';
 import Link from 'next/link';
+
+// Force dynamic rendering
+export const dynamic = 'force-dynamic';
 
 export default function FlyersIndexPage() {
   const flyers = [

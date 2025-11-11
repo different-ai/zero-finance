@@ -1,8 +1,9 @@
-'use client';
-
 import React from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { PDFExportButton } from '@/components/flyers/pdf-export-button';
+
+// Force dynamic rendering since we use client components
+export const dynamic = 'force-dynamic';
 
 export default function HeroFlyerPage() {
   return (
@@ -12,21 +13,6 @@ export default function HeroFlyerPage() {
         flyerName="Your Idle Cash"
         pageSize="letter"
       />
-      <style jsx global>{`
-        @media print {
-          .no-print {
-            display: none !important;
-          }
-          body {
-            margin: 0;
-            padding: 0;
-          }
-          @page {
-            size: letter;
-            margin: 0;
-          }
-        }
-      `}</style>
       {/* 8.5" x 11" ratio container */}
       <div className="flyer-container w-[816px] h-[1056px] bg-white relative flex flex-col p-16">
         {/* Logo - Top */}
