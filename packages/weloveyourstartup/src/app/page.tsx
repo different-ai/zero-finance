@@ -29,12 +29,16 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-black">
       {/* Hero Section */}
-      <section className="relative border-b-2 border-[#00FF00] overflow-hidden" style={{ backgroundColor: '#000000' }}>
+      <section
+        className="relative border-b-2 border-[#00FF00] overflow-hidden"
+        style={{ backgroundColor: '#000000' }}
+      >
         {/* Grid overlay */}
         <div
           className="absolute inset-0 opacity-20 pointer-events-none"
           style={{
-            backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 19px, rgba(0, 255, 0, 0.3) 19px, rgba(0, 255, 0, 0.3) 20px), repeating-linear-gradient(90deg, transparent, transparent 19px, rgba(0, 255, 0, 0.3) 19px, rgba(0, 255, 0, 0.3) 20px)',
+            backgroundImage:
+              'repeating-linear-gradient(0deg, transparent, transparent 19px, rgba(0, 255, 0, 0.3) 19px, rgba(0, 255, 0, 0.3) 20px), repeating-linear-gradient(90deg, transparent, transparent 19px, rgba(0, 255, 0, 0.3) 19px, rgba(0, 255, 0, 0.3) 20px)',
           }}
         />
 
@@ -50,7 +54,9 @@ export default function Home() {
             </h1>
             <div className="mt-8 border-2 border-[#00FF00] bg-black p-6 max-w-4xl mx-auto">
               <p className="text-white/70 text-base sm:text-lg font-mono leading-relaxed uppercase tracking-wide">
-                // A curated directory of founders we admire. See how much their idle cash could be earning with Zero Finance's 8% APY savings accounts.
+                // A curated directory of founders we admire. See how much their
+                idle cash could be earning with Zero Finance's high-yield
+                savings at 8% APY — 4x more than traditional banks.
               </p>
             </div>
 
@@ -75,9 +81,17 @@ export default function Home() {
       {/* Featured Startup */}
       {companies
         .filter((c) => c.showcase?.featured)
-        .sort((a, b) => (a.publishedDate && b.publishedDate ? new Date(b.publishedDate).getTime() - new Date(a.publishedDate).getTime() : 0))
+        .sort((a, b) =>
+          a.publishedDate && b.publishedDate
+            ? new Date(b.publishedDate).getTime() -
+              new Date(a.publishedDate).getTime()
+            : 0,
+        )
         .map((company, index) => (
-          <section key={company.id} className="bg-black py-16 sm:py-20 border-b-2 border-[#00FF00]">
+          <section
+            key={company.id}
+            className="bg-black py-16 sm:py-20 border-b-2 border-[#00FF00]"
+          >
             <div className="mx-auto max-w-[1400px] px-8">
               <div className="flex items-center gap-4 mb-8">
                 <p className="uppercase tracking-widest text-xs text-[#00FF00]/60 font-mono font-bold">
@@ -167,13 +181,14 @@ export default function Home() {
 
                   <div className="bg-black border-2 border-white p-6">
                     <p className="text-xs uppercase tracking-widest text-white/50 font-mono font-bold mb-4">
-                      [ OUTPUT: SAVINGS ]
+                      [ OUTPUT: EXTRA_YIELD ]
                     </p>
                     <p className="text-3xl font-black text-white font-mono tabular-nums">
-                      +{formatCurrency(calculateSavings(company.funding.amount))}
+                      +
+                      {formatCurrency(calculateSavings(company.funding.amount))}
                     </p>
                     <p className="text-sm text-white/50 font-mono uppercase mt-2">
-                      PER_YEAR_WITH_ZERO
+                      PER_YEAR_VS_BANKS
                     </p>
                   </div>
                 </div>
@@ -202,7 +217,10 @@ export default function Home() {
         ))}
 
       {/* All Startups Directory */}
-      <section id="directory" className="bg-black py-16 sm:py-20 border-b-2 border-[#00FF00]">
+      <section
+        id="directory"
+        className="bg-black py-16 sm:py-20 border-b-2 border-[#00FF00]"
+      >
         <div className="mx-auto max-w-[1400px] px-8">
           <p className="uppercase tracking-widest text-xs text-[#00FF00]/60 font-mono font-bold mb-4">
             [ DATABASE: STARTUP_REGISTRY ]
@@ -263,7 +281,8 @@ export default function Home() {
                       {'>> POTENTIAL_SAVINGS: '}
                     </span>
                     <span className="text-sm font-bold text-white font-mono">
-                      {formatCurrency(calculateSavings(startup.funding.amount))}/YR
+                      {formatCurrency(calculateSavings(startup.funding.amount))}
+                      /YR
                     </span>
                   </div>
                 </div>
@@ -287,6 +306,135 @@ export default function Home() {
         </div>
       </section>
 
+      {/* API Access Section */}
+      <section className="bg-black py-16 sm:py-20 border-b-2 border-[#00FF00]">
+        <div className="mx-auto max-w-[1400px] px-8">
+          <p className="uppercase tracking-widest text-xs text-[#00FF00]/60 font-mono font-bold mb-4">
+            [ MODULE: API_INFRASTRUCTURE ]
+          </p>
+          <h2 className="font-mono text-4xl sm:text-5xl font-black uppercase tracking-wide text-white mb-10">
+            EMBED_HIGH_YIELD_SAVINGS_IN_YOUR_APP
+          </h2>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {/* API Overview */}
+            <div className="border-2 border-[#00FFFF] bg-black p-8">
+              <div className="text-sm font-mono font-bold uppercase tracking-wider text-[#00FFFF] mb-4">
+                [ API_PLATFORM ]
+              </div>
+              <p className="text-base text-white/80 font-mono leading-relaxed mb-6">
+                // Integrate 8% APY high-yield savings directly into your
+                fintech product. We handle the DeFi complexity, insurance, and
+                compliance — you get a clean REST API.
+              </p>
+              <div className="space-y-3 text-sm font-mono text-white/70">
+                <div className="flex items-start gap-3">
+                  <span className="text-[#00FF00] flex-shrink-0">▸</span>
+                  <span>RESTful API with comprehensive documentation</span>
+                </div>
+                <div className="flex items-start gap-3">
+                  <span className="text-[#00FF00] flex-shrink-0">▸</span>
+                  <span>White-label solution for your brand</span>
+                </div>
+                <div className="flex items-start gap-3">
+                  <span className="text-[#00FF00] flex-shrink-0">▸</span>
+                  <span>Sub-1 week integration time</span>
+                </div>
+                <div className="flex items-start gap-3">
+                  <span className="text-[#00FF00] flex-shrink-0">▸</span>
+                  <span>Self-custody architecture — users own their funds</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Use Cases */}
+            <div className="border-2 border-[#00FFFF] bg-[#0000AA]/10 p-8">
+              <div className="text-sm font-mono font-bold uppercase tracking-wider text-[#00FFFF] mb-4">
+                [ USE_CASES ]
+              </div>
+              <div className="space-y-4">
+                <div className="border-l-2 border-[#00FF00] pl-4">
+                  <h3 className="text-base font-black text-white font-mono uppercase mb-1">
+                    Corporate_Banking
+                  </h3>
+                  <p className="text-sm text-white/70 font-mono">
+                    Offer high-yield treasury management to business customers
+                  </p>
+                </div>
+                <div className="border-l-2 border-[#00FF00] pl-4">
+                  <h3 className="text-base font-black text-white font-mono uppercase mb-1">
+                    Neobanks
+                  </h3>
+                  <p className="text-sm text-white/70 font-mono">
+                    Add competitive savings rates to your product suite
+                  </p>
+                </div>
+                <div className="border-l-2 border-[#00FF00] pl-4">
+                  <h3 className="text-base font-black text-white font-mono uppercase mb-1">
+                    Crypto_Wallets
+                  </h3>
+                  <p className="text-sm text-white/70 font-mono">
+                    Enable idle balance yield for your users
+                  </p>
+                </div>
+                <div className="border-l-2 border-[#00FF00] pl-4">
+                  <h3 className="text-base font-black text-white font-mono uppercase mb-1">
+                    Payment_Apps
+                  </h3>
+                  <p className="text-sm text-white/70 font-mono">
+                    Let users earn while they save for upcoming payments
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Stats */}
+          <div className="mt-8 grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="bg-black border-2 border-[#00FF00] p-6 text-center">
+              <p className="text-3xl font-black text-[#00FF00] font-mono">8%</p>
+              <p className="text-xs text-white/70 font-mono uppercase tracking-wide mt-2">
+                APY_YIELD
+              </p>
+            </div>
+            <div className="bg-black border-2 border-[#00FF00] p-6 text-center">
+              <p className="text-3xl font-black text-[#00FF00] font-mono">
+                &lt;1wk
+              </p>
+              <p className="text-xs text-white/70 font-mono uppercase tracking-wide mt-2">
+                INTEGRATION
+              </p>
+            </div>
+            <div className="bg-black border-2 border-[#00FF00] p-6 text-center">
+              <p className="text-3xl font-black text-[#00FF00] font-mono">
+                $2M+
+              </p>
+              <p className="text-xs text-white/70 font-mono uppercase tracking-wide mt-2">
+                LOI_COMMITMENTS
+              </p>
+            </div>
+            <div className="bg-black border-2 border-[#00FF00] p-6 text-center">
+              <p className="text-3xl font-black text-[#00FF00] font-mono">
+                15+
+              </p>
+              <p className="text-xs text-white/70 font-mono uppercase tracking-wide mt-2">
+                STARTUPS_SIGNED
+              </p>
+            </div>
+          </div>
+
+          {/* CTA */}
+          <div className="mt-8 text-center">
+            <Link
+              href="https://cal.com/team/0finance/30"
+              className="inline-block px-10 py-4 text-base font-bold font-mono uppercase tracking-wider bg-[#00FF00] text-black hover:bg-white transition-all border-2 border-[#00FF00] hover:border-white"
+            >
+              [ REQUEST_API_ACCESS ]
+            </Link>
+          </div>
+        </div>
+      </section>
+
       {/* CTA Section */}
       <section className="bg-black py-16 sm:py-20 border-b-2 border-[#00FF00]">
         <div className="mx-auto max-w-[1000px] px-8 text-center">
@@ -295,17 +443,18 @@ export default function Home() {
               [ CALL_TO_ACTION ]
             </p>
             <h2 className="font-mono text-4xl sm:text-5xl font-black uppercase tracking-wide text-white mb-6">
-              YOUR_STARTUP_COULD_BE_NEXT
+              START_EARNING_4X_MORE
             </h2>
             <p className="text-base sm:text-lg text-white/70 font-mono leading-relaxed max-w-[60ch] mx-auto mb-8">
-              // JOIN THE GROWING LIST OF STARTUPS EARNING 8% APY ON THEIR IDLE CASH. STOP LEAVING MONEY ON THE TABLE.
+              // STOP LEAVING MONEY ON THE TABLE. GET 8% APY HIGH-YIELD SAVINGS
+              ON YOUR IDLE CASH — 4X MORE THAN TRADITIONAL BANKS.
             </p>
             <div className="flex flex-col sm:flex-row gap-5 justify-center items-center">
               <Link
                 href="https://0.finance"
                 className="px-8 py-4 text-base font-bold font-mono uppercase tracking-wider bg-[#00FF00] text-black hover:bg-white transition-all border-2 border-[#00FF00] hover:border-white"
               >
-                [ START_EARNING_8%_APY ]
+                [ OPEN_HIGH_YIELD_ACCOUNT ]
               </Link>
               <Link
                 href="https://cal.com/team/0finance/30"
@@ -341,7 +490,7 @@ export default function Home() {
                   </a>
                 </p>
                 <p className="text-xs text-white/50 font-mono uppercase tracking-wide mt-2">
-                  // HELPING_STARTUPS_MAXIMIZE_RUNWAY
+                  // HIGH_YIELD_SAVINGS_FOR_STARTUPS
                 </p>
               </div>
             </div>

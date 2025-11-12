@@ -356,6 +356,64 @@
         "featured": true,
         "order": 4
       }
+    },
+    {
+      "publishedDate": "2025-01-11",
+      "featuredOrder": 5,
+      "id": "0finance",
+      "name": "0 Finance",
+      "tagline": "High-yield savings for your startup's runway",
+      "description": "Earn 2-3x more than traditional banks on idle cash while maintaining full liquidity. No minimums, no lock-ups, instant withdrawals.",
+      "longDescription": "Open US bank accounts with routing numbers and EU IBANs instantly. Receive wire transfers, ACH, and SEPA payments. Your idle cash automatically sweeps to vetted yield strategies on battle-tested DeFi protocols securing $8B+ in assets. Spend with your global corporate card or withdraw anytime with zero penalties. For fintechs: embed high-yield savings via RESTful API with white-label options and sub-1 week integration.",
+      "logo": "/images/companies/0finance-logo.png",
+      "website": "https://0.finance",
+      "twitter": "https://x.com/0financexyz",
+      "category": "Embedded Finance",
+      "whyWeLoveThem": "From concept to first customers with real deposits in 8 weeks. $2M+ in LOI commitments from 15+ startups. Self-custody architecture means you truly own your funds.",
+      "funding": {
+        "amount": 0,
+        "round": "Pre-Seed",
+        "date": "2025",
+        "valuation": null,
+        "leadInvestors": [
+          "OrangeDAO"
+        ],
+        "announcement": "We raised $170K from OrangeDAO. Now raising $2.5M seed."
+      },
+      "founders": [
+        {
+          "id": "benjamin-shafii",
+          "name": "Benjamin Shafii",
+          "role": "Co-founder & CEO",
+          "twitter": "https://x.com/benjaminshafii",
+          "linkedin": "https://www.linkedin.com/in/ben-shafii-450039107/",
+          "avatar": "/images/founders/benjamin-shafii.jpg",
+          "bio": "Founding engineer at Gnosis Pay ($75M volume). 7 years in crypto payments at Request Network."
+        },
+        {
+          "id": "raghav-aggarwal",
+          "name": "Raghav Aggarwal",
+          "role": "Co-founder & Head of Product",
+          "twitter": "https://x.com/raghavagg",
+          "linkedin": "https://www.linkedin.com/in/raghavagg/",
+          "avatar": "/images/founders/raghav-aggarwal.jpg",
+          "bio": "Employee #2 at Gnosis Pay, Head of Product. Scaled from idea to $75M in transactions. Ex-Bain & Company, London Business School MBA."
+        }
+      ],
+      "metrics": {
+        "loiCommitments": "$2M+ from 15+ startups",
+        "timeToMarket": "8 weeks from concept to first customer",
+        "yieldMultiple": "2-3x traditional bank rates",
+        "apiIntegration": "Sub-1 week integration time",
+        "infrastructure": "$8B+ secured in battle-tested money markets"
+      },
+      "showcase": {
+        "primaryColor": "#6366F1",
+        "gradient": "from-indigo-500 to-purple-600",
+        "emoji": "🏦",
+        "featured": true,
+        "order": 5
+      }
     }
   ],
   "calculatorConfig": {

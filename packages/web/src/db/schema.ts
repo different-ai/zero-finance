@@ -1350,4 +1350,36 @@ export type UserInvoicePreferences = typeof userInvoicePreferences.$inferSelect;
 export type NewUserInvoicePreferences =
   typeof userInvoicePreferences.$inferInsert;
 
+// API Waitlist table
+export const apiWaitlist = pgTable(
+  'api_waitlist',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    email: varchar('email', { length: 255 }),
+    companyName: varchar('company_name', { length: 255 }),
+    useCase: text('use_case'),
+    privyDid: varchar('privy_did', { length: 255 }),
+    userId: varchar('user_id', { length: 255 }),
+    status: varchar('status', { length: 50 }).notNull().default('pending'), // pending, contacted, onboarded
+    notes: text('notes'),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => {
+    return {
+      emailIdx: index('api_waitlist_email_idx').on(table.email),
+      privyDidIdx: index('api_waitlist_privy_did_idx').on(table.privyDid),
+      statusIdx: index('api_waitlist_status_idx').on(table.status),
+    };
+  },
+);
+
+export type ApiWaitlist = typeof apiWaitlist.$inferSelect;
+export type NewApiWaitlist = typeof apiWaitlist.$inferInsert;
+
 // Workspace invite system and extensions - imported from schema/workspaces.ts (see top of file)

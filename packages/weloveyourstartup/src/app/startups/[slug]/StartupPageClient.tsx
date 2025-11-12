@@ -75,6 +75,7 @@ interface Company {
   name: string;
   tagline: string;
   description: string;
+  longDescription?: string;
   category: string;
   logo?: string;
   model3d?: string; // Single model (legacy support)
@@ -155,10 +156,10 @@ function WireframeRocket({
   customModels,
 }: WireframeRocketProps) {
   // Determine which model to show based on scroll progress
-  const modelIndex = Math.min(Math.floor(scrollProgress * 4), 3);
+  const modelIndex = Math.min(Math.floor(scrollProgress * 6), 5);
   const modelPath = customModels
     ? customModels[modelIndex]
-    : MODELS[modelIndex];
+    : MODELS[Math.min(modelIndex, 3)]; // Cap at 3 for default MODELS array (only 4 models)
 
   const { scene } = useGLTF(modelPath);
   const groupRef = useRef<THREE.Group>(null);
@@ -347,7 +348,8 @@ interface StartupPageClientProps {
 const SECTIONS = [
   { id: 'company', label: 'COMPANY', shortLabel: 'INFO', color: '#00FFFF' },
   { id: 'mission', label: 'MISSION', shortLabel: 'MISSION', color: '#00FF00' },
-  { id: 'funding', label: 'FUNDING', shortLabel: 'FUNDING', color: '#FFFF00' },
+  { id: 'product', label: 'PRODUCT', shortLabel: 'PRODUCT', color: '#FFFF00' },
+  { id: 'funding', label: 'FUNDING', shortLabel: 'FUNDING', color: '#FF00FF' },
   { id: 'team', label: 'TEAM', shortLabel: 'TEAM', color: '#00FFFF' },
   { id: 'zero', label: 'ZERO_FINANCE', shortLabel: 'CALC', color: '#FF00FF' },
 ] as const;
@@ -367,8 +369,11 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
   const [showControls, setShowControls] = useState(false);
   const [currentModelIndex, setCurrentModelIndex] = useState(0);
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const [recordingMode, setRecordingMode] = useState<
+    'off' | '16:9' | '9:16' | '1:1'
+  >('off');
 
-  // Model controls for each of the 5 models - use company configs if available
+  // Model controls for each of the 6 models - use company configs if available
   const [modelControls, setModelControls] = useState<ModelControls[]>(
     company.modelConfigs || [
       // Default Model 0 (Section 1 - COMPANY)
@@ -387,7 +392,7 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
         scale: 0.7,
         position: { x: 0, y: 0, z: 12.0 },
       },
-      // Default Model 2 (Section 3 - FUNDING)
+      // Default Model 2 (Section 3 - PRODUCT)
       {
         cameraPosition: [0, 0, 15],
         cameraFov: 75,
@@ -395,7 +400,7 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
         scale: 0.7,
         position: { x: 0, y: 0, z: 12.0 },
       },
-      // Default Model 3 (Section 4 - TEAM)
+      // Default Model 3 (Section 4 - FUNDING)
       {
         cameraPosition: [0, 0, 15],
         cameraFov: 75,
@@ -403,7 +408,15 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
         scale: 0.7,
         position: { x: 0, y: 0, z: 12.0 },
       },
-      // Default Model 4 (Section 5 - ZERO_FINANCE)
+      // Default Model 4 (Section 5 - TEAM)
+      {
+        cameraPosition: [0, 0, 15],
+        cameraFov: 75,
+        rotation: { x: -1.2, y: 0, z: -0.5 },
+        scale: 0.7,
+        position: { x: 0, y: 0, z: 12.0 },
+      },
+      // Default Model 5 (Section 6 - ZERO_FINANCE)
       {
         cameraPosition: [0, 0, 15],
         cameraFov: 75,
@@ -419,8 +432,10 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
     if (company.models3d) {
       return company.models3d; // Use models3d if available
     } else if (company.model3d) {
-      // Convert single model to array of 4
+      // Convert single model to array of 6 (one for each section)
       return [
+        company.model3d,
+        company.model3d,
         company.model3d,
         company.model3d,
         company.model3d,
@@ -443,6 +458,16 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
       if (e.ctrlKey && e.shiftKey && e.key === 'D') {
         e.preventDefault();
         setShowControls((prev) => !prev);
+      }
+      // Toggle recording mode with Ctrl+Shift+R
+      if (e.ctrlKey && e.shiftKey && e.key === 'R') {
+        e.preventDefault();
+        setRecordingMode((prev) => {
+          if (prev === 'off') return '16:9';
+          if (prev === '16:9') return '9:16';
+          if (prev === '9:16') return '1:1';
+          return 'off';
+        });
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -658,11 +683,135 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
     );
   };
 
+  // Calculate recording frame dimensions
+  const recordingFrameStyle = useMemo(() => {
+    if (recordingMode === 'off') return null;
+
+    let aspectRatio: number;
+    let maxWidth: number;
+    let maxHeight: number;
+    let label: string;
+
+    switch (recordingMode) {
+      case '16:9':
+        aspectRatio = 16 / 9;
+        maxWidth = 1920;
+        maxHeight = 1080;
+        label = 'LANDSCAPE (16:9)';
+        break;
+      case '9:16':
+        aspectRatio = 9 / 16;
+        maxWidth = 1080;
+        maxHeight = 1920;
+        label = 'PORTRAIT (9:16)';
+        break;
+      case '1:1':
+        aspectRatio = 1;
+        maxWidth = 1080;
+        maxHeight = 1080;
+        label = 'SQUARE (1:1)';
+        break;
+      default:
+        return null;
+    }
+
+    // Calculate actual frame size based on window size
+    const windowWidth =
+      typeof window !== 'undefined' ? window.innerWidth : 1920;
+    const windowHeight =
+      typeof window !== 'undefined' ? window.innerHeight : 1080;
+
+    let frameWidth = maxWidth;
+    let frameHeight = maxHeight;
+
+    // Scale down to fit window while maintaining aspect ratio
+    if (frameWidth > windowWidth * 0.95) {
+      frameWidth = windowWidth * 0.95;
+      frameHeight = frameWidth / aspectRatio;
+    }
+    if (frameHeight > windowHeight * 0.95) {
+      frameHeight = windowHeight * 0.95;
+      frameWidth = frameHeight * aspectRatio;
+    }
+
+    return {
+      width: `${frameWidth}px`,
+      height: `${frameHeight}px`,
+      label,
+      dimensions: `${maxWidth}×${maxHeight}`,
+    };
+  }, [recordingMode]);
+
   return (
     <div
-      className="min-h-screen relative"
-      style={{ backgroundColor: '#000000' }}
+      className="relative"
+      style={{
+        backgroundColor: '#000000',
+        ...(recordingMode !== 'off' && recordingFrameStyle
+          ? {
+              width: recordingFrameStyle.width,
+              height: recordingFrameStyle.height,
+              overflow: 'hidden',
+              position: 'fixed',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+            }
+          : {
+              minHeight: '100vh',
+            }),
+      }}
     >
+      {/* Recording Mode Frame Overlay */}
+      {recordingMode !== 'off' && recordingFrameStyle && (
+        <>
+          {/* Recording indicator - top */}
+          <div className="absolute -top-8 left-0 font-mono text-[10px] text-[#00FF00] uppercase tracking-wider font-bold flex items-center gap-2 z-[9999]">
+            <span className="w-2 h-2 bg-[#00FF00] rounded-full animate-pulse"></span>
+            REC: {recordingFrameStyle.label}
+          </div>
+
+          {/* Dimensions display - bottom */}
+          <div className="absolute -bottom-7 left-0 font-mono text-[9px] text-[#00FFFF] uppercase tracking-wide z-[9999]">
+            {recordingFrameStyle.dimensions} | CTRL+SHIFT+R
+          </div>
+
+          {/* Corner guides */}
+          <div className="absolute inset-0 pointer-events-none z-[9999]">
+            {/* Corner guides - top-left */}
+            <div className="absolute top-0 left-0 w-8 h-8">
+              <div className="absolute top-0 left-0 w-full h-[2px] bg-[#00FF00]"></div>
+              <div className="absolute top-0 left-0 w-[2px] h-full bg-[#00FF00]"></div>
+            </div>
+            {/* Corner guides - top-right */}
+            <div className="absolute top-0 right-0 w-8 h-8">
+              <div className="absolute top-0 right-0 w-full h-[2px] bg-[#00FF00]"></div>
+              <div className="absolute top-0 right-0 w-[2px] h-full bg-[#00FF00]"></div>
+            </div>
+            {/* Corner guides - bottom-left */}
+            <div className="absolute bottom-0 left-0 w-8 h-8">
+              <div className="absolute bottom-0 left-0 w-full h-[2px] bg-[#00FF00]"></div>
+              <div className="absolute bottom-0 left-0 w-[2px] h-full bg-[#00FF00]"></div>
+            </div>
+            {/* Corner guides - bottom-right */}
+            <div className="absolute bottom-0 right-0 w-8 h-8">
+              <div className="absolute bottom-0 right-0 w-full h-[2px] bg-[#00FF00]"></div>
+              <div className="absolute bottom-0 right-0 w-[2px] h-full bg-[#00FF00]"></div>
+            </div>
+
+            {/* Thirds grid - subtle */}
+            <div className="absolute inset-0">
+              {/* Horizontal thirds */}
+              <div className="absolute top-1/3 left-0 w-full h-[1px] bg-[#00FF00]/15"></div>
+              <div className="absolute top-2/3 left-0 w-full h-[1px] bg-[#00FF00]/15"></div>
+              {/* Vertical thirds */}
+              <div className="absolute top-0 left-1/3 w-[1px] h-full bg-[#00FF00]/15"></div>
+              <div className="absolute top-0 left-2/3 w-[1px] h-full bg-[#00FF00]/15"></div>
+            </div>
+          </div>
+        </>
+      )}
+
       {/* CAD-style vertical wipe transition overlay */}
       {isTransitioning && (
         <>
@@ -709,7 +858,7 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
               ACAD v12 - {company.name.toUpperCase().substring(0, 12)}.DWG
             </span>
             <span className="text-[#00FFFF] flex-shrink-0">
-              SECT: {SECTIONS.findIndex((s) => s.id === activeSection) + 1}/5
+              SECT: {SECTIONS.findIndex((s) => s.id === activeSection) + 1}/6
             </span>
           </div>
 
@@ -754,7 +903,7 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
                 <Suspense fallback={null}>
                   <WireframeRocket
                     scrollProgress={
-                      SECTIONS.findIndex((s) => s.id === activeSection) / 4
+                      SECTIONS.findIndex((s) => s.id === activeSection) / 5
                     }
                     rotation={
                       modelControls[
@@ -833,11 +982,7 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
                     {company.name.toUpperCase()}
                   </h1>
 
-                  <p className="text-sm sm:text-base font-mono tracking-wide uppercase font-bold text-[#00FF00] break-words">
-                    // {company.tagline.toUpperCase()}
-                  </p>
-
-                  <div className="border-2 border-[#00FFFF] bg-[#0000AA]/10 p-3">
+                  <div className="border-2 border-[#00FFFF] bg-[#0000AA]/10 p-3 mt-4">
                     <div className="text-[9px] font-mono font-bold uppercase tracking-wider text-[#FFFF00] mb-2">
                       [ DESCRIPTION ]
                     </div>
@@ -881,28 +1026,51 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
 
                 <div className="space-y-3">
                   <h2 className="text-2xl sm:text-3xl font-black uppercase font-mono tracking-wide text-[#00FFFF] break-words">
+                    Mission Statement
+                  </h2>
+
+                  <div className="border-2 border-[#00FFFF] bg-[#0000AA]/10 p-3">
+                    <div className="text-[9px] font-mono font-bold uppercase tracking-wider text-[#FFFF00] mb-2">
+                      [ TAGLINE ]
+                    </div>
+                    <p className="text-xs sm:text-sm text-white/90 leading-relaxed font-mono break-words">
+                      {company.tagline}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* SECTION 3: PRODUCT */}
+              <div id="product" className="scroll-mt-4">
+                <div className="border border-[#00FFFF]/30 bg-[#0000AA]/20 p-2 mb-3">
+                  <div className="font-mono text-[9px] sm:text-[10px] text-[#FF00FF] uppercase tracking-wider">
+                    &gt;&gt; SECT_03: PRODUCT
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <h2 className="text-2xl sm:text-3xl font-black uppercase font-mono tracking-wide text-[#00FFFF] break-words">
                     The Product
                   </h2>
 
-                  {company.whyWeLoveThem && (
+                  {company.longDescription && (
                     <div className="bg-black border-2 border-[#00FFFF] p-3">
                       <p className="text-[9px] sm:text-[10px] uppercase tracking-wider text-[#00FFFF] font-bold mb-2 font-mono">
-                        [ WHY_WE_LOVE_
-                        {company.name.toUpperCase().replace(/\s+/g, '_')} ]
+                        [ WHAT_YOU_CAN_DO ]
                       </p>
                       <p className="text-white/90 leading-relaxed text-xs sm:text-sm font-mono break-words">
-                        {company.whyWeLoveThem}
+                        {company.longDescription}
                       </p>
                     </div>
                   )}
                 </div>
               </div>
 
-              {/* SECTION 3: FUNDING */}
+              {/* SECTION 4: FUNDING */}
               <div id="funding" className="scroll-mt-4">
                 <div className="border border-[#00FFFF]/30 bg-[#0000AA]/20 p-2 mb-3">
                   <div className="font-mono text-[9px] sm:text-[10px] text-[#FF00FF] uppercase tracking-wider">
-                    &gt;&gt; SECT_03: FUNDING
+                    &gt;&gt; SECT_04: FUNDING
                   </div>
                 </div>
 
@@ -911,25 +1079,39 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
                     CAPITAL_RAISED
                   </h2>
 
-                  <div className="bg-black border-2 border-[#00FFFF] p-4">
-                    <p className="text-[9px] sm:text-[10px] uppercase tracking-widest text-[#00FFFF] mb-2 font-mono font-bold">
-                      [ DATA: FUNDING_AMT ]
-                    </p>
-                    <p className="text-3xl sm:text-4xl font-black text-[#00FFFF] font-mono tracking-tight mb-2">
-                      {formatCurrency(company.funding.amount)}
-                    </p>
-                    <p className="text-[10px] sm:text-xs text-[#00FFFF]/70 font-mono uppercase tracking-wide">
-                      {company.funding.round} / {company.funding.date}
-                    </p>
-                  </div>
+                  {company.funding.amount > 0 ? (
+                    <div className="bg-black border-2 border-[#00FFFF] p-4">
+                      <p className="text-[9px] sm:text-[10px] uppercase tracking-widest text-[#00FFFF] mb-2 font-mono font-bold">
+                        [ DATA: FUNDING_AMT ]
+                      </p>
+                      <p className="text-3xl sm:text-4xl font-black text-[#00FFFF] font-mono tracking-tight mb-2">
+                        {formatCurrency(company.funding.amount)}
+                      </p>
+                      <p className="text-[10px] sm:text-xs text-[#00FFFF]/70 font-mono uppercase tracking-wide">
+                        {company.funding.round} / {company.funding.date}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="bg-black border-2 border-[#00FFFF] p-4">
+                      <p className="text-[9px] sm:text-[10px] uppercase tracking-widest text-[#00FFFF] mb-2 font-mono font-bold">
+                        [ STATUS: FUNDING ]
+                      </p>
+                      <p className="text-2xl sm:text-3xl font-black text-[#00FFFF] font-mono tracking-tight mb-2">
+                        BOOTSTRAPPED
+                      </p>
+                      <p className="text-[10px] sm:text-xs text-[#00FFFF]/70 font-mono uppercase tracking-wide">
+                        SELF_FUNDED / NO_EXTERNAL_CAPITAL
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
 
-              {/* SECTION 4: TEAM */}
+              {/* SECTION 5: TEAM */}
               <div id="team" className="scroll-mt-4">
                 <div className="border border-[#00FFFF]/30 bg-[#0000AA]/20 p-2 mb-3">
                   <div className="font-mono text-[9px] sm:text-[10px] text-[#FF00FF] uppercase tracking-wider">
-                    &gt;&gt; SECT_04: TEAM
+                    &gt;&gt; SECT_05: TEAM
                   </div>
                 </div>
 
@@ -976,11 +1158,11 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
                 </div>
               </div>
 
-              {/* SECTION 5: ZERO_FINANCE */}
+              {/* SECTION 6: ZERO_FINANCE */}
               <div id="zero" className="scroll-mt-4 pb-4">
                 <div className="border border-[#00FFFF]/30 bg-[#0000AA]/20 p-2 mb-3">
                   <div className="font-mono text-[9px] sm:text-[10px] text-[#FF00FF] uppercase tracking-wider">
-                    &gt;&gt; SECT_05: ZERO_FINANCE
+                    &gt;&gt; SECT_06: ZERO_FINANCE
                   </div>
                 </div>
 
@@ -1034,7 +1216,7 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
       {/* AutoCAD-style Right Sidebar Navigation (desktop only) */}
       {!isMobile && (
         <div
-          className="fixed right-0 top-0 h-screen w-64 bg-[#0000AA] border-l-2 border-[#00FFFF] z-50 flex flex-col"
+          className={`${recordingMode === 'off' ? 'fixed h-screen' : 'absolute h-full'} right-0 top-0 w-64 bg-[#0000AA] border-l-2 border-[#00FFFF] z-50 flex flex-col`}
           style={{ fontFamily: 'monospace' }}
         >
           {/* Header */}
@@ -1089,7 +1271,9 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
 
       {/* Main Content - Full-screen sections on desktop only */}
       {!isMobile && (
-        <div className="lg:pr-64">
+        <div
+          className={`lg:pr-64 ${recordingMode !== 'off' ? 'h-full overflow-hidden' : ''}`}
+        >
           <div
             key={`desktop-content-${activeSection}-${isTransitioning}`}
             className={!isTransitioning ? 'cad-redraw' : ''}
@@ -1097,7 +1281,7 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
             {/* SECTION 1: COMPANY */}
             <section
               id="company"
-              className="min-h-screen flex flex-col justify-center px-16 py-16"
+              className={`${recordingMode === 'off' ? 'min-h-screen' : 'h-full'} flex flex-col justify-center px-16 py-16`}
             >
               <div className="text-xs uppercase tracking-widest text-[#FF00FF] font-mono font-bold mb-8">
                 {'>> SECTION_01: COMPANY'}
@@ -1110,7 +1294,7 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
                   </div>
 
                   <h1
-                    className="text-8xl lg:text-9xl font-black tracking-tight leading-none uppercase font-mono mb-6"
+                    className="text-8xl lg:text-9xl font-black tracking-tight leading-none uppercase font-mono mb-10"
                     style={{
                       color: '#00FFFF',
                       letterSpacing: '0.05em',
@@ -1118,10 +1302,6 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
                   >
                     {company.name.toUpperCase()}
                   </h1>
-
-                  <p className="text-2xl lg:text-3xl font-mono max-w-4xl tracking-wide uppercase font-bold text-[#00FF00] mb-10">
-                    // {company.tagline.toUpperCase()}
-                  </p>
 
                   <div className="mb-10">
                     <div className="text-sm font-mono font-bold uppercase tracking-wider text-[#FFFF00] mb-3">
@@ -1208,7 +1388,7 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
             {/* SECTION 2: MISSION */}
             <section
               id="mission"
-              className="min-h-screen flex flex-col justify-center px-16 py-16"
+              className={`${recordingMode === 'off' ? 'min-h-screen' : 'h-full'} flex flex-col justify-center px-16 py-16`}
             >
               <div className="text-xs uppercase tracking-widest text-[#FF00FF] font-mono font-bold mb-8">
                 {'>> SECTION_02: MISSION'}
@@ -1220,20 +1400,17 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
                     className="text-6xl lg:text-7xl font-black uppercase font-mono tracking-wide"
                     style={{ color: '#00FFFF' }}
                   >
-                    The Product
+                    Mission Statement
                   </h2>
 
-                  {company.whyWeLoveThem && (
-                    <div className="bg-black border-2 border-[#00FFFF] p-10">
-                      <p className="text-sm uppercase tracking-wider text-[#00FFFF] font-bold mb-6 font-mono">
-                        [ NOTE: WHY_WE_LOVE_
-                        {company.name.toUpperCase().replace(/\s+/g, '_')} ]
-                      </p>
-                      <p className="text-white/90 leading-relaxed text-xl lg:text-2xl font-mono">
-                        {company.whyWeLoveThem}
-                      </p>
-                    </div>
-                  )}
+                  <div className="bg-black border-2 border-[#00FFFF] p-10">
+                    <p className="text-sm uppercase tracking-wider text-[#00FFFF] font-bold mb-6 font-mono">
+                      [ TAGLINE ]
+                    </p>
+                    <p className="text-white/90 leading-relaxed text-xl lg:text-2xl font-mono">
+                      {company.tagline}
+                    </p>
+                  </div>
                 </div>
 
                 {/* 3D Model - Apollo Soyuz - on right, aligned with text box */}
@@ -1262,7 +1439,7 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
                       <directionalLight position={[5, 5, 5]} intensity={0.4} />
                       <Suspense fallback={null}>
                         <WireframeRocket
-                          scrollProgress={1 / 3}
+                          scrollProgress={1 / 5}
                           rotation={modelControls[1].rotation}
                           scale={modelControls[1].scale}
                           position={modelControls[1].position}
@@ -1276,13 +1453,83 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
               </div>
             </section>
 
-            {/* SECTION 3: FUNDING */}
+            {/* SECTION 3: PRODUCT */}
             <section
-              id="funding"
-              className="min-h-screen flex flex-col justify-center px-16 py-16"
+              id="product"
+              className={`${recordingMode === 'off' ? 'min-h-screen' : 'h-full'} flex flex-col justify-center px-16 py-16`}
             >
               <div className="text-xs uppercase tracking-widest text-[#FF00FF] font-mono font-bold mb-8">
-                {'>> SECTION_03: FUNDING'}
+                {'>> SECTION_03: PRODUCT'}
+              </div>
+
+              <div className="flex flex-col lg:flex-row gap-12 items-end">
+                <div className="flex-1 space-y-8 max-w-3xl">
+                  <h2
+                    className="text-6xl lg:text-7xl font-black uppercase font-mono tracking-wide"
+                    style={{ color: '#00FFFF' }}
+                  >
+                    The Product
+                  </h2>
+
+                  {company.longDescription && (
+                    <div className="bg-black border-2 border-[#00FFFF] p-10">
+                      <p className="text-sm uppercase tracking-wider text-[#00FFFF] font-bold mb-6 font-mono">
+                        [ WHAT_YOU_CAN_DO ]
+                      </p>
+                      <p className="text-white/90 leading-relaxed text-xl lg:text-2xl font-mono">
+                        {company.longDescription}
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                {/* 3D Model - on right */}
+                {!isMobile && (
+                  <CADViewport
+                    label="MODEL_03"
+                    viewType="PERSPECTIVE"
+                    className="w-full lg:w-[450px] h-[450px] flex-shrink-0"
+                  >
+                    <Canvas
+                      camera={{
+                        position: modelControls[2].cameraPosition,
+                        fov: modelControls[2].cameraFov,
+                      }}
+                      dpr={[1, 1.5]}
+                      performance={{ min: 0.5 }}
+                      style={{ backgroundColor: '#000000' }}
+                    >
+                      <PerspectiveCamera
+                        makeDefault
+                        position={modelControls[2].cameraPosition}
+                        fov={modelControls[2].cameraFov}
+                      />
+                      <CameraDrift />
+                      <ambientLight intensity={0.2} />
+                      <directionalLight position={[5, 5, 5]} intensity={0.4} />
+                      <Suspense fallback={null}>
+                        <WireframeRocket
+                          scrollProgress={2 / 5}
+                          rotation={modelControls[2].rotation}
+                          scale={modelControls[2].scale}
+                          position={modelControls[2].position}
+                          customModels={customModels}
+                        />
+                      </Suspense>
+                      {/* No effects for PRODUCT section */}
+                    </Canvas>
+                  </CADViewport>
+                )}
+              </div>
+            </section>
+
+            {/* SECTION 4: FUNDING */}
+            <section
+              id="funding"
+              className={`${recordingMode === 'off' ? 'min-h-screen' : 'h-full'} flex flex-col justify-center px-16 py-16`}
+            >
+              <div className="text-xs uppercase tracking-widest text-[#FF00FF] font-mono font-bold mb-8">
+                {'>> SECTION_04: FUNDING'}
               </div>
 
               <h2
@@ -1293,27 +1540,41 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
               </h2>
 
               <div className="max-w-3xl">
-                <div className="bg-black border-3 border-[#00FFFF] p-10 border-2">
-                  <p className="text-sm uppercase tracking-widest text-[#00FFFF] mb-6 font-mono font-bold">
-                    [ DATA: FUNDING_AMOUNT ]
-                  </p>
-                  <p className="text-6xl lg:text-7xl font-black text-[#00FFFF] font-mono tracking-tight mb-4">
-                    {formatCurrency(company.funding.amount)}
-                  </p>
-                  <p className="text-lg text-[#00FFFF]/70 font-mono uppercase tracking-wide">
-                    {company.funding.round} / {company.funding.date}
-                  </p>
-                </div>
+                {company.funding.amount > 0 ? (
+                  <div className="bg-black border-3 border-[#00FFFF] p-10 border-2">
+                    <p className="text-sm uppercase tracking-widest text-[#00FFFF] mb-6 font-mono font-bold">
+                      [ DATA: FUNDING_AMOUNT ]
+                    </p>
+                    <p className="text-6xl lg:text-7xl font-black text-[#00FFFF] font-mono tracking-tight mb-4">
+                      {formatCurrency(company.funding.amount)}
+                    </p>
+                    <p className="text-lg text-[#00FFFF]/70 font-mono uppercase tracking-wide">
+                      {company.funding.round} / {company.funding.date}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="bg-black border-3 border-[#00FFFF] p-10 border-2">
+                    <p className="text-sm uppercase tracking-widest text-[#00FFFF] mb-6 font-mono font-bold">
+                      [ STATUS: FUNDING ]
+                    </p>
+                    <p className="text-5xl lg:text-6xl font-black text-[#00FFFF] font-mono tracking-tight mb-4">
+                      BOOTSTRAPPED
+                    </p>
+                    <p className="text-lg text-[#00FFFF]/70 font-mono uppercase tracking-wide">
+                      SELF_FUNDED / NO_EXTERNAL_CAPITAL
+                    </p>
+                  </div>
+                )}
               </div>
             </section>
 
-            {/* SECTION 4: TEAM */}
+            {/* SECTION 5: TEAM */}
             <section
               id="team"
-              className="min-h-screen flex flex-col justify-center px-16 py-16"
+              className={`${recordingMode === 'off' ? 'min-h-screen' : 'h-full'} flex flex-col justify-center px-16 py-16`}
             >
               <div className="text-xs uppercase tracking-widest text-[#FF00FF] font-mono font-bold mb-8">
-                {'>> SECTION_04: TEAM'}
+                {'>> SECTION_05: TEAM'}
               </div>
 
               <div className="flex flex-col lg:flex-row gap-12 items-start">
@@ -1365,14 +1626,14 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
                 {/* 3D Model - Space Suit - on right */}
                 {!isMobile && (
                   <CADViewport
-                    label="MODEL_04"
+                    label="MODEL_05"
                     viewType="PERSPECTIVE"
                     className="w-full lg:w-[450px] h-[450px] flex-shrink-0"
                   >
                     <Canvas
                       camera={{
-                        position: modelControls[3].cameraPosition,
-                        fov: modelControls[3].cameraFov,
+                        position: modelControls[4].cameraPosition,
+                        fov: modelControls[4].cameraFov,
                       }}
                       dpr={[1, 1.5]}
                       performance={{ min: 0.5 }}
@@ -1380,18 +1641,18 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
                     >
                       <PerspectiveCamera
                         makeDefault
-                        position={modelControls[3].cameraPosition}
-                        fov={modelControls[3].cameraFov}
+                        position={modelControls[4].cameraPosition}
+                        fov={modelControls[4].cameraFov}
                       />
                       <CameraDrift />
                       <ambientLight intensity={0.2} />
                       <directionalLight position={[5, 5, 5]} intensity={0.4} />
                       <Suspense fallback={null}>
                         <WireframeRocket
-                          scrollProgress={2 / 3}
-                          rotation={modelControls[3].rotation}
-                          scale={modelControls[3].scale}
-                          position={modelControls[3].position}
+                          scrollProgress={4 / 5}
+                          rotation={modelControls[4].rotation}
+                          scale={modelControls[4].scale}
+                          position={modelControls[4].position}
                           customModels={customModels}
                         />
                       </Suspense>
@@ -1402,13 +1663,13 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
               </div>
             </section>
 
-            {/* SECTION 5: ZERO_FINANCE (Separate Plug/Shill) */}
+            {/* SECTION 6: ZERO_FINANCE (Separate Plug/Shill) */}
             <section
               id="zero"
-              className="min-h-screen flex flex-col justify-center px-16 py-16"
+              className={`${recordingMode === 'off' ? 'min-h-screen' : 'h-full'} flex flex-col justify-center px-16 py-16`}
             >
               <div className="text-xs uppercase tracking-widest text-[#FF00FF] font-mono font-bold mb-8">
-                {'>> SECTION_05: ZERO_FINANCE'}
+                {'>> SECTION_06: ZERO_FINANCE'}
               </div>
 
               <div className="max-w-4xl space-y-10">
@@ -1460,8 +1721,8 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
           {/* Model Selector */}
           <div className="mb-4">
             <label className="text-[#FFFF00] block mb-2">SELECT MODEL:</label>
-            <div className="grid grid-cols-4 gap-1">
-              {[0, 1, 2, 3].map((idx) => (
+            <div className="grid grid-cols-3 gap-1">
+              {[0, 1, 2, 3, 4, 5].map((idx) => (
                 <button
                   key={idx}
                   onClick={() => setCurrentModelIndex(idx)}
@@ -1477,7 +1738,7 @@ export function StartupPageClient({ company }: StartupPageClientProps) {
             </div>
             <div className="text-[#00FFFF] mt-2 text-[10px]">
               Section:{' '}
-              {['COMPANY', 'MISSION', 'FUNDING', 'TEAM'][currentModelIndex]}
+              {['COMPANY', 'MISSION', 'PRODUCT', 'FUNDING', 'TEAM', 'ZERO'][currentModelIndex]}
             </div>
           </div>
 

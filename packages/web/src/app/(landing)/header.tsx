@@ -21,7 +21,13 @@ export function Header() {
               finance
             </span>
           </Link>
-          <nav className="flex items-center gap-3 sm:gap-4">
+          <nav className="flex items-center gap-2 sm:gap-3">
+            <Link
+              className="hidden sm:inline-flex px-3 sm:px-4 py-1.5 sm:py-2 text-[#101010] hover:text-[#0050ff] text-[12px] sm:text-[13px] font-medium transition-colors"
+              href="#api-access"
+            >
+              API
+            </Link>
             <Link
               className="px-3 sm:px-4 py-1.5 sm:py-2 text-[#101010] hover:text-[#0050ff] text-[12px] sm:text-[13px] font-medium transition-colors"
               href="/dashboard?demo=true"

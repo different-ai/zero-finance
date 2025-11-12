@@ -51,7 +51,8 @@
       "WebFetch(domain:codepen.io)",
       "WebFetch(domain:aleclownes.com)",
       "WebFetch(domain:tympanus.net)",
-      "WebFetch(domain:github.com)"
+      "WebFetch(domain:github.com)",
+      "mcp__notion__notion-update-database"
     ],
     "deny": [],
     "ask": []

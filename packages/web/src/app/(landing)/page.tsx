@@ -4,9 +4,11 @@ import React, { useState } from 'react';
 import { Header } from './header';
 import { HeroSection } from './hero-section';
 import { WhatYouGetSection } from './what-you-get-section';
+import { ApiWaitlistSection } from './api-waitlist-section';
 import { FinalCTASection } from './final-cta-section';
 import { DepositModal } from './deposit-modal';
 import { TransferModal } from './transfer-modal';
+import { joinApiWaitlist } from '@/actions/api-waitlist';
 
 export default function CryptoLandingPage() {
   const [showDepositModal, setShowDepositModal] = useState(false);
@@ -17,6 +19,7 @@ export default function CryptoLandingPage() {
       <Header />
       <HeroSection />
       <WhatYouGetSection />
+      <ApiWaitlistSection onSubmit={joinApiWaitlist} />
       {/* <TestimonialSection /> */}
       <FinalCTASection />
 

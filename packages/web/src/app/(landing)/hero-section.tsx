@@ -18,18 +18,18 @@ export function HeroSection() {
           {/* <GradientBackground variant="hero" className="z-0 bg-[#F6F5EF] " /> */}
           <div className="relative z-10 mx-auto max-w-[1200px] px-4 sm:px-6 lg:px-8 pt-16 sm:pt-20 lg:pt-24 w-full">
             <p className="uppercase tracking-[0.14em] sm:tracking-[0.18em] text-[11px] sm:text-[12px] lg:text-[13px] font-medium text-[#101010]/70">
-              Turn idle cash into headcount
+              High-Yield Business Savings
             </p>
             <h1 className="mt-3 font-serif text-[36px] sm:text-[52px] md:text-[72px] lg:text-[88px] leading-[0.96] tracking-[-0.015em] text-[#101010]">
-              <span className="block text-[#1B29FF] text-[44px] sm:text-[64px] md:text-[88px] lg:text-[108px] leading-[0.9]">
-                Your idle cash
+              <span className="text-[#1B29FF] text-[44px] sm:text-[64px] md:text-[88px] lg:text-[108px] leading-[0.9]">
+                High-yield savings
               </span>{' '}
-              could hire your <span className="italic">next engineer</span>
+              for your startup's runway
             </h1>
             <p className="mt-4 sm:mt-6 max-w-[62ch] text-[15px] sm:text-[16px] lg:text-[18px] leading-[1.5] text-[#222]">
               Open US or EU account numbers, wire USD or USDC. We automatically
-              place your funds into vetted yield strategies with defined
-              insurance coverage. Withdraw any time.
+              place your idle funds into vetted yield strategies. Withdraw
+              anytime with zero penalties or lock-ups.
             </p>
             <div className="mt-3 flex items-center gap-2 text-[13px] text-[#101010]/60">
               <svg
@@ -90,7 +90,7 @@ export function HeroSection() {
                       $2,480,930.22
                     </div>
                     <div className="mt-1 text-[13px] sm:text-[14px] text-[#1B29FF] font-medium">
-                      +$679.45 today (8% APY)
+                      +$679.45 today
                     </div>
                   </div>
                   <div className="sm:text-right">
@@ -252,8 +252,8 @@ export function HeroSection() {
                 Auto-sweep idle cash
               </h3>
               <p className="mt-1 text-[13px] sm:text-[14px] text-[#101010]/70">
-                Funds above your threshold automatically sweep to earn 8% APY.
-                No manual transfers.
+                Funds above your threshold automatically sweep to high-yield
+                strategies. No manual transfers.
               </p>
             </div>
             <div className="p-4 sm:p-6">
@@ -261,11 +261,11 @@ export function HeroSection() {
                 3
               </div>
               <h3 className="mt-2 text-[15px] sm:text-[16px] font-medium text-[#101010]">
-                Connect your bank
+                Spend & withdraw freely
               </h3>
               <p className="mt-1 text-[13px] sm:text-[14px] text-[#101010]/70">
-                Link Mercury, Brex, or any bank via Plaid. Set your operating
-                balance threshold.
+                Use your corporate card globally or withdraw anytime. No
+                penalties, no lock-ups, instant liquidity.
               </p>
               <div className="mt-3 flex items-center">
                 <img

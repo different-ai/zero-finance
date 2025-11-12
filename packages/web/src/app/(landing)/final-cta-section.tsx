@@ -11,22 +11,23 @@ export function FinalCTASection() {
         <div className="mx-auto max-w-[1200px] px-4 sm:px-6 lg:px-8">
           <div className="max-w-[800px]">
             <h2 className="font-serif text-[28px] sm:text-[36px] lg:text-[48px] leading-[1.1] tracking-[-0.01em] text-[#101010]">
-              Ready to earn 8% on your startup&apos;s funds?
+              Start Earning <span className="text-[#1B29FF]">High Yield</span>{' '}
+              on Your Runway
             </h2>
             <p className="mt-3 sm:mt-4 text-[15px] sm:text-[16px] lg:text-[18px] text-[#101010]/70">
-              Join startups securing their future with insured yield
-              opportunities.
+              Stop leaving money on the table. Get competitive high-yield
+              savings with no minimums, no lock-ups, and full liquidity.
             </p>
             <p className="mt-2 text-[14px] sm:text-[15px] font-medium text-[#101010]">
-              $1M+ Platform - Leading startups are committing over $1M to earn
-              insured yields on their treasury.
+              Trusted by leading startups securing over $2M+ in high-yield
+              deposits.
             </p>
             <div className="mt-6 sm:mt-8 flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6">
               <Link
                 href="/signin?source=crypto"
                 className="inline-flex items-center px-6 py-3 text-[15px] sm:text-[16px] font-medium text-white bg-[#1B29FF] hover:bg-[#1420CC] rounded-md transition-colors"
               >
-                Open account →
+                Open high-yield account →
               </Link>
               <Link
                 href="https://cal.com/team/0finance/30"
@@ -185,8 +186,8 @@ export function FinalCTASection() {
                   © 2025 0 Finance
                 </span>
                 <span className="text-[12px] text-[#101010]/40">
-                  8% target yield through DeFi protocols with smart contract
-                  insurance
+                  High-yield strategies through vetted DeFi protocols with smart
+                  contract insurance
                 </span>
               </div>
               <div className="flex items-center gap-2">
@@ -195,6 +196,10 @@ export function FinalCTASection() {
                 </span>
                 <OrangeDAOLogo className="h-4 sm:h-5 w-auto opacity-50 grayscale" />
               </div>
+            </div>
+            <div className="mt-4 text-[11px] text-[#101010]/40 leading-relaxed">
+              High-yield strategies target 2-3x traditional bank rates through
+              vetted DeFi protocols with insurance coverage.
             </div>
           </div>
         </div>

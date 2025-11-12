@@ -12,8 +12,10 @@ export interface Funding {
   amount: number;
   round: string;
   date: string;
-  valuation?: number;
+  valuation?: number | null;
   leadInvestors?: string[];
+  participatingInvestors?: string[];
+  angels?: string[];
   announcement?: string;
 }
 
@@ -31,7 +33,9 @@ export interface Company {
   funFact?: string;
   funding: Funding;
   founders: Founder[];
-  metrics?: Record<string, string>;
+  metrics?: Record<string, string | undefined>;
+  publishedDate?: string;
+  featuredOrder?: number;
   showcase?: {
     primaryColor?: string;
     gradient?: string;
