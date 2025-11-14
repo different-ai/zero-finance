@@ -1,9 +1,5 @@
 'use server';
 
-import { db } from '@/db';
-import { apiWaitlist } from '@/db/schema';
-import { eq } from 'drizzle-orm';
-
 // Helper to send Loops transactional emails
 async function sendLoopsTransactionalEmail({
   transactionalId,
@@ -69,44 +65,7 @@ export async function joinApiWaitlist(data: {
       };
     }
 
-    // Check if email or privyDid already exists
-    if (data.email) {
-      const existing = await db.query.apiWaitlist.findFirst({
-        where: eq(apiWaitlist.email, data.email),
-      });
-
-      if (existing) {
-        return {
-          success: false,
-          message: 'This email is already on the waitlist',
-        };
-      }
-    }
-
-    if (data.privyDid) {
-      const existing = await db.query.apiWaitlist.findFirst({
-        where: eq(apiWaitlist.privyDid, data.privyDid),
-      });
-
-      if (existing) {
-        return {
-          success: false,
-          message: 'You are already on the waitlist',
-        };
-      }
-    }
-
-    // Insert into waitlist
-    await db.insert(apiWaitlist).values({
-      email: data.email,
-      companyName: data.companyName,
-      useCase: data.useCase || null,
-      privyDid: data.privyDid || null,
-      userId: data.userId || null,
-      status: 'pending',
-    });
-
-    // Send emails via Loops
+    // Send emails via Loops (no database needed - all tracking in Loops)
     const userConfirmationId =
       process.env.LOOPS_TRANSACTIONAL_ID_API_WAITLIST_CONFIRMATION;
     const internalNotificationId =

@@ -40,7 +40,7 @@ Hi {{companyName}} team,
 
 Thanks for your interest in 0 Finance's API!
 
-We're excited to help you embed high-yield savings (8%+ APY) into your product. We handle the DeFi complexity, insurance, and compliance — you get a clean REST API.
+We're excited to help you embed high-yield savings into your product. We handle the DeFi complexity, insurance, and compliance — you get a clean REST API.
 
 **What's Next:**
 
