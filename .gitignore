@@ -72,3 +72,4 @@ data/
 
 # Research documentation
 research/
+.claude/settings.local.json
