@@ -41,10 +41,10 @@ export async function joinApiWaitlist(data: {
             transactionalId: process.env.LOOPS_TRANSACTIONAL_ID_API_WAITLIST_INTERNAL,
             dataVariables: {
               companyName: data.companyName,
-              userEmail: data.email || 'Not provided',
+              email: data.email || 'Not provided',
               useCase: data.useCase || 'Not provided',
-              privyDid: data.privyDid || 'N/A',
-              submittedAt: new Date().toISOString(),
+              privyId: data.privyDid || 'N/A',
+              timestamp: new Date().toISOString(),
             },
           }),
         });
