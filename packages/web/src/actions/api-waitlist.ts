@@ -29,47 +29,83 @@ export async function joinApiWaitlist(data: {
     const LOOPS_API_BASE_URL = 'https://app.loops.so/api/v1';
 
     console.log('LOOPS_API_KEY:', !!LOOPS_API_KEY);
+    console.log('LOOPS_TRANSACTIONAL_ID_API_WAITLIST_INTERNAL:', process.env.LOOPS_TRANSACTIONAL_ID_API_WAITLIST_INTERNAL);
+    console.log('LOOPS_TRANSACTIONAL_ID_API_WAITLIST_CONFIRMATION:', process.env.LOOPS_TRANSACTIONAL_ID_API_WAITLIST_CONFIRMATION);
+    console.log('INTERNAL_NOTIFICATION_EMAIL:', process.env.INTERNAL_NOTIFICATION_EMAIL || 'ben@0.finance');
+    
     if (LOOPS_API_KEY) {
       try {
         // Send internal notification
-        await fetch(`${LOOPS_API_BASE_URL}/transactional`, {
+        const internalEmailPayload = {
+          email: process.env.INTERNAL_NOTIFICATION_EMAIL || 'ben@0.finance',
+          transactionalId: process.env.LOOPS_TRANSACTIONAL_ID_API_WAITLIST_INTERNAL,
+          dataVariables: {
+            companyName: data.companyName,
+            email: data.email || 'Not provided',
+            useCase: data.useCase || 'Not provided',
+            privyId: data.privyDid || 'N/A',
+            timestamp: new Date().toISOString(),
+          },
+        };
+        
+        console.log('[INTERNAL EMAIL] Request:', JSON.stringify({
+          url: `${LOOPS_API_BASE_URL}/transactional`,
+          method: 'POST',
+          payload: internalEmailPayload,
+        }, null, 2));
+        
+        const internalResponse = await fetch(`${LOOPS_API_BASE_URL}/transactional`, {
           method: 'POST',
           headers: {
             Authorization: `Bearer ${LOOPS_API_KEY}`,
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({
-            email: process.env.INTERNAL_NOTIFICATION_EMAIL || 'ben@0.finance',
-            transactionalId: process.env.LOOPS_TRANSACTIONAL_ID_API_WAITLIST_INTERNAL,
-            dataVariables: {
-              companyName: data.companyName,
-              email: data.email || 'Not provided',
-              useCase: data.useCase || 'Not provided',
-              privyId: data.privyDid || 'N/A',
-              timestamp: new Date().toISOString(),
-            },
-          }),
+          body: JSON.stringify(internalEmailPayload),
         });
+        
+        const internalResponseText = await internalResponse.text();
+        console.log('[INTERNAL EMAIL] Response status:', internalResponse.status);
+        console.log('[INTERNAL EMAIL] Response body:', internalResponseText);
+        
+        if (!internalResponse.ok) {
+          console.error('[INTERNAL EMAIL] Failed with status:', internalResponse.status);
+        }
 
         // Send user confirmation if they provided an email
         console.log('Sending user confirmation email to:', data.email);
         if (data.email) {
-          await fetch(`${LOOPS_API_BASE_URL}/transactional`, {
+          const userEmailPayload = {
+            email: data.email,
+            transactionalId: process.env.LOOPS_TRANSACTIONAL_ID_API_WAITLIST_CONFIRMATION,
+            dataVariables: {
+              companyName: data.companyName,
+              useCase: data.useCase || 'Not provided',
+              calLink: 'https://cal.com/team/0finance/30',
+            },
+          };
+          
+          console.log('[USER EMAIL] Request:', JSON.stringify({
+            url: `${LOOPS_API_BASE_URL}/transactional`,
+            method: 'POST',
+            payload: userEmailPayload,
+          }, null, 2));
+          
+          const userResponse = await fetch(`${LOOPS_API_BASE_URL}/transactional`, {
             method: 'POST',
             headers: {
               Authorization: `Bearer ${LOOPS_API_KEY}`,
               'Content-Type': 'application/json',
             },
-            body: JSON.stringify({
-              email: data.email,
-              transactionalId: process.env.LOOPS_TRANSACTIONAL_ID_API_WAITLIST_CONFIRMATION,
-              dataVariables: {
-                companyName: data.companyName,
-                useCase: data.useCase || 'Not provided',
-                calLink: 'https://cal.com/team/0finance/30',
-              },
-            }),
+            body: JSON.stringify(userEmailPayload),
           });
+          
+          const userResponseText = await userResponse.text();
+          console.log('[USER EMAIL] Response status:', userResponse.status);
+          console.log('[USER EMAIL] Response body:', userResponseText);
+          
+          if (!userResponse.ok) {
+            console.error('[USER EMAIL] Failed with status:', userResponse.status);
+          }
         }
 
         console.log('Successfully sent API waitlist emails via Loops.');
