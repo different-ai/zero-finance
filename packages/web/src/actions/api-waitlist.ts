@@ -1,8 +1,5 @@
 'use server';
 
-const LOOPS_API_KEY = process.env.LOOPS_API_KEY;
-const LOOPS_API_BASE_URL = 'https://app.loops.so/api/v1';
-
 export async function joinApiWaitlist(data: {
   email?: string;
   companyName?: string;
@@ -26,7 +23,10 @@ export async function joinApiWaitlist(data: {
       };
     }
 
-    // Send emails via Loops (using same pattern as feedback-router and workspace-router)
+    // Send emails via Loops - access env vars inside function for Server Actions
+    const LOOPS_API_KEY = process.env.LOOPS_API_KEY;
+    const LOOPS_API_BASE_URL = 'https://app.loops.so/api/v1';
+
     if (LOOPS_API_KEY) {
       try {
         // Send internal notification
