@@ -91,7 +91,7 @@ export async function joinApiWaitlist(data: {
             email: internalEmail,
             dataVariables: {
               companyName: data.companyName,
-              email: data.email,
+              email: data.email || 'N/A',
               useCase: data.useCase || 'Not provided',
               privyDid: data.privyDid || 'N/A',
               timestamp: new Date().toISOString(),
