@@ -72,9 +72,12 @@ export async function joinApiWaitlist(data: {
       process.env.LOOPS_TRANSACTIONAL_ID_API_WAITLIST_INTERNAL;
     const internalEmail = process.env.INTERNAL_NOTIFICATION_EMAIL || 'team@example.com';
 
-    if (data.email && userConfirmationId && internalNotificationId) {
-      try {
-        // Build internal notification dataVariables, excluding email if not provided
+    try {
+      const emailPromises = [];
+
+      // Always send internal notification if configured
+      if (internalNotificationId) {
+        // Build internal notification dataVariables
         const internalDataVariables: Record<string, string> = {
           companyName: data.companyName,
           useCase: data.useCase || 'Not provided',
@@ -82,13 +85,23 @@ export async function joinApiWaitlist(data: {
           timestamp: new Date().toISOString(),
         };
 
-        // Only include email if it's a valid email address (Loops validates this field)
+        // Only include email field if provided (Loops validates this as email format)
         if (data.email) {
           internalDataVariables.email = data.email;
         }
 
-        await Promise.all([
-          // Send confirmation email to the user
+        emailPromises.push(
+          sendLoopsTransactionalEmail({
+            transactionalId: internalNotificationId,
+            email: internalEmail,
+            dataVariables: internalDataVariables,
+          })
+        );
+      }
+
+      // Send user confirmation only if they provided an email
+      if (data.email && userConfirmationId) {
+        emailPromises.push(
           sendLoopsTransactionalEmail({
             transactionalId: userConfirmationId,
             email: data.email,
@@ -97,21 +110,19 @@ export async function joinApiWaitlist(data: {
               useCase: data.useCase || 'Not provided',
               calLink: 'https://cal.com/team/0finance/30',
             },
-          }),
-          // Send notification email to internal team
-          sendLoopsTransactionalEmail({
-            transactionalId: internalNotificationId,
-            email: internalEmail,
-            dataVariables: internalDataVariables,
-          }),
-        ]);
-        console.log('Successfully sent API waitlist emails via Loops.');
-      } catch (emailError) {
-        console.error('Failed to send emails, but user was added to waitlist:', emailError);
-        // Don't fail the whole operation if emails fail
+          })
+        );
       }
-    } else {
-      console.warn('Loops transactional IDs not configured. Skipping emails.');
+
+      if (emailPromises.length > 0) {
+        await Promise.all(emailPromises);
+        console.log('Successfully sent API waitlist emails via Loops.');
+      } else {
+        console.warn('Loops transactional IDs not configured. Skipping emails.');
+      }
+    } catch (emailError) {
+      console.error('Failed to send emails, but user was added to waitlist:', emailError);
+      // Don't fail the whole operation if emails fail
     }
 
     return {
