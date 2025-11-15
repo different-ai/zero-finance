@@ -74,6 +74,19 @@ export async function joinApiWaitlist(data: {
 
     if (data.email && userConfirmationId && internalNotificationId) {
       try {
+        // Build internal notification dataVariables, excluding email if not provided
+        const internalDataVariables: Record<string, string> = {
+          companyName: data.companyName,
+          useCase: data.useCase || 'Not provided',
+          privyDid: data.privyDid || 'N/A',
+          timestamp: new Date().toISOString(),
+        };
+
+        // Only include email if it's a valid email address (Loops validates this field)
+        if (data.email) {
+          internalDataVariables.email = data.email;
+        }
+
         await Promise.all([
           // Send confirmation email to the user
           sendLoopsTransactionalEmail({
@@ -89,13 +102,7 @@ export async function joinApiWaitlist(data: {
           sendLoopsTransactionalEmail({
             transactionalId: internalNotificationId,
             email: internalEmail,
-            dataVariables: {
-              companyName: data.companyName,
-              email: data.email || 'N/A',
-              useCase: data.useCase || 'Not provided',
-              privyDid: data.privyDid || 'N/A',
-              timestamp: new Date().toISOString(),
-            },
+            dataVariables: internalDataVariables,
           }),
         ]);
         console.log('Successfully sent API waitlist emails via Loops.');
