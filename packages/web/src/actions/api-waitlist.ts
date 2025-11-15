@@ -28,6 +28,7 @@ export async function joinApiWaitlist(data: {
     const LOOPS_API_KEY = process.env.LOOPS_API_KEY;
     const LOOPS_API_BASE_URL = 'https://app.loops.so/api/v1';
 
+    console.log('LOOPS_API_KEY:', !!LOOPS_API_KEY);
     if (LOOPS_API_KEY) {
       try {
         // Send internal notification
@@ -51,6 +52,7 @@ export async function joinApiWaitlist(data: {
         });
 
         // Send user confirmation if they provided an email
+        console.log('Sending user confirmation email to:', data.email);
         if (data.email) {
           await fetch(`${LOOPS_API_BASE_URL}/transactional`, {
             method: 'POST',
