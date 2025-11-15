@@ -7,6 +7,7 @@ export async function joinApiWaitlist(data: {
   privyDid?: string;
   userId?: string;
 }): Promise<{ success: boolean; message?: string }> {
+  console.log('joinApiWaitlist', JSON.stringify(data, null, 2));
   try {
     // Validate required fields
     if (!data.email && !data.privyDid) {

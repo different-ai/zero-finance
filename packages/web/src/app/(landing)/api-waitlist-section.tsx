@@ -250,50 +250,12 @@ export function ApiWaitlistSection({ onSubmit }: ApiWaitlistSectionProps) {
                   </button>
                 </form>
 
-                <p className="mt-4 text-[12px] text-[#101010]/50 text-center">
-                  API launching Q1 2025 • High-yield strategies target 2-3x
-                  traditional bank rates
-                </p>
+                
               </>
             )}
           </div>
         </div>
-
-        {/* Stats Row */}
-        <div className="mt-12 grid grid-cols-2 md:grid-cols-4 gap-4 max-w-5xl mx-auto">
-          <div className="bg-white border border-[#101010]/10 rounded-md p-6 text-center">
-            <p className="text-[32px] font-black text-[#1B29FF] font-mono">
-              2-3x
-            </p>
-            <p className="text-[12px] text-[#101010]/60 uppercase tracking-[0.14em] mt-2">
-              Bank Rates
-            </p>
-          </div>
-          <div className="bg-white border border-[#101010]/10 rounded-md p-6 text-center">
-            <p className="text-[32px] font-black text-[#1B29FF] font-mono">
-              {'<'}1wk
-            </p>
-            <p className="text-[12px] text-[#101010]/60 uppercase tracking-[0.14em] mt-2">
-              Integration
-            </p>
-          </div>
-          <div className="bg-white border border-[#101010]/10 rounded-md p-6 text-center">
-            <p className="text-[32px] font-black text-[#1B29FF] font-mono">
-              $2M+
-            </p>
-            <p className="text-[12px] text-[#101010]/60 uppercase tracking-[0.14em] mt-2">
-              LOI Commitments
-            </p>
-          </div>
-          <div className="bg-white border border-[#101010]/10 rounded-md p-6 text-center">
-            <p className="text-[32px] font-black text-[#1B29FF] font-mono">
-              15+
-            </p>
-            <p className="text-[12px] text-[#101010]/60 uppercase tracking-[0.14em] mt-2">
-              Startups Signed
-            </p>
-          </div>
-        </div>
+       
       </div>
     </section>
   );
