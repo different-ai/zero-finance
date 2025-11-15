@@ -25,20 +25,16 @@ export async function joinApiWaitlist(data: {
     }
 
     // Send emails via Loops - access env vars inside function for Server Actions
-    const LOOPS_API_KEY = process.env.LOOPS_API_KEY;
+    // IMPORTANT: Trim all env vars to remove trailing newlines
+    const LOOPS_API_KEY = process.env.LOOPS_API_KEY?.trim();
     const LOOPS_API_BASE_URL = 'https://app.loops.so/api/v1';
 
-    console.log('LOOPS_API_KEY:', !!LOOPS_API_KEY);
-    console.log('LOOPS_TRANSACTIONAL_ID_API_WAITLIST_INTERNAL:', process.env.LOOPS_TRANSACTIONAL_ID_API_WAITLIST_INTERNAL);
-    console.log('LOOPS_TRANSACTIONAL_ID_API_WAITLIST_CONFIRMATION:', process.env.LOOPS_TRANSACTIONAL_ID_API_WAITLIST_CONFIRMATION);
-    console.log('INTERNAL_NOTIFICATION_EMAIL:', process.env.INTERNAL_NOTIFICATION_EMAIL || 'ben@0.finance');
-    
     if (LOOPS_API_KEY) {
       try {
         // Send internal notification
         const internalEmailPayload = {
-          email: process.env.INTERNAL_NOTIFICATION_EMAIL || 'ben@0.finance',
-          transactionalId: process.env.LOOPS_TRANSACTIONAL_ID_API_WAITLIST_INTERNAL,
+          email: (process.env.INTERNAL_NOTIFICATION_EMAIL || 'ben@0.finance').trim(),
+          transactionalId: process.env.LOOPS_TRANSACTIONAL_ID_API_WAITLIST_INTERNAL?.trim(),
           dataVariables: {
             companyName: data.companyName,
             email: data.email || 'Not provided',
@@ -72,11 +68,10 @@ export async function joinApiWaitlist(data: {
         }
 
         // Send user confirmation if they provided an email
-        console.log('Sending user confirmation email to:', data.email);
         if (data.email) {
           const userEmailPayload = {
             email: data.email,
-            transactionalId: process.env.LOOPS_TRANSACTIONAL_ID_API_WAITLIST_CONFIRMATION,
+            transactionalId: process.env.LOOPS_TRANSACTIONAL_ID_API_WAITLIST_CONFIRMATION?.trim(),
             dataVariables: {
               companyName: data.companyName,
               useCase: data.useCase || 'Not provided',
