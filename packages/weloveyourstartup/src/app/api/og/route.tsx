@@ -220,7 +220,7 @@ export async function GET(request: Request) {
                   textTransform: 'uppercase',
                   border: '2px solid #00FF00',
                   padding: '8px 16px',
-                  display: 'inline-block',
+                  display: 'flex',
                   maxWidth: 'fit-content',
                 }}>
                   CATEGORY: {company.category.toUpperCase()}
