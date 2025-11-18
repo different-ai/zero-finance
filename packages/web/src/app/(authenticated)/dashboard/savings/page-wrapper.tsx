@@ -41,6 +41,8 @@ import {
   calculateAverageApy,
   calculateWeightedInstantApy,
 } from './utils/vault-calculations';
+import { MultiChainSection } from './components/multi-chain-section';
+import { featureConfig } from '@/lib/feature-config';
 
 export type SavingsPageWrapperProps = {
   mode?: SavingsExperienceMode;
@@ -546,6 +548,11 @@ export default function SavingsPageWrapper({
             vaultCount={vaultsVM.length}
           />
         </div>
+
+        {/* Multi-Chain Vaults Section */}
+        {featureConfig.multiChain.enabled && !isDemoMode && (
+          <MultiChainSection userDid={primarySafe?.userDid || ''} />
+        )}
 
         {/* Live Yield Counter - Premium Card */}
         {totalSaved > 0 && (
