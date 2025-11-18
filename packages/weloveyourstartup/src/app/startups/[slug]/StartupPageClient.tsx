@@ -157,7 +157,7 @@ function WireframeRocket({
 }: WireframeRocketProps) {
   // Determine which model to show based on scroll progress
   const modelIndex = Math.min(Math.floor(scrollProgress * 6), 5);
-  const modelPath = customModels
+  const modelPath = customModels && customModels[modelIndex]
     ? customModels[modelIndex]
     : MODELS[Math.min(modelIndex, 3)]; // Cap at 3 for default MODELS array (only 4 models)
 
