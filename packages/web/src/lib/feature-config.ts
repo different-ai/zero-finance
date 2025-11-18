@@ -76,22 +76,27 @@ export const featureConfig = {
   multiChain: {
     // Feature is enabled via environment variable
     get enabled() {
-      return process.env.MULTI_CHAIN_ENABLED === 'true';
+      return process.env.NEXT_PUBLIC_MULTI_CHAIN_ENABLED === 'true';
     },
     // Percentage of users to enable for (0-100)
     get betaPercentage() {
-      return parseInt(process.env.MULTI_CHAIN_BETA_PERCENTAGE || '0', 10);
+      return parseInt(
+        process.env.NEXT_PUBLIC_MULTI_CHAIN_BETA_PERCENTAGE || '0',
+        10,
+      );
     },
     // Specific user DIDs allowed (comma-separated in env)
     get allowedUsers() {
       return (
-        process.env.MULTI_CHAIN_ALLOWED_USERS?.split(',').filter(Boolean) || []
+        process.env.NEXT_PUBLIC_MULTI_CHAIN_ALLOWED_USERS?.split(',').filter(
+          Boolean,
+        ) || []
       );
     },
     // Which chains are enabled
     chains: {
       base: true, // Always enabled
-      arbitrum: process.env.MULTI_CHAIN_ARBITRUM_ENABLED === 'true',
+      arbitrum: process.env.NEXT_PUBLIC_MULTI_CHAIN_ARBITRUM_ENABLED === 'true',
     },
   },
 };
