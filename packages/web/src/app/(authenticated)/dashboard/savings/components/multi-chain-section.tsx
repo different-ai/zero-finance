@@ -19,20 +19,18 @@ interface MultiChainSectionProps {
 }
 
 export function MultiChainSection({ userDid }: MultiChainSectionProps) {
-  // Check if multi-chain feature is enabled
-  if (!featureConfig.multiChain.enabled) {
-    return null;
-  }
-
   const [showCollectModal, setShowCollectModal] = useState(false);
   const [showBridgeModal, setShowBridgeModal] = useState(false);
 
-  // Fetch multi-chain positions
+  const isEnabled = featureConfig.multiChain.enabled;
+
+  // Fetch multi-chain positions (only if enabled)
   const {
     data: multiChainData,
     isLoading,
     refetch,
   } = trpc.earn.getMultiChainPositions.useQuery(undefined, {
+    enabled: isEnabled,
     refetchInterval: 30000, // Refresh every 30s
   });
 
@@ -42,6 +40,11 @@ export function MultiChainSection({ userDid }: MultiChainSectionProps) {
       refetch();
     },
   });
+
+  // Check if multi-chain feature is enabled (after hooks)
+  if (!isEnabled) {
+    return null;
+  }
 
   // Loading state
   if (isLoading) {
