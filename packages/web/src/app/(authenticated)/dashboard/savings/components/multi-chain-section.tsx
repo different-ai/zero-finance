@@ -183,13 +183,11 @@ export function MultiChainSection({ userDid }: MultiChainSectionProps) {
         onOpenChange={setShowCollectModal}
         positions={multiChainData.positions.map((p) => ({
           vaultId: p.vaultId,
-          vaultName:
-            ALL_CROSS_CHAIN_VAULTS.find((v) => v.id === p.vaultId)
-              ?.displayName || p.vaultId,
-          chainId: p.chainId as 8453 | 42161,
           shares: BigInt(p.shares || '0'),
           value: `$${Number(p.valueUsd).toLocaleString()}`,
+          apy: p.apy || 0,
         }))}
+        vaults={ALL_CROSS_CHAIN_VAULTS}
         onConfirm={handleCollectFromVaults}
       />
 
