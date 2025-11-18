@@ -209,6 +209,9 @@ importers:
 
   packages/web:
     dependencies:
+      '@across-protocol/app-sdk':
+        specifier: ^0.4.4
+        version: 0.4.4(viem@2.37.12(bufferutil@4.0.9)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@4.1.11))
       '@ai-sdk/openai':
         specifier: 2.0.42
         version: 2.0.42(zod@4.1.11)
@@ -678,6 +681,12 @@ importers:
         version: 5.9.3
 
 packages:
+
+  '@across-protocol/app-sdk@0.4.4':
+    resolution: {integrity: sha512-Yz+C1/jFJCQ3TRXRxCn+WXW1K0aLyrGi+S2p7Ot+MSO6X/rThRCbZpXdfPkSRLxdNBKXL5h3LAEgwwj1j2Pa7w==}
+    engines: {node: '>=18.0.0'}
+    peerDependencies:
+      viem: ^2.31.2
 
   '@adraffy/ens-normalize@1.11.1':
     resolution: {integrity: sha512-nhCBV3quEgesuf7c7KYfperqSS14T8bYuvJ8PcLJp6znkZpFc0AuW4qBtr8eKVyPPe/8RSr7sglCWPU5eaxwKQ==}
@@ -10356,6 +10365,10 @@ packages:
     resolution: {integrity: sha512-bXE4cR/kVZhKZX/RjPEflHaKVhUVl85noU3v6b8apfQEc1x4A+zBxjZ4lN8LqGd6WZ3dl98pY4o717VFmoPp+A==}
 
 snapshots:
+
+  '@across-protocol/app-sdk@0.4.4(viem@2.37.12(bufferutil@4.0.9)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@4.1.11))':
+    dependencies:
+      viem: 2.37.12(bufferutil@4.0.9)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@4.1.11)
 
   '@adraffy/ens-normalize@1.11.1': {}
 

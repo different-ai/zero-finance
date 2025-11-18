@@ -68,6 +68,32 @@ export const featureConfig = {
   email: {
     loops: !!process.env.LOOPS_API_KEY,
   },
+
+  /**
+   * Multi-chain vault feature configuration
+   * Controls access to cross-chain vault functionality
+   */
+  multiChain: {
+    // Feature is enabled via environment variable
+    get enabled() {
+      return process.env.MULTI_CHAIN_ENABLED === 'true';
+    },
+    // Percentage of users to enable for (0-100)
+    get betaPercentage() {
+      return parseInt(process.env.MULTI_CHAIN_BETA_PERCENTAGE || '0', 10);
+    },
+    // Specific user DIDs allowed (comma-separated in env)
+    get allowedUsers() {
+      return (
+        process.env.MULTI_CHAIN_ALLOWED_USERS?.split(',').filter(Boolean) || []
+      );
+    },
+    // Which chains are enabled
+    chains: {
+      base: true, // Always enabled
+      arbitrum: process.env.MULTI_CHAIN_ARBITRUM_ENABLED === 'true',
+    },
+  },
 };
 
 // Export type for use in components

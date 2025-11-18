@@ -30,11 +30,38 @@ import {
   createPublicClient,
   decodeEventLog,
   formatUnits,
+  parseUnits,
   type Address,
 } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 import { base, mainnet } from 'viem/chains';
 import crypto from 'crypto';
+
+// Multi-chain imports
+import {
+  SUPPORTED_CHAINS,
+  type SupportedChainId,
+  getUSDCAddress,
+} from '@/lib/constants/chains';
+import {
+  getUserSafes as getMultiChainUserSafes,
+  getSafeOnChain,
+  getSafeDeploymentTransaction,
+} from '../earn/multi-chain-safe-manager';
+import {
+  getBridgeQuoteForVault,
+  encodeBridgeWithVaultDeposit,
+  trackBridgeDeposit,
+} from '../earn/across-bridge-service';
+import {
+  createBridgeTransaction,
+  updateBridgeStatus,
+  updateBridgeDepositHash,
+  getUserBridgeTransactions,
+  getPendingBridgeTransactions,
+} from '../earn/bridge-transaction-crud';
+import { predictSafeAddress } from '@/lib/safe-multi-chain';
+import { getRPCManager } from '@/lib/multi-chain-rpc';
 
 type EarningsEventPayload = {
   id: string;
@@ -2144,6 +2171,355 @@ export const earnRouter = router({
         pct: config?.pct ?? 0,
         autoVaultAddress: config?.autoVaultAddress ?? null,
         lastTrigger: config?.lastTrigger ?? null,
+      };
+    }),
+
+  // ============================================
+  // Multi-Chain Endpoints
+  // ============================================
+
+  /**
+   * Get multi-chain vault positions
+   * Returns all vault positions across all chains for the user
+   */
+  getMultiChainPositions: protectedProcedure.query(async ({ ctx }) => {
+    const privyDid = requirePrivyDid(ctx);
+
+    // Get user's Safes across all chains
+    const safes = await getMultiChainUserSafes(privyDid);
+
+    // Get RPC manager for balance queries
+    const rpcManager = getRPCManager();
+
+    // Get positions for each Safe
+    const positions = await Promise.all(
+      safes.map(async (safe) => {
+        const chainId = safe.chainId as SupportedChainId;
+        const safeAddress = safe.safeAddress as Address;
+
+        // Get USDC balance
+        const usdcAddress = getUSDCAddress(chainId);
+        const balance = await rpcManager.getBalance(
+          chainId,
+          usdcAddress,
+          safeAddress,
+        );
+
+        return {
+          safeId: safe.id,
+          safeAddress,
+          chainId,
+          safeType: safe.safeType,
+          usdcBalance: balance?.formatted || '0',
+          usdcBalanceRaw: balance?.raw.toString() || '0',
+        };
+      }),
+    );
+
+    // Calculate total balance across all chains
+    const totalBalance = positions.reduce((sum, pos) => {
+      return sum + parseFloat(pos.usdcBalance);
+    }, 0);
+
+    return {
+      safes: safes.map((s) => ({
+        id: s.id,
+        address: s.safeAddress,
+        chainId: s.chainId as SupportedChainId,
+        type: s.safeType,
+      })),
+      positions,
+      totalBalance: totalBalance.toFixed(2),
+    };
+  }),
+
+  /**
+   * Get bridge quote for vault deposit
+   * Returns fee breakdown and estimated time
+   */
+  getBridgeQuote: protectedProcedure
+    .input(
+      z.object({
+        amount: z.string(),
+        sourceChainId: z.number(),
+        destChainId: z.number(),
+        vaultAddress: z.string().length(42),
+      }),
+    )
+    .query(async ({ input }) => {
+      const quote = await getBridgeQuoteForVault({
+        amount: input.amount,
+        sourceChainId: input.sourceChainId as SupportedChainId,
+        destChainId: input.destChainId as SupportedChainId,
+        vaultAddress: input.vaultAddress as Address,
+        destinationSafeAddress:
+          '0x0000000000000000000000000000000000000000' as Address, // Placeholder
+      });
+
+      return {
+        inputAmount: quote.inputAmount.toString(),
+        outputAmount: quote.outputAmount.toString(),
+        bridgeFee: quote.bridgeFee.toString(),
+        lpFee: quote.lpFee.toString(),
+        relayerGasFee: quote.relayerGasFee.toString(),
+        totalFee: quote.totalFee.toString(),
+        estimatedFillTime: quote.estimatedFillTime,
+      };
+    }),
+
+  /**
+   * Deposit to vault on another chain (with bridge)
+   * Returns transaction data for user to sign
+   */
+  depositToVaultWithBridge: protectedProcedure
+    .input(
+      z.object({
+        vaultAddress: z.string().length(42),
+        amount: z.string(),
+        sourceChainId: z.number(),
+        destChainId: z.number(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const privyDid = requirePrivyDid(ctx);
+
+      // Get source Safe
+      const sourceSafe = await getSafeOnChain(
+        privyDid,
+        input.sourceChainId as SupportedChainId,
+        'primary',
+      );
+
+      if (!sourceSafe) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: `No Safe found on source chain ${input.sourceChainId}`,
+        });
+      }
+
+      // Get or predict destination Safe
+      let destSafe = await getSafeOnChain(
+        privyDid,
+        input.destChainId as SupportedChainId,
+        'primary',
+      );
+
+      let destSafeAddress: Address;
+      let needsDeployment = false;
+
+      if (destSafe) {
+        destSafeAddress = destSafe.safeAddress as Address;
+      } else {
+        // Predict Safe address on destination chain
+        const rpcManager = getRPCManager();
+        const sourceClient = rpcManager.getClient(
+          input.sourceChainId as SupportedChainId,
+        );
+
+        // Get owners from source Safe
+        const owners = (await sourceClient.readContract({
+          address: sourceSafe.safeAddress as Address,
+          abi: [
+            {
+              inputs: [],
+              name: 'getOwners',
+              outputs: [{ name: '', type: 'address[]' }],
+              stateMutability: 'view',
+              type: 'function',
+            },
+          ],
+          functionName: 'getOwners',
+        })) as Address[];
+
+        // Predict address
+        destSafeAddress = await predictSafeAddress({
+          owners,
+          threshold: 1,
+          chainId: input.destChainId as SupportedChainId,
+          saltNonce: sourceSafe.safeAddress.toLowerCase(),
+        });
+        needsDeployment = true;
+      }
+
+      // Get bridge quote
+      const quote = await getBridgeQuoteForVault({
+        amount: input.amount,
+        sourceChainId: input.sourceChainId as SupportedChainId,
+        destChainId: input.destChainId as SupportedChainId,
+        vaultAddress: input.vaultAddress as Address,
+        destinationSafeAddress: destSafeAddress,
+      });
+
+      // Create bridge transaction record
+      const bridgeTxId = await createBridgeTransaction({
+        userDid: privyDid,
+        sourceChainId: input.sourceChainId as SupportedChainId,
+        destChainId: input.destChainId as SupportedChainId,
+        vaultAddress: input.vaultAddress,
+        amount: input.amount,
+        bridgeFee: quote.totalFee.toString(),
+        lpFee: quote.lpFee.toString(),
+        relayerGasFee: quote.relayerGasFee.toString(),
+        relayerCapitalFee: quote.relayerCapitalFee.toString(),
+      });
+
+      // Encode bridge transaction
+      const bridgeTx = await encodeBridgeWithVaultDeposit({
+        depositor: sourceSafe.safeAddress as Address,
+        vaultAddress: input.vaultAddress as Address,
+        destinationSafeAddress: destSafeAddress,
+        amount: input.amount,
+        sourceChainId: input.sourceChainId as SupportedChainId,
+        destChainId: input.destChainId as SupportedChainId,
+      });
+
+      return {
+        bridgeTransactionId: bridgeTxId,
+        transaction: {
+          to: bridgeTx.to,
+          data: bridgeTx.data,
+          value: bridgeTx.value.toString(),
+          chainId: bridgeTx.chainId,
+        },
+        needsDeployment,
+        destinationSafeAddress: destSafeAddress,
+        quote: {
+          inputAmount: quote.inputAmount.toString(),
+          outputAmount: quote.outputAmount.toString(),
+          totalFee: quote.totalFee.toString(),
+          estimatedFillTime: quote.estimatedFillTime,
+        },
+      };
+    }),
+
+  /**
+   * Update bridge transaction after deposit is sent
+   */
+  updateBridgeDeposit: protectedProcedure
+    .input(
+      z.object({
+        bridgeTransactionId: z.string(),
+        depositTxHash: z.string().length(66),
+        depositId: z.string().optional(),
+      }),
+    )
+    .mutation(async ({ input }) => {
+      await updateBridgeDepositHash(
+        input.bridgeTransactionId,
+        input.depositTxHash,
+        input.depositId,
+      );
+
+      return { success: true };
+    }),
+
+  /**
+   * Get bridge transaction status
+   */
+  getBridgeStatus: protectedProcedure
+    .input(
+      z.object({
+        bridgeTransactionId: z.string(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const privyDid = requirePrivyDid(ctx);
+
+      const transactions = await getUserBridgeTransactions(privyDid);
+      const tx = transactions.find((t) => t.id === input.bridgeTransactionId);
+
+      if (!tx) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Bridge transaction not found',
+        });
+      }
+
+      // If pending and has deposit hash, check status
+      if (tx.status === 'pending' && tx.depositTxHash) {
+        try {
+          const status = await trackBridgeDeposit(
+            tx.depositTxHash,
+            tx.sourceChainId as SupportedChainId,
+          );
+
+          if (status === 'filled') {
+            await updateBridgeStatus(tx.id, 'filled');
+            return { status: 'filled' };
+          }
+        } catch (error) {
+          console.error('Error tracking bridge deposit:', error);
+        }
+      }
+
+      return { status: tx.status };
+    }),
+
+  /**
+   * Get user's bridge transaction history
+   */
+  getBridgeHistory: protectedProcedure.query(async ({ ctx }) => {
+    const privyDid = requirePrivyDid(ctx);
+
+    const transactions = await getUserBridgeTransactions(privyDid);
+
+    return transactions.map((tx) => ({
+      id: tx.id,
+      sourceChainId: tx.sourceChainId,
+      destChainId: tx.destChainId,
+      vaultAddress: tx.vaultAddress,
+      amount: tx.amount,
+      bridgeFee: tx.bridgeFee,
+      status: tx.status,
+      depositTxHash: tx.depositTxHash,
+      fillTxHash: tx.fillTxHash,
+      createdAt: tx.createdAt?.toISOString(),
+      filledAt: tx.filledAt?.toISOString(),
+    }));
+  }),
+
+  /**
+   * Get pending bridge transactions
+   */
+  getPendingBridges: protectedProcedure.query(async ({ ctx }) => {
+    const privyDid = requirePrivyDid(ctx);
+
+    const transactions = await getPendingBridgeTransactions(privyDid);
+
+    return transactions.map((tx) => ({
+      id: tx.id,
+      sourceChainId: tx.sourceChainId,
+      destChainId: tx.destChainId,
+      amount: tx.amount,
+      depositTxHash: tx.depositTxHash,
+      createdAt: tx.createdAt?.toISOString(),
+    }));
+  }),
+
+  /**
+   * Get Safe deployment transaction for new chain
+   */
+  getSafeDeploymentTx: protectedProcedure
+    .input(
+      z.object({
+        targetChainId: z.number(),
+        safeType: z.enum(['primary', 'tax', 'liquidity', 'yield']),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const privyDid = requirePrivyDid(ctx);
+
+      const deploymentTx = await getSafeDeploymentTransaction(
+        privyDid,
+        input.targetChainId as SupportedChainId,
+        input.safeType,
+      );
+
+      return {
+        to: deploymentTx.to,
+        data: deploymentTx.data,
+        value: deploymentTx.value,
+        predictedAddress: deploymentTx.predictedAddress,
       };
     }),
 });

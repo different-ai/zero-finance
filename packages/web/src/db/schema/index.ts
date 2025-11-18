@@ -2,6 +2,7 @@
 export * from './users';
 export * from './workspaces';
 export * from './admins';
+export * from './bridge-transactions';
 
 // Re-export everything else from main schema, excluding what we've already exported above
 export {

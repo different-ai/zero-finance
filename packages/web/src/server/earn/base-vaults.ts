@@ -1,4 +1,9 @@
-export const BASE_CHAIN_ID = 8453;
+import {
+  SUPPORTED_CHAINS,
+  type SupportedChainId,
+} from '@/lib/constants/chains';
+
+export const BASE_CHAIN_ID = SUPPORTED_CHAINS.BASE;
 export const ETHEREUM_CHAIN_ID = 1;
 
 export type BaseVault = {
@@ -9,7 +14,7 @@ export type BaseVault = {
   risk: 'Conservative' | 'Balanced' | 'High' | 'Optimized';
   curator: string;
   appUrl: string;
-  chainId?: number;
+  chainId: SupportedChainId;
 };
 
 // Primary vault - Morpho Gauntlet USDC Frontier on Ethereum
