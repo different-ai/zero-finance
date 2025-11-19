@@ -159,7 +159,6 @@ export default function SavingsPageWrapper({
   const userIsInsured = userProfile?.isInsured || false;
 
   // Check workspace features
-  const primarySafe = safesData?.[0];
   const workspaceId = primarySafe?.workspaceId;
 
   const { data: workspaceFeatures } = trpc.workspace.getFeatures.useQuery(
