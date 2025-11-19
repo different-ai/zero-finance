@@ -277,7 +277,7 @@ export function WithdrawEarnCard({
         transactions,
       });
 
-      const userOpHash = await sendTxViaRelay(transactions, 600_000n); // Increased gas limit
+      const userOpHash = await sendTxViaRelay(transactions, 1_200_000n); // Morpho/Gauntlet vaults need high gas for redeems
 
       console.log('[WithdrawEarnCard] Withdrawal tx hash:', userOpHash);
 
