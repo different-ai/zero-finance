@@ -217,8 +217,8 @@ export function BridgeFundsModal({
   if (bridgeState.step === 'success') {
     return (
       <div className="p-6 text-center space-y-4">
-        <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center mx-auto">
-          <CheckCircle className="h-6 w-6 text-green-600" />
+        <div className="w-12 h-12 rounded-full bg-[#10B981]/10 flex items-center justify-center mx-auto">
+          <CheckCircle className="h-6 w-6 text-[#10B981]" />
         </div>
         <div>
           <h3 className="text-[18px] font-semibold text-[#101010] mb-2">

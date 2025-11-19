@@ -207,7 +207,7 @@ export function CheckingActionsCard({
           </div>
           <div className="space-y-2">
             {baseSafe && (
-              <div className="flex items-center justify-between py-2 px-3 rounded-[8px] bg-[#F7F7F2]">
+              <div className="flex items-center justify-between py-2 px-3 rounded-md bg-[#F7F7F2]">
                 <span className="text-[13px] text-[#101010]">
                   {getChainDisplayName(SUPPORTED_CHAINS.BASE)}
                 </span>
@@ -217,7 +217,7 @@ export function CheckingActionsCard({
               </div>
             )}
             {arbitrumSafe && (
-              <div className="flex items-center justify-between py-2 px-3 rounded-[8px] bg-[#F7F7F2]">
+              <div className="flex items-center justify-between py-2 px-3 rounded-md bg-[#F7F7F2]">
                 <span className="text-[13px] text-[#101010]">
                   {getChainDisplayName(SUPPORTED_CHAINS.ARBITRUM)}
                 </span>
