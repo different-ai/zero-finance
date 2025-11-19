@@ -6,8 +6,19 @@ import path from 'path';
 dotenv.config({ path: path.resolve(process.cwd(), 'packages/web/.env.local') });
 
 async function main() {
-  const userDid = 'did:privy:cmfzy4jse000pjx0clx16p972';
-  const chainId = 42161; // Arbitrum
+  const userDid = process.argv[2];
+  const chainId = parseInt(process.argv[3] || '42161', 10); // Default to Arbitrum
+
+  if (!userDid) {
+    console.error('Usage: npx ts-node scripts/clean-arbitrum-safe.ts <user-did> [chain-id]');
+    console.error('Example: npx ts-node scripts/clean-arbitrum-safe.ts did:privy:abc123 42161');
+    process.exit(1);
+  }
+
+  if (!userDid.startsWith('did:privy:')) {
+    console.error('Error: user-did must start with "did:privy:"');
+    process.exit(1);
+  }
 
   const connectionString = process.env.DATABASE_URL || process.env.POSTGRES_URL;
 
