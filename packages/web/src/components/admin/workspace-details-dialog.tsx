@@ -13,6 +13,8 @@ import { formatUnits } from 'viem';
 import { Badge } from '@/components/ui/badge';
 import { CopyButton } from '@/components/ui/copy-button';
 import { Separator } from '@/components/ui/separator';
+import { Switch } from '@/components/ui/switch';
+import { toast } from '@/components/ui/use-toast';
 
 interface WorkspaceDetailsDialogProps {
   workspace: any;
@@ -35,6 +37,84 @@ export default function WorkspaceDetailsDialog({
         retry: false,
       },
     );
+
+  const { data: workspaceFeatures, isLoading: isLoadingFeatures } =
+    api.admin.listWorkspaceFeatures.useQuery(
+      {
+        workspaceId: workspace?.id || '',
+      },
+      {
+        enabled: !!workspace && isOpen,
+        retry: false,
+      },
+    );
+
+  const utils = api.useUtils();
+
+  const grantFeatureMutation = api.admin.grantWorkspaceFeature.useMutation({
+    onSuccess: (data) => {
+      toast({
+        title: 'Feature enabled',
+        description: data.message,
+      });
+      utils.admin.listWorkspaceFeatures.invalidate({
+        workspaceId: workspace?.id,
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const revokeFeatureMutation = api.admin.revokeWorkspaceFeature.useMutation({
+    onSuccess: (data) => {
+      toast({
+        title: 'Feature disabled',
+        description: data.message,
+      });
+      utils.admin.listWorkspaceFeatures.invalidate({
+        workspaceId: workspace?.id,
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const isFeatureEnabled = (featureName: string) => {
+    return (
+      workspaceFeatures?.some(
+        (f) => f.featureName === featureName && f.isActive,
+      ) || false
+    );
+  };
+
+  const handleFeatureToggle = async (
+    featureName: 'multi_chain',
+    enabled: boolean,
+  ) => {
+    if (!workspace?.id) return;
+
+    if (enabled) {
+      await grantFeatureMutation.mutateAsync({
+        workspaceId: workspace.id,
+        featureName,
+      });
+    } else {
+      await revokeFeatureMutation.mutateAsync({
+        workspaceId: workspace.id,
+        featureName,
+      });
+    }
+  };
 
   const getKycStatusColor = (status: string) => {
     switch (status) {
@@ -552,6 +632,37 @@ export default function WorkspaceDetailsDialog({
                       </div>
                     </div>
                   )}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Workspace Features</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <div className="text-sm font-medium">
+                        Multi-Chain Support
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        Enable cross-chain bridging and Arbitrum vault deposits
+                      </div>
+                    </div>
+                    <Switch
+                      checked={isFeatureEnabled('multi_chain')}
+                      onCheckedChange={(checked) =>
+                        handleFeatureToggle('multi_chain', checked)
+                      }
+                      disabled={
+                        grantFeatureMutation.isPending ||
+                        revokeFeatureMutation.isPending ||
+                        isLoadingFeatures
+                      }
+                    />
+                  </div>
                 </div>
               </CardContent>
             </Card>
