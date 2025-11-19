@@ -295,13 +295,6 @@ export async function getSafeDeploymentTransaction(
   value: string;
   predictedAddress: Address;
 }> {
-  // Check if Safe already exists on this chain
-  const existingSafe = await getSafeOnChain(userDid, chainId, safeType);
-
-  if (existingSafe) {
-    throw new Error(`Safe already exists on chain ${chainId}`);
-  }
-
   // Get source Safe from Base (primary chain) to use its address as salt
   const sourceSafe = await getSafeOnChain(
     userDid,
@@ -327,15 +320,9 @@ export async function getSafeDeploymentTransaction(
   let threshold: number;
 
   if (userWallet) {
-    console.log(
-      `Deploying Safe on ${chainId} with EOA owner: ${userWallet.address}`,
-    );
     owners = [userWallet.address as Address];
     threshold = 1;
   } else {
-    console.warn(
-      `No default wallet found for user ${userDid}. Falling back to source Safe configuration.`,
-    );
     // Fallback: Fetch from source Safe (Smart Wallet owned)
     const tx = await getSafeDeploymentTransactionFromSource(
       sourceSafe.safeAddress as Address,
@@ -360,6 +347,26 @@ export async function getSafeDeploymentTransaction(
     chainId,
     saltNonce,
   });
+
+  // Check if Safe already exists on this chain in DB
+  const existingSafe = await getSafeOnChain(userDid, chainId, safeType);
+
+  if (existingSafe) {
+    // If it exists, verify it matches our prediction
+    if (
+      existingSafe.safeAddress.toLowerCase() !==
+      deploymentTx.predictedAddress.toLowerCase()
+    ) {
+      throw new Error(
+        `Safe already exists on chain ${chainId} but address mismatch. Existing: ${existingSafe.safeAddress}, Predicted: ${deploymentTx.predictedAddress}`,
+      );
+    }
+    // If it matches, we can just return the deployment tx (idempotent behavior)
+    // This helps if the FE is stale or if the user needs to re-broadcast deployment
+    console.log(
+      `Safe already registered on chain ${chainId}, returning deployment info idempotently.`,
+    );
+  }
 
   return {
     to: deploymentTx.to,
