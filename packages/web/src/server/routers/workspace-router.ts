@@ -13,10 +13,58 @@ import {
 import { eq, and, or, desc, isNull } from 'drizzle-orm';
 import crypto from 'crypto';
 
+import {
+  hasWorkspaceFeature,
+  getWorkspaceFeatures,
+  checkWorkspaceFeatures,
+} from '@/lib/workspace-features';
+
 const LOOPS_API_KEY = process.env.LOOPS_API_KEY;
 const LOOPS_API_BASE_URL = 'https://app.loops.so/api/v1';
 
 export const workspaceRouter = router({
+  /**
+   * Get active features for a workspace
+   */
+  getFeatures: protectedProcedure
+    .input(
+      z.object({
+        workspaceId: z.string().uuid(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const { userId } = ctx;
+
+      if (!userId) {
+        throw new TRPCError({
+          code: 'UNAUTHORIZED',
+          message: 'User not authenticated',
+        });
+      }
+
+      // Verify user is member of workspace
+      const membership = await ctx.db
+        .select()
+        .from(workspaceMembers)
+        .where(
+          and(
+            eq(workspaceMembers.workspaceId, input.workspaceId),
+            eq(workspaceMembers.userId, userId),
+          ),
+        )
+        .limit(1);
+
+      if (!membership.length) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'Not a member of this workspace',
+        });
+      }
+
+      const features = await getWorkspaceFeatures(input.workspaceId);
+      return features;
+    }),
+
   /**
    * Update workspace with company name and notify founders
    */

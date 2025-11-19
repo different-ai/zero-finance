@@ -21,6 +21,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Address } from 'viem';
 import { BASE_USDC_VAULTS } from '@/server/earn/base-vaults';
+import { ALL_CROSS_CHAIN_VAULTS } from '@/server/earn/cross-chain-vaults';
 import { AnimatedYieldCounter } from '@/components/animated-yield-counter';
 import { toast } from 'sonner';
 import Image from 'next/image';
@@ -157,6 +158,21 @@ export default function SavingsPageWrapper({
   });
   const userIsInsured = userProfile?.isInsured || false;
 
+  // Check workspace features
+  const primarySafe = safesData?.[0];
+  const workspaceId = primarySafe?.workspaceId;
+
+  const { data: workspaceFeatures } = trpc.workspace.getFeatures.useQuery(
+    { workspaceId: workspaceId! },
+    {
+      enabled: !!workspaceId && !isDemoMode,
+      staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    },
+  );
+
+  const hasMultiChainFeature =
+    workspaceFeatures?.includes('multi_chain') || false;
+
   // Get real savings state
   const { savingsState: realSavingsState, isLoading: isLoadingRealState } =
     useRealSavingsState(safeAddress, 0);
@@ -195,7 +211,14 @@ export default function SavingsPageWrapper({
   const vaultStats = isDemoMode ? demoVaultStats : realVaultStats.data;
 
   // Base vaults configuration
-  const BASE_VAULTS = BASE_USDC_VAULTS;
+  const BASE_VAULTS = useMemo(() => {
+    if (isDemoMode) {
+      // Demo mode always uses base vaults for simplicity unless we want to demo multi-chain
+      return BASE_USDC_VAULTS;
+    }
+    return hasMultiChainFeature ? ALL_CROSS_CHAIN_VAULTS : BASE_USDC_VAULTS;
+  }, [isDemoMode, hasMultiChainFeature]);
+
   const baseVaultAddresses = useMemo(
     () => BASE_VAULTS.map((v) => v.address),
     [BASE_VAULTS],
