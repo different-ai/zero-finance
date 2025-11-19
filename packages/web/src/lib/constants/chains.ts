@@ -35,6 +35,7 @@ export interface ChainConfig {
     decimals: number;
   };
   usdcAddress: Address;
+  acrossMulticallHandler?: Address;
 }
 
 /**
@@ -81,6 +82,7 @@ export const CHAIN_CONFIG: Record<SupportedChainId, ChainConfig> = {
       decimals: 18,
     },
     usdcAddress: '0xaf88d065e77c8cC2239327C5EDb3A432268e5831',
+    acrossMulticallHandler: '0x924a9f036260DdD5808007E1AA95f08eD08aA569',
   },
 } as const;
 

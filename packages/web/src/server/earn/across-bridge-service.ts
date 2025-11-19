@@ -25,7 +25,11 @@ import {
   encodeVaultDepositMulticall,
   type CrossChainAction,
 } from '@/lib/across/encode-multicall';
-import { getUSDCAddress, SUPPORTED_CHAINS } from '@/lib/constants/chains';
+import {
+  getUSDCAddress,
+  getChainConfig,
+  SUPPORTED_CHAINS,
+} from '@/lib/constants/chains';
 
 /**
  * Across SpokePool addresses
@@ -76,11 +80,12 @@ export interface BridgeTransaction {
  */
 export interface BridgeDepositParams {
   depositor: Address;
-  vaultAddress: Address;
+  vaultAddress?: Address; // Made optional for simple transfers
   destinationSafeAddress: Address;
   amount: string;
   sourceChainId: SupportedChainId;
   destChainId: SupportedChainId;
+  message?: Hex; // Optional custom message
 }
 
 /**
@@ -106,7 +111,7 @@ export async function getBridgeQuoteForVault(params: {
   amount: string;
   sourceChainId: SupportedChainId;
   destChainId: SupportedChainId;
-  vaultAddress: Address;
+  vaultAddress?: Address; // Made optional
   destinationSafeAddress: Address;
 }): Promise<BridgeQuote> {
   const { amount, sourceChainId, destChainId } = params;
@@ -173,6 +178,70 @@ function encodeCrossChainMessage(actions: CrossChainAction[]): Hex {
   return encoded;
 }
 
+/**
+ * Encode simple bridge transfer (no multicall)
+ *
+ * @param params - Bridge deposit parameters
+ * @returns Transaction ready to be signed
+ */
+export async function encodeBridgeTransfer(
+  params: BridgeDepositParams,
+): Promise<BridgeTransaction> {
+  const {
+    depositor,
+    destinationSafeAddress,
+    amount,
+    sourceChainId,
+    destChainId,
+  } = params;
+
+  // Get quote
+  const quote = await getAcrossBridgeQuote({
+    amount: BigInt(amount),
+    originChainId: sourceChainId,
+    destinationChainId: destChainId,
+  });
+
+  // Get USDC addresses
+  const sourceUSDC = getUSDCAddress(sourceChainId);
+  const destUSDC = getUSDCAddress(destChainId);
+
+  // Get SpokePool address for source chain
+  const spokePoolAddress = SPOKE_POOL_ADDRESSES[sourceChainId];
+
+  // Get deposit parameters from the raw quote
+  const rawQuote = quote.rawQuote;
+  const deposit = rawQuote.deposit;
+
+  // Encode depositV3 call with EMPTY message and recipient = destinationSafeAddress
+  // This will just transfer funds to the destination Safe
+  const data = encodeFunctionData({
+    abi: spokePoolDepositV3Abi,
+    functionName: 'depositV3',
+    args: [
+      depositor,
+      destinationSafeAddress, // Recipient is the Safe directly
+      sourceUSDC,
+      destUSDC,
+      BigInt(amount),
+      quote.outputAmount,
+      BigInt(destChainId),
+      deposit.exclusiveRelayer as Address,
+      deposit.quoteTimestamp,
+      deposit.fillDeadline,
+      deposit.exclusivityDeadline,
+      '0x', // Empty message for simple transfer
+    ],
+  });
+
+  return {
+    to: spokePoolAddress,
+    data,
+    value: 0n,
+    chainId: sourceChainId,
+  };
+}
+
 export async function encodeBridgeWithVaultDeposit(
   params: BridgeDepositParams,
 ): Promise<BridgeTransaction> {
@@ -185,6 +254,11 @@ export async function encodeBridgeWithVaultDeposit(
     destChainId,
   } = params;
 
+  // Validate vault address is present for vault deposit flow
+  if (!vaultAddress) {
+    throw new Error('Vault address is required for vault deposit flow');
+  }
+
   // Get quote with cross-chain actions
   const quote = await getAcrossBridgeQuote({
     amount: BigInt(amount),
@@ -195,6 +269,16 @@ export async function encodeBridgeWithVaultDeposit(
   // Get USDC addresses
   const sourceUSDC = getUSDCAddress(sourceChainId);
   const destUSDC = getUSDCAddress(destChainId);
+
+  // Get MulticallHandler for destination chain
+  const destChainConfig = getChainConfig(destChainId);
+  const multicallHandler = destChainConfig.acrossMulticallHandler;
+
+  if (!multicallHandler) {
+    throw new Error(
+      `No Across MulticallHandler configured for chain ${destChainId}`,
+    );
+  }
 
   // Encode cross-chain actions: approve + vault deposit
   const actions = encodeVaultDepositMulticall({
@@ -220,7 +304,7 @@ export async function encodeBridgeWithVaultDeposit(
     functionName: 'depositV3',
     args: [
       depositor,
-      destinationSafeAddress,
+      multicallHandler,
       sourceUSDC,
       destUSDC,
       BigInt(amount),

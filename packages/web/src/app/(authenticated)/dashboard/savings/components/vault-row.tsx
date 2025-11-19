@@ -9,6 +9,10 @@ import { InsuranceContactPanel } from './insurance-contact-panel';
 import { ZERO_LOGO_SRC } from '../demo-data';
 import { toast } from 'sonner';
 import type { Address } from 'viem';
+import {
+  SUPPORTED_CHAINS,
+  type SupportedChainId,
+} from '@/lib/constants/chains';
 
 type VaultRowProps = {
   vault: {
@@ -24,6 +28,7 @@ type VaultRowProps = {
     isAuto: boolean;
     isInsured: boolean;
     isContactOnly: boolean;
+    chainId?: SupportedChainId;
   };
   safeAddress: string | null;
   isDemoMode: boolean;
@@ -232,6 +237,7 @@ export function VaultRowDesktop({
                   safeAddress={safeAddress as Address}
                   vaultAddress={vault.address as Address}
                   onDepositSuccess={onDepositSuccess}
+                  chainId={vault.chainId || SUPPORTED_CHAINS.BASE}
                 />
               ) : expandedAction === 'withdraw' && isSelected ? (
                 <WithdrawEarnCard
@@ -442,6 +448,7 @@ export function VaultRowMobile({
                     safeAddress={safeAddress as Address}
                     vaultAddress={vault.address as Address}
                     onDepositSuccess={onDepositSuccess}
+                    chainId={vault.chainId || SUPPORTED_CHAINS.BASE}
                   />
                 ) : expandedAction === 'withdraw' && isSelected ? (
                   <WithdrawEarnCard

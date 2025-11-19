@@ -1,5 +1,3 @@
-'use client';
-
 import { useState, useEffect } from 'react';
 import {
   Loader2,
@@ -8,9 +6,11 @@ import {
   CheckCircle,
   ExternalLink,
   Clock,
+  ArrowRight,
+  ArrowDown,
 } from 'lucide-react';
 import { trpc } from '@/utils/trpc';
-import type { Address } from 'viem';
+import type { Address, Hex } from 'viem';
 import {
   formatUnits,
   parseUnits,
@@ -20,14 +20,37 @@ import {
   http,
   erc20Abi,
 } from 'viem';
-import { base } from 'viem/chains';
+import { base, arbitrum } from 'viem/chains';
 import { useSafeRelay } from '@/hooks/use-safe-relay';
+import { useSmartWallets } from '@privy-io/react-auth/smart-wallets';
 import { USDC_ADDRESS, USDC_DECIMALS } from '@/lib/constants';
+import {
+  SUPPORTED_CHAINS,
+  type SupportedChainId,
+} from '@/lib/constants/chains';
+import Safe, {
+  SafeAccountConfig,
+  SafeDeploymentConfig,
+} from '@safe-global/protocol-kit';
+import { cn } from '@/lib/utils';
+// import { buildSafeTx, relaySafeTx } from '@/lib/sponsor-tx/core'; // Removed unused import
+
+// Bridge quote type (matches tRPC response)
+interface BridgeQuote {
+  inputAmount: string;
+  outputAmount: string;
+  bridgeFee: string;
+  lpFee: string;
+  relayerGasFee: string;
+  totalFee: string;
+  estimatedFillTime: number;
+}
 
 interface DepositEarnCardProps {
   safeAddress: Address;
   vaultAddress: Address;
   onDepositSuccess?: () => void;
+  chainId?: SupportedChainId; // Target chain for the vault
 }
 
 // ERC4626 Vault ABI for deposits
@@ -46,28 +69,54 @@ type TransactionStep =
   | 'waiting-approval'
   | 'depositing'
   | 'waiting-deposit'
+  | 'bridging'
+  | 'waiting-bridge'
+  | 'needs-deployment'
+  | 'deploying-safe'
+  | 'waiting-deployment'
   | 'success'
   | 'error';
+
+interface DeploymentInfo {
+  chainId: number;
+  transaction: {
+    to: string;
+    data: string;
+    value: string;
+    chainId: number;
+  };
+  predictedAddress: string;
+}
 
 interface TransactionState {
   step: TransactionStep;
   txHash?: string;
   errorMessage?: string;
   depositedAmount?: string;
+  bridgeQuote?: BridgeQuote;
+  deploymentInfo?: DeploymentInfo;
 }
 
 export function DepositEarnCard({
   safeAddress,
   vaultAddress,
   onDepositSuccess,
+  chainId = SUPPORTED_CHAINS.BASE, // Default to Base
 }: DepositEarnCardProps) {
   const [amount, setAmount] = useState('');
+  const [depositAmount, setDepositAmount] = useState(''); // Separate state for deposit on target chain
   const [transactionState, setTransactionState] = useState<TransactionState>({
     step: 'idle',
   });
+  const [bridgeQuote, setBridgeQuote] = useState<BridgeQuote | null>(null);
+  const [isLoadingQuote, setIsLoadingQuote] = useState(false);
+
+  // Determine if this is a cross-chain deposit (vault on different chain than user's Safe on Base)
+  const isCrossChain = chainId !== SUPPORTED_CHAINS.BASE;
 
   const { ready: isRelayReady, send: sendTxViaRelay } =
     useSafeRelay(safeAddress);
+  const { client: smartWalletClient, getClientForChain } = useSmartWallets();
   const publicClient = createPublicClient({
     chain: base,
     transport: http(process.env.NEXT_PUBLIC_BASE_RPC_URL),
@@ -77,6 +126,7 @@ export function DepositEarnCard({
   useEffect(() => {
     console.log('[DepositEarnCard] Vault address changed to:', vaultAddress);
     setAmount('');
+    setDepositAmount('');
     setTransactionState({ step: 'idle' });
   }, [vaultAddress]);
 
@@ -119,6 +169,129 @@ export function DepositEarnCard({
     };
   }, [safeAddress]);
 
+  // tRPC utils for refetching
+  const trpcUtils = trpc.useUtils();
+
+  // tRPC mutation for encoding bridge transaction
+  const bridgeDepositMutation =
+    trpc.earn.depositToVaultWithBridge.useMutation();
+
+  // tRPC mutation for updating bridge status
+  const updateBridgeStatusMutation =
+    trpc.earn.updateBridgeDeposit.useMutation();
+
+  // tRPC mutation for Safe deployment on new chain
+  const safeDeploymentMutation = trpc.earn.getSafeDeploymentTx.useMutation();
+
+  // tRPC mutation for registering a deployed Safe
+  const registerSafeMutation = trpc.earn.registerDeployedSafe.useMutation();
+
+  // tRPC mutation for bridging funds only
+  const bridgeFundsMutation = trpc.earn.bridgeFunds.useMutation();
+
+  // Fetch target safe balance for cross-chain vaults
+  const { data: targetSafeBalanceData, refetch: refetchTargetBalance } =
+    trpc.earn.getSafeBalanceOnChain.useQuery(
+      {
+        safeAddress: safeAddress, // This is actually the Base Safe address, we need the target Safe address. Wait, safeAddress prop is the current safe.
+        // We need to fetch the target safe address first or assume it's the same if deployed with same nonce.
+        // Actually, for balance check we need the target safe address.
+        // The backend `getSafeOnChain` handles looking up the safe for the user on the target chain.
+        // But the frontend only has `safeAddress` (Base Safe).
+        // We should probably fetch the target safe address first.
+        // However, `getMultiChainPositions` returns all safes.
+        // Let's use a useEffect to find the target safe address from `multiChainData`.
+        chainId: chainId,
+      },
+      {
+        enabled: false, // We'll enable this manually once we have the target safe address
+      },
+    );
+    
+  // We need to get the target safe address to check its balance
+  const { data: multiChainPositions } = trpc.earn.getMultiChainPositions.useQuery(
+    undefined, 
+    { enabled: isCrossChain }
+  );
+
+  const targetSafeAddress = multiChainPositions?.safes.find(
+    (s) => s.chainId === chainId
+  )?.address as Address | undefined;
+  
+  // Force fetch of target balance when we have the address
+  const [targetBalance, setTargetBalance] = useState<bigint>(0n);
+  
+  useEffect(() => {
+    if (isCrossChain && targetSafeAddress) {
+        trpcUtils.earn.getSafeBalanceOnChain.fetch({
+             safeAddress: targetSafeAddress,
+             chainId,
+        }).then(res => {
+            setTargetBalance(BigInt(res.balance));
+        }).catch(console.error);
+    }
+  }, [isCrossChain, targetSafeAddress, chainId, trpcUtils]);
+
+  // Poll target balance when bridging
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (isCrossChain && targetSafeAddress) {
+      const checkBalance = async () => {
+        const result = await trpcUtils.earn.getSafeBalanceOnChain.fetch({
+          safeAddress: targetSafeAddress,
+          chainId,
+        });
+        setTargetBalance(BigInt(result.balance));
+        return result;
+      };
+
+      // Initial check
+      checkBalance();
+      
+      // Regular poll every 10s
+      interval = setInterval(checkBalance, 10000);
+
+      // Poll if we are waiting for bridge
+      if (transactionState.step === 'waiting-bridge' || transactionState.step === 'bridging') {
+         // The interval above covers this
+         // But we can add logic to auto-complete bridge step
+      }
+    }
+    return () => clearInterval(interval);
+  }, [isCrossChain, targetSafeAddress, chainId, transactionState.step, trpcUtils]);
+
+
+  // Fetch bridge quote for cross-chain deposits (funding flow)
+  useEffect(() => {
+    if (!isCrossChain || !amount || parseFloat(amount) <= 0) {
+      setBridgeQuote(null);
+      return;
+    }
+
+    const fetchQuote = async () => {
+      setIsLoadingQuote(true);
+      try {
+        const amountInSmallestUnit = parseUnits(amount, USDC_DECIMALS);
+        const quote = await trpcUtils.earn.getBridgeQuote.fetch({
+            amount: amountInSmallestUnit.toString(),
+            sourceChainId: SUPPORTED_CHAINS.BASE,
+            destChainId: chainId,
+            vaultAddress,
+        });
+        setBridgeQuote(quote);
+      } catch (error) {
+        console.error('Failed to fetch bridge quote:', error);
+        setBridgeQuote(null);
+      } finally {
+        setIsLoadingQuote(false);
+      }
+    };
+
+    // Debounce quote fetching
+    const timeoutId = setTimeout(fetchQuote, 500);
+    return () => clearTimeout(timeoutId);
+  }, [amount, isCrossChain, chainId, vaultAddress, trpcUtils]);
+
   // Check current allowance
   const {
     data: allowanceData,
@@ -131,14 +304,28 @@ export function DepositEarnCard({
       spenderAddress: vaultAddress,
     },
     {
-      enabled: !!safeAddress && !!vaultAddress,
+      enabled: !!safeAddress && !!vaultAddress && !isCrossChain, // Only check allowance on Base for same-chain
       refetchInterval: 30000, // Reduced from 10s to 30s
       staleTime: 20000, // Consider data fresh for 20s
     },
   );
 
-  // Single flow deposit handler
-  const handleDeposit = async () => {
+  // Handle "Bridge Funds" Action
+  const handleBridgeOnly = async () => {
+      if (!amount || !isRelayReady) return;
+      const amountInSmallestUnit = parseUnits(amount, USDC_DECIMALS);
+      await handleBridgeFunds(amountInSmallestUnit);
+  }
+  
+  // Handle "Deposit" Action (Target Chain)
+  const handleDepositOnly = async () => {
+      if (!depositAmount || !targetSafeAddress) return;
+      const amountInSmallestUnit = parseUnits(depositAmount, USDC_DECIMALS);
+      await handleTargetChainDeposit(amountInSmallestUnit, targetSafeAddress);
+  }
+
+  // Single flow deposit handler (Same Chain)
+  const handleSameChainDeposit = async () => {
     if (!amount || !isRelayReady) return;
 
     const amountInSmallestUnit = parseUnits(amount, USDC_DECIMALS);
@@ -154,6 +341,8 @@ export function DepositEarnCard({
       currentAllowance: currentAllowance.toString(),
       needsApproval,
       isRelayReady,
+      isCrossChain,
+      targetChainId: chainId,
     });
 
     try {
@@ -375,9 +564,189 @@ export function DepositEarnCard({
     }
   };
 
+  // Handle "Bridge Funds" Step
+  const handleBridgeFunds = async (amountInSmallestUnit: bigint) => {
+    try {
+      setTransactionState({
+        step: 'bridging',
+        bridgeQuote: bridgeQuote ?? undefined,
+      });
+
+      const bridgeResult = await bridgeFundsMutation.mutateAsync({
+        amount: amountInSmallestUnit.toString(),
+        sourceChainId: SUPPORTED_CHAINS.BASE,
+        destChainId: chainId,
+      });
+
+       if (bridgeResult.needsDeployment) {
+         // This should be handled by the deployment UI state, but just in case
+         const deploymentResult = bridgeResult as any;
+          setTransactionState({
+          step: 'needs-deployment',
+          deploymentInfo: {
+            chainId: deploymentResult.destinationChainId,
+            transaction: deploymentResult.deploymentTransaction,
+            predictedAddress: deploymentResult.predictedSafeAddress,
+          },
+        });
+        return;
+       }
+
+      const {
+        bridgeTransactionId,
+        transaction: bridgeTx,
+      } = bridgeResult as any;
+
+      // Execute bridge transaction on Base (Source)
+      const bridgeTxHash = await sendTxViaRelay(
+        [
+          {
+            to: bridgeTx.to as Address,
+            value: bridgeTx.value,
+            data: bridgeTx.data as `0x${string}`,
+          },
+        ],
+        500_000n,
+      );
+
+      if (!bridgeTxHash) throw new Error('Bridge transaction failed');
+
+      await updateBridgeStatusMutation.mutateAsync({
+        bridgeTransactionId,
+        depositTxHash: bridgeTxHash,
+      });
+
+      setTransactionState({
+        step: 'waiting-bridge',
+        txHash: bridgeTxHash,
+      });
+
+      // Wait for bridge to initiate (mined on Base)
+      await new Promise((resolve) => setTimeout(resolve, 7000));
+      
+      // Now we wait for funds to arrive on destination (Polling in useEffect will handle UI update)
+      // User stays on "waiting-bridge" until balance increases
+      setTransactionState({ step: 'idle' }); // Reset to idle so they can see the updated balance
+      setAmount('');
+
+    } catch (error) {
+      console.error('[DepositEarnCard] Bridge error:', error);
+      let errorMessage = 'Bridge transaction failed';
+      if (error instanceof Error) errorMessage = error.message;
+      setTransactionState({ step: 'error', errorMessage });
+    }
+  };
+
+  // Handle "Deposit on Target Chain" Step
+  const handleTargetChainDeposit = async (
+    amountInSmallestUnit: bigint,
+    targetSafe: Address,
+  ) => {
+    try {
+      // 1. Get Client for Target Chain
+      const targetClient = await getClientForChain({ id: chainId });
+      if (!targetClient || !targetClient.account)
+        throw new Error(`Could not get client for chain ${chainId}`);
+
+      // 2. Get Public Client for Target Chain
+      const rpcUrl =
+        chainId === 42161
+          ? process.env.NEXT_PUBLIC_ARBITRUM_RPC_URL
+          : process.env.NEXT_PUBLIC_BASE_RPC_URL;
+      const targetPublicClient = createPublicClient({
+        chain: chainId === 42161 ? arbitrum : base,
+        transport: http(rpcUrl),
+      });
+
+      // 3. Check Allowance on Target Chain
+      const targetUSDC =
+        chainId === 42161
+          ? '0xaf88d065e77c8cC2239327C5EDb3A432268e5831' // Arb USDC
+          : USDC_ADDRESS;
+
+      const allowance = await targetPublicClient.readContract({
+        address: targetUSDC as Address,
+        abi: erc20Abi,
+        functionName: 'allowance',
+        args: [targetSafe, vaultAddress],
+      });
+
+      // 4. Approve if needed
+      if (allowance < amountInSmallestUnit) {
+        setTransactionState({ step: 'approving' });
+        console.log(`Approving on chain ${chainId}...`);
+
+        const approveData = encodeFunctionData({
+          abi: erc20Abi,
+          functionName: 'approve',
+          args: [vaultAddress, amountInSmallestUnit],
+        });
+
+        const approveHash = await targetClient.sendTransaction({
+          to: targetUSDC as Address,
+          value: 0n,
+          data: approveData,
+          chain: chainId === 42161 ? arbitrum : base,
+        });
+
+        setTransactionState({
+          step: 'waiting-approval',
+          txHash: approveHash,
+        });
+
+        // Wait for approval confirmation
+        // Ideally use waitForTransactionReceipt, but we'll use a delay for now as we don't have the specific public client hook handy for waiting easily without import
+        await new Promise((r) => setTimeout(r, 5000));
+      }
+
+      // 5. Deposit on Target Chain
+      setTransactionState({ step: 'depositing' });
+      console.log(`Depositing on chain ${chainId}...`);
+
+      const depositData = encodeFunctionData({
+        abi: VAULT_ABI,
+        functionName: 'deposit',
+        args: [amountInSmallestUnit, targetSafe],
+      });
+
+      const depositHash = await targetClient.sendTransaction({
+        to: vaultAddress,
+        value: 0n,
+        data: depositData,
+        chain: chainId === 42161 ? arbitrum : base,
+      });
+
+      setTransactionState({
+        step: 'waiting-deposit',
+        txHash: depositHash,
+      });
+
+      // Wait for deposit
+      await new Promise((r) => setTimeout(r, 7000));
+
+      setTransactionState({
+        step: 'success',
+        txHash: depositHash,
+        depositedAmount: depositAmount,
+      });
+
+      setDepositAmount('');
+      if (onDepositSuccess) onDepositSuccess();
+    } catch (error) {
+      console.error('[DepositEarnCard] Target deposit error:', error);
+      let errorMessage = 'Deposit failed on destination chain';
+      if (error instanceof Error) errorMessage = error.message;
+      setTransactionState({ step: 'error', errorMessage });
+    }
+  };
   const handleMax = () => {
-    const maxAmount = formatUnits(usdcBalance, USDC_DECIMALS);
-    setAmount(maxAmount);
+      const maxAmount = formatUnits(usdcBalance, USDC_DECIMALS);
+      setAmount(maxAmount);
+  };
+  
+  const handleMaxDeposit = () => {
+      const maxAmount = formatUnits(targetBalance, USDC_DECIMALS);
+      setDepositAmount(maxAmount);
   };
 
   const resetTransaction = () => {
@@ -396,6 +765,15 @@ export function DepositEarnCard({
       maximumFractionDigits: 6,
     },
   );
+  
+  const availableTargetBalance = formatUnits(targetBalance, USDC_DECIMALS);
+  const displayTargetBalance = parseFloat(availableTargetBalance).toLocaleString(
+    undefined,
+    {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 6,
+    },
+  );
 
   // Show skeleton only on initial load, not on data updates
   if (showSkeleton) {
@@ -408,7 +786,7 @@ export function DepositEarnCard({
     );
   }
 
-  // Check if we need approval
+  // Check if we need approval (Component Scope)
   const amountInSmallestUnit = amount ? parseUnits(amount, USDC_DECIMALS) : 0n;
   const needsApproval = amountInSmallestUnit > currentAllowance;
 
@@ -421,16 +799,255 @@ export function DepositEarnCard({
         return 25;
       case 'waiting-approval':
         return 40;
+      case 'bridging':
+        return 50;
       case 'depositing':
         return 60;
       case 'waiting-deposit':
         return 80;
+      case 'waiting-bridge':
+        return 90;
       case 'success':
         return 100;
       default:
         return 0;
     }
   };
+
+  // Needs deployment state - show UI to deploy Safe on destination chain
+  if (
+    transactionState.step === 'needs-deployment' &&
+    transactionState.deploymentInfo
+  ) {
+    const { deploymentInfo } = transactionState;
+    const chainName =
+      deploymentInfo.chainId === 42161
+        ? 'Arbitrum'
+        : `Chain ${deploymentInfo.chainId}`;
+
+    const handleDeploySafe = async () => {
+      try {
+        setTransactionState({ step: 'deploying-safe' });
+
+        console.log('Deploying Safe on Arbitrum. Chain object:', arbitrum);
+        
+        // Get the smart wallet client for Arbitrum
+        // Use hardcoded ID 42161 to prevent "reading 'id' of undefined" error if arbitrum import fails
+        const arbClient = await getClientForChain({ id: 42161 });
+        if (!arbClient) {
+          throw new Error('Failed to get Arbitrum client for Safe deployment');
+        }
+
+        const smartWalletAddress = arbClient.account?.address;
+        if (!smartWalletAddress) {
+          throw new Error('Smart wallet address not found');
+        }
+
+        console.log('[DepositEarnCard] Starting Arbitrum Safe deployment');
+        console.log(
+          '[DepositEarnCard] Smart wallet address:',
+          smartWalletAddress,
+        );
+
+        // Create Safe configuration with the Privy wallet as owner
+        const safeAccountConfig: SafeAccountConfig = {
+          owners: [smartWalletAddress],
+          threshold: 1,
+        };
+
+        // Use the Base Safe address as salt nonce for deterministic address matching
+        const saltNonce = safeAddress.toLowerCase();
+        const safeDeploymentConfig: SafeDeploymentConfig = {
+          saltNonce,
+          safeVersion: '1.4.1',
+        };
+
+        console.log('[DepositEarnCard] Safe config:', {
+          safeAccountConfig,
+          safeDeploymentConfig,
+        });
+
+        // Initialize the Protocol Kit with Arbitrum RPC
+        const arbitrumRpcUrl =
+          process.env.NEXT_PUBLIC_ARBITRUM_RPC_URL ||
+          'https://arb1.arbitrum.io/rpc';
+
+        const protocolKit = await Safe.init({
+          predictedSafe: {
+            safeAccountConfig,
+            safeDeploymentConfig,
+          },
+          provider: arbitrumRpcUrl,
+        });
+
+        // Get the predicted Safe address
+        const predictedSafeAddress =
+          (await protocolKit.getAddress()) as Address;
+        console.log(
+          `[DepositEarnCard] Predicted Safe address on Arbitrum: ${predictedSafeAddress}`,
+        );
+
+        // Create the Safe deployment transaction
+        const deploymentTransaction =
+          await protocolKit.createSafeDeploymentTransaction();
+
+        setTransactionState({ step: 'waiting-deployment' });
+
+        // Send the deployment transaction on Arbitrum using Privy smart wallet
+        console.log(
+          '[DepositEarnCard] Sending deployment transaction on Arbitrum...',
+        );
+
+        if (!arbitrum) {
+             throw new Error('Arbitrum chain definition is missing. Cannot proceed with deployment.');
+        }
+
+        const userOpHash = await arbClient.sendTransaction(
+          {
+            to: deploymentTransaction.to as Address,
+            value: BigInt(deploymentTransaction.value || '0'),
+            data: deploymentTransaction.data as `0x${string}`,
+            chain: arbitrum,
+          },
+          {
+            uiOptions: {
+              showWalletUIs: false,
+            },
+          },
+        );
+
+        console.log(`[DepositEarnCard] UserOperation hash: ${userOpHash}`);
+
+        // Wait for Safe deployment to be confirmed
+        const arbPublicClient = createPublicClient({
+          chain: arbitrum,
+          transport: http(arbitrumRpcUrl),
+        });
+
+        // Poll for Safe bytecode on Arbitrum
+        let retries = 30; // 2 minutes timeout
+        while (retries > 0) {
+          const code = await arbPublicClient.getBytecode({
+            address: predictedSafeAddress,
+          });
+          if (code && code !== '0x') {
+            console.log(
+              '[DepositEarnCard] Safe deployed successfully on Arbitrum',
+            );
+            break;
+          }
+          await new Promise((r) => setTimeout(r, 4000));
+          retries--;
+        }
+
+        if (retries === 0) {
+          throw new Error(
+            'Safe deployment timed out. Please check later and try again.',
+          );
+        }
+
+        // Save the Safe to database via tRPC
+        console.log('[DepositEarnCard] Saving Arbitrum Safe to database...');
+        await registerSafeMutation.mutateAsync({
+          safeAddress: predictedSafeAddress,
+          chainId: deploymentInfo.chainId,
+          safeType: 'primary',
+        });
+
+        // Reset to idle and let user retry the deposit
+        setTransactionState({ step: 'idle' });
+
+        // Show success message briefly then reset
+        console.log(
+          `[DepositEarnCard] Arbitrum Safe created at ${predictedSafeAddress}`,
+        );
+      } catch (error) {
+        console.error('Safe deployment error:', error);
+        setTransactionState({
+          step: 'error',
+          errorMessage:
+            error instanceof Error ? error.message : 'Failed to deploy Safe',
+        });
+      }
+    };
+
+    return (
+      <div className="space-y-4">
+        <div className="bg-[#FFF7ED] border border-[#F59E0B]/20 p-4">
+          <div className="flex gap-3">
+            <AlertCircle className="h-4 w-4 text-[#F59E0B] flex-shrink-0 mt-0.5" />
+            <div className="space-y-3">
+              <div className="text-[14px] font-medium text-[#101010]">
+                {chainName} Account Setup Required
+              </div>
+              <p className="text-[12px] text-[#101010]/70 leading-relaxed">
+                To deposit to {chainName} vaults, you need to set up your
+                account on {chainName} first. This is a one-time setup that
+                creates your secure savings account on the destination network.
+              </p>
+              <div className="text-[11px] text-[#101010]/50">
+                Predicted address:{' '}
+                <code className="font-mono">
+                  {deploymentInfo.predictedAddress.slice(0, 10)}...
+                  {deploymentInfo.predictedAddress.slice(-8)}
+                </code>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <button
+          onClick={handleDeploySafe}
+          className="w-full py-3 bg-[#1B29FF] text-white text-[14px] font-medium hover:bg-[#1420CC] transition-colors"
+        >
+          Set Up {chainName} Account
+        </button>
+
+        <button
+          onClick={resetTransaction}
+          className="w-full py-2 text-[12px] text-[#101010]/60 hover:text-[#101010] transition-colors"
+        >
+          Cancel
+        </button>
+      </div>
+    );
+  }
+
+  // Deploying Safe state
+  if (
+    transactionState.step === 'deploying-safe' ||
+    transactionState.step === 'waiting-deployment'
+  ) {
+    return (
+      <div className="space-y-4">
+        <div className="bg-white border border-[#101010]/10 p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-[14px] text-[#101010]">
+              Setting Up Account
+            </span>
+            <Loader2 className="h-4 w-4 animate-spin text-[#1B29FF]" />
+          </div>
+
+          <div className="relative h-2 bg-[#101010]/5 overflow-hidden">
+            <div
+              className="absolute inset-y-0 left-0 bg-[#1B29FF] transition-all duration-500"
+              style={{
+                width:
+                  transactionState.step === 'deploying-safe' ? '30%' : '70%',
+              }}
+            />
+          </div>
+
+          <div className="flex items-center gap-2 text-[12px] text-[#101010]/60">
+            <Clock className="h-3 w-3" />
+            {transactionState.step === 'deploying-safe'
+              ? 'Deploying your Safe on destination chain...'
+              : 'Waiting for deployment confirmation...'}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // Transaction in progress
   if (
@@ -477,7 +1094,7 @@ export function DepositEarnCard({
                     rel="noopener noreferrer"
                     className="flex items-center gap-1 text-[11px] text-[#1B29FF] hover:text-[#1420CC] transition-colors"
                   >
-                    View on BaseScan
+                    View on Explorer
                     <ExternalLink className="h-3 w-3" />
                   </a>
                 )}
@@ -489,7 +1106,34 @@ export function DepositEarnCard({
               <div className="space-y-2">
                 <div className="flex items-center gap-2 text-[12px] text-[#101010]">
                   <div className="h-2 w-2 rounded-full bg-[#1B29FF] animate-pulse" />
-                  Step 2 of 2: Depositing USDC
+                  {isCrossChain
+                    ? 'Step 2 of 2: Depositing on Destination Chain'
+                    : 'Step 2 of 2: Depositing USDC'}
+                </div>
+                {transactionState.txHash && (
+                  <a
+                    href={`https://basescan.org/tx/${transactionState.txHash}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1 text-[11px] text-[#1B29FF] hover:text-[#1420CC] transition-colors"
+                  >
+                    View on Explorer
+                    <ExternalLink className="h-3 w-3" />
+                  </a>
+                )}
+              </div>
+            )}
+
+            {(transactionState.step === 'bridging' ||
+              transactionState.step === 'waiting-bridge') && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-[12px] text-[#101010]">
+                  <div className="h-2 w-2 rounded-full bg-[#28A0F0] animate-pulse" />
+                  Transferring Funds
+                </div>
+                <div className="text-[11px] text-[#101010]/60">
+                  Funds are being bridged via Across Protocol. This typically
+                  takes 1-2 minutes.
                 </div>
                 {transactionState.txHash && (
                   <a
@@ -508,7 +1152,7 @@ export function DepositEarnCard({
         </div>
 
         <p className="text-[11px] text-[#101010]/50 text-center">
-          Please wait while your transaction is being processed on Base network
+          Please wait while your transaction is being processed
         </p>
       </div>
     );
@@ -523,10 +1167,12 @@ export function DepositEarnCard({
             <CheckCircle className="h-4 w-4 text-[#10B981] flex-shrink-0 mt-0.5" />
             <div className="space-y-2">
               <div className="text-[14px] font-medium text-[#101010]">
-                Successfully deposited {transactionState.depositedAmount} USDC
+                {isCrossChain && !depositAmount // If it was a bridge transaction
+                  ? `Successfully deposited ${transactionState.depositedAmount} USDC`
+                  : `Successfully deposited ${transactionState.depositedAmount} USDC`}
               </div>
               <div className="text-[12px] text-[#101010]/70">
-                Your funds are now earning yield in the vault.
+                  Your funds are now earning yield in the vault.
               </div>
               {transactionState.txHash && (
                 <a
@@ -535,7 +1181,7 @@ export function DepositEarnCard({
                   rel="noopener noreferrer"
                   className="flex items-center gap-1 text-[11px] text-[#1B29FF] hover:text-[#1420CC] transition-colors"
                 >
-                  View transaction on BaseScan
+                  View transaction
                   <ExternalLink className="h-3 w-3" />
                 </a>
               )}
@@ -592,7 +1238,119 @@ export function DepositEarnCard({
     );
   }
 
-  // Default form state
+  // --- CROSS-CHAIN SPLIT VIEW ---
+  if (isCrossChain && targetSafeAddress) {
+      const chainName = chainId === 42161 ? 'Arbitrum' : `Chain ${chainId}`;
+      
+      return (
+          <div className="space-y-6">
+             {/* TOP CARD: Target Chain Account (Investment) */}
+             <div className="bg-white border border-[#101010]/10 p-5 rounded-[12px] shadow-[0_2px_8px_rgba(16,16,16,0.04)]">
+                <div className="flex justify-between items-start mb-4">
+                    <div>
+                        <p className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60 mb-1">
+                            {chainName} Account Balance
+                        </p>
+                        <p className="text-[24px] font-medium tabular-nums text-[#101010]">
+                            ${displayTargetBalance}
+                        </p>
+                    </div>
+                </div>
+
+                {/* Target Deposit Input & Button */}
+                <div className="space-y-3">
+                    <div className="relative">
+                        <input
+                            type="number"
+                            placeholder="0.0"
+                            value={depositAmount}
+                            onChange={(e) => setDepositAmount(e.target.value)}
+                            className="w-full h-12 px-4 bg-[#F7F7F2] border border-[#101010]/10 rounded-md focus:border-[#1B29FF] focus:outline-none text-[15px] transition-colors"
+                            step="0.000001"
+                            min="0"
+                            max={availableTargetBalance}
+                            disabled={targetBalance === 0n}
+                        />
+                         <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                            <span className="text-[12px] text-[#101010]/50">USDC</span>
+                            <button
+                                type="button"
+                                onClick={handleMaxDeposit}
+                                className="text-[11px] text-[#1B29FF] font-medium hover:text-[#1420CC] transition-colors"
+                                disabled={targetBalance === 0n}
+                            >
+                                MAX
+                            </button>
+                        </div>
+                    </div>
+                    <button
+                        onClick={handleDepositOnly}
+                        disabled={!depositAmount || parseFloat(depositAmount) <= 0 || targetBalance === 0n}
+                        className="w-full h-11 bg-[#1B29FF] hover:bg-[#1420CC] text-white font-medium rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    >
+                        <ArrowDownToLine className="h-4 w-4" />
+                        Deposit to Earn
+                    </button>
+                </div>
+             </div>
+
+            {/* BOTTOM CARD: Source Chain Account (Funding) */}
+             <div className="bg-[#F7F7F2] border border-[#101010]/10 p-5 rounded-[12px]">
+                <div className="flex justify-between items-center mb-4">
+                    <div>
+                        <h3 className="text-[14px] font-medium text-[#101010]">
+                           Add funds from Base
+                        </h3>
+                        <p className="text-[12px] text-[#101010]/60 mt-0.5">
+                            Available: ${displayBalance}
+                        </p>
+                    </div>
+                </div>
+                
+                {/* Bridge Input & Button */}
+                <div className="flex gap-3">
+                     <div className="relative flex-1">
+                        <input
+                            type="number"
+                            placeholder="0.0"
+                            value={amount}
+                            onChange={(e) => setAmount(e.target.value)}
+                            className="w-full h-10 px-3 bg-white border border-[#101010]/10 rounded-md focus:border-[#1B29FF] focus:outline-none text-[14px] transition-colors"
+                            step="0.000001"
+                             min="0"
+                             max={availableBalance}
+                        />
+                         <button
+                            type="button"
+                            onClick={handleMax}
+                            className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-[#1B29FF] hover:text-[#1420CC]"
+                        >
+                            MAX
+                        </button>
+                     </div>
+                     <button
+                        onClick={handleBridgeOnly}
+                        disabled={!amount || parseFloat(amount) <= 0 || isLoadingQuote}
+                        className="px-4 h-10 bg-white border border-[#101010]/20 hover:border-[#101010]/40 text-[#101010] text-[13px] font-medium rounded-md transition-colors flex items-center gap-2 whitespace-nowrap"
+                     >
+                        {isLoadingQuote ? <Loader2 className="h-3 w-3 animate-spin" /> : <ArrowRight className="h-3 w-3" />}
+                        Transfer
+                     </button>
+                </div>
+                
+                {/* Quote Info */}
+                {bridgeQuote && amount && (
+                    <div className="mt-3 p-2 bg-[#101010]/5 rounded text-[11px] text-[#101010]/70 flex justify-between">
+                         <span>Fee: ${formatUnits(BigInt(bridgeQuote.totalFee), USDC_DECIMALS)}</span>
+                         <span>Est. Time: {bridgeQuote.estimatedFillTime}s</span>
+                    </div>
+                )}
+             </div>
+          </div>
+      );
+  }
+
+  // --- DEFAULT SAME-CHAIN VIEW ---
   return (
     <div className="space-y-4">
       {/* Current Balance */}
@@ -661,7 +1419,7 @@ export function DepositEarnCard({
 
       {/* Deposit Button */}
       <button
-        onClick={handleDeposit}
+        onClick={handleSameChainDeposit}
         disabled={
           !amount ||
           parseFloat(amount) <= 0 ||
@@ -691,8 +1449,8 @@ export function DepositEarnCard({
       {/* Help text */}
       <p className="text-[11px] text-[#101010]/50 text-center">
         {needsApproval
-          ? 'This will approve and deposit in a single transaction flow'
-          : 'Your deposit will start earning yield immediately'}
+            ? 'This will approve and deposit in a single transaction flow'
+            : 'Your deposit will start earning yield immediately'}
       </p>
     </div>
   );

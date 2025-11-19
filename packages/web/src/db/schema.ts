@@ -1396,3 +1396,10 @@ export type ApiWaitlist = typeof apiWaitlist.$inferSelect;
 export type NewApiWaitlist = typeof apiWaitlist.$inferInsert;
 
 // Workspace invite system and extensions - imported from schema/workspaces.ts (see top of file)
+
+// Bridge transactions for cross-chain operations
+export {
+  bridgeTransactions,
+  type InsertBridgeTransaction,
+  type SelectBridgeTransaction,
+} from './schema/bridge-transactions';

@@ -41,9 +41,10 @@ import {
   calculateAverageApy,
   calculateWeightedInstantApy,
 } from './utils/vault-calculations';
-// Multi-chain feature disabled for now - needs more work
-// import { MultiChainSection } from './components/multi-chain-section';
-// import { featureConfig } from '@/lib/feature-config';
+import { featureConfig } from '@/lib/feature-config';
+import { ALL_CROSS_CHAIN_VAULTS } from '@/server/earn/cross-chain-vaults';
+import { NetworkBadge } from '@/components/savings/network-badge';
+import { SUPPORTED_CHAINS } from '@/lib/constants/chains';
 
 export type SavingsPageWrapperProps = {
   mode?: SavingsExperienceMode;
@@ -197,8 +198,11 @@ export default function SavingsPageWrapper({
 
   const vaultStats = isDemoMode ? demoVaultStats : realVaultStats.data;
 
-  // Base vaults configuration
-  const BASE_VAULTS = BASE_USDC_VAULTS;
+  // Vaults configuration - include Arbitrum if multi-chain enabled
+  const isMultiChainEnabled = featureConfig.multiChain.enabled && !isDemoMode;
+  const BASE_VAULTS = isMultiChainEnabled
+    ? ALL_CROSS_CHAIN_VAULTS
+    : BASE_USDC_VAULTS;
   const baseVaultAddresses = useMemo(
     () => BASE_VAULTS.map((v) => v.address),
     [BASE_VAULTS],
@@ -792,6 +796,7 @@ export default function SavingsPageWrapper({
                                 safeAddress={safeAddress as Address}
                                 vaultAddress={vault.address as Address}
                                 onDepositSuccess={handleDepositSuccess}
+                                chainId={vault.chainId}
                               />
                             ) : expandedAction === 'withdraw' && isSelected ? (
                               <WithdrawEarnCard
@@ -992,6 +997,7 @@ export default function SavingsPageWrapper({
                                   safeAddress={safeAddress as Address}
                                   vaultAddress={vault.address as Address}
                                   onDepositSuccess={handleDepositSuccess}
+                                  chainId={vault.chainId}
                                 />
                               ) : expandedAction === 'withdraw' &&
                                 isSelected ? (

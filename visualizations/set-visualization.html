@@ -1,0 +1,967 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Infinite Sets – Diagonal, Cardinals & CH, S ⊂ [0,1]²</title>
+  <style>
+    :root {
+      --bg: #050509;
+      --panel-bg: rgba(0, 0, 0, 0.82);
+      --panel-soft: rgba(12, 12, 24, 0.9);
+      --accent: #3d65ff;
+      --accent-soft: #4ec9ff;
+      --text-main: #f5f5ff;
+      --text-soft: #c9cadb;
+    }
+
+    body {
+      margin: 0;
+      background: radial-gradient(circle at top, #151528 0, #050509 55%);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      color: var(--text-main);
+      overflow: hidden;
+    }
+
+    #canvas2d,
+    #webgl {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      display: block;
+    }
+
+    #webgl {
+      display: none; /* Only visible in view 2 */
+    }
+
+    #controls {
+      position: fixed;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--panel-bg);
+      backdrop-filter: blur(8px);
+      padding: 6px 12px;
+      border-radius: 999px;
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      font-size: 12px;
+      z-index: 20;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    }
+
+    #controls button {
+      border: none;
+      padding: 5px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      cursor: pointer;
+      background: #181822;
+      color: var(--text-soft);
+      transition: background 0.15s ease, color 0.15s ease, transform 0.1s ease;
+    }
+
+    #controls button:hover {
+      background: #222537;
+      transform: translateY(-1px);
+    }
+
+    #controls button.active {
+      background: var(--accent);
+      color: #ffffff;
+    }
+
+    #controls label {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      color: var(--text-soft);
+      padding-left: 8px;
+      border-left: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    #controls input[type="checkbox"] {
+      accent-color: var(--accent);
+      cursor: pointer;
+    }
+
+    #sidebar {
+      position: fixed;
+      top: 56px;
+      right: 10px;
+      bottom: 10px;
+      width: min(420px, 34vw);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      z-index: 15;
+      pointer-events: none;
+    }
+
+    #info,
+    #theory {
+      pointer-events: auto;
+      background: var(--panel-soft);
+      border-radius: 10px;
+      padding: 8px 10px;
+      font-size: 11px;
+      line-height: 1.5;
+      border: 1px solid rgba(255, 255, 255, 0.07);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.55);
+    }
+
+    #info {
+      min-height: 64px;
+      max-height: 120px;
+      overflow-y: auto;
+    }
+
+    #theory {
+      flex: 1;
+      overflow-y: auto;
+    }
+
+    #info b {
+      color: #ffffff;
+    }
+
+    #theory h2 {
+      margin: 0 0 4px;
+      font-size: 13px;
+      color: #ffffff;
+    }
+
+    #theory h3 {
+      margin: 8px 0 2px;
+      font-size: 12px;
+      color: #c5c7ff;
+    }
+
+    #theory p {
+      margin: 2px 0 4px;
+      color: var(--text-soft);
+    }
+
+    #theory code {
+      font-family: Menlo, Consolas, monospace;
+      font-size: 11px;
+      background: rgba(255, 255, 255, 0.06);
+      padding: 1px 3px;
+      border-radius: 3px;
+      color: #fdfdff;
+    }
+
+    @media (max-width: 900px) {
+      #sidebar {
+        width: min(440px, 90vw);
+        left: 10px;
+        right: 10px;
+        top: auto;
+        bottom: 10px;
+        height: 38vh;
+      }
+      #theory {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<canvas id="canvas2d"></canvas>
+<canvas id="webgl"></canvas>
+
+<div id="controls">
+  <button data-mode="diagonal" class="active">1. Diagonal</button>
+  <button data-mode="cardinals">2. Cardinals &amp; CH</button>
+  <button data-mode="square">3. S ⊂ [0,1]²</button>
+  <label>
+    <input type="checkbox" id="chToggle" />
+    Assume CH (2^{ℵ₀} = ℵ₁)
+  </label>
+</div>
+
+<div id="sidebar">
+  <div id="info"></div>
+  <div id="theory">
+    <h2>How these three views glue the chapter together</h2>
+
+    <h3>1. Diagonal view: why reals are “bigger” than naturals</h3>
+    <p>
+      • Rows are a pretend list of infinite binary sequences f₀, f₁, …<br/>
+      • Orange diagonal bits are fₙ[n]; magenta row g flips them, so g[n] ≠ fₙ[n] for every n.<br/>
+      • So g ≠ fₙ for all n. Any natural-number-indexed list misses some reals.<br/>
+      That’s Cantor’s diagonal argument: the set of reals in [0,1] can’t be listed ⇒ uncountable.
+    </p>
+
+    <h3>2. Cardinals & CH view: what sizes of infinity we’re comparing</h3>
+    <p>
+      • Bars on the axis are ℵ₀ (countable), ℵ₁ (next up), and 2^{ℵ₀} (continuum).<br/>
+      • CH OFF: shaded gap between ℵ₁ and 2^{ℵ₀} = space where extra infinite sizes could live.<br/>
+      • CH ON: gap vanishes and a bracket ties ℵ₁ and 2^{ℵ₀} together: 2^{ℵ₀} = ℵ₁.
+    </p>
+
+    <h3>3. Square view: Scott's S ⊂ [0,1]² puzzle</h3>
+    <p>
+      • Square = [0,1]², each point is a pair (x,y).<br/>
+      • Blue dots on the x-axis = A (size ℵ₁); green markings on y-axis = B = { y : ∃x∈A with (x,y) ∈ S }.<br/>
+      • Rules: per x only countably many y in S; and for every (x,y), either (x,y) or (y,x) ∈ S.
+    </p>
+    <p>
+      • CH OFF (2^{ℵ₀} &gt; ℵ₁): B has size ℵ₁, [0,1] has size 2^{ℵ₀}, so some y₀ ∉ B exists, and that
+        forces uncountably many points (y₀,x) in S ⇒ contradiction.<br/>
+      • CH ON: ℵ₁ and 2^{ℵ₀} coincide, so the “there must be y₀ ∉ B” step no longer follows just from sizes.
+    </p>
+
+    <h3>4. Big picture</h3>
+    <p>
+      The diagonal view gives you |ℝ| = 2^{ℵ₀} &gt; ℵ₀. The cardinal view shows how 2^{ℵ₀} sits relative to ℵ₀
+      and ℵ₁ under CH vs ¬CH. The square view shows how that exact size relationship is what drives Aaronson’s S ⊂ [0,1]² argument.
+    </p>
+  </div>
+</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+
+<script type="module">
+  import * as THREE from 'three';
+  import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+  // --- Shared DOM and state -------------------------------------------------
+  const canvas2d = document.getElementById('canvas2d');
+  const ctx = canvas2d.getContext('2d');
+  const webglCanvas = document.getElementById('webgl');
+  const info = document.getElementById('info');
+  const controls = document.getElementById('controls');
+  const chToggle = document.getElementById('chToggle');
+
+  const modes = {
+    diagonal: 'diagonal',
+    cardinals: 'cardinals',
+    square: 'square'
+  };
+  let mode = modes.diagonal;
+  let assumeCH = false;
+
+  function applyCanvasVisibility() {
+    if (mode === modes.cardinals) {
+      canvas2d.style.display = 'none';
+      webglCanvas.style.display = 'block';
+    } else {
+      canvas2d.style.display = 'block';
+      webglCanvas.style.display = 'none';
+    }
+  }
+
+  function setMode(newMode) {
+    mode = newMode;
+    applyCanvasVisibility();
+    const buttons = controls.querySelectorAll('button[data-mode]');
+    buttons.forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.mode === newMode);
+    });
+    updateInfoForMode();
+  }
+
+  controls.addEventListener('click', (e) => {
+    const btn = e.target.closest('button[data-mode]');
+    if (!btn) return;
+    setMode(btn.dataset.mode);
+  });
+
+  chToggle.addEventListener('change', () => {
+    assumeCH = chToggle.checked;
+    // 3D-specific visibility toggles are set inside cardinals init
+    updateCardinalsCHState();
+    updateInfoForMode();
+  });
+
+  // --- 2D: Diagonal + Square drawing ---------------------------------------
+  function resize2D() {
+    canvas2d.width = window.innerWidth;
+    canvas2d.height = window.innerHeight;
+  }
+  resize2D();
+
+  const N = 12;
+  const diagCycleDuration = 10;
+  const diagPauseAfter = 4;
+
+  const bits = [];
+  for (let n = 0; n < N; n++) {
+    const row = [];
+    for (let k = 0; k < N; k++) {
+      row.push(Math.random() < 0.5 ? 0 : 1);
+    }
+    bits.push(row);
+  }
+  const g = [];
+  for (let k = 0; k < N; k++) {
+    g.push(1 - bits[k][k]);
+  }
+
+  function drawDiagonal2D(t, w, h) {
+    const fullPhaseDuration = diagCycleDuration + diagPauseAfter;
+    const phaseT = t % fullPhaseDuration;
+
+    let currentIndex = 0;
+    let buildingDone = false;
+    if (phaseT < diagCycleDuration) {
+      currentIndex = Math.min(
+        N,
+        Math.floor((phaseT / diagCycleDuration) * N + 0.0001)
+      );
+    } else {
+      currentIndex = N;
+      buildingDone = true;
+    }
+
+    const size = Math.min(w, h) * 0.7;
+    const cellSize = size / N;
+    const gridLeft = (w - size) / 2;
+    const gridTop = (h - size) / 2 - 20;
+
+    ctx.fillStyle = '#050509';
+    ctx.fillRect(0, 0, w, h);
+
+    ctx.fillStyle = 'rgba(16, 16, 32, 0.98)';
+    ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+    ctx.lineWidth = 1.4;
+    if (ctx.roundRect) {
+      ctx.beginPath();
+      ctx.roundRect(gridLeft - 14, gridTop - 18, size + 28, size + 80, 16);
+      ctx.fill();
+      ctx.stroke();
+    } else {
+      ctx.fillRect(gridLeft - 14, gridTop - 18, size + 28, size + 80);
+    }
+
+    const gridColor = '#303040';
+    const bitColor = '#ccccdd';
+    const diagColor = '#ffb347';
+    const rowHighlightColor = '#4ec9ff';
+    const gColor = '#ff3bff';
+
+    ctx.strokeStyle = gridColor;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    for (let i = 0; i <= N; i++) {
+      const y = gridTop + i * cellSize;
+      ctx.moveTo(gridLeft, y);
+      ctx.lineTo(gridLeft + size, y);
+    }
+    for (let j = 0; j <= N; j++) {
+      const x = gridLeft + j * cellSize;
+      ctx.moveTo(x, gridTop);
+      ctx.lineTo(x, gridTop + size);
+    }
+    ctx.stroke();
+
+    let highlightRow = null;
+    if (buildingDone) {
+      const highlightPhase = (phaseT - diagCycleDuration) / diagPauseAfter;
+      const index = Math.floor(highlightPhase * (N + 1));
+      if (index < N) {
+        highlightRow = index;
+      }
+    }
+
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.font = `${cellSize * 0.45}px Menlo, Consolas, monospace`;
+
+    for (let n = 0; n < N; n++) {
+      for (let k = 0; k < N; k++) {
+        const val = bits[n][k];
+        const x = gridLeft + (k + 0.5) * cellSize;
+        const y = gridTop + (n + 0.5) * cellSize;
+        const isDiagonal = (n === k);
+        const isVisitedDiag = (k < currentIndex && n === k);
+
+        if (highlightRow === n) {
+          ctx.fillStyle = 'rgba(78, 201, 255, 0.16)';
+          ctx.fillRect(
+            gridLeft + k * cellSize,
+            gridTop + n * cellSize,
+            cellSize,
+            cellSize
+          );
+        }
+
+        if (isVisitedDiag && isDiagonal) {
+          ctx.fillStyle = diagColor;
+        } else if (highlightRow === n) {
+          ctx.fillStyle = rowHighlightColor;
+        } else {
+          ctx.fillStyle = bitColor;
+        }
+        ctx.fillText(String(val), x, y);
+      }
+    }
+
+    ctx.fillStyle = '#a0a0ff';
+    ctx.font = `${cellSize * 0.35}px Menlo, Consolas, monospace`;
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'middle';
+    for (let n = 0; n < N; n++) {
+      const y = gridTop + (n + 0.5) * cellSize;
+      ctx.fillText(`f${n}`, gridLeft - cellSize * 0.6, y);
+    }
+
+    const gRowY = gridTop + size + cellSize * 1.2;
+    ctx.fillStyle = gColor;
+    ctx.fillText('g', gridLeft - cellSize * 0.6, gRowY);
+
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.font = `${cellSize * 0.45}px Menlo, Consolas, monospace`;
+    for (let k = 0; k < N; k++) {
+      const x = gridLeft + (k + 0.5) * cellSize;
+      const val = g[k];
+      if (k < currentIndex) {
+        ctx.fillStyle = gColor;
+        if (highlightRow === k) {
+          ctx.save();
+          ctx.strokeStyle = gColor;
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.rect(
+            x - cellSize * 0.4,
+            gRowY - cellSize * 0.4,
+            cellSize * 0.8,
+            cellSize * 0.8
+          );
+          ctx.stroke();
+          ctx.restore();
+        }
+        ctx.fillText(String(val), x, gRowY);
+      } else {
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
+        ctx.fillText('·', x, gRowY);
+      }
+    }
+
+    ctx.font = '12px system-ui, -apple-system, BlinkMacSystemFont, sans-serif';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'bottom';
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+    ctx.fillText(
+      'Diagonal: flip fₙ[n] → build g[n] so g dodges every row.',
+      gridLeft - 6,
+      gridTop - 6
+    );
+  }
+
+  function drawSquare2D(t, w, h) {
+    ctx.fillStyle = '#050509';
+    ctx.fillRect(0, 0, w, h);
+
+    const size = Math.min(w, h) * 0.55;
+    const left = (w - size) / 2 - 40;
+    const top = (h - size) / 2 - 10;
+
+    ctx.fillStyle = 'rgba(16,16,32,0.95)';
+    ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+    ctx.lineWidth = 1.8;
+    if (ctx.roundRect) {
+      ctx.beginPath();
+      ctx.roundRect(left - 12, top - 14, size + 60, size + 60, 14);
+      ctx.fill();
+      ctx.stroke();
+    } else {
+      ctx.fillRect(left - 12, top - 14, size + 60, size + 60);
+    }
+
+    ctx.strokeStyle = '#444a66';
+    ctx.lineWidth = 1.8;
+    ctx.strokeRect(left, top, size, size);
+
+    ctx.font = '12px Menlo, Consolas, monospace';
+    ctx.fillStyle = '#ccccff';
+    ctx.textBaseline = 'top';
+    ctx.textAlign = 'left';
+    ctx.fillText('x ∈ [0,1]', left + size * 0.55, top + size + 8);
+    ctx.save();
+    ctx.translate(left - 10, top + size * 0.25);
+    ctx.rotate(-Math.PI / 2);
+    ctx.fillText('y ∈ [0,1]', 0, 0);
+    ctx.restore();
+
+    ctx.strokeStyle = '#5555ff';
+    ctx.lineWidth = 1.4;
+    ctx.beginPath();
+    ctx.moveTo(left, top + size);
+    ctx.lineTo(left + size, top);
+    ctx.stroke();
+
+    const A_xs = [0.1, 0.25, 0.4, 0.6, 0.8];
+    ctx.fillStyle = '#3d65ff';
+    A_xs.forEach(xFrac => {
+      const x = left + xFrac * size;
+      const y = top + size;
+      ctx.beginPath();
+      ctx.arc(x, y, 4, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    ctx.fillStyle = '#a0c8ff';
+    ctx.textBaseline = 'top';
+    ctx.textAlign = 'left';
+    ctx.fillText('A (size ℵ₁)', left + 4, top + size + 26);
+
+    if (assumeCH) {
+      ctx.strokeStyle = '#33ff99';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      for (let i = 0; i <= 26; i++) {
+        const z = top + size * (i / 26);
+        ctx.moveTo(left, z);
+        ctx.lineTo(left - 7, z);
+      }
+      ctx.stroke();
+      ctx.fillStyle = '#a8ffd4';
+      ctx.fillText('B as large as [0,1] (ℵ₁ = 2^{ℵ₀})', left - 6, top - 18);
+
+      ctx.fillStyle = '#ffaaaa';
+      ctx.fillText(
+        'CH ON: cardinalities alone do not force a y₀ ∉ B.',
+        left + 12,
+        top + 8
+      );
+    } else {
+      const B_ys = [0.15, 0.35, 0.55, 0.75];
+      ctx.fillStyle = '#33ff99';
+      B_ys.forEach(yFrac => {
+        const x = left;
+        const y = top + (1 - yFrac) * size;
+        ctx.beginPath();
+        ctx.arc(x, y, 4, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      ctx.fillStyle = '#a8ffd4';
+      ctx.fillText('B (size ℵ₁)', left - 6, top - 18);
+
+      const y0Frac = 0.9;
+      const y0Y = top + (1 - y0Frac) * size;
+      const y0X = left;
+
+      ctx.strokeStyle = '#ff5555';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(y0X, y0Y, 6, 0, Math.PI * 2);
+      ctx.stroke();
+
+      ctx.fillStyle = '#ff8888';
+      ctx.textBaseline = 'middle';
+      ctx.textAlign = 'left';
+      ctx.fillText('y₀ ∉ B', y0X + 10, y0Y - 10);
+
+      const xForY0 = left + y0Frac * size;
+      ctx.strokeStyle = 'rgba(255, 85, 85, 0.4)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(xForY0, top);
+      ctx.lineTo(xForY0, top + size);
+      ctx.stroke();
+
+      ctx.fillStyle = '#ff5555';
+      A_xs.forEach(xFrac => {
+        const y = top + (1 - xFrac) * size;
+        ctx.beginPath();
+        ctx.arc(xForY0, y, 4, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      ctx.fillStyle = '#ffaaaa';
+      ctx.textBaseline = 'top';
+      ctx.textAlign = 'left';
+      ctx.fillText(
+        '(x,y₀) ∉ S for x∈A ⇒ (y₀,x) ∈ S for all x∈A → uncountably many points on one y₀.',
+        left + 12,
+        top + 8
+      );
+    }
+  }
+
+  // --- 3D: Cardinals + CH (view 2) -----------------------------------------
+  let scene, camera, renderer, controls3D;
+  let aleph0Bar, aleph1Bar, contBar;
+  let gapBox, gapLabel, bracketGroup;
+  let hoveredObj = null;
+  const raycaster = new THREE.Raycaster();
+  const mouse = new THREE.Vector2();
+  const hoverTargets = [];
+
+  function makeTextSprite(message, color = '#ffffff', fontSize = 64) {
+    const canvas = document.createElement('canvas');
+    const context = canvas.getContext('2d');
+    context.font = `${fontSize}px system-ui, -apple-system, BlinkMacSystemFont, sans-serif`;
+    const metrics = context.measureText(message);
+    const padding = 20;
+    canvas.width = metrics.width + padding * 2;
+    canvas.height = fontSize * 1.8;
+    context.font = `${fontSize}px system-ui, -apple-system, BlinkMacSystemFont, sans-serif`;
+    context.clearRect(0, 0, canvas.width, canvas.height);
+    context.fillStyle = 'rgba(0,0,0,0)';
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    context.fillStyle = color;
+    context.textAlign = 'center';
+    context.textBaseline = 'middle';
+    context.fillText(message, canvas.width / 2, canvas.height / 2);
+    const texture = new THREE.Texture(canvas);
+    texture.needsUpdate = true;
+    texture.encoding = THREE.sRGBEncoding;
+    const material = new THREE.SpriteMaterial({
+      map: texture,
+      transparent: true
+    });
+    const sprite = new THREE.Sprite(material);
+    const scaleFactor = 0.008;
+    sprite.scale.set(canvas.width * scaleFactor, canvas.height * scaleFactor, 1);
+    return sprite;
+  }
+
+  function initCardinals3D() {
+    scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x050509);
+    scene.fog = new THREE.Fog(0x050509, 10, 30);
+
+    camera = new THREE.PerspectiveCamera(
+      45,
+      window.innerWidth / window.innerHeight,
+      0.1,
+      100
+    );
+    camera.position.set(6, 4, 8);
+
+    renderer = new THREE.WebGLRenderer({ antialias: true, canvas: webglCanvas });
+    renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.outputEncoding = THREE.sRGBEncoding;
+
+    controls3D = new OrbitControls(camera, renderer.domElement);
+    controls3D.enableDamping = true;
+    controls3D.dampingFactor = 0.06;
+    controls3D.minDistance = 4;
+    controls3D.maxDistance = 20;
+    controls3D.target.set(0, 0.6, 0);
+
+    const hemi = new THREE.HemisphereLight(0xffffff, 0x111122, 0.9);
+    scene.add(hemi);
+    const dir = new THREE.DirectionalLight(0xffffff, 0.8);
+    dir.position.set(5, 8, 4);
+    scene.add(dir);
+    const rim = new THREE.DirectionalLight(0x8888ff, 0.4);
+    rim.position.set(-6, 5, -4);
+    scene.add(rim);
+
+    const grid = new THREE.GridHelper(20, 20, 0x303040, 0x202030);
+    grid.position.y = 0;
+    scene.add(grid);
+
+    const centerPlaneGeo = new THREE.PlaneGeometry(10, 4);
+    const centerPlaneMat = new THREE.MeshBasicMaterial({
+      color: 0x111122,
+      transparent: true,
+      opacity: 0.28,
+      side: THREE.DoubleSide
+    });
+    const centerPlane = new THREE.Mesh(centerPlaneGeo, centerPlaneMat);
+    centerPlane.rotation.x = -Math.PI / 2;
+    centerPlane.position.set(0, 0.001, 0);
+    scene.add(centerPlane);
+
+    // Axis group
+    const axisGroup = new THREE.Group();
+    scene.add(axisGroup);
+
+    const axisGeo = new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(-5, 0.01, 0),
+      new THREE.Vector3(5, 0.01, 0)
+    ]);
+    const axisMat = new THREE.LineBasicMaterial({ color: 0x444a66 });
+    axisGroup.add(new THREE.Line(axisGeo, axisMat));
+
+    const tickHeight = 0.3;
+    function addTick(x) {
+      const tickGeo = new THREE.BufferGeometry().setFromPoints([
+        new THREE.Vector3(x, 0, 0),
+        new THREE.Vector3(x, tickHeight, 0)
+      ]);
+      const tickMat = new THREE.LineBasicMaterial({ color: 0x555a77 });
+      axisGroup.add(new THREE.Line(tickGeo, tickMat));
+    }
+
+    const posAleph0 = -3;
+    const posAleph1 = 0;
+    const posCont = 3;
+    addTick(posAleph0);
+    addTick(posAleph1);
+    addTick(posCont);
+
+    const cardBarWidth = 1.5;
+    const cardBarDepth = 0.6;
+    const cardBarHeight = 0.6;
+
+    function makeBar(x, color, labelText) {
+      const geo = new THREE.BoxGeometry(cardBarWidth, cardBarHeight, cardBarDepth);
+      const mat = new THREE.MeshStandardMaterial({
+        color,
+        metalness: 0.3,
+        roughness: 0.35
+      });
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.position.set(x, cardBarHeight / 2 + 0.02, 0);
+      mesh.userData.baseColor = new THREE.Color(color);
+      axisGroup.add(mesh);
+
+      const label = makeTextSprite(labelText, '#ffffff', 70);
+      label.position.set(x, cardBarHeight + 0.8, 0);
+      axisGroup.add(label);
+      return mesh;
+    }
+
+    aleph0Bar = { mesh: makeBar(posAleph0, 0x4ec9ff, 'ℵ₀') };
+    aleph1Bar = { mesh: makeBar(posAleph1, 0xffb347, 'ℵ₁') };
+    contBar = { mesh: makeBar(posCont, 0xff3bff, '2^{ℵ₀}') };
+
+    // Gap box
+    const gapWidth = posCont - posAleph1 - cardBarWidth;
+    const gapGeo = new THREE.BoxGeometry(gapWidth, 0.4, cardBarDepth * 1.3);
+    const gapMat = new THREE.MeshStandardMaterial({
+      color: 0xffffff,
+      transparent: true,
+      opacity: 0.12,
+      roughness: 1.0,
+      metalness: 0.0
+    });
+    gapBox = new THREE.Mesh(gapGeo, gapMat);
+    gapBox.position.set((posAleph1 + posCont) / 2, 0.3, 0);
+    axisGroup.add(gapBox);
+
+    gapLabel = makeTextSprite('room for extra cardinals', '#e0e0e0', 48);
+    gapLabel.position.set((posAleph1 + posCont) / 2, 1.1, 0.02);
+    axisGroup.add(gapLabel);
+
+    // Bracket group
+    bracketGroup = new THREE.Group();
+    axisGroup.add(bracketGroup);
+    const bracketMat = new THREE.LineBasicMaterial({ color: 0xffbffb, linewidth: 2 });
+    const bracketTopY = 1.7;
+    const bracketBottomY = 0.9;
+    const bracketGeo = new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(posAleph1, bracketBottomY, 0),
+      new THREE.Vector3(posAleph1, bracketTopY, 0),
+      new THREE.Vector3(posCont, bracketTopY, 0),
+      new THREE.Vector3(posCont, bracketBottomY, 0)
+    ]);
+    bracketGroup.add(new THREE.Line(bracketGeo, bracketMat));
+    const bracketLabel = makeTextSprite('CH: 2^{ℵ₀} = ℵ₁', '#ffd9ff', 54);
+    bracketLabel.position.set((posAleph1 + posCont) / 2, bracketTopY + 0.35, 0);
+    bracketGroup.add(bracketLabel);
+    bracketGroup.visible = false;
+
+    // ℕ/ℚ planes
+    const planeGroup = new THREE.Group();
+    scene.add(planeGroup);
+    const planeY = 1.8;
+    const planeWidth = 3.2;
+    const planeDepth = 0.6;
+
+    const nPlaneGeo = new THREE.BoxGeometry(planeWidth, 0.12, planeDepth);
+    const qPlaneGeo = new THREE.BoxGeometry(planeWidth, 0.12, planeDepth);
+    const planeMat = new THREE.MeshStandardMaterial({
+      color: 0x3d65ff,
+      metalness: 0.25,
+      roughness: 0.35
+    });
+    const nPlane = new THREE.Mesh(nPlaneGeo, planeMat.clone());
+    const qPlane = new THREE.Mesh(qPlaneGeo, planeMat.clone());
+    nPlane.position.set(-0.5, planeY, -2.5);
+    qPlane.position.set(-0.5, planeY - 0.4, -2.5);
+    planeGroup.add(nPlane, qPlane);
+
+    const nLabel = makeTextSprite('ℕ (naturals)', '#ffffff', 48);
+    nLabel.position.set(nPlane.position.x + planeWidth / 2 + 1.1, planeY + 0.25, -2.5);
+    planeGroup.add(nLabel);
+    const qLabel = makeTextSprite('ℚ (rationals)', '#ffffff', 48);
+    qLabel.position.set(qPlane.position.x + planeWidth / 2 + 1.1, planeY - 0.15, -2.5);
+    planeGroup.add(qLabel);
+    const sameSizeLabel = makeTextSprite('bijection (same size ℵ₀)', '#a0a0ff', 40);
+    sameSizeLabel.position.set(nPlane.position.x, planeY - 0.1, -2.2);
+    planeGroup.add(sameSizeLabel);
+
+    const pairingMat = new THREE.LineBasicMaterial({ color: 0xa0a0ff, linewidth: 1 });
+    const pairingGroup = new THREE.Group();
+    for (let i = 0; i < 6; i++) {
+      const frac = (i + 0.5) / 6;
+      const x0 = nPlane.position.x - planeWidth / 2 + planeWidth * frac;
+      const x1 = qPlane.position.x - planeWidth / 2 + planeWidth * ((i * 1.4) % 6 + 0.5) / 6;
+      const y0 = planeY + 0.06;
+      const y1 = planeY - 0.4 - 0.06;
+      const z = -2.5 + planeDepth / 2 + 0.05;
+      const geo = new THREE.BufferGeometry().setFromPoints([
+        new THREE.Vector3(x0, y0, z),
+        new THREE.Vector3(x1, y1, z)
+      ]);
+      pairingGroup.add(new THREE.Line(geo, pairingMat));
+    }
+    planeGroup.add(pairingGroup);
+
+    hoverTargets.push(aleph0Bar.mesh, aleph1Bar.mesh, contBar.mesh, gapBox);
+
+    window.addEventListener('mousemove', onMouseMove);
+    updateCardinalsCHState();
+    updateInfoForMode(); // initial
+  }
+
+  function onMouseMove(event) {
+    const rect = renderer.domElement.getBoundingClientRect();
+    const x = (event.clientX - rect.left) / rect.width;
+    const y = (event.clientY - rect.top) / rect.height;
+    mouse.x = x * 2 - 1;
+    mouse.y = -y * 2 + 1;
+  }
+
+  function updateCardinalsCHState() {
+    if (!gapBox || !bracketGroup) return;
+    gapBox.visible = !assumeCH;
+    gapLabel.visible = !assumeCH;
+    bracketGroup.visible = assumeCH;
+  }
+
+  function setHover(object) {
+    if (hoveredObj === object) return;
+    [aleph0Bar.mesh, aleph1Bar.mesh, contBar.mesh].forEach(mesh => {
+      mesh.scale.set(1, 1, 1);
+      mesh.material.emissive = new THREE.Color(0x000000);
+    });
+    if (gapBox) {
+      gapBox.scale.set(1, 1, 1);
+      gapBox.material.emissive = new THREE.Color(0x000000);
+    }
+    hoveredObj = object;
+    if (!object) {
+      updateInfoForMode();
+      return;
+    }
+    if (object === aleph0Bar.mesh || object === aleph1Bar.mesh || object === contBar.mesh) {
+      object.scale.set(1.05, 1.08, 1.05);
+      object.material.emissive = object.userData.baseColor.clone().multiplyScalar(0.4);
+    } else if (object === gapBox) {
+      gapBox.scale.set(1, 1.2, 1.05);
+      gapBox.material.emissive = new THREE.Color(0x666666);
+    }
+    updateInfoForMode();
+  }
+
+  function updateInfoCardinals() {
+    if (mode !== modes.cardinals) return;
+    let main;
+    if (hoveredObj === aleph0Bar.mesh) {
+      main = '<b>ℵ₀ (aleph-zero)</b><br/>Countable size: naturals, integers, rationals; anything you can list.';
+    } else if (hoveredObj === aleph1Bar.mesh) {
+      main = '<b>ℵ₁</b><br/>Next cardinal after ℵ₀. If CH holds, this is already the size of the continuum.';
+    } else if (hoveredObj === contBar.mesh) {
+      main = '<b>2^{ℵ₀} (continuum)</b><br/>Size of the reals / infinite binary sequences. Proven &gt; ℵ₀ by the diagonal argument.';
+    } else if (hoveredObj === gapBox && !assumeCH) {
+      main = '<b>Gap region</b><br/>If CH fails, cardinals strictly between ℵ₁ and 2^{ℵ₀} can “live” here.';
+    } else {
+      main = assumeCH
+        ? '<b>CH ON.</b><br/>No gap: 2^{ℵ₀} and ℵ₁ are the same size (bracketed together). Hover bars to inspect each cardinal.'
+        : '<b>CH OFF.</b><br/>Real gap: ℵ₀ &lt; ℵ₁ &lt; 2^{ℵ₀}. The shaded box marks where extra infinities can exist. Hover bars or gap.';
+    }
+    info.innerHTML = main;
+  }
+
+  // --- Info text per view ---------------------------------------------------
+  function updateInfoForMode() {
+    if (mode === modes.cardinals) {
+      // 3D view owns the info box, but only if scene is ready
+      if (scene) updateInfoCardinals();
+      return;
+    }
+    hoveredObj = null; // reset any 3D hover
+    if (mode === modes.diagonal) {
+      info.innerHTML = `
+        <b>View 1: Cantor's diagonal</b><br/>
+        • Rows = a list of binary sequences fₙ.<br/>
+        • Orange diagonal bits are fₙ[n]; g flips them, so g ≠ fₙ for all n.<br/>
+        This is why the reals (via binary expansions) can’t be listed by naturals.
+      `;
+    } else if (mode === modes.square) {
+      info.innerHTML = `
+        <b>View 3: S ⊂ [0,1]² puzzle</b><br/>
+        • Square = [0,1]²; blue = A, green = B.<br/>
+        • ${assumeCH
+          ? 'CH ON: B can be as large as [0,1], so a y₀ ∉ B isn’t forced by size alone.'
+          : 'CH OFF: [0,1] is bigger than B, so a y₀ ∉ B exists and drives the contradiction.'}
+      `;
+    }
+  }
+
+  // --- Animation loop -------------------------------------------------------
+  let startTime = performance.now();
+
+  function animate(now) {
+    const t = (now - startTime) / 1000;
+    const w = canvas2d.width;
+    const h = canvas2d.height;
+
+    if (mode === modes.diagonal) {
+      drawDiagonal2D(t, w, h);
+    } else if (mode === modes.square) {
+      drawSquare2D(t, w, h);
+    }
+
+    if (scene && renderer && camera) {
+      // gentle float of bars
+      const tt = now * 0.001;
+      [aleph0Bar.mesh, aleph1Bar.mesh, contBar.mesh].forEach((mesh, i) => {
+        const baseY = 0.6 / 2 + 0.02;
+        mesh.position.y = baseY + Math.sin(tt * 1.4 + i) * 0.03;
+      });
+
+      if (mode === modes.cardinals) {
+        raycaster.setFromCamera(mouse, camera);
+        const hits = raycaster.intersectObjects(hoverTargets, false);
+        setHover(hits.length ? hits[0].object : null);
+      }
+
+      if (bracketGroup && assumeCH) {
+        const pulse = 0.75 + 0.25 * (Math.sin(now * 0.002) + 1) / 2;
+        bracketGroup.children[0].material.color.setRGB(1.0 * pulse, 0.75 * pulse, 1.0);
+      }
+
+      controls3D.update();
+      renderer.render(scene, camera);
+    }
+
+    requestAnimationFrame(animate);
+  }
+
+  // --- Init everything ------------------------------------------------------
+  initCardinals3D();
+  applyCanvasVisibility();
+  updateInfoForMode();
+  requestAnimationFrame(animate);
+
+  window.addEventListener('resize', () => {
+    resize2D();
+    if (renderer && camera) {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+  });
+</script>
+</body>
+</html>

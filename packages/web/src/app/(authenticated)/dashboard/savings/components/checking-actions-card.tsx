@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { ArrowRightCircle, Info, Building2, Copy, Check } from 'lucide-react';
+import { ArrowRightCircle, Info, Building2, Copy, Check, Globe } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -19,6 +19,7 @@ import { api } from '@/trpc/react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatUsd } from '@/lib/utils';
 import { demoFundingSources, demoUserData } from '../demo-data';
+import { getChainDisplayName, type SupportedChainId } from '@/lib/constants/chains';
 
 type CheckingActionsCardProps = {
   balanceUsd: number;
@@ -32,7 +33,8 @@ export function CheckingActionsCard({
   isDemoMode,
 }: CheckingActionsCardProps) {
   const [isMoveModalOpen, setIsMoveModalOpen] = useState(false);
-  const [isAddressCopied, setIsAddressCopied] = useState(false);
+  const [isAccountInfoOpen, setIsAccountInfoOpen] = useState(false);
+  const [copiedSafeAddress, setCopiedSafeAddress] = useState<string | null>(null);
   const [showAdvancedDetails, setShowAdvancedDetails] = useState(false);
   const isMobile = useIsMobile();
   const { ready, authenticated, user } = usePrivy();
@@ -46,6 +48,11 @@ export function CheckingActionsCard({
   } = api.align.getVirtualAccountDetails.useQuery(undefined, {
     enabled: !isDemoMode && ready && authenticated && !!user?.id,
   });
+
+  const { data: multiChainData, isLoading: isLoadingMultiChain } =
+    api.earn.getMultiChainPositions.useQuery(undefined, {
+      enabled: !isDemoMode && isAccountInfoOpen,
+    });
 
   const [hasRequestedStarterAccounts, setHasRequestedStarterAccounts] =
     useState(false);
@@ -85,13 +92,13 @@ export function CheckingActionsCard({
     setHasRequestedStarterAccounts(false);
   }, [safeAddress]);
 
-  const handleCopyAddress = () => {
-    if (!safeAddress || typeof navigator === 'undefined') return;
+  const handleCopyAddress = (address: string) => {
+    if (!address || typeof navigator === 'undefined') return;
     navigator.clipboard
-      .writeText(safeAddress)
+      .writeText(address)
       .then(() => {
-        setIsAddressCopied(true);
-        setTimeout(() => setIsAddressCopied(false), 2000);
+        setCopiedSafeAddress(address);
+        setTimeout(() => setCopiedSafeAddress(null), 2000);
       })
       .catch((error) => console.error('Failed to copy address', error));
   };
@@ -155,7 +162,9 @@ export function CheckingActionsCard({
         </Dialog>
 
         <Dialog
+          open={isAccountInfoOpen}
           onOpenChange={(open) => {
+            setIsAccountInfoOpen(open);
             if (!isDemoMode && open) {
               void refetchFundingSources();
               if (
@@ -190,46 +199,66 @@ export function CheckingActionsCard({
                   <Building2 className="h-5 w-5 text-[#101010]/60" />
                   Your account details
                 </DialogTitle>
-                {safeAddress && (
+                
+                {/* Multi-Chain Accounts Section */}
+                {(isDemoMode || (multiChainData?.safes && multiChainData.safes.length > 0)) && (
                   <div className="mt-6 border-t border-[#101010]/10 pt-4">
                     <button
                       type="button"
                       onClick={() => setShowAdvancedDetails((prev) => !prev)}
                       className="inline-flex items-center gap-2 text-[12px] font-medium text-[#101010]/70 hover:text-[#1B29FF] transition-colors"
                     >
+                      <Globe className="h-4 w-4" />
                       {showAdvancedDetails
-                        ? 'Hide technical'
-                        : 'Show technical'}{' '}
-                      details
+                        ? 'Hide wallet addresses'
+                        : 'Show wallet addresses'}{' '}
+                      (Multi-Chain)
                     </button>
 
                     {showAdvancedDetails && (
-                      <div className="mt-3 rounded-[10px] border border-[#101010]/10 bg-[#F7F7F2] p-3 text-[12px] text-[#101010]/70">
-                        <p className="uppercase tracking-[0.14em] text-[10px] text-[#101010]/50 mb-2">
-                          Treasury safe address
-                        </p>
-                        <div className="flex items-center justify-between gap-3">
-                          <code className="font-mono text-[11px] text-[#101010]">
-                            {safeAddress}
-                          </code>
-                          <button
-                            type="button"
-                            onClick={handleCopyAddress}
-                            className="inline-flex items-center gap-1 rounded-full border border-[#101010]/15 bg-white px-3 py-1 text-[11px] text-[#101010] hover:border-[#1B29FF]/30 hover:text-[#1B29FF] transition-colors"
-                          >
-                            {isAddressCopied ? (
-                              <>
-                                <Check className="h-3 w-3" /> Copied
-                              </>
-                            ) : (
-                              <>
-                                <Copy className="h-3 w-3" /> Copy
-                              </>
-                            )}
-                          </button>
-                        </div>
-                        <p className="mt-2 text-[11px] text-[#101010]/50">
-                          Use this address only for advanced treasury workflows.
+                      <div className="mt-3 space-y-2">
+                        {isDemoMode ? (
+                           <div className="rounded-[10px] border border-[#101010]/10 bg-[#F7F7F2] p-3 text-[12px]">
+                             <div className="flex items-center justify-between gap-3">
+                               <div>
+                                 <span className="uppercase tracking-[0.1em] text-[10px] text-[#101010]/50 block mb-0.5">Base (Demo)</span>
+                                 <code className="font-mono text-[11px] text-[#101010]">{safeAddress}</code>
+                               </div>
+                             </div>
+                           </div>
+                        ) : (
+                          multiChainData?.safes.map((safe) => (
+                            <div key={safe.id} className="rounded-[10px] border border-[#101010]/10 bg-[#F7F7F2] p-3 text-[12px]">
+                              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                <div>
+                                  <span className="uppercase tracking-[0.1em] text-[10px] text-[#101010]/50 block mb-0.5">
+                                    {getChainDisplayName(safe.chainId)}
+                                  </span>
+                                  <code className="font-mono text-[11px] text-[#101010] break-all">
+                                    {safe.address}
+                                  </code>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => handleCopyAddress(safe.address)}
+                                  className="self-start sm:self-auto flex-shrink-0 inline-flex items-center gap-1 rounded-full border border-[#101010]/15 bg-white px-3 py-1 text-[11px] text-[#101010] hover:border-[#1B29FF]/30 hover:text-[#1B29FF] transition-colors"
+                                >
+                                  {copiedSafeAddress === safe.address ? (
+                                    <>
+                                      <Check className="h-3 w-3" /> Copied
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Copy className="h-3 w-3" /> Copy
+                                    </>
+                                  )}
+                                </button>
+                              </div>
+                            </div>
+                          ))
+                        )}
+                        <p className="mt-2 text-[11px] text-[#101010]/50 px-1">
+                          These are your deployed Safe addresses on each network. Use these for advanced operations.
                         </p>
                       </div>
                     )}

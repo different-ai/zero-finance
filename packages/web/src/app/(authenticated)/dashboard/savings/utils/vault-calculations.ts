@@ -1,4 +1,8 @@
 import { INSURED_VAULT_IDS } from '../demo-data';
+import {
+  type SupportedChainId,
+  SUPPORTED_CHAINS,
+} from '@/lib/constants/chains';
 
 export type VaultStat = {
   vaultAddress: string;
@@ -11,11 +15,13 @@ export type VaultStat = {
   monthlyApy?: number | string | null;
   netApy?: number | string | null;
   apy?: number | string | null;
+  chainId?: SupportedChainId;
 };
 
 export type UserPosition = {
   vaultAddress: string;
   assetsUsd?: number | string | null;
+  chainId?: SupportedChainId;
 };
 
 export type BaseVault = {
@@ -26,6 +32,7 @@ export type BaseVault = {
   curator: string;
   address: string;
   appUrl?: string;
+  chainId?: SupportedChainId;
 };
 
 export type VaultViewModel = {
@@ -47,6 +54,7 @@ export type VaultViewModel = {
   instantApy: number;
   isInsured: boolean;
   isContactOnly: boolean;
+  chainId: SupportedChainId;
 };
 
 export function toNumberOrFallback(
@@ -64,12 +72,27 @@ export function calculateVaultViewModels(
   userIsInsured: boolean = false,
 ): VaultViewModel[] {
   return baseVaults.map((v) => {
-    const stat = vaultStatsMany?.find(
-      (s) => s.vaultAddress.toLowerCase() === v.address.toLowerCase(),
-    );
-    const pos = userPositions?.find(
-      (p) => p.vaultAddress.toLowerCase() === v.address.toLowerCase(),
-    );
+    // For cross-chain vaults, match by both address and chainId if available
+    const vaultChainId = v.chainId || SUPPORTED_CHAINS.BASE;
+
+    const stat = vaultStatsMany?.find((s) => {
+      const matchesAddress =
+        s.vaultAddress.toLowerCase() === v.address.toLowerCase();
+      // If stat has chainId, match it; otherwise just match address
+      if (s.chainId && v.chainId) {
+        return matchesAddress && s.chainId === v.chainId;
+      }
+      return matchesAddress;
+    });
+    const pos = userPositions?.find((p) => {
+      const matchesAddress =
+        p.vaultAddress.toLowerCase() === v.address.toLowerCase();
+      // If position has chainId, match it; otherwise just match address
+      if (p.chainId && v.chainId) {
+        return matchesAddress && p.chainId === v.chainId;
+      }
+      return matchesAddress;
+    });
 
     const balanceUsd = pos?.assetsUsd ? Number(pos.assetsUsd) : 0;
 
@@ -177,8 +200,64 @@ export function calculateVaultViewModels(
         INSURED_VAULT_IDS.has(v.id) ||
         (userIsInsured && v.id === 'morphoGauntlet'),
       isContactOnly: false,
+      chainId: vaultChainId,
     };
   });
+}
+
+/**
+ * Calculate total saved across all chains
+ */
+export function calculateTotalSavedByChain(
+  vaults: VaultViewModel[],
+): Record<SupportedChainId, number> {
+  const result: Record<SupportedChainId, number> = {
+    [SUPPORTED_CHAINS.BASE]: 0,
+    [SUPPORTED_CHAINS.ARBITRUM]: 0,
+  };
+
+  vaults.forEach((v) => {
+    if (result[v.chainId] !== undefined) {
+      result[v.chainId] += v.balanceUsd;
+    }
+  });
+
+  return result;
+}
+
+/**
+ * Calculate total earned across all chains
+ */
+export function calculateTotalEarnedByChain(
+  vaults: VaultViewModel[],
+): Record<SupportedChainId, number> {
+  const result: Record<SupportedChainId, number> = {
+    [SUPPORTED_CHAINS.BASE]: 0,
+    [SUPPORTED_CHAINS.ARBITRUM]: 0,
+  };
+
+  vaults.forEach((v) => {
+    if (result[v.chainId] !== undefined) {
+      result[v.chainId] += v.earnedUsd;
+    }
+  });
+
+  return result;
+}
+
+/**
+ * Get unique chains that have vaults with balances
+ */
+export function getActiveChains(vaults: VaultViewModel[]): SupportedChainId[] {
+  const chainsWithBalance = new Set<SupportedChainId>();
+
+  vaults.forEach((v) => {
+    if (v.balanceUsd > 0) {
+      chainsWithBalance.add(v.chainId);
+    }
+  });
+
+  return Array.from(chainsWithBalance);
 }
 
 export function calculateTotalSaved(vaults: VaultViewModel[]): number {
