@@ -965,31 +965,33 @@ export function DepositEarnCard({
 
         console.log('Deploying Safe on Arbitrum. Chain object:', arbitrum);
         
-        // Get the smart wallet client for Arbitrum
-        // Use hardcoded ID 42161 to prevent "reading 'id' of undefined" error if arbitrum import fails
+        // Get the smart wallet client for Arbitrum (for relaying if needed)
         const arbClient = await getClientForChain({ id: 42161 });
         if (!arbClient) {
           throw new Error('Failed to get Arbitrum client for Safe deployment');
         }
 
-        const smartWalletAddress = arbClient.account?.address;
-        if (!smartWalletAddress) {
-          throw new Error('Smart wallet address not found');
+        // Determine Owner: Prefer EOA (Embedded Wallet) to match backend logic
+        // If wallets are available, use the first one (embedded)
+        // Otherwise fallback to smart wallet (legacy/backup)
+        const eoaAddress = wallets?.[0]?.address;
+        const ownerAddress = eoaAddress || arbClient.account?.address;
+
+        if (!ownerAddress) {
+          throw new Error('No valid owner address found (EOA or Smart Wallet)');
         }
 
         console.log('[DepositEarnCard] Starting Arbitrum Safe deployment');
-        console.log(
-          '[DepositEarnCard] Smart wallet address:',
-          smartWalletAddress,
-        );
+        console.log('[DepositEarnCard] Owner address:', ownerAddress);
 
-        // Create Safe configuration with the Privy wallet as owner
+        // Create Safe configuration
         const safeAccountConfig: SafeAccountConfig = {
-          owners: [smartWalletAddress],
+          owners: [ownerAddress as Address],
           threshold: 1,
         };
 
         // Use the Base Safe address as salt nonce for deterministic address matching
+        // This MUST match the backend logic in multi-chain-safe-manager.ts
         const saltNonce = safeAddress.toLowerCase();
         const safeDeploymentConfig: SafeDeploymentConfig = {
           saltNonce,
@@ -1005,7 +1007,10 @@ export function DepositEarnCard({
         const arbitrumRpcUrl =
           process.env.NEXT_PUBLIC_ARBITRUM_RPC_URL ||
           'https://arb1.arbitrum.io/rpc';
-
+        
+        // We need an adapter or signer for the Protocol Kit usually, 
+        // but for address prediction and deployment transaction generation, 
+        // we can initialize it with just the provider and config.
         const protocolKit = await Safe.init({
           predictedSafe: {
             safeAccountConfig,
@@ -1021,7 +1026,33 @@ export function DepositEarnCard({
           `[DepositEarnCard] Predicted Safe address on Arbitrum: ${predictedSafeAddress}`,
         );
 
+        // Check if Safe is already deployed
+        const arbPublicClient = createPublicClient({
+          chain: arbitrum,
+          transport: http(arbitrumRpcUrl),
+        });
+        
+        const code = await arbPublicClient.getBytecode({
+            address: predictedSafeAddress,
+        });
+
+        if (code && code !== '0x') {
+             console.log('[DepositEarnCard] Safe is already deployed on-chain. Registering...');
+             // Safe exists, just register it
+             await registerSafeMutation.mutateAsync({
+                safeAddress: predictedSafeAddress,
+                chainId: deploymentInfo.chainId,
+                safeType: 'primary',
+              });
+              
+             console.log(`[DepositEarnCard] Arbitrum Safe linked: ${predictedSafeAddress}`);
+             setTransactionState({ step: 'idle' });
+             return;
+        }
+
         // Create the Safe deployment transaction
+        // This will throw if the SDK thinks it's deployed, but we checked above.
+        // Double check that we are not trying to deploy to an address that exists.
         const deploymentTransaction =
           await protocolKit.createSafeDeploymentTransaction();
 
@@ -1053,11 +1084,6 @@ export function DepositEarnCard({
         console.log(`[DepositEarnCard] UserOperation hash: ${userOpHash}`);
 
         // Wait for Safe deployment to be confirmed
-        const arbPublicClient = createPublicClient({
-          chain: arbitrum,
-          transport: http(arbitrumRpcUrl),
-        });
-
         // Poll for Safe bytecode on Arbitrum
         let retries = 30; // 2 minutes timeout
         while (retries > 0) {
