@@ -219,9 +219,9 @@ export default function SavingsPageWrapper({
 
   // Fetch user positions
   const realUserPositions = trpc.earn.userPositions.useQuery(
-    { userSafe: safeAddress!, vaultAddresses: baseVaultAddresses },
+    { vaultAddresses: baseVaultAddresses },
     {
-      enabled: !!safeAddress && !isDemoMode,
+      enabled: !isDemoMode,
       refetchInterval: 10000,
     },
   );
@@ -804,6 +804,7 @@ export default function SavingsPageWrapper({
                                 safeAddress={safeAddress as Address}
                                 vaultAddress={vault.address as Address}
                                 onWithdrawSuccess={handleWithdrawSuccess}
+                                chainId={vault.chainId}
                               />
                             ) : null}
                           </div>
@@ -1006,6 +1007,7 @@ export default function SavingsPageWrapper({
                                   safeAddress={safeAddress as Address}
                                   vaultAddress={vault.address as Address}
                                   onWithdrawSuccess={handleWithdrawSuccess}
+                                  chainId={vault.chainId}
                                 />
                               ) : null}
                             </div>

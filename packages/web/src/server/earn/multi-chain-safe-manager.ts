@@ -4,7 +4,12 @@
  */
 
 import { db } from '@/db';
-import { userSafes, userWalletsTable, type UserSafe, type NewUserSafe } from '@/db/schema';
+import {
+  userSafes,
+  userWalletsTable,
+  type UserSafe,
+  type NewUserSafe,
+} from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { type Address, type Hex, createPublicClient, http } from 'viem';
 import { base, arbitrum } from 'viem/chains';
@@ -259,7 +264,6 @@ export async function getSafeDeploymentTransactionFromSource(
  * @returns Transaction data for deployment
  */
 
-
 /**
  * Delete a user's Safe on a specific chain
  * Used for administrative cleanup or resetting state
@@ -308,45 +312,13 @@ export async function getSafeDeploymentTransaction(
     );
   }
 
-  // Fetch user's embedded wallet (EOA)
-  const userWallet = await db.query.userWalletsTable.findFirst({
-    where: and(
-      eq(userWalletsTable.userId, userDid),
-      eq(userWalletsTable.isDefault, true),
-    ),
-  });
-
-  let owners: Address[];
-  let threshold: number;
-
-  if (userWallet) {
-    owners = [userWallet.address as Address];
-    threshold = 1;
-  } else {
-    // Fallback: Fetch from source Safe (Smart Wallet owned)
-    const tx = await getSafeDeploymentTransactionFromSource(
-      sourceSafe.safeAddress as Address,
-      SUPPORTED_CHAINS.BASE,
-      chainId,
-    );
-    return {
-      to: tx.to,
-      data: tx.data,
-      value: tx.value.toString(),
-      predictedAddress: tx.predictedAddress,
-    };
-  }
-
-  // Use source Safe address as salt nonce
-  const saltNonce = sourceSafe.safeAddress.toLowerCase();
-
-  // Generate deployment transaction
-  const deploymentTx = await getSafeDeploymentTx({
-    owners,
-    threshold,
+  // Always use source Safe's owners for consistency
+  // This ensures the Smart Wallet that owns the Base Safe also owns cross-chain Safes
+  const tx = await getSafeDeploymentTransactionFromSource(
+    sourceSafe.safeAddress as Address,
+    SUPPORTED_CHAINS.BASE,
     chainId,
-    saltNonce,
-  });
+  );
 
   // Check if Safe already exists on this chain in DB
   const existingSafe = await getSafeOnChain(userDid, chainId, safeType);
@@ -355,10 +327,10 @@ export async function getSafeDeploymentTransaction(
     // If it exists, verify it matches our prediction
     if (
       existingSafe.safeAddress.toLowerCase() !==
-      deploymentTx.predictedAddress.toLowerCase()
+      tx.predictedAddress.toLowerCase()
     ) {
       throw new Error(
-        `Safe already exists on chain ${chainId} but address mismatch. Existing: ${existingSafe.safeAddress}, Predicted: ${deploymentTx.predictedAddress}`,
+        `Safe already exists on chain ${chainId} but address mismatch. Existing: ${existingSafe.safeAddress}, Predicted: ${tx.predictedAddress}`,
       );
     }
     // If it matches, we can just return the deployment tx (idempotent behavior)
@@ -369,10 +341,10 @@ export async function getSafeDeploymentTransaction(
   }
 
   return {
-    to: deploymentTx.to,
-    data: deploymentTx.data,
-    value: deploymentTx.value.toString(),
-    predictedAddress: deploymentTx.predictedAddress,
+    to: tx.to,
+    data: tx.data,
+    value: tx.value.toString(),
+    predictedAddress: tx.predictedAddress,
   };
 }
 

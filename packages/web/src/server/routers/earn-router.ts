@@ -1207,28 +1207,55 @@ export const earnRouter = router({
   getVaultInfo: protectedProcedure
     .input(
       z.object({
-        safeAddress: z
-          .string()
-          .refine((val) => /^0x[a-fA-F0-9]{40}$/.test(val), {
-            message: 'Invalid Safe address format',
-          })
-          .transform((val) => getAddress(val)),
         vaultAddress: z
           .string()
           .refine((val) => /^0x[a-fA-F0-9]{40}$/.test(val), {
             message: 'Invalid vault address format',
           })
           .transform((val) => getAddress(val)),
+        chainId: z.number().optional().default(8453), // Default to Base
       }),
     )
     .query(async ({ ctx, input }) => {
-      const { safeAddress, vaultAddress } = input;
+      const { vaultAddress, chainId } = input;
 
-      await getSafeForWorkspace(ctx, safeAddress);
+      // Select chain and RPC based on chainId
+      const isArbitrum = chainId === 42161;
+      const chain = isArbitrum ? arbitrum : base;
+      const rpcUrl = isArbitrum
+        ? (process.env.ARBITRUM_RPC_URL ??
+          process.env.NEXT_PUBLIC_ARBITRUM_RPC_URL ??
+          'https://arb1.arbitrum.io/rpc')
+        : BASE_RPC_URL;
+
+      // Get the workspace's Safe on the target chain
+      const workspaceId = ctx.workspaceId;
+      if (!workspaceId) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Workspace context is unavailable.',
+        });
+      }
+
+      const workspaceSafe = await db.query.userSafes.findFirst({
+        where: and(
+          eq(userSafes.workspaceId, workspaceId),
+          eq(userSafes.chainId, chainId),
+        ),
+      });
+
+      if (!workspaceSafe) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: `No Safe found for workspace on chain ${chainId}`,
+        });
+      }
+
+      const targetSafeAddress = workspaceSafe.safeAddress as `0x${string}`;
 
       const publicClient = createPublicClient({
-        chain: base,
-        transport: http(BASE_RPC_URL),
+        chain,
+        transport: http(rpcUrl),
       });
 
       try {
@@ -1240,7 +1267,7 @@ export const earnRouter = router({
               'function balanceOf(address owner) external view returns (uint256)',
             ]),
             functionName: 'balanceOf',
-            args: [safeAddress],
+            args: [targetSafeAddress],
           }),
           publicClient.readContract({
             address: vaultAddress,
@@ -1273,6 +1300,7 @@ export const earnRouter = router({
           assets: assets.toString(),
           decimals: Number(decimals),
           assetAddress: assetAddress,
+          safeAddress: targetSafeAddress, // Return the actual Safe address used for the query
         };
       } catch (error) {
         ctx.log.error({ error }, 'Error fetching vault info');
@@ -2009,10 +2037,6 @@ export const earnRouter = router({
   userPositions: protectedProcedure
     .input(
       z.object({
-        userSafe: z
-          .string()
-          .length(42)
-          .transform((val) => getAddress(val)),
         vaultAddresses: z.array(
           z
             .string()
@@ -2022,8 +2046,27 @@ export const earnRouter = router({
       }),
     )
     .query(async ({ ctx, input }) => {
-      const { userSafe, vaultAddresses } = input;
-      await getSafeForWorkspace(ctx, userSafe);
+      const { vaultAddresses } = input;
+
+      // Get workspace from context
+      const workspaceId = ctx.workspaceId;
+      if (!workspaceId) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Workspace context is unavailable.',
+        });
+      }
+
+      // Get all safes for this workspace (we'll need safes on different chains)
+      const workspaceSafes = await db.query.userSafes.findMany({
+        where: eq(userSafes.workspaceId, workspaceId),
+      });
+
+      // Create a map of chainId -> safeAddress for quick lookup
+      const safesByChain = new Map<number, string>();
+      for (const safe of workspaceSafes) {
+        safesByChain.set(safe.chainId, safe.safeAddress);
+      }
 
       // Fetch positions directly from on-chain
       // This is more reliable than GraphQL and gives us real-time data
@@ -2031,6 +2074,20 @@ export const earnRouter = router({
         vaultAddresses.map(async (vaultAddress) => {
           const chainId = getChainIdForVault(vaultAddress);
           const client = getPublicClientForChain(chainId);
+
+          // Get the Safe address for this vault's chain
+          const safeAddress = safesByChain.get(chainId);
+          if (!safeAddress) {
+            // No Safe on this chain, return zero balance
+            return {
+              vaultAddress,
+              shares: '0',
+              assets: '0',
+              assetsUsd: 0,
+              chainId,
+            };
+          }
+
           try {
             // Get shares balance
             const shares = await client.readContract({
@@ -2039,7 +2096,7 @@ export const earnRouter = router({
                 'function balanceOf(address) view returns (uint256)',
               ]),
               functionName: 'balanceOf',
-              args: [userSafe],
+              args: [safeAddress as Address],
             });
 
             if (shares > 0n) {
@@ -2061,6 +2118,7 @@ export const earnRouter = router({
                 shares: shares.toString(),
                 assets: assets.toString(),
                 assetsUsd,
+                chainId,
               };
             }
 
@@ -2069,6 +2127,7 @@ export const earnRouter = router({
               shares: '0',
               assets: '0',
               assetsUsd: 0,
+              chainId,
             };
           } catch (error) {
             console.error(
@@ -2080,6 +2139,7 @@ export const earnRouter = router({
               shares: '0',
               assets: '0',
               assetsUsd: 0,
+              chainId,
             };
           }
         }),
@@ -2393,7 +2453,7 @@ export const earnRouter = router({
       return {
         needsDeployment: false,
         bridgeTransactionId: bridgeTxId,
-        transaction: bridgeTx.map(tx => ({
+        transaction: bridgeTx.map((tx) => ({
           to: tx.to,
           data: tx.data,
           value: tx.value.toString(),
@@ -2504,7 +2564,7 @@ export const earnRouter = router({
       return {
         needsDeployment: false,
         bridgeTransactionId: bridgeTxId,
-        transaction: bridgeTx.map(tx => ({
+        transaction: bridgeTx.map((tx) => ({
           to: tx.to,
           data: tx.data,
           value: tx.value.toString(),

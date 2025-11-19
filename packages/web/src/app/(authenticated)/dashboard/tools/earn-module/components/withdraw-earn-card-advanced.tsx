@@ -88,9 +88,9 @@ export function WithdrawEarnCardAdvanced({
     refetch: refetchVaultInfoTRPC,
     isLoading: isQueryingVaultInfoTRPC,
   } = api.earn.getVaultInfo.useQuery(
-    { safeAddress: safeAddress || '0x', vaultAddress: vaultAddress || '0x' },
+    { vaultAddress: vaultAddress || '0x' },
     {
-      enabled: !!safeAddress && !!vaultAddress,
+      enabled: !!vaultAddress,
       retry: 1,
       refetchOnWindowFocus: false,
     },

@@ -245,6 +245,7 @@ export function VaultRowDesktop({
                   safeAddress={safeAddress as Address}
                   vaultAddress={vault.address as Address}
                   onWithdrawSuccess={onWithdrawSuccess}
+                  chainId={vault.chainId || SUPPORTED_CHAINS.BASE}
                 />
               ) : null}
             </div>
@@ -456,6 +457,7 @@ export function VaultRowMobile({
                     safeAddress={safeAddress as Address}
                     vaultAddress={vault.address as Address}
                     onWithdrawSuccess={onWithdrawSuccess}
+                    chainId={vault.chainId || SUPPORTED_CHAINS.BASE}
                   />
                 ) : null}
               </div>
