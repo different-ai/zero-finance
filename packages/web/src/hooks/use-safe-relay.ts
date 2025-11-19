@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useState, useEffect } from 'react';
 import type { MetaTransactionData } from '@safe-global/safe-core-sdk-types';
 import { Address, type Hex, isAddress } from 'viem';
 import { base, arbitrum } from 'viem/chains';
@@ -41,7 +41,31 @@ export function useSafeRelay(
   safeAddress: Address | string | undefined,
   chainId?: number,
 ) {
-  const { client: smartClient } = useSmartWallets();
+  const { client: defaultClient, getClientForChain } = useSmartWallets();
+  const [chainClient, setChainClient] = useState<any>(null);
+
+  // Get the appropriate client for the target chain
+  const targetChainId = chainId || SUPPORTED_CHAINS.BASE;
+  const isCrossChain = targetChainId !== SUPPORTED_CHAINS.BASE;
+
+  // Fetch chain-specific client when needed
+  useEffect(() => {
+    if (isCrossChain && getClientForChain) {
+      getClientForChain({ id: targetChainId })
+        .then((client) => {
+          setChainClient(client);
+        })
+        .catch((err) => {
+          console.error('[useSafeRelay] Failed to get client for chain:', err);
+          setChainClient(null);
+        });
+    } else {
+      setChainClient(null);
+    }
+  }, [isCrossChain, targetChainId, getClientForChain]);
+
+  // Use chain-specific client for cross-chain, default client for Base
+  const smartClient = isCrossChain ? chainClient : defaultClient;
 
   // Get chain object for the target chain
   const targetChain = useMemo(() => {
@@ -75,12 +99,14 @@ export function useSafeRelay(
       // Use provided gas or default to 200_000n
       const gasToUse = gas || 200_000n;
 
-      console.log(
-        'Building Safe transaction with gas:',
-        gasToUse.toString(),
-        'chainId:',
+      console.log('[useSafeRelay] Building Safe transaction:', {
+        gas: gasToUse.toString(),
         chainId,
-      );
+        isCrossChain,
+        safeAddress: safeAddr,
+        signerAddress: signerAddr,
+        clientChain: smartClient?.chain?.id,
+      });
 
       const safeTx = await buildSafeTx(txs, {
         safeAddress: safeAddr,
