@@ -3,10 +3,22 @@
 import { useCallback, useMemo } from 'react';
 import type { MetaTransactionData } from '@safe-global/safe-core-sdk-types';
 import { Address, type Hex, isAddress } from 'viem';
+import { base, arbitrum } from 'viem/chains';
+import type { Chain } from 'viem/chains';
 import { useSmartWallets } from '@privy-io/react-auth/smart-wallets';
 import { relaySafeTx } from '@/lib/sponsor-tx/core';
 import { buildSafeTx } from '@/lib/sponsor-tx/core';
+import { SUPPORTED_CHAINS } from '@/lib/constants/chains';
 
+/**
+ * Helper to get Chain object for a chain ID
+ */
+function getChainForId(chainId: number): Chain {
+  if (chainId === SUPPORTED_CHAINS.ARBITRUM) {
+    return arbitrum;
+  }
+  return base;
+}
 
 /**
  * Hook: useSafeRelay
@@ -15,6 +27,7 @@ import { buildSafeTx } from '@/lib/sponsor-tx/core';
  *
  * @param safeAddress — the Safe being controlled. May be `undefined`
  *                     until the caller has determined which Safe to use.
+ * @param chainId — optional chain ID for the Safe (defaults to Base)
  *
  * @returns { ready, send }
  *   • ready — boolean, true when the smart‑wallet client and safeAddress
@@ -24,12 +37,19 @@ import { buildSafeTx } from '@/lib/sponsor-tx/core';
  *             ‑ gas  : override for safeTxGas if you want manual control
  *             ‑ opts : { skipPreSig?: boolean } — forward to relaySafeTx.
  */
-export function useSafeRelay(safeAddress: Address | string | undefined) {
+export function useSafeRelay(
+  safeAddress: Address | string | undefined,
+  chainId?: number,
+) {
   const { client: smartClient } = useSmartWallets();
+
+  // Get chain object for the target chain
+  const targetChain = useMemo(() => {
+    return chainId ? getChainForId(chainId) : base;
+  }, [chainId]);
 
   // ---------- derived state ----------
   const ready = useMemo(() => {
-   
     return (
       !!smartClient?.account &&
       !!safeAddress &&
@@ -54,10 +74,19 @@ export function useSafeRelay(safeAddress: Address | string | undefined) {
 
       // Use provided gas or default to 200_000n
       const gasToUse = gas || 200_000n;
-      
-      console.log('Building Safe transaction with gas:', gasToUse.toString());
 
-      const safeTx = await buildSafeTx(txs, { safeAddress: safeAddr, gas: gasToUse });
+      console.log(
+        'Building Safe transaction with gas:',
+        gasToUse.toString(),
+        'chainId:',
+        chainId,
+      );
+
+      const safeTx = await buildSafeTx(txs, {
+        safeAddress: safeAddr,
+        chainId,
+        gas: gasToUse,
+      });
       console.log('safeTx', safeTx);
 
       return relaySafeTx(
@@ -65,12 +94,12 @@ export function useSafeRelay(safeAddress: Address | string | undefined) {
         signerAddr,
         smartClient,
         safeAddr,
-        undefined,
+        targetChain,
         undefined,
         opts,
       );
     },
-    [ready, smartClient, safeAddress],
+    [ready, smartClient, safeAddress, chainId, targetChain],
   );
 
   return { ready, send };

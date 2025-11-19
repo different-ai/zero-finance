@@ -1,7 +1,14 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { ArrowRightCircle, Info, Building2, Copy, Check, Globe } from 'lucide-react';
+import {
+  ArrowRightCircle,
+  Info,
+  Building2,
+  Copy,
+  Check,
+  Globe,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -19,7 +26,10 @@ import { api } from '@/trpc/react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatUsd } from '@/lib/utils';
 import { demoFundingSources, demoUserData } from '../demo-data';
-import { getChainDisplayName, type SupportedChainId } from '@/lib/constants/chains';
+import {
+  getChainDisplayName,
+  type SupportedChainId,
+} from '@/lib/constants/chains';
 
 type CheckingActionsCardProps = {
   balanceUsd: number;
@@ -34,7 +44,9 @@ export function CheckingActionsCard({
 }: CheckingActionsCardProps) {
   const [isMoveModalOpen, setIsMoveModalOpen] = useState(false);
   const [isAccountInfoOpen, setIsAccountInfoOpen] = useState(false);
-  const [copiedSafeAddress, setCopiedSafeAddress] = useState<string | null>(null);
+  const [copiedSafeAddress, setCopiedSafeAddress] = useState<string | null>(
+    null,
+  );
   const [showAdvancedDetails, setShowAdvancedDetails] = useState(false);
   const isMobile = useIsMobile();
   const { ready, authenticated, user } = usePrivy();
@@ -199,9 +211,11 @@ export function CheckingActionsCard({
                   <Building2 className="h-5 w-5 text-[#101010]/60" />
                   Your account details
                 </DialogTitle>
-                
-                {/* Multi-Chain Accounts Section */}
-                {(isDemoMode || (multiChainData?.safes && multiChainData.safes.length > 0)) && (
+
+                {/* Advanced Account Details Section */}
+                {(isDemoMode ||
+                  (multiChainData?.safes &&
+                    multiChainData.safes.length > 0)) && (
                   <div className="mt-6 border-t border-[#101010]/10 pt-4">
                     <button
                       type="button"
@@ -210,29 +224,39 @@ export function CheckingActionsCard({
                     >
                       <Globe className="h-4 w-4" />
                       {showAdvancedDetails
-                        ? 'Hide wallet addresses'
-                        : 'Show wallet addresses'}{' '}
-                      (Multi-Chain)
+                        ? 'Hide advanced details'
+                        : 'Advanced'}
                     </button>
 
                     {showAdvancedDetails && (
                       <div className="mt-3 space-y-2">
+                        <p className="text-[11px] text-[#101010]/50 px-1 mb-2">
+                          Account identifiers for receiving crypto payments
+                          directly.
+                        </p>
                         {isDemoMode ? (
-                           <div className="rounded-[10px] border border-[#101010]/10 bg-[#F7F7F2] p-3 text-[12px]">
-                             <div className="flex items-center justify-between gap-3">
-                               <div>
-                                 <span className="uppercase tracking-[0.1em] text-[10px] text-[#101010]/50 block mb-0.5">Base (Demo)</span>
-                                 <code className="font-mono text-[11px] text-[#101010]">{safeAddress}</code>
-                               </div>
-                             </div>
-                           </div>
+                          <div className="rounded-[10px] border border-[#101010]/10 bg-[#F7F7F2] p-3 text-[12px]">
+                            <div className="flex items-center justify-between gap-3">
+                              <div>
+                                <span className="uppercase tracking-[0.1em] text-[10px] text-[#101010]/50 block mb-0.5">
+                                  Primary Account (Demo)
+                                </span>
+                                <code className="font-mono text-[11px] text-[#101010]">
+                                  {safeAddress}
+                                </code>
+                              </div>
+                            </div>
+                          </div>
                         ) : (
                           multiChainData?.safes.map((safe) => (
-                            <div key={safe.id} className="rounded-[10px] border border-[#101010]/10 bg-[#F7F7F2] p-3 text-[12px]">
+                            <div
+                              key={safe.id}
+                              className="rounded-[10px] border border-[#101010]/10 bg-[#F7F7F2] p-3 text-[12px]"
+                            >
                               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                                 <div>
                                   <span className="uppercase tracking-[0.1em] text-[10px] text-[#101010]/50 block mb-0.5">
-                                    {getChainDisplayName(safe.chainId)}
+                                    {getChainDisplayName(safe.chainId)} Account
                                   </span>
                                   <code className="font-mono text-[11px] text-[#101010] break-all">
                                     {safe.address}
@@ -240,7 +264,9 @@ export function CheckingActionsCard({
                                 </div>
                                 <button
                                   type="button"
-                                  onClick={() => handleCopyAddress(safe.address)}
+                                  onClick={() =>
+                                    handleCopyAddress(safe.address)
+                                  }
                                   className="self-start sm:self-auto flex-shrink-0 inline-flex items-center gap-1 rounded-full border border-[#101010]/15 bg-white px-3 py-1 text-[11px] text-[#101010] hover:border-[#1B29FF]/30 hover:text-[#1B29FF] transition-colors"
                                 >
                                   {copiedSafeAddress === safe.address ? (
@@ -257,9 +283,6 @@ export function CheckingActionsCard({
                             </div>
                           ))
                         )}
-                        <p className="mt-2 text-[11px] text-[#101010]/50 px-1">
-                          These are your deployed Safe addresses on each network. Use these for advanced operations.
-                        </p>
                       </div>
                     )}
                   </div>
