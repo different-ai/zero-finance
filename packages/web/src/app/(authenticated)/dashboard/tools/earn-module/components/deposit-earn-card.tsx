@@ -233,7 +233,7 @@ export function DepositEarnCard({
       
       safeDeploymentMutation
         .mutateAsync({
-          chainId,
+          targetChainId: chainId,
           safeType: 'primary',
         })
         .then((res) => {
