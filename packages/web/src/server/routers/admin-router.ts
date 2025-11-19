@@ -2072,7 +2072,7 @@ export const adminRouter = router({
             workspaceId,
             featureName: featureName as WorkspaceFeatureName,
             isActive: true,
-            grantedBy: ctx.session.user.id,
+            grantedBy: ctx.userId,
             grantSource: 'admin',
             grantReference,
             expiresAt,
@@ -2085,7 +2085,7 @@ export const adminRouter = router({
             ],
             set: {
               isActive: true,
-              grantedBy: ctx.session.user.id,
+              grantedBy: ctx.userId,
               grantSource: 'admin',
               grantReference,
               expiresAt,
@@ -2098,7 +2098,7 @@ export const adminRouter = router({
           {
             workspaceId,
             featureName,
-            grantedBy: ctx.session.user.id,
+            grantedBy: ctx.userId,
           },
           'Workspace feature granted',
         );
@@ -2179,7 +2179,7 @@ export const adminRouter = router({
           {
             workspaceId,
             featureName,
-            revokedBy: ctx.session.user.id,
+            revokedBy: ctx.userId,
           },
           'Workspace feature revoked',
         );
