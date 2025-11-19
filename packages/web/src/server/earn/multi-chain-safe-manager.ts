@@ -4,7 +4,7 @@
  */
 
 import { db } from '@/db';
-import { userSafes, type UserSafe, type NewUserSafe } from '@/db/schema';
+import { userSafes, userWalletsTable, type UserSafe, type NewUserSafe } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { type Address, type Hex, createPublicClient, http } from 'viem';
 import { base, arbitrum } from 'viem/chains';
@@ -258,6 +258,33 @@ export async function getSafeDeploymentTransactionFromSource(
  * @param safeType - Type of Safe to deploy
  * @returns Transaction data for deployment
  */
+
+
+/**
+ * Delete a user's Safe on a specific chain
+ * Used for administrative cleanup or resetting state
+ */
+export async function deleteUserSafe(
+  userDid: string,
+  chainId: SupportedChainId,
+): Promise<void> {
+  // Normalize chainId to match DB storage (if needed, currently numbers match)
+  const safes = await db.query.userSafes.findMany({
+    where: (tbl, { eq, and }) =>
+      and(eq(tbl.userDid, userDid), eq(tbl.chainId, chainId)),
+  });
+
+  if (safes.length === 0) return;
+
+  // Delete all found safes for this user on this chain
+  for (const safe of safes) {
+    await db.delete(userSafes).where(eq(userSafes.id, safe.id));
+  }
+
+  console.log(
+    `Deleted ${safes.length} safes for user ${userDid} on chain ${chainId}`,
+  );
+}
 export async function getSafeDeploymentTransaction(
   userDid: string,
   chainId: SupportedChainId,
@@ -275,7 +302,7 @@ export async function getSafeDeploymentTransaction(
     throw new Error(`Safe already exists on chain ${chainId}`);
   }
 
-  // Get source Safe from Base (primary chain)
+  // Get source Safe from Base (primary chain) to use its address as salt
   const sourceSafe = await getSafeOnChain(
     userDid,
     SUPPORTED_CHAINS.BASE,
@@ -288,12 +315,51 @@ export async function getSafeDeploymentTransaction(
     );
   }
 
-  // Get deployment transaction using source Safe configuration
-  const deploymentTx = await getSafeDeploymentTransactionFromSource(
-    sourceSafe.safeAddress as Address,
-    SUPPORTED_CHAINS.BASE,
+  // Fetch user's embedded wallet (EOA)
+  const userWallet = await db.query.userWalletsTable.findFirst({
+    where: and(
+      eq(userWalletsTable.userId, userDid),
+      eq(userWalletsTable.isDefault, true),
+    ),
+  });
+
+  let owners: Address[];
+  let threshold: number;
+
+  if (userWallet) {
+    console.log(
+      `Deploying Safe on ${chainId} with EOA owner: ${userWallet.address}`,
+    );
+    owners = [userWallet.address as Address];
+    threshold = 1;
+  } else {
+    console.warn(
+      `No default wallet found for user ${userDid}. Falling back to source Safe configuration.`,
+    );
+    // Fallback: Fetch from source Safe (Smart Wallet owned)
+    const tx = await getSafeDeploymentTransactionFromSource(
+      sourceSafe.safeAddress as Address,
+      SUPPORTED_CHAINS.BASE,
+      chainId,
+    );
+    return {
+      to: tx.to,
+      data: tx.data,
+      value: tx.value.toString(),
+      predictedAddress: tx.predictedAddress,
+    };
+  }
+
+  // Use source Safe address as salt nonce
+  const saltNonce = sourceSafe.safeAddress.toLowerCase();
+
+  // Generate deployment transaction
+  const deploymentTx = await getSafeDeploymentTx({
+    owners,
+    threshold,
     chainId,
-  );
+    saltNonce,
+  });
 
   return {
     to: deploymentTx.to,

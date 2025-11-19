@@ -33,7 +33,8 @@ import Safe, {
   SafeDeploymentConfig,
 } from '@safe-global/protocol-kit';
 import { cn } from '@/lib/utils';
-// import { buildSafeTx, relaySafeTx } from '@/lib/sponsor-tx/core'; // Removed unused import
+import { usePrivy, useWallets } from '@privy-io/react-auth';
+import { buildSafeTx, relaySafeTx } from '@/lib/sponsor-tx/core';
 
 // Bridge quote type (matches tRPC response)
 interface BridgeQuote {
@@ -103,6 +104,7 @@ export function DepositEarnCard({
   onDepositSuccess,
   chainId = SUPPORTED_CHAINS.BASE, // Default to Base
 }: DepositEarnCardProps) {
+  const { wallets } = useWallets();
   const [amount, setAmount] = useState('');
   const [depositAmount, setDepositAmount] = useState(''); // Separate state for deposit on target chain
   const [transactionState, setTransactionState] = useState<TransactionState>({
@@ -637,16 +639,22 @@ export function DepositEarnCard({
     }
   };
 
+  const { user } = usePrivy();
+
   // Handle "Deposit on Target Chain" Step
   const handleTargetChainDeposit = async (
     amountInSmallestUnit: bigint,
     targetSafe: Address,
   ) => {
     try {
-      // 1. Get Client for Target Chain
+      setTransactionState({ step: 'checking' });
+
+      // 1. Get Client for Target Chain (Smart Wallet Client - used as Relayer)
       const targetClient = await getClientForChain({ id: chainId });
       if (!targetClient || !targetClient.account)
         throw new Error(`Could not get client for chain ${chainId}`);
+
+      const smartWalletAddress = targetClient.account.address;
 
       // 2. Get Public Client for Target Chain
       const rpcUrl =
@@ -671,54 +679,139 @@ export function DepositEarnCard({
         args: [targetSafe, vaultAddress],
       });
 
-      // 4. Approve if needed
-      if (allowance < amountInSmallestUnit) {
-        setTransactionState({ step: 'approving' });
-        console.log(`Approving on chain ${chainId}...`);
+      // 4. Determine Signer (Owner of the Safe)
+      const owners = await targetPublicClient.readContract({
+        address: targetSafe,
+        abi: parseAbi(['function getOwners() view returns (address[])']),
+        functionName: 'getOwners',
+      });
 
+      const isSmartWalletOwner = owners.some(
+        (owner) =>
+          owner.toLowerCase() === smartWalletAddress.toLowerCase(),
+      );
+      const isEoaOwner =
+        user?.wallet?.address &&
+        owners.some(
+          (owner) =>
+            owner.toLowerCase() === user.wallet!.address.toLowerCase(),
+        );
+
+      let signerAddress: Address;
+
+      if (isSmartWalletOwner) {
+        console.log('Target Safe is owned by Smart Wallet');
+        signerAddress = smartWalletAddress;
+      } else if (isEoaOwner) {
+        console.log('Target Safe is owned by EOA');
+        signerAddress = user!.wallet!.address as Address;
+      } else {
+        // Fallback or Error
+        console.warn(
+          'Neither Smart Wallet nor current EOA is an owner. Using first owner.',
+        );
+        signerAddress = owners[0];
+      }
+
+      // 5. Build Batch Transaction (Approve + Deposit)
+      const txs = [];
+
+      if (allowance < amountInSmallestUnit) {
+        console.log(`Adding approval for chain ${chainId}...`);
         const approveData = encodeFunctionData({
           abi: erc20Abi,
           functionName: 'approve',
           args: [vaultAddress, amountInSmallestUnit],
         });
 
-        const approveHash = await targetClient.sendTransaction({
+        txs.push({
           to: targetUSDC as Address,
-          value: 0n,
+          value: '0',
           data: approveData,
-          chain: chainId === 42161 ? arbitrum : base,
         });
-
-        setTransactionState({
-          step: 'waiting-approval',
-          txHash: approveHash,
-        });
-
-        // Wait for approval confirmation
-        // Ideally use waitForTransactionReceipt, but we'll use a delay for now as we don't have the specific public client hook handy for waiting easily without import
-        await new Promise((r) => setTimeout(r, 5000));
       }
 
-      // 5. Deposit on Target Chain
-      setTransactionState({ step: 'depositing' });
-      console.log(`Depositing on chain ${chainId}...`);
-
+      console.log(`Adding deposit for chain ${chainId}...`);
       const depositData = encodeFunctionData({
         abi: VAULT_ABI,
         functionName: 'deposit',
         args: [amountInSmallestUnit, targetSafe],
       });
 
-      const depositHash = await targetClient.sendTransaction({
+      txs.push({
         to: vaultAddress,
-        value: 0n,
+        value: '0',
         data: depositData,
-        chain: chainId === 42161 ? arbitrum : base,
       });
+
+      setTransactionState({ step: 'depositing' });
+      console.log('Building Safe batch transaction for target chain...', txs);
+
+      // Build the Safe transaction
+      const safeTx = await buildSafeTx(txs, {
+        safeAddress: targetSafe,
+        gas: 500_000n, // Safe gas limit
+        chainId, // Pass chainId for correct context
+      });
+
+      // Relay the transaction
+      // If signer is EOA, relaySafeTx handles EIP-712 signing via Privy embedded wallet (if available in context? No, we might need to pass signer)
+      // relaySafeTx logic needs verification: it uses `smartClient.sendTransaction`.
+      // If signer != smartClient.address, it needs a signature.
+      // `relaySafeTx` in `core.ts` takes `signerAddress`.
+      // But how does it get the signature?
+      // It calls `safeTx.addSignature`. But wait, `buildPrevalidatedSig` is only for `msg.sender == owner`.
+      // If EOA is owner, we need `signTypedData`.
+      // `relaySafeTx` implementation in `core.ts` assumes `skipPreSig` or manual addition?
+      // Let's check `core.ts` implementation details I just committed.
+      // It has `if (!opts.skipPreSig) { buildPrevalidatedSig... }`.
+      // This ONLY works for Smart Wallet owner (where msg.sender is owner).
+      // For EOA owner, we need to sign!
+
+      // We need to sign the transaction hash if EOA is owner.
+      if (isEoaOwner) {
+        console.log('Signing with EOA...');
+        const safeTxHash = await safeTx.getTransactionHash();
+        const userAddress = user!.wallet!.address;
+
+        const wallet = wallets.find(
+          (w) => w.address.toLowerCase() === userAddress.toLowerCase(),
+        );
+
+        if (!wallet) {
+          throw new Error('Connected wallet not found for signing');
+        }
+
+        // Sign the Safe transaction hash
+        // Note: This uses eth_sign (or personal_sign) which produces a valid signature for Safe
+        // Safe accepts EIP-191 signatures of the tx hash
+        const signature = await wallet.sign(safeTxHash);
+
+        // Add the signature to the Safe transaction object
+        // Safe SDK expects the signature to be added before execution
+        safeTx.addSignature({
+          signer: userAddress as Address,
+          data: signature as Hex,
+          staticPart: () => signature as Hex,
+          dynamicPart: () => '',
+        } as any); // Cast to any because Safe SDK types can be strict about signature implementation
+      }
+
+      const depositUserOpHash = await relaySafeTx(
+        safeTx,
+        signerAddress,
+        targetClient,
+        targetSafe,
+        undefined, // chain object
+        undefined, // providerUrl
+        { skipPreSig: isEoaOwner }, // Skip pre-validated sig if EOA, as we added a real signature above
+      );
+
+      console.log('Target chain deposit UserOp:', depositUserOpHash);
 
       setTransactionState({
         step: 'waiting-deposit',
-        txHash: depositHash,
+        txHash: depositUserOpHash,
       });
 
       // Wait for deposit
@@ -726,7 +819,7 @@ export function DepositEarnCard({
 
       setTransactionState({
         step: 'success',
-        txHash: depositHash,
+        txHash: depositUserOpHash,
         depositedAmount: depositAmount,
       });
 
