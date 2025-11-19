@@ -1374,6 +1374,26 @@ export function DepositEarnCard({
     );
   }
 
+  // --- CROSS-CHAIN LOADING / UNDETERMINED STATE ---
+  // If we are cross-chain but don't have the target safe address yet,
+  // and we are NOT in the "needs-deployment" flow (which handles its own UI),
+  // show a skeleton to prevent flashing the default view.
+  if (
+    isCrossChain &&
+    (!targetSafeAddress || isLoadingPositions) &&
+    transactionState.step !== 'needs-deployment' &&
+    transactionState.step !== 'deploying-safe' &&
+    transactionState.step !== 'waiting-deployment'
+  ) {
+    return (
+      <div className="space-y-4">
+        <div className="h-20 w-full bg-[#101010]/5 animate-pulse" />
+        <div className="h-12 w-full bg-[#101010]/5 animate-pulse" />
+        <div className="h-12 w-full bg-[#101010]/5 animate-pulse" />
+      </div>
+    );
+  }
+
   // --- CROSS-CHAIN SPLIT VIEW ---
   if (isCrossChain && targetSafeAddress) {
       const chainName = chainId === 42161 ? 'Arbitrum' : `Chain ${chainId}`;
