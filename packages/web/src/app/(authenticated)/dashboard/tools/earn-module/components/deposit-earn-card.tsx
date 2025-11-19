@@ -211,15 +211,56 @@ export function DepositEarnCard({
     );
     
   // We need to get the target safe address to check its balance
-  const { data: multiChainPositions } = trpc.earn.getMultiChainPositions.useQuery(
-    undefined, 
-    { enabled: isCrossChain }
+  const { data: multiChainPositions, isLoading: isLoadingPositions } = trpc.earn.getMultiChainPositions.useQuery(
+    undefined,
+    { enabled: isCrossChain },
   );
 
   const targetSafeAddress = multiChainPositions?.safes.find(
-    (s) => s.chainId === chainId
+    (s) => s.chainId === chainId,
   )?.address as Address | undefined;
-  
+
+  // Auto-trigger deployment check if cross-chain and no safe exists
+  useEffect(() => {
+    if (
+      isCrossChain &&
+      !isLoadingPositions &&
+      !targetSafeAddress &&
+      transactionState.step === 'idle'
+    ) {
+      console.log('[DepositEarnCard] No target Safe found, fetching deployment info...');
+      setTransactionState({ step: 'checking' }); // Show loading state briefly
+      
+      safeDeploymentMutation
+        .mutateAsync({
+          chainId,
+          safeType: 'primary',
+        })
+        .then((res) => {
+          setTransactionState({
+            step: 'needs-deployment',
+            deploymentInfo: {
+              chainId: chainId,
+              transaction: {
+                 to: res.to,
+                 data: res.data,
+                 value: res.value,
+                 chainId: chainId
+              },
+              predictedAddress: res.predictedAddress,
+            },
+          });
+        })
+        .catch((err) => {
+          console.error('Failed to fetch deployment info:', err);
+          setTransactionState({ 
+              step: 'error', 
+              errorMessage: 'Failed to load account setup info. Please refresh.' 
+          });
+        });
+    }
+  }, [isCrossChain, isLoadingPositions, targetSafeAddress, chainId, transactionState.step]);
+
   // Force fetch of target balance when we have the address
   const [targetBalance, setTargetBalance] = useState<bigint>(0n);
   
