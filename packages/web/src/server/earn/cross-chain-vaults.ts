@@ -90,6 +90,7 @@ export function getVaultsGroupedByChain(): Record<
   return {
     [SUPPORTED_CHAINS.BASE]: getVaultsByChain(SUPPORTED_CHAINS.BASE),
     [SUPPORTED_CHAINS.ARBITRUM]: getVaultsByChain(SUPPORTED_CHAINS.ARBITRUM),
+    [SUPPORTED_CHAINS.MAINNET]: getVaultsByChain(SUPPORTED_CHAINS.MAINNET),
   };
 }
 
