@@ -24,12 +24,7 @@ export const workspaceFeatures = pgTable(
       .notNull()
       .references(() => workspaces.id, { onDelete: 'cascade' }),
     featureName: text('feature_name', {
-      enum: [
-        'multi_chain',
-        'advanced_analytics',
-        'auto_categorization',
-        'workspace_automation',
-      ],
+      enum: ['multi_chain'],
     }).notNull(),
     isActive: boolean('is_active').default(true).notNull(),
     grantedBy: text('granted_by'), // Admin who granted the feature
@@ -52,9 +47,10 @@ export const workspaceFeatures = pgTable(
   (table) => {
     return {
       // Ensure a workspace can only have one active feature of each type
-      workspaceFeatureUniqueIdx: uniqueIndex(
-        'workspace_feature_unique_idx',
-      ).on(table.workspaceId, table.featureName),
+      workspaceFeatureUniqueIdx: uniqueIndex('workspace_feature_unique_idx').on(
+        table.workspaceId,
+        table.featureName,
+      ),
       workspaceIdIdx: index('workspace_features_workspace_id_idx').on(
         table.workspaceId,
       ),

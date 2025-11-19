@@ -1017,12 +1017,7 @@ export const userFeatures = pgTable(
       .references(() => users.privyDid, { onDelete: 'cascade' }),
     workspaceId: uuid('workspace_id'),
     featureName: text('feature_name', {
-      enum: [
-        'workspace_automation',
-        'savings',
-        'advanced_analytics',
-        'auto_categorization',
-      ],
+      enum: ['savings'],
     }).notNull(),
     isActive: boolean('is_active').default(true).notNull(),
     purchaseSource: text('purchase_source', {

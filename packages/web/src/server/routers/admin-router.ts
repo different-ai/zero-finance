@@ -1143,111 +1143,6 @@ export const adminRouter = router({
       }
     }),
 
-  /**
-   * Grant a feature to a user (admin only)
-   */
-  grantFeature: protectedProcedure
-    .input(
-      z.object({
-        userPrivyDid: z.string().min(1, 'User Privy DID is required'),
-        featureName: z.enum([
-          'workspace_automation',
-          'savings',
-          'advanced_analytics',
-          'auto_categorization',
-        ]),
-        purchaseSource: z.enum(['polar', 'manual', 'promo']).default('polar'),
-        purchaseReference: z.string().optional(),
-        expiresAt: z.date().optional(),
-      }),
-    )
-    .mutation(async ({ ctx, input }) => {
-      if (!ctx.userId) {
-        throw new TRPCError({
-          code: 'UNAUTHORIZED',
-          message: 'User ID not found',
-        });
-      }
-      await requireAdmin(ctx.userId);
-
-      const {
-        userPrivyDid,
-        featureName,
-        purchaseSource,
-        purchaseReference,
-        expiresAt,
-      } = input;
-      const logPayload = {
-        procedure: 'grantFeature',
-        targetUserDid: userPrivyDid,
-        featureName,
-        purchaseSource,
-        adminUserDid: ctx.userId,
-      };
-
-      ctx.log.info(logPayload, 'Attempting to grant feature to user...');
-
-      try {
-        // Check if user already has this feature
-        const existingFeature = await db
-          .select()
-          .from(userFeatures)
-          .where(
-            and(
-              eq(userFeatures.userPrivyDid, userPrivyDid),
-              eq(userFeatures.featureName, featureName),
-            ),
-          )
-          .limit(1);
-
-        if (existingFeature.length > 0) {
-          // Update existing feature
-          await db
-            .update(userFeatures)
-            .set({
-              isActive: true,
-              purchaseSource,
-              purchaseReference,
-              expiresAt,
-              activatedAt: new Date(),
-            })
-            .where(eq(userFeatures.id, existingFeature[0].id));
-
-          ctx.log.info(
-            { ...logPayload, result: 'updated' },
-            'Successfully updated existing feature.',
-          );
-          return { success: true, updated: true };
-        } else {
-          // Create new feature
-          await db.insert(userFeatures).values({
-            userPrivyDid,
-            featureName,
-            isActive: true,
-            purchaseSource,
-            purchaseReference,
-            expiresAt,
-            activatedAt: new Date(),
-          });
-
-          ctx.log.info(
-            { ...logPayload, result: 'created' },
-            'Successfully created new feature.',
-          );
-          return { success: true, created: true };
-        }
-      } catch (error) {
-        ctx.log.error(
-          { ...logPayload, error: (error as Error).message },
-          'Failed to grant feature.',
-        );
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: `Failed to grant feature: ${(error as Error).message}`,
-        });
-      }
-    }),
-
   getUserDetails: protectedProcedure
     .input(
       z.object({
@@ -2147,8 +2042,13 @@ export const adminRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const { requireAdmin } = userService(ctx.session);
-      await requireAdmin();
+      if (!ctx.userId) {
+        throw new TRPCError({
+          code: 'UNAUTHORIZED',
+          message: 'User ID not found',
+        });
+      }
+      await requireAdmin(ctx.userId);
 
       const { workspaceId, featureName, grantReference, expiresAt } = input;
 
@@ -2239,8 +2139,13 @@ export const adminRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const { requireAdmin } = userService(ctx.session);
-      await requireAdmin();
+      if (!ctx.userId) {
+        throw new TRPCError({
+          code: 'UNAUTHORIZED',
+          message: 'User ID not found',
+        });
+      }
+      await requireAdmin(ctx.userId);
 
       const { workspaceId, featureName } = input;
 
@@ -2310,8 +2215,13 @@ export const adminRouter = router({
       }),
     )
     .query(async ({ ctx, input }) => {
-      const { requireAdmin } = userService(ctx.session);
-      await requireAdmin();
+      if (!ctx.userId) {
+        throw new TRPCError({
+          code: 'UNAUTHORIZED',
+          message: 'User ID not found',
+        });
+      }
+      await requireAdmin(ctx.userId);
 
       const features = await db.query.workspaceFeatures.findMany({
         where: eq(workspaceFeatures.workspaceId, input.workspaceId),
@@ -2336,8 +2246,13 @@ export const adminRouter = router({
       }),
     )
     .query(async ({ ctx, input }) => {
-      const { requireAdmin } = userService(ctx.session);
-      await requireAdmin();
+      if (!ctx.userId) {
+        throw new TRPCError({
+          code: 'UNAUTHORIZED',
+          message: 'User ID not found',
+        });
+      }
+      await requireAdmin(ctx.userId);
 
       const { featureName, activeOnly } = input;
 
@@ -2386,8 +2301,13 @@ export const adminRouter = router({
       }),
     )
     .query(async ({ ctx, input }) => {
-      const { requireAdmin } = userService(ctx.session);
-      await requireAdmin();
+      if (!ctx.userId) {
+        throw new TRPCError({
+          code: 'UNAUTHORIZED',
+          message: 'User ID not found',
+        });
+      }
+      await requireAdmin(ctx.userId);
 
       const { workspaceId, featureName } = input;
 
