@@ -1447,7 +1447,7 @@ export function DepositEarnCard({
                             placeholder="0.0"
                             value={depositAmount}
                             onChange={(e) => setDepositAmount(e.target.value)}
-                            className="w-full h-12 px-4 bg-[#F7F7F2] border border-[#101010]/10 rounded-md focus:border-[#1B29FF] focus:outline-none text-[15px] transition-colors"
+                            className="w-full h-12 px-4 bg-[#F7F7F2] border border-[#101010]/10 rounded-md focus:border-[#1B29FF] focus:outline-none text-[15px] transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                             step="0.000001"
                             min="0"
                             max={availableTargetBalance}
@@ -1501,7 +1501,7 @@ export function DepositEarnCard({
                             placeholder="0.0"
                             value={amount}
                             onChange={(e) => setAmount(e.target.value)}
-                            className="w-full h-10 px-3 bg-white border border-[#101010]/10 rounded-md focus:border-[#1B29FF] focus:outline-none text-[14px] transition-colors"
+                            className="w-full h-10 px-3 bg-white border border-[#101010]/10 rounded-md focus:border-[#1B29FF] focus:outline-none text-[14px] transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                             step="0.000001"
                              min="0"
                              max={availableBalance}
@@ -1578,7 +1578,7 @@ export function DepositEarnCard({
             placeholder="0.0"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
-            className="w-full px-3 py-2 pr-20 text-[14px] bg-white border border-[#101010]/10 focus:border-[#1B29FF] focus:outline-none transition-colors"
+            className="w-full px-3 py-2 pr-20 text-[14px] bg-white border border-[#101010]/10 focus:border-[#1B29FF] focus:outline-none transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
             step="0.000001"
             min="0"
             max={availableBalance}
