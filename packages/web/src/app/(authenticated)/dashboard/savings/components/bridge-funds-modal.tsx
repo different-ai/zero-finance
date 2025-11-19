@@ -114,6 +114,7 @@ export function BridgeFundsModal({
           amount: amountInSmallestUnit.toString(),
           sourceChainId: sourceChain,
           destChainId: destChain,
+          vaultAddress: '0x0000000000000000000000000000000000000000',
         });
         setQuote({
           outputAmount: quoteData.outputAmount,

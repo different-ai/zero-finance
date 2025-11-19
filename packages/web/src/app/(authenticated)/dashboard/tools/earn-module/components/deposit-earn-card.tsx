@@ -785,7 +785,7 @@ export function DepositEarnCard({
 
         // Initialize Safe SDK with EIP-1193 provider and EOA as signer
         const protocolKit = await Safe.init({
-          provider: ethereumProvider,
+          provider: ethereumProvider as any,
           signer: eoaAddress,
           safeAddress: targetSafe,
         });
@@ -1231,7 +1231,7 @@ export function DepositEarnCard({
             to: deploymentTransaction.to as Address,
             value: BigInt(deploymentTransaction.value || '0'),
             data: deploymentTransaction.data as `0x${string}`,
-            chain: arbitrum,
+            chain: arbitrum as any,
           },
           {
             uiOptions: {
@@ -1377,7 +1377,8 @@ export function DepositEarnCard({
     transactionState.step !== 'idle' &&
     transactionState.step !== 'success' &&
     transactionState.step !== 'error' &&
-    transactionState.step !== 'checking'
+    transactionState.step !== 'checking' &&
+    transactionState.step !== 'waiting-arrival'
   ) {
     return (
       <div className="space-y-4">
@@ -1397,13 +1398,6 @@ export function DepositEarnCard({
           </div>
 
           <div className="space-y-2">
-            {transactionState.step === 'checking' && (
-              <div className="flex items-center gap-2 text-[12px] text-[#101010]/60">
-                <Clock className="h-3 w-3" />
-                Checking requirements...
-              </div>
-            )}
-
             {(transactionState.step === 'approving' ||
               transactionState.step === 'waiting-approval') && (
               <div className="space-y-2">
@@ -1605,13 +1599,7 @@ export function DepositEarnCard({
   // If we are cross-chain but don't have the target safe address yet,
   // and we are NOT in the "needs-deployment" flow (which handles its own UI),
   // show a skeleton to prevent flashing the default view.
-  if (
-    isCrossChain &&
-    (!targetSafeAddress || isLoadingPositions) &&
-    transactionState.step !== 'needs-deployment' &&
-    transactionState.step !== 'deploying-safe' &&
-    transactionState.step !== 'waiting-deployment'
-  ) {
+  if (isCrossChain && (!targetSafeAddress || isLoadingPositions)) {
     return (
       <div className="space-y-4">
         <div className="h-20 w-full bg-[#101010]/5 animate-pulse" />

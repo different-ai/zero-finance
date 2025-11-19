@@ -204,7 +204,7 @@ export function usePrimaryAccountSetup() {
           to: deploymentTransaction.to as Address,
           value: BigInt(deploymentTransaction.value || '0'),
           data: deploymentTransaction.data as `0x${string}`,
-          chain: base,
+          chain: base as any,
         },
         {
           uiOptions: {

@@ -19,7 +19,7 @@ export function AnimatedEarningsV2({
 }: AnimatedEarningsV2Props) {
   const [displayValue, setDisplayValue] = useState(0);
   const [isInitialized, setIsInitialized] = useState(false);
-  const animationFrameRef = useRef<number>();
+  const animationFrameRef = useRef<number | undefined>(undefined);
   const startTimeRef = useRef<number>(0);
   const initialValueRef = useRef<number>(0);
   const earningsPerSecondRef = useRef<number>(0);

@@ -30,7 +30,7 @@ export function AnimatedYieldCounter({
   const [dailyYield, setDailyYield] = useState(0);
   const [monthlyYield, setMonthlyYield] = useState(0);
   const [yearlyYield, setYearlyYield] = useState(0);
-  const animationRef = useRef<number>();
+  const animationRef = useRef<number | undefined>(undefined);
 
   useEffect(() => {
     if (principal <= 0 || apy <= 0) {

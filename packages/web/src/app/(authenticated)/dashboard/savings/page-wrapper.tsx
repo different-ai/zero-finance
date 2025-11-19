@@ -363,6 +363,7 @@ export default function SavingsPageWrapper({
       instantApy: 0.08,
       isInsured: true,
       isContactOnly: true,
+      chainId: 8453 as const,
       insuranceSummary:
         'Dedicated coverage arranged by the 0 Finance insurance desk.',
     }),

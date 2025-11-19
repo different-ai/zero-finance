@@ -214,6 +214,7 @@ export function calculateTotalSavedByChain(
   const result: Record<SupportedChainId, number> = {
     [SUPPORTED_CHAINS.BASE]: 0,
     [SUPPORTED_CHAINS.ARBITRUM]: 0,
+    [SUPPORTED_CHAINS.MAINNET]: 0,
   };
 
   vaults.forEach((v) => {
@@ -234,6 +235,7 @@ export function calculateTotalEarnedByChain(
   const result: Record<SupportedChainId, number> = {
     [SUPPORTED_CHAINS.BASE]: 0,
     [SUPPORTED_CHAINS.ARBITRUM]: 0,
+    [SUPPORTED_CHAINS.MAINNET]: 0,
   };
 
   vaults.forEach((v) => {

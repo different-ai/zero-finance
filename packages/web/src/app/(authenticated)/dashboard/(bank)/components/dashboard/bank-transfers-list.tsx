@@ -3,10 +3,9 @@ import { trpc, RouterOutputs } from '@/utils/trpc';
 import { Loader2, AlertCircle, UploadCloud, Banknote } from 'lucide-react';
 import React from 'react';
 
-type OnrampTransfer =
-  RouterOutputs['align']['listOnrampTransfers'][number] & {
-    created_at?: string | null;
-  };
+type OnrampTransfer = RouterOutputs['align']['listOnrampTransfers'][number] & {
+  created_at?: string | null;
+};
 type OfframpTransfer =
   RouterOutputs['align']['listOfframpTransfers'][number] & {
     created_at?: string | null;
@@ -130,12 +129,13 @@ export function BankTransfersList() {
           <div className="divide-y divide-gray-200">
             {transfers.map((tx) => {
               const amountValue = Number(tx.amount ?? 0);
-              const currencyCode =
-                tx.source_currency ??
-                ('destination_currency' in tx
-                  ? tx.destination_currency
-                  : undefined) ??
-                (tx.quote?.deposit_currency ?? undefined);
+              let currencyCode: string | undefined;
+
+              if (tx._direction === 'incoming') {
+                currencyCode = tx.source_currency ?? tx.quote?.deposit_currency;
+              } else {
+                currencyCode = tx.destination_currency;
+              }
 
               return (
                 <div
@@ -176,4 +176,4 @@ export function BankTransfersList() {
       </CardContent>
     </Card>
   );
-} 
+}
