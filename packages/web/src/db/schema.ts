@@ -117,7 +117,9 @@ export const userProfilesTable = pgTable(
 export const userRequestsTable = pgTable(
   'user_requests',
   {
-    id: text('id').primaryKey().default(crypto.randomUUID()), // Using text for UUIDs
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()), // Using text for UUIDs
     requestId: text('request_id'), // Request Network ID
     userId: text('user_id').notNull(),
     workspaceId: uuid('workspace_id'),
@@ -1403,3 +1405,12 @@ export {
   type InsertBridgeTransaction,
   type SelectBridgeTransaction,
 } from './schema/bridge-transactions';
+
+// Workspace features for admin-controlled feature activation
+export {
+  workspaceFeatures,
+  workspaceFeaturesRelations,
+  type WorkspaceFeature,
+  type NewWorkspaceFeature,
+  type WorkspaceFeatureName,
+} from './schema/workspace-features';

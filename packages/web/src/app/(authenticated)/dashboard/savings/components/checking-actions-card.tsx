@@ -230,11 +230,11 @@ export function CheckingActionsCard({
         </div>
       )}
 
-      <div className="flex flex-col sm:flex-row gap-3">
+      <div className="flex flex-col sm:flex-row flex-wrap gap-3">
         <Dialog open={isMoveModalOpen} onOpenChange={setIsMoveModalOpen}>
           <DialogTrigger asChild>
             <Button
-              className="flex-1 inline-flex items-center justify-center gap-2 px-5 py-3 text-[15px] font-semibold text-white bg-[#1B29FF] hover:bg-[#1420CC] transition-colors"
+              className="flex-1 min-w-[120px] inline-flex items-center justify-center gap-2 px-5 py-3 text-[15px] font-semibold text-white bg-[#1B29FF] hover:bg-[#1420CC] transition-colors"
               disabled={
                 !isDemoMode && (!canInitiateMove || isCheckingOwnership)
               }
@@ -262,7 +262,7 @@ export function CheckingActionsCard({
             <DialogTrigger asChild>
               <Button
                 variant="outline"
-                className="flex-1 inline-flex items-center justify-center gap-2 px-5 py-3 text-[15px] font-semibold text-[#101010] border border-[#101010]/10 hover:border-[#1B29FF]/20 hover:text-[#1B29FF] hover:bg-[#F7F7F2] transition-colors"
+                className="flex-1 min-w-[120px] inline-flex items-center justify-center gap-2 px-5 py-3 text-[15px] font-semibold text-[#101010] border border-[#101010]/10 hover:border-[#1B29FF]/20 hover:text-[#1B29FF] hover:bg-[#F7F7F2] transition-colors"
                 disabled={!hasAnyBalance}
                 title={
                   !hasAnyBalance
@@ -306,7 +306,7 @@ export function CheckingActionsCard({
           <DialogTrigger asChild>
             <Button
               variant="outline"
-              className="flex-1 inline-flex items-center justify-center gap-2 px-5 py-3 text-[15px] font-semibold text-[#101010] border border-[#101010]/10 hover:border-[#1B29FF]/20 hover:text-[#1B29FF] hover:bg-[#F7F7F2] transition-colors"
+              className="flex-1 min-w-[120px] inline-flex items-center justify-center gap-2 px-5 py-3 text-[15px] font-semibold text-[#101010] border border-[#101010]/10 hover:border-[#1B29FF]/20 hover:text-[#1B29FF] hover:bg-[#F7F7F2] transition-colors"
             >
               <Info className="h-5 w-5 text-[#101010]/60" />
               Account Info

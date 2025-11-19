@@ -41,10 +41,6 @@ import {
   calculateAverageApy,
   calculateWeightedInstantApy,
 } from './utils/vault-calculations';
-import { featureConfig } from '@/lib/feature-config';
-import { ALL_CROSS_CHAIN_VAULTS } from '@/server/earn/cross-chain-vaults';
-import { NetworkBadge } from '@/components/savings/network-badge';
-import { SUPPORTED_CHAINS } from '@/lib/constants/chains';
 
 export type SavingsPageWrapperProps = {
   mode?: SavingsExperienceMode;
@@ -198,11 +194,8 @@ export default function SavingsPageWrapper({
 
   const vaultStats = isDemoMode ? demoVaultStats : realVaultStats.data;
 
-  // Vaults configuration - include Arbitrum if multi-chain enabled
-  const isMultiChainEnabled = featureConfig.multiChain.enabled && !isDemoMode;
-  const BASE_VAULTS = isMultiChainEnabled
-    ? ALL_CROSS_CHAIN_VAULTS
-    : BASE_USDC_VAULTS;
+  // Base vaults configuration
+  const BASE_VAULTS = BASE_USDC_VAULTS;
   const baseVaultAddresses = useMemo(
     () => BASE_VAULTS.map((v) => v.address),
     [BASE_VAULTS],
@@ -553,12 +546,6 @@ export default function SavingsPageWrapper({
             vaultCount={vaultsVM.length}
           />
         </div>
-
-        {/* Multi-Chain Vaults Section - disabled for now, needs more work
-        {featureConfig.multiChain.enabled && !isDemoMode && (
-          <MultiChainSection userDid={primarySafe?.userDid || ''} />
-        )}
-        */}
 
         {/* Live Yield Counter - Premium Card */}
         {totalSaved > 0 && (

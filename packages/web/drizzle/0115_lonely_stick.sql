@@ -1,1 +1,0 @@
-ALTER TABLE "user_requests" ALTER COLUMN "id" SET DEFAULT '65fa33a1-c090-4f06-9e3b-a0f301c89a75';

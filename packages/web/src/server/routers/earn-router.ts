@@ -65,6 +65,7 @@ import {
 } from '../earn/bridge-transaction-crud';
 import { predictSafeAddress } from '@/lib/safe-multi-chain';
 import { getRPCManager } from '@/lib/multi-chain-rpc';
+import { hasMultiChainFeature } from '@/lib/workspace-features';
 
 type EarningsEventPayload = {
   id: string;
@@ -2785,4 +2786,18 @@ export const earnRouter = router({
         safeAddress: newSafe.safeAddress,
       };
     }),
+
+  /**
+   * Check if multi-chain feature is enabled for the current workspace
+   */
+  isMultiChainEnabled: protectedProcedure.query(async ({ ctx }) => {
+    const workspaceId = requireWorkspaceId(ctx.workspaceId);
+
+    // Check if the workspace has the multi-chain feature enabled
+    const hasFeature = await hasMultiChainFeature(workspaceId);
+
+    return {
+      enabled: hasFeature,
+    };
+  }),
 });

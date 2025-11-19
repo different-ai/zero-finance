@@ -12,11 +12,13 @@ import {
   userFeatures,
   workspaces,
   workspaceMembers,
+  workspaceFeatures,
   admins,
   autoEarnConfigs,
   earnDeposits,
   earnWithdrawals,
 } from '../../db/schema';
+import type { WorkspaceFeatureName } from '../../db/schema/workspace-features';
 import { eq, and } from 'drizzle-orm';
 import { customAlphabet } from 'nanoid';
 import { alignApi, AlignCustomer } from '@/server/services/align-api';
@@ -2121,5 +2123,300 @@ export const adminRouter = router({
           message: `Failed to get vault breakdown: ${(error as Error).message}`,
         });
       }
+    }),
+
+  // ============================================
+  // Workspace Feature Management
+  // ============================================
+
+  /**
+   * Grant a feature to a workspace
+   */
+  grantWorkspaceFeature: protectedProcedure
+    .input(
+      z.object({
+        workspaceId: z.string().uuid(),
+        featureName: z.enum([
+          'multi_chain',
+          'advanced_analytics',
+          'auto_categorization',
+          'workspace_automation',
+        ]),
+        grantReference: z.string().optional(),
+        expiresAt: z.date().optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const { requireAdmin } = userService(ctx.session);
+      await requireAdmin();
+
+      const { workspaceId, featureName, grantReference, expiresAt } = input;
+
+      // Verify workspace exists
+      const workspace = await db.query.workspaces.findFirst({
+        where: eq(workspaces.id, workspaceId),
+      });
+
+      if (!workspace) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: `Workspace ${workspaceId} not found`,
+        });
+      }
+
+      try {
+        // Upsert the feature (insert or update if exists)
+        await db
+          .insert(workspaceFeatures)
+          .values({
+            workspaceId,
+            featureName: featureName as WorkspaceFeatureName,
+            isActive: true,
+            grantedBy: ctx.session.user.id,
+            grantSource: 'admin',
+            grantReference,
+            expiresAt,
+            activatedAt: new Date(),
+          })
+          .onConflictDoUpdate({
+            target: [
+              workspaceFeatures.workspaceId,
+              workspaceFeatures.featureName,
+            ],
+            set: {
+              isActive: true,
+              grantedBy: ctx.session.user.id,
+              grantSource: 'admin',
+              grantReference,
+              expiresAt,
+              activatedAt: new Date(),
+              updatedAt: new Date(),
+            },
+          });
+
+        ctx.log.info(
+          {
+            workspaceId,
+            featureName,
+            grantedBy: ctx.session.user.id,
+          },
+          'Workspace feature granted',
+        );
+
+        return {
+          success: true,
+          message: `Feature ${featureName} granted to workspace ${workspace.name}`,
+        };
+      } catch (error) {
+        ctx.log.error(
+          {
+            workspaceId,
+            featureName,
+            error: (error as Error).message,
+          },
+          'Failed to grant workspace feature',
+        );
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: `Failed to grant feature: ${(error as Error).message}`,
+        });
+      }
+    }),
+
+  /**
+   * Revoke a feature from a workspace
+   */
+  revokeWorkspaceFeature: protectedProcedure
+    .input(
+      z.object({
+        workspaceId: z.string().uuid(),
+        featureName: z.enum([
+          'multi_chain',
+          'advanced_analytics',
+          'auto_categorization',
+          'workspace_automation',
+        ]),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const { requireAdmin } = userService(ctx.session);
+      await requireAdmin();
+
+      const { workspaceId, featureName } = input;
+
+      try {
+        // Set feature to inactive
+        const result = await db
+          .update(workspaceFeatures)
+          .set({
+            isActive: false,
+            updatedAt: new Date(),
+          })
+          .where(
+            and(
+              eq(workspaceFeatures.workspaceId, workspaceId),
+              eq(
+                workspaceFeatures.featureName,
+                featureName as WorkspaceFeatureName,
+              ),
+            ),
+          )
+          .returning();
+
+        if (result.length === 0) {
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: `Feature ${featureName} not found for workspace`,
+          });
+        }
+
+        ctx.log.info(
+          {
+            workspaceId,
+            featureName,
+            revokedBy: ctx.session.user.id,
+          },
+          'Workspace feature revoked',
+        );
+
+        return {
+          success: true,
+          message: `Feature ${featureName} revoked from workspace`,
+        };
+      } catch (error) {
+        if (error instanceof TRPCError) throw error;
+        ctx.log.error(
+          {
+            workspaceId,
+            featureName,
+            error: (error as Error).message,
+          },
+          'Failed to revoke workspace feature',
+        );
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: `Failed to revoke feature: ${(error as Error).message}`,
+        });
+      }
+    }),
+
+  /**
+   * List all features for a workspace
+   */
+  listWorkspaceFeatures: protectedProcedure
+    .input(
+      z.object({
+        workspaceId: z.string().uuid(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const { requireAdmin } = userService(ctx.session);
+      await requireAdmin();
+
+      const features = await db.query.workspaceFeatures.findMany({
+        where: eq(workspaceFeatures.workspaceId, input.workspaceId),
+      });
+
+      return features;
+    }),
+
+  /**
+   * List all workspaces with a specific feature enabled
+   */
+  listWorkspacesWithFeature: protectedProcedure
+    .input(
+      z.object({
+        featureName: z.enum([
+          'multi_chain',
+          'advanced_analytics',
+          'auto_categorization',
+          'workspace_automation',
+        ]),
+        activeOnly: z.boolean().default(true),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const { requireAdmin } = userService(ctx.session);
+      await requireAdmin();
+
+      const { featureName, activeOnly } = input;
+
+      const features = await db.query.workspaceFeatures.findMany({
+        where: activeOnly
+          ? and(
+              eq(
+                workspaceFeatures.featureName,
+                featureName as WorkspaceFeatureName,
+              ),
+              eq(workspaceFeatures.isActive, true),
+            )
+          : eq(
+              workspaceFeatures.featureName,
+              featureName as WorkspaceFeatureName,
+            ),
+        with: {
+          workspace: true,
+        },
+      });
+
+      return features.map((f) => ({
+        workspaceId: f.workspaceId,
+        workspaceName: f.workspace?.name || 'Unknown',
+        isActive: f.isActive,
+        activatedAt: f.activatedAt,
+        expiresAt: f.expiresAt,
+        grantedBy: f.grantedBy,
+        grantSource: f.grantSource,
+      }));
+    }),
+
+  /**
+   * Check if a workspace has a specific feature
+   */
+  checkWorkspaceFeature: protectedProcedure
+    .input(
+      z.object({
+        workspaceId: z.string().uuid(),
+        featureName: z.enum([
+          'multi_chain',
+          'advanced_analytics',
+          'auto_categorization',
+          'workspace_automation',
+        ]),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const { requireAdmin } = userService(ctx.session);
+      await requireAdmin();
+
+      const { workspaceId, featureName } = input;
+
+      const feature = await db.query.workspaceFeatures.findFirst({
+        where: and(
+          eq(workspaceFeatures.workspaceId, workspaceId),
+          eq(
+            workspaceFeatures.featureName,
+            featureName as WorkspaceFeatureName,
+          ),
+          eq(workspaceFeatures.isActive, true),
+        ),
+      });
+
+      // Check if expired
+      const isExpired = feature?.expiresAt
+        ? new Date(feature.expiresAt) < new Date()
+        : false;
+
+      return {
+        hasFeature: !!feature && !isExpired,
+        feature: feature
+          ? {
+              isActive: feature.isActive,
+              activatedAt: feature.activatedAt,
+              expiresAt: feature.expiresAt,
+              isExpired,
+            }
+          : null,
+      };
     }),
 });

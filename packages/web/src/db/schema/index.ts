@@ -1,6 +1,7 @@
 // Export from domain modules
 export * from './users';
 export * from './workspaces';
+export * from './workspace-features';
 export * from './admins';
 export * from './bridge-transactions';
 
