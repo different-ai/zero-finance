@@ -203,6 +203,15 @@ export function WithdrawEarnCard({
       setIsWithdrawing(true);
       const amountInSmallestUnit = parseUnits(amount, vaultInfo.assetDecimals);
 
+      console.log('[WithdrawEarnCard] Starting withdrawal:', {
+        chainId,
+        isCrossChain,
+        effectiveSafeAddress,
+        targetSafeAddress,
+        vaultAddress,
+        amount: amountInSmallestUnit.toString(),
+      });
+
       if (amountInSmallestUnit > vaultInfo.assets) {
         throw new Error('Amount exceeds available vault balance.');
       }
@@ -210,7 +219,7 @@ export function WithdrawEarnCard({
       const isMaxWithdrawal = amountInSmallestUnit >= vaultInfo.assets;
 
       // Convert the asset amount to shares using the vault's conversion function
-      console.log('Converting assets to shares...', {
+      console.log('[WithdrawEarnCard] Converting assets to shares...', {
         assets: amountInSmallestUnit.toString(),
         vaultAddress,
       });
@@ -246,7 +255,10 @@ export function WithdrawEarnCard({
         }
       }
 
-      console.log('Shares to redeem:', sharesToRedeem.toString());
+      console.log(
+        '[WithdrawEarnCard] Shares to redeem:',
+        sharesToRedeem.toString(),
+      );
 
       // Encode the redeem function call
       const redeemData = encodeFunctionData({
@@ -265,7 +277,16 @@ export function WithdrawEarnCard({
         },
       ];
 
+      console.log('[WithdrawEarnCard] Sending withdrawal tx via relay:', {
+        safeAddress: effectiveSafeAddress,
+        chainId,
+        vaultAddress,
+        transactions,
+      });
+
       const userOpHash = await sendTxViaRelay(transactions, 600_000n); // Increased gas limit
+
+      console.log('[WithdrawEarnCard] Withdrawal tx hash:', userOpHash);
 
       if (userOpHash) {
         // Record the withdrawal in the database

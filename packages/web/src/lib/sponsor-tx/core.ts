@@ -1,8 +1,6 @@
 'use client';
 
-import Safe, {
-  EthSafeTransaction,
-} from '@safe-global/protocol-kit';
+import Safe, { EthSafeTransaction } from '@safe-global/protocol-kit';
 import type { MetaTransactionData } from '@safe-global/safe-core-sdk-types';
 import { Address, Hex, encodeFunctionData } from 'viem';
 import { base, arbitrum } from 'viem/chains';
@@ -28,8 +26,7 @@ const APPROVE_HASH_ABI = [
 function getRpcUrlForChain(chainId: number): string {
   if (chainId === SUPPORTED_CHAINS.ARBITRUM) {
     return (
-      process.env.NEXT_PUBLIC_ARBITRUM_RPC_URL ||
-      'https://arb1.arbitrum.io/rpc'
+      process.env.NEXT_PUBLIC_ARBITRUM_RPC_URL || 'https://arb1.arbitrum.io/rpc'
     );
   }
   if (chainId === SUPPORTED_CHAINS.MAINNET) {
@@ -73,9 +70,23 @@ export async function buildSafeTx(
   const providerUrl = chainId ? getRpcUrlForChain(chainId) : getBaseRpcUrl();
 
   const sdk = await Safe.init({ provider: providerUrl, safeAddress });
+
+  // If only one transaction, create it directly without MultiSend
+  // This avoids any delegatecall issues
+  if (txs.length === 1) {
+    const safeTx = await sdk.createTransaction({
+      transactions: txs,
+      options: {
+        safeTxGas: gas.toString(),
+      },
+    });
+    return safeTx;
+  }
+
+  // For multiple transactions, use MultiSendCallOnly with onlyCalls: true
   const safeTx = await sdk.createTransaction({
     transactions: txs,
-    onlyCalls: false,
+    onlyCalls: true, // Use regular calls instead of delegatecall to MultiSend
     options: {
       safeTxGas: gas.toString(),
     },
@@ -127,21 +138,16 @@ type ExecTxArgs = [
 export async function relaySafeTx(
   safeTx: EthSafeTransaction,
   signerAddress: Address,
-  smartClient: { sendTransaction: Function },
+  smartClient: { sendTransaction: Function; signTypedData?: Function },
   safeAddress: Address,
   chain?: Chain, // Explicit Chain object for the wallet client
   providerUrl?: string, // Kept for backward compatibility but unused here
   opts: { skipPreSig?: boolean } = {},
 ): Promise<Hex> {
-  console.log('relaying safe tx', safeAddress);
-  console.log('opts', opts);
-
   if (!opts.skipPreSig) {
     const preSig = buildPrevalidatedSig(signerAddress as `0x${string}`);
     safeTx.addSignature({ signer: signerAddress, data: preSig } as any);
   }
-
-  console.log('safeTx', safeTx);
 
   const execArgs: ExecTxArgs = [
     safeTx.data.to as Address,
@@ -155,17 +161,22 @@ export async function relaySafeTx(
     safeTx.data.refundReceiver as Address,
     safeTx.encodedSignatures() as `0x${string}`,
   ];
-  console.log('execArgs', execArgs);
 
   const execData = encodeFunctionData({
     abi: SAFE_ABI,
     functionName: 'execTransaction',
     args: execArgs,
   });
-  console.log('execData', execData);
 
   // If no chain provided, default to Base, but for cross-chain we expect it passed or implied by smartClient
   const targetChain = chain || base;
+
+  console.log('[relaySafeTx] Sending transaction:', {
+    chainId: targetChain.id,
+    chainName: targetChain.name,
+    safeAddress,
+    signerAddress,
+  });
 
   return smartClient.sendTransaction(
     {
