@@ -32,6 +32,11 @@ function getRpcUrlForChain(chainId: number): string {
       'https://arb1.arbitrum.io/rpc'
     );
   }
+  if (chainId === SUPPORTED_CHAINS.MAINNET) {
+    return (
+      process.env.NEXT_PUBLIC_ETHEREUM_RPC_URL || 'https://eth.llamarpc.com'
+    );
+  }
   return getBaseRpcUrl(); // Default to Base
 }
 

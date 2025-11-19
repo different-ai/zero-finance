@@ -11,6 +11,7 @@ import { type Address } from 'viem';
 export const SUPPORTED_CHAINS = {
   BASE: 8453,
   ARBITRUM: 42161,
+  MAINNET: 1,
 } as const;
 
 export type SupportedChainId =
@@ -83,6 +84,26 @@ export const CHAIN_CONFIG: Record<SupportedChainId, ChainConfig> = {
     },
     usdcAddress: '0xaf88d065e77c8cC2239327C5EDb3A432268e5831',
     acrossMulticallHandler: '0x924a9f036260DdD5808007E1AA95f08eD08aA569',
+  },
+  [SUPPORTED_CHAINS.MAINNET]: {
+    name: 'mainnet',
+    displayName: 'Ethereum',
+    color: '#627EEA',
+    rpcUrls: {
+      alchemy: process.env.ETHEREUM_RPC_URL,
+      public: [
+        'https://eth.llamarpc.com',
+        'https://rpc.ankr.com/eth',
+        'https://1rpc.io/eth',
+      ],
+    },
+    explorerUrl: 'https://etherscan.io',
+    nativeCurrency: {
+      name: 'Ethereum',
+      symbol: 'ETH',
+      decimals: 18,
+    },
+    usdcAddress: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
   },
 } as const;
 
