@@ -72,6 +72,7 @@ type TransactionStep =
   | 'waiting-deposit'
   | 'bridging'
   | 'waiting-bridge'
+  | 'waiting-arrival'
   | 'needs-deployment'
   | 'deploying-safe'
   | 'waiting-deployment'
@@ -112,6 +113,9 @@ export function DepositEarnCard({
   });
   const [bridgeQuote, setBridgeQuote] = useState<BridgeQuote | null>(null);
   const [isLoadingQuote, setIsLoadingQuote] = useState(false);
+  
+  // Track initial balance for bridge arrival detection
+  const initialTargetBalanceRef = useRef<bigint>(0n);
 
   // Determine if this is a cross-chain deposit (vault on different chain than user's Safe on Base)
   const isCrossChain = chainId !== SUPPORTED_CHAINS.BASE;
