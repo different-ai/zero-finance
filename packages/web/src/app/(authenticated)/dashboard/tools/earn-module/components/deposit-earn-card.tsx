@@ -1183,11 +1183,13 @@ export function DepositEarnCard({
     );
   }
 
-  // Transaction in progress
+  // Transaction in progress (Blocking View)
+  // We exclude 'checking' from this view to avoid flashing a loading screen for quick checks
   if (
     transactionState.step !== 'idle' &&
     transactionState.step !== 'success' &&
-    transactionState.step !== 'error'
+    transactionState.step !== 'error' &&
+    transactionState.step !== 'checking'
   ) {
     return (
       <div className="space-y-4">
@@ -1419,10 +1421,14 @@ export function DepositEarnCard({
                     </div>
                     <button
                         onClick={handleDepositOnly}
-                        disabled={!depositAmount || parseFloat(depositAmount) <= 0 || targetBalance === 0n}
+                        disabled={!depositAmount || parseFloat(depositAmount) <= 0 || targetBalance === 0n || transactionState.step === 'checking'}
                         className="w-full h-11 bg-[#1B29FF] hover:bg-[#1420CC] text-white font-medium rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                     >
-                        <ArrowDownToLine className="h-4 w-4" />
+                        {transactionState.step === 'checking' ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                            <ArrowDownToLine className="h-4 w-4" />
+                        )}
                         Deposit to Earn
                     </button>
                 </div>
@@ -1559,11 +1565,16 @@ export function DepositEarnCard({
           parseFloat(amount) <= 0 ||
           parseFloat(amount) > parseFloat(availableBalance) ||
           !isRelayReady ||
-          usdcBalance === 0n
+          usdcBalance === 0n ||
+          transactionState.step === 'checking'
         }
         className="w-full px-4 py-2.5 text-[14px] font-medium text-white bg-[#1B29FF] hover:bg-[#1420CC] disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
       >
-        <ArrowDownToLine className="h-4 w-4" />
+        {transactionState.step === 'checking' ? (
+          <Loader2 className="h-4 w-4 animate-spin" />
+        ) : (
+          <ArrowDownToLine className="h-4 w-4" />
+        )}
         {needsApproval ? 'Approve & Deposit' : 'Deposit'}
       </button>
 
