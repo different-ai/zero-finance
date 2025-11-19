@@ -1409,7 +1409,7 @@ export function DepositEarnCard({
               <div className="space-y-2">
                 <div className="flex items-center gap-2 text-[12px] text-[#101010]">
                   <div className="h-2 w-2 rounded-full bg-[#FFA500] animate-pulse" />
-                  Step 1 of 2: Approving USDC
+                  Step 1 of 2: Approving funds
                 </div>
                 {transactionState.txHash && (
                   <a
@@ -1430,9 +1430,7 @@ export function DepositEarnCard({
               <div className="space-y-2">
                 <div className="flex items-center gap-2 text-[12px] text-[#101010]">
                   <div className="h-2 w-2 rounded-full bg-[#1B29FF] animate-pulse" />
-                  {isCrossChain
-                    ? 'Depositing to Vault'
-                    : 'Depositing USDC to Vault'}
+                  Depositing to Vault
                 </div>
                 {transactionState.txHash && (
                   <a
@@ -1546,7 +1544,7 @@ export function DepositEarnCard({
                 Transfer Initiated
               </div>
               <div className="text-[12px] text-[#101010]/70">
-                Your {transactionState.depositedAmount} USDC is being bridged to
+                Your ${transactionState.depositedAmount} is being transferred to
                 Arbitrum. This typically takes <strong>1-2 minutes</strong> to
                 arrive.
               </div>
@@ -1657,7 +1655,7 @@ export function DepositEarnCard({
                 disabled={targetBalance === 0n}
               />
               <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
-                <span className="text-[12px] text-[#101010]/50">USDC</span>
+                <span className="text-[12px] text-[#101010]/50">USD</span>
                 <button
                   type="button"
                   onClick={handleMaxDeposit}

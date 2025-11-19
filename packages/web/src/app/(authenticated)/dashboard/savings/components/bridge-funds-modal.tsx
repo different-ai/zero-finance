@@ -179,7 +179,7 @@ export function BridgeFundsModal({
       });
 
       toast.success('Transfer initiated', {
-        description: `Moving ${amount} USDC from ${getChainDisplayName(sourceChain as SupportedChainId)} to ${getChainDisplayName(destChain as SupportedChainId)}. Estimated arrival: ${Math.ceil((quote?.estimatedFillTime || 120) / 60)} minutes.`,
+        description: `Moving $${amount} from ${getChainDisplayName(sourceChain as SupportedChainId)} to ${getChainDisplayName(destChain as SupportedChainId)}. Estimated arrival: ${Math.ceil((quote?.estimatedFillTime || 120) / 60)} minutes.`,
       });
 
       setAmount('');
