@@ -34,7 +34,7 @@ import Safe, {
 } from '@safe-global/protocol-kit';
 import { cn } from '@/lib/utils';
 import { usePrivy, useWallets } from '@privy-io/react-auth';
-import { buildSafeTx, relaySafeTx } from '@/lib/sponsor-tx/core';
+import { buildSafeTx, relaySafeTx, getSafeTxHash } from '@/lib/sponsor-tx/core';
 
 // Bridge quote type (matches tRPC response)
 interface BridgeQuote {
@@ -793,31 +793,19 @@ export function DepositEarnCard({
       setTransactionState({ step: 'depositing' });
       console.log('Building Safe batch transaction for target chain...', txs);
 
-      // Build the Safe transaction
+      // Use buildSafeTx helper to ensure consistent SDK initialization
       const safeTx = await buildSafeTx(txs, {
         safeAddress: targetSafe,
-        gas: 500_000n, // Safe gas limit
-        chainId, // Pass chainId for correct context
+        chainId,
+        gas: 500_000n,
       });
-
-      // Relay the transaction
-      // If signer is EOA, relaySafeTx handles EIP-712 signing via Privy embedded wallet (if available in context? No, we might need to pass signer)
-      // relaySafeTx logic needs verification: it uses `smartClient.sendTransaction`.
-      // If signer != smartClient.address, it needs a signature.
-      // `relaySafeTx` in `core.ts` takes `signerAddress`.
-      // But how does it get the signature?
-      // It calls `safeTx.addSignature`. But wait, `buildPrevalidatedSig` is only for `msg.sender == owner`.
-      // If EOA is owner, we need `signTypedData`.
-      // `relaySafeTx` implementation in `core.ts` assumes `skipPreSig` or manual addition?
-      // Let's check `core.ts` implementation details I just committed.
-      // It has `if (!opts.skipPreSig) { buildPrevalidatedSig... }`.
-      // This ONLY works for Smart Wallet owner (where msg.sender is owner).
-      // For EOA owner, we need to sign!
 
       // We need to sign the transaction hash if EOA is owner.
       if (isEoaOwner) {
         console.log('Signing with EOA...');
-        const safeTxHash = await safeTx.getTransactionHash();
+        // Use helper to calculate hash (uses consistent SDK instance)
+        const safeTxHash = await getSafeTxHash(targetSafe, safeTx, chainId);
+        
         const userAddress = user!.wallet!.address;
 
         const wallet = wallets.find(
@@ -834,7 +822,6 @@ export function DepositEarnCard({
         const signature = await wallet.sign(safeTxHash);
 
         // Add the signature to the Safe transaction object
-        // Safe SDK expects the signature to be added before execution
         safeTx.addSignature({
           signer: userAddress as Address,
           data: signature as Hex,

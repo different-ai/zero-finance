@@ -252,3 +252,21 @@ export async function relayNestedSafeTx(
 
   return txHash;
 }
+
+/* -------------------------------------------------------------------------- */
+/*                            getSafeTxHash                                   */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Calculate the transaction hash for a Safe transaction
+ * Useful for signing the hash (EOA owner) before relaying
+ */
+export async function getSafeTxHash(
+  safeAddress: Address,
+  safeTx: EthSafeTransaction,
+  chainId: number,
+): Promise<string> {
+  const providerUrl = getRpcUrlForChain(chainId);
+  const sdk = await Safe.init({ provider: providerUrl, safeAddress });
+  return sdk.getTransactionHash(safeTx);
+}
