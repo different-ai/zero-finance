@@ -1,19 +1,12 @@
 'use client';
 
-import Safe, {
-  // encodeMultiSendData,
-  EthSafeTransaction,
-} from '@safe-global/protocol-kit';
+import Safe, { EthSafeTransaction } from '@safe-global/protocol-kit';
 import type { MetaTransactionData } from '@safe-global/safe-core-sdk-types';
 import { Address, Hex, encodeFunctionData } from 'viem';
-import { base } from 'viem/chains';
+import { base, arbitrum } from 'viem/chains';
 import type { Chain } from 'viem/chains';
 import { getBaseRpcUrl } from '@/lib/base-rpc-url';
-// at the top of both core.ts and page.tsx
-
-/** canonical multisend on every chain (v1.3+ safes) */
-// export const MULTISEND_ADDRESS =
-//   '0xA238CBeb142c10Ef7Ad8442C6D1f9E89e07e7761' as const;
+import { SUPPORTED_CHAINS } from '@/lib/constants/chains';
 
 /* -------------------------------------------------------------------------- */
 /*                                   helpers                                  */
@@ -23,32 +16,36 @@ import { getBaseRpcUrl } from '@/lib/base-rpc-url';
 export const buildPrevalidatedSig = (owner: `0x${string}`): `0x${string}` =>
   `0x000000000000000000000000${owner.slice(2)}000000000000000000000000000000000000000000000000000000000000000001`;
 
-/** 65‑byte "contract" signature (v = 0, r = owner, s = 0x20, empty payload). */
-const buildContractSig = (owner: `0x${string}`): `0x${string}` => {
-  /* r = owner (left‑padded to 32 bytes) */
-  const r = '00'.repeat(12) + owner.slice(2).toLowerCase();
-  /* s = 0x20 (pointer to the 32‑byte empty payload appended after the first 65 bytes) */
-  const s = '00'.repeat(31) + '20';
-  /* v = 0 => contract signature */
-  const v = '00';
-  /* 32‑byte empty payload (length = 0) */
-  const payload = '00'.repeat(32);
-  return ('0x' + r + s + v + payload) as `0x${string}`;
-};
-
 const APPROVE_HASH_ABI = [
   { name: 'approveHash', type: 'function', inputs: [{ type: 'bytes32' }] },
 ] as const;
 
 /**
- * Builds the calldata for approving a Safe transaction hash via `approveHash`.
+ * Helper to get RPC URL for a chain ID
  */
-const buildApproveHashCalldata = (txHash: `0x${string}`): Hex =>
-  encodeFunctionData({
-    abi: APPROVE_HASH_ABI,
-    functionName: 'approveHash',
-    args: [txHash],
-  });
+function getRpcUrlForChain(chainId: number): string {
+  if (chainId === SUPPORTED_CHAINS.ARBITRUM) {
+    return (
+      process.env.NEXT_PUBLIC_ARBITRUM_RPC_URL || 'https://arb1.arbitrum.io/rpc'
+    );
+  }
+  if (chainId === SUPPORTED_CHAINS.MAINNET) {
+    return (
+      process.env.NEXT_PUBLIC_ETHEREUM_RPC_URL || 'https://eth.llamarpc.com'
+    );
+  }
+  return getBaseRpcUrl(); // Default to Base
+}
+
+/**
+ * Helper to get Chain object for a chain ID
+ */
+function getChainForId(chainId: number): Chain {
+  if (chainId === SUPPORTED_CHAINS.ARBITRUM) {
+    return arbitrum;
+  }
+  return base;
+}
 
 /* -------------------------------------------------------------------------- */
 /*                               buildSafeTx                                  */
@@ -56,20 +53,40 @@ const buildApproveHashCalldata = (txHash: `0x${string}`): Hex =>
 
 type BuildOpts = {
   safeAddress: Address;
-  providerUrl?: string;
+  chainId?: number; // Optional chainId to select correct RPC
   gas?: bigint | string;
 };
 
 /** create a SafeTx with optional overridden safeTxGas */
 export async function buildSafeTx(
   txs: MetaTransactionData[],
-  { safeAddress, providerUrl = getBaseRpcUrl(), gas = 200_000n }: BuildOpts,
+  { safeAddress, chainId, gas = 200_000n }: BuildOpts,
 ): Promise<EthSafeTransaction> {
-  console.log('building safe tx', safeAddress);
+  console.log(
+    `building safe tx for ${safeAddress} on chain ${chainId || 'default(base)'}`,
+  );
+
+  // Determine provider URL based on chainId
+  const providerUrl = chainId ? getRpcUrlForChain(chainId) : getBaseRpcUrl();
+
   const sdk = await Safe.init({ provider: providerUrl, safeAddress });
+
+  // If only one transaction, create it directly without MultiSend
+  // This avoids any delegatecall issues
+  if (txs.length === 1) {
+    const safeTx = await sdk.createTransaction({
+      transactions: txs,
+      options: {
+        safeTxGas: gas.toString(),
+      },
+    });
+    return safeTx;
+  }
+
+  // For multiple transactions, use MultiSendCallOnly with onlyCalls: true
   const safeTx = await sdk.createTransaction({
     transactions: txs,
-    onlyCalls: false,
+    onlyCalls: true, // Use regular calls instead of delegatecall to MultiSend
     options: {
       safeTxGas: gas.toString(),
     },
@@ -102,32 +119,6 @@ export const SAFE_ABI = [
     ],
     outputs: [{ type: 'bool' }],
   },
-
-  /* -------- views / helpers ----- */
-  {
-    name: 'isValidSignature',
-    type: 'function',
-    stateMutability: 'view',
-    inputs: [
-      { name: '_dataHash', type: 'bytes32' },
-      { name: '_signature', type: 'bytes' },
-    ],
-    outputs: [{ type: 'bytes4' }],
-  },
-  {
-    name: 'getOwners',
-    type: 'function',
-    stateMutability: 'view',
-    inputs: [],
-    outputs: [{ type: 'address[]' }],
-  },
-  {
-    name: 'getThreshold',
-    type: 'function',
-    stateMutability: 'view',
-    inputs: [],
-    outputs: [{ type: 'uint256' }],
-  },
 ] as const;
 
 type ExecTxArgs = [
@@ -147,19 +138,17 @@ type ExecTxArgs = [
 export async function relaySafeTx(
   safeTx: EthSafeTransaction,
   signerAddress: Address,
-  smartClient: { sendTransaction: Function },
+  smartClient: { sendTransaction: Function; signTypedData?: Function },
   safeAddress: Address,
-  chain: Chain = base,
-  providerUrl = getBaseRpcUrl(),
+  chain?: Chain, // Explicit Chain object for the wallet client
+  providerUrl?: string, // Kept for backward compatibility but unused here
   opts: { skipPreSig?: boolean } = {},
 ): Promise<Hex> {
-  console.log('relaying safe tx', safeAddress);
-  console.log('opts', opts);
   if (!opts.skipPreSig) {
     const preSig = buildPrevalidatedSig(signerAddress as `0x${string}`);
     safeTx.addSignature({ signer: signerAddress, data: preSig } as any);
   }
-  console.log('safeTx', safeTx);
+
   const execArgs: ExecTxArgs = [
     safeTx.data.to as Address,
     BigInt(safeTx.data.value),
@@ -172,17 +161,26 @@ export async function relaySafeTx(
     safeTx.data.refundReceiver as Address,
     safeTx.encodedSignatures() as `0x${string}`,
   ];
-  console.log('execArgs', execArgs);
 
   const execData = encodeFunctionData({
     abi: SAFE_ABI,
     functionName: 'execTransaction',
     args: execArgs,
   });
-  console.log('execData', execData);
+
+  // If no chain provided, default to Base, but for cross-chain we expect it passed or implied by smartClient
+  const targetChain = chain || base;
+
+  console.log('[relaySafeTx] Sending transaction:', {
+    chainId: targetChain.id,
+    chainName: targetChain.name,
+    safeAddress,
+    signerAddress,
+  });
+
   return smartClient.sendTransaction(
     {
-      chain,
+      chain: targetChain,
       to: safeAddress,
       data: execData,
       value: 0n,
@@ -221,7 +219,7 @@ export async function relayNestedSafeTx(
   console.log('building nested safe tx', nestedSafe);
   const nestedSafeTx = await buildSafeTx(nestedTxs, {
     safeAddress: nestedSafe,
-    providerUrl,
+    chainId: chain?.id,
   });
   console.log('nestedSafeTx', nestedSafeTx);
   /* ---------- attach a v = 1 pre‑validated sig from the PRIMARY safe ---------- */
@@ -256,7 +254,7 @@ export async function relayNestedSafeTx(
   /* ---------- execute that meta‑tx from the primary Safe ---------- */
   const primarySafeTx = await buildSafeTx([nestedExecMeta], {
     safeAddress: primarySafe,
-    providerUrl,
+    chainId: chain?.id,
   });
 
   const txHash = await relaySafeTx(
@@ -269,4 +267,22 @@ export async function relayNestedSafeTx(
   );
 
   return txHash;
+}
+
+/* -------------------------------------------------------------------------- */
+/*                            getSafeTxHash                                   */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Calculate the transaction hash for a Safe transaction
+ * Useful for signing the hash (EOA owner) before relaying
+ */
+export async function getSafeTxHash(
+  safeAddress: Address,
+  safeTx: EthSafeTransaction,
+  chainId: number,
+): Promise<string> {
+  const providerUrl = getRpcUrlForChain(chainId);
+  const sdk = await Safe.init({ provider: providerUrl, safeAddress });
+  return sdk.getTransactionHash(safeTx);
 }

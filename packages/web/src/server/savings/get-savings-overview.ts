@@ -82,7 +82,6 @@ export async function getSavingsOverview({
           vaultAddresses: baseVaultAddresses,
         }),
         helpers.earn.userPositions.prefetch({
-          userSafe: safeAddress,
           vaultAddresses: baseVaultAddresses,
         }),
         helpers.earn.getAutoEarnConfig.prefetch({ safeAddress }),

@@ -1,18 +1,11 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, AlertCircle, Wallet } from 'lucide-react';
+import { Loader2, AlertCircle } from 'lucide-react';
 import { trpc } from '@/utils/trpc';
 import { toast } from 'sonner';
 import type { Address } from 'viem';
@@ -24,13 +17,15 @@ import {
   createPublicClient,
   http,
 } from 'viem';
-import { base } from 'viem/chains';
+import { base, arbitrum } from 'viem/chains';
 import { useSafeRelay } from '@/hooks/use-safe-relay';
+import { SUPPORTED_CHAINS } from '@/lib/constants/chains';
 
 interface WithdrawEarnCardProps {
-  safeAddress: Address;
+  safeAddress: Address; // Base Safe address (used as fallback for Base chain)
   vaultAddress: Address;
   onWithdrawSuccess?: () => void;
+  chainId?: number; // Target chain for the vault (default: Base)
 }
 
 interface VaultInfo {
@@ -52,24 +47,58 @@ export function WithdrawEarnCard({
   safeAddress,
   vaultAddress,
   onWithdrawSuccess,
+  chainId = 8453, // Default to Base
 }: WithdrawEarnCardProps) {
   const [amount, setAmount] = useState('');
   const [isWithdrawing, setIsWithdrawing] = useState(false);
   const [vaultInfo, setVaultInfo] = useState<VaultInfo | null>(null);
 
-  const { ready: isRelayReady, send: sendTxViaRelay } =
-    useSafeRelay(safeAddress);
+  // Determine if this is a cross-chain withdrawal (vault on different chain than Base)
+  const isCrossChain = chainId !== SUPPORTED_CHAINS.BASE;
+
+  // Fetch user's multi-chain positions to get the target Safe address
+  const { data: multiChainPositions, isLoading: isLoadingPositions } =
+    trpc.earn.getMultiChainPositions.useQuery(undefined, {
+      enabled: isCrossChain,
+    });
+
+  // Find the Safe address for the target chain
+  const targetSafeAddress = isCrossChain
+    ? (multiChainPositions?.safes.find((s) => s.chainId === chainId)
+        ?.address as Address | undefined)
+    : safeAddress;
+
+  // Use the target chain's Safe address for relay operations
+  const effectiveSafeAddress = targetSafeAddress || safeAddress;
+
+  const { ready: isRelayReady, send: sendTxViaRelay } = useSafeRelay(
+    effectiveSafeAddress,
+    chainId,
+  );
+
+  // Select chain based on chainId
+  const isArbitrum = chainId === 42161;
+  const chain = isArbitrum ? arbitrum : base;
+  const rpcUrl = isArbitrum
+    ? process.env.NEXT_PUBLIC_ARBITRUM_RPC_URL || 'https://arb1.arbitrum.io/rpc'
+    : process.env.NEXT_PUBLIC_BASE_RPC_URL;
+
   const publicClient = createPublicClient({
-    chain: base,
-    transport: http(process.env.NEXT_PUBLIC_BASE_RPC_URL),
+    chain,
+    transport: http(rpcUrl),
   });
 
   // Reset state when vault changes
   useEffect(() => {
-    console.log('[WithdrawEarnCard] Vault address changed to:', vaultAddress);
+    console.log(
+      '[WithdrawEarnCard] Vault address changed to:',
+      vaultAddress,
+      'chainId:',
+      chainId,
+    );
     setAmount('');
     setIsWithdrawing(false);
-  }, [vaultAddress]);
+  }, [vaultAddress, chainId]);
 
   // Fetch vault info
   const {
@@ -77,9 +106,9 @@ export function WithdrawEarnCard({
     isLoading: isLoadingVault,
     refetch: refetchVaultInfo,
   } = trpc.earn.getVaultInfo.useQuery(
-    { safeAddress, vaultAddress },
+    { vaultAddress, chainId },
     {
-      enabled: !!safeAddress && !!vaultAddress,
+      enabled: !!vaultAddress,
       staleTime: 30000, // Consider data fresh for 30s
       refetchInterval: false, // Disable automatic refetching
     },
@@ -161,11 +190,20 @@ export function WithdrawEarnCard({
   }, [vaultData, vaultAddress]);
 
   const handleWithdraw = async () => {
-    if (!amount || !vaultInfo || !isRelayReady) return;
+    if (!amount || !vaultInfo || !isRelayReady || !effectiveSafeAddress) return;
 
     try {
       setIsWithdrawing(true);
       const amountInSmallestUnit = parseUnits(amount, vaultInfo.assetDecimals);
+
+      console.log('[WithdrawEarnCard] Starting withdrawal:', {
+        chainId,
+        isCrossChain,
+        effectiveSafeAddress,
+        targetSafeAddress,
+        vaultAddress,
+        amount: amountInSmallestUnit.toString(),
+      });
 
       if (amountInSmallestUnit > vaultInfo.assets) {
         throw new Error('Amount exceeds available vault balance.');
@@ -174,7 +212,7 @@ export function WithdrawEarnCard({
       const isMaxWithdrawal = amountInSmallestUnit >= vaultInfo.assets;
 
       // Convert the asset amount to shares using the vault's conversion function
-      console.log('Converting assets to shares...', {
+      console.log('[WithdrawEarnCard] Converting assets to shares...', {
         assets: amountInSmallestUnit.toString(),
         vaultAddress,
       });
@@ -210,13 +248,16 @@ export function WithdrawEarnCard({
         }
       }
 
-      console.log('Shares to redeem:', sharesToRedeem.toString());
+      console.log(
+        '[WithdrawEarnCard] Shares to redeem:',
+        sharesToRedeem.toString(),
+      );
 
       // Encode the redeem function call
       const redeemData = encodeFunctionData({
         abi: VAULT_ABI,
         functionName: 'redeem',
-        args: [sharesToRedeem, safeAddress, safeAddress], // shares, receiver, owner
+        args: [sharesToRedeem, effectiveSafeAddress, effectiveSafeAddress], // shares, receiver, owner
       });
 
       // Execute the withdrawal via Safe relay
@@ -229,12 +270,21 @@ export function WithdrawEarnCard({
         },
       ];
 
-      const userOpHash = await sendTxViaRelay(transactions, 600_000n); // Increased gas limit
+      console.log('[WithdrawEarnCard] Sending withdrawal tx via relay:', {
+        safeAddress: effectiveSafeAddress,
+        chainId,
+        vaultAddress,
+        transactions,
+      });
+
+      const userOpHash = await sendTxViaRelay(transactions, 1_200_000n); // Morpho/Gauntlet vaults need high gas for redeems
+
+      console.log('[WithdrawEarnCard] Withdrawal tx hash:', userOpHash);
 
       if (userOpHash) {
         // Record the withdrawal in the database
         await recordWithdrawalMutation.mutateAsync({
-          safeAddress: safeAddress,
+          safeAddress: effectiveSafeAddress,
           vaultAddress: vaultAddress,
           tokenAddress: vaultInfo.assetAddress,
           assetsWithdrawn: amountInSmallestUnit.toString(),
@@ -273,11 +323,24 @@ export function WithdrawEarnCard({
     setAmount(maxAmount);
   };
 
-  if (isLoadingVault) {
+  if (isLoadingVault || (isCrossChain && isLoadingPositions)) {
     return (
       <div className="flex items-center justify-center py-8">
         <Loader2 className="h-6 w-6 animate-spin" />
       </div>
+    );
+  }
+
+  // For cross-chain vaults, we need the target Safe to exist
+  if (isCrossChain && !targetSafeAddress) {
+    return (
+      <Alert>
+        <AlertCircle className="h-4 w-4" />
+        <AlertDescription>
+          No account found on this chain. Please make a deposit first to create
+          your account.
+        </AlertDescription>
+      </Alert>
     );
   }
 
@@ -326,7 +389,8 @@ export function WithdrawEarnCard({
     !amountIsPositive ||
     amountExceedsBalance ||
     isWithdrawing ||
-    !isRelayReady;
+    !isRelayReady ||
+    !effectiveSafeAddress;
 
   return (
     <div className="space-y-4">

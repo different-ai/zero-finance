@@ -1,7 +1,9 @@
 // Export from domain modules
 export * from './users';
 export * from './workspaces';
+export * from './workspace-features';
 export * from './admins';
+export * from './bridge-transactions';
 
 // Re-export everything else from main schema, excluding what we've already exported above
 export {

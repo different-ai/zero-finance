@@ -117,7 +117,9 @@ export const userProfilesTable = pgTable(
 export const userRequestsTable = pgTable(
   'user_requests',
   {
-    id: text('id').primaryKey().default(crypto.randomUUID()), // Using text for UUIDs
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()), // Using text for UUIDs
     requestId: text('request_id'), // Request Network ID
     userId: text('user_id').notNull(),
     workspaceId: uuid('workspace_id'),
@@ -179,7 +181,7 @@ export type NewUserRequest = typeof userRequestsTable.$inferInsert;
 
 // Users table - imported from schema/users.ts (see top of file)
 
-// UserSafes table - Linking users to their various Safe addresses
+// UserSafes table - Linking users to their various Safe addresses across chains
 export const userSafes = pgTable(
   'user_safes',
   {
@@ -191,6 +193,7 @@ export const userSafes = pgTable(
       .references(() => users.privyDid), // Foreign key to users table
     workspaceId: uuid('workspace_id'),
     safeAddress: varchar('safe_address', { length: 42 }).notNull(), // Ethereum address (42 chars)
+    chainId: integer('chain_id').notNull().default(8453), // Chain ID where this Safe is deployed (default: Base mainnet)
     safeType: text('safe_type', {
       enum: ['primary', 'tax', 'liquidity', 'yield'],
     }).notNull(), // Type of Safe
@@ -203,12 +206,20 @@ export const userSafes = pgTable(
   },
   (table) => {
     return {
-      // Ensure a user can only have one Safe of each type
-      userTypeUniqueIdx: uniqueIndex('user_safe_type_unique_idx').on(
+      // Ensure a user can only have one Safe of each type per chain
+      userTypeChainUniqueIdx: uniqueIndex('user_safe_type_chain_unique_idx').on(
         table.userDid,
         table.safeType,
+        table.chainId,
       ),
+      // Index for efficient queries by chain
+      chainIdIdx: index('user_safes_chain_id_idx').on(table.chainId),
       workspaceIdx: index('user_safes_workspace_idx').on(table.workspaceId),
+      // Composite index for user + chain lookups
+      userChainIdx: index('user_safes_user_chain_idx').on(
+        table.userDid,
+        table.chainId,
+      ),
     };
   },
 );
@@ -602,6 +613,7 @@ export const earnDeposits = pgTable(
       .references(() => users.privyDid, { onDelete: 'cascade' }),
     workspaceId: uuid('workspace_id'),
     safeAddress: varchar('safe_address', { length: 42 }).notNull(),
+    chainId: integer('chain_id').notNull().default(8453), // Chain ID where the vault is deployed (default: Base mainnet)
     vaultAddress: varchar('vault_address', { length: 42 }).notNull(),
     tokenAddress: varchar('token_address', { length: 42 }).notNull(),
     assetsDeposited: largeIntNumeric('assets_deposited').notNull(),
@@ -618,6 +630,7 @@ export const earnDeposits = pgTable(
     return {
       safeAddressIdx: index('earn_safe_address_idx').on(table.safeAddress),
       vaultAddressIdx: index('earn_vault_address_idx').on(table.vaultAddress),
+      chainIdIdx: index('earn_deposits_chain_id_idx').on(table.chainId),
       userDidIdx: index('earn_user_did_idx').on(table.userDid),
       workspaceIdx: index('earn_workspace_idx').on(table.workspaceId),
     };
@@ -635,6 +648,7 @@ export const earnWithdrawals = pgTable(
       .references(() => users.privyDid, { onDelete: 'cascade' }),
     workspaceId: uuid('workspace_id'),
     safeAddress: varchar('safe_address', { length: 42 }).notNull(),
+    chainId: integer('chain_id').notNull().default(8453), // Chain ID where the vault is deployed (default: Base mainnet)
     vaultAddress: varchar('vault_address', { length: 42 }).notNull(),
     tokenAddress: varchar('token_address', { length: 42 }).notNull(),
     assetsWithdrawn: largeIntNumeric('assets_withdrawn').notNull(),
@@ -658,6 +672,7 @@ export const earnWithdrawals = pgTable(
       vaultAddressIdx: index('earn_withdrawals_vault_address_idx').on(
         table.vaultAddress,
       ),
+      chainIdIdx: index('earn_withdrawals_chain_id_idx').on(table.chainId),
       userDidIdx: index('earn_withdrawals_user_did_idx').on(table.userDid),
       workspaceIdx: index('earn_withdrawals_workspace_idx').on(
         table.workspaceId,
@@ -1383,3 +1398,19 @@ export type ApiWaitlist = typeof apiWaitlist.$inferSelect;
 export type NewApiWaitlist = typeof apiWaitlist.$inferInsert;
 
 // Workspace invite system and extensions - imported from schema/workspaces.ts (see top of file)
+
+// Bridge transactions for cross-chain operations
+export {
+  bridgeTransactions,
+  type InsertBridgeTransaction,
+  type SelectBridgeTransaction,
+} from './schema/bridge-transactions';
+
+// Workspace features for admin-controlled feature activation
+export {
+  workspaceFeatures,
+  workspaceFeaturesRelations,
+  type WorkspaceFeature,
+  type NewWorkspaceFeature,
+  type WorkspaceFeatureName,
+} from './schema/workspace-features';

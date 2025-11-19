@@ -17,6 +17,7 @@ import {
   BASE_CHAIN_ID,
   ETHEREUM_CHAIN_ID,
 } from '../earn/base-vaults';
+import { ALL_CROSS_CHAIN_VAULTS } from '../earn/cross-chain-vaults';
 import {
   getVaultApyBasisPoints,
   resolveVaultDecimals,
@@ -30,11 +31,41 @@ import {
   createPublicClient,
   decodeEventLog,
   formatUnits,
+  parseUnits,
   type Address,
 } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
-import { base, mainnet } from 'viem/chains';
+import { base, mainnet, arbitrum } from 'viem/chains';
 import crypto from 'crypto';
+
+// Multi-chain imports
+import {
+  SUPPORTED_CHAINS,
+  type SupportedChainId,
+  getUSDCAddress,
+} from '@/lib/constants/chains';
+import {
+  getUserSafes as getMultiChainUserSafes,
+  getSafeOnChain,
+  getSafeDeploymentTransaction,
+  createSafeRecord,
+} from '../earn/multi-chain-safe-manager';
+import {
+  getBridgeQuoteForVault,
+  encodeBridgeWithVaultDeposit,
+  encodeBridgeTransfer,
+  trackBridgeDeposit,
+} from '../earn/across-bridge-service';
+import {
+  createBridgeTransaction,
+  updateBridgeStatus,
+  updateBridgeDepositHash,
+  getUserBridgeTransactions,
+  getPendingBridgeTransactions,
+} from '../earn/bridge-transaction-crud';
+import { predictSafeAddress } from '@/lib/safe-multi-chain';
+import { getRPCManager } from '@/lib/multi-chain-rpc';
+import { hasMultiChainFeature } from '@/lib/workspace-features';
 
 type EarningsEventPayload = {
   id: string;
@@ -82,6 +113,13 @@ let ethereumPublicClient: ReturnType<typeof createPublicClient> | null = null;
 const toLowerAddress = (value: string) => value.toLowerCase();
 
 function getVaultConfig(vaultAddress: string) {
+  // First check cross-chain vaults (includes Base + Arbitrum)
+  const crossChainVault = ALL_CROSS_CHAIN_VAULTS.find(
+    (vault) => toLowerAddress(vault.address) === toLowerAddress(vaultAddress),
+  );
+  if (crossChainVault) return crossChainVault;
+
+  // Fall back to Base vaults for backwards compatibility
   return BASE_USDC_VAULTS.find(
     (vault) => toLowerAddress(vault.address) === toLowerAddress(vaultAddress),
   );
@@ -90,6 +128,9 @@ function getVaultConfig(vaultAddress: string) {
 function getChainIdForVault(vaultAddress: string) {
   return getVaultConfig(vaultAddress)?.chainId ?? BASE_CHAIN_ID;
 }
+
+// Arbitrum public client singleton
+let arbitrumPublicClient: ReturnType<typeof createPublicClient> | null = null;
 
 function getPublicClientForChain(chainId: number) {
   if (chainId === BASE_CHAIN_ID) {
@@ -115,6 +156,22 @@ function getPublicClientForChain(chainId: number) {
     }
 
     return ethereumPublicClient;
+  }
+
+  if (chainId === SUPPORTED_CHAINS.ARBITRUM) {
+    if (!arbitrumPublicClient) {
+      const rpcUrl =
+        process.env.ARBITRUM_RPC_URL ??
+        process.env.NEXT_PUBLIC_ARBITRUM_RPC_URL ??
+        'https://arb1.arbitrum.io/rpc';
+
+      arbitrumPublicClient = createPublicClient({
+        chain: arbitrum,
+        transport: http(rpcUrl),
+      });
+    }
+
+    return arbitrumPublicClient;
   }
 
   throw new Error(`Unsupported chain id ${chainId} for public client`);
@@ -1151,28 +1208,55 @@ export const earnRouter = router({
   getVaultInfo: protectedProcedure
     .input(
       z.object({
-        safeAddress: z
-          .string()
-          .refine((val) => /^0x[a-fA-F0-9]{40}$/.test(val), {
-            message: 'Invalid Safe address format',
-          })
-          .transform((val) => getAddress(val)),
         vaultAddress: z
           .string()
           .refine((val) => /^0x[a-fA-F0-9]{40}$/.test(val), {
             message: 'Invalid vault address format',
           })
           .transform((val) => getAddress(val)),
+        chainId: z.number().optional().default(8453), // Default to Base
       }),
     )
     .query(async ({ ctx, input }) => {
-      const { safeAddress, vaultAddress } = input;
+      const { vaultAddress, chainId } = input;
 
-      await getSafeForWorkspace(ctx, safeAddress);
+      // Select chain and RPC based on chainId
+      const isArbitrum = chainId === 42161;
+      const chain = isArbitrum ? arbitrum : base;
+      const rpcUrl = isArbitrum
+        ? (process.env.ARBITRUM_RPC_URL ??
+          process.env.NEXT_PUBLIC_ARBITRUM_RPC_URL ??
+          'https://arb1.arbitrum.io/rpc')
+        : BASE_RPC_URL;
+
+      // Get the workspace's Safe on the target chain
+      const workspaceId = ctx.workspaceId;
+      if (!workspaceId) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Workspace context is unavailable.',
+        });
+      }
+
+      const workspaceSafe = await db.query.userSafes.findFirst({
+        where: and(
+          eq(userSafes.workspaceId, workspaceId),
+          eq(userSafes.chainId, chainId),
+        ),
+      });
+
+      if (!workspaceSafe) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: `No Safe found for workspace on chain ${chainId}`,
+        });
+      }
+
+      const targetSafeAddress = workspaceSafe.safeAddress as `0x${string}`;
 
       const publicClient = createPublicClient({
-        chain: base,
-        transport: http(BASE_RPC_URL),
+        chain,
+        transport: http(rpcUrl),
       });
 
       try {
@@ -1184,7 +1268,7 @@ export const earnRouter = router({
               'function balanceOf(address owner) external view returns (uint256)',
             ]),
             functionName: 'balanceOf',
-            args: [safeAddress],
+            args: [targetSafeAddress],
           }),
           publicClient.readContract({
             address: vaultAddress,
@@ -1217,6 +1301,7 @@ export const earnRouter = router({
           assets: assets.toString(),
           decimals: Number(decimals),
           assetAddress: assetAddress,
+          safeAddress: targetSafeAddress, // Return the actual Safe address used for the query
         };
       } catch (error) {
         ctx.log.error({ error }, 'Error fetching vault info');
@@ -1953,10 +2038,6 @@ export const earnRouter = router({
   userPositions: protectedProcedure
     .input(
       z.object({
-        userSafe: z
-          .string()
-          .length(42)
-          .transform((val) => getAddress(val)),
         vaultAddresses: z.array(
           z
             .string()
@@ -1966,8 +2047,27 @@ export const earnRouter = router({
       }),
     )
     .query(async ({ ctx, input }) => {
-      const { userSafe, vaultAddresses } = input;
-      await getSafeForWorkspace(ctx, userSafe);
+      const { vaultAddresses } = input;
+
+      // Get workspace from context
+      const workspaceId = ctx.workspaceId;
+      if (!workspaceId) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Workspace context is unavailable.',
+        });
+      }
+
+      // Get all safes for this workspace (we'll need safes on different chains)
+      const workspaceSafes = await db.query.userSafes.findMany({
+        where: eq(userSafes.workspaceId, workspaceId),
+      });
+
+      // Create a map of chainId -> safeAddress for quick lookup
+      const safesByChain = new Map<number, string>();
+      for (const safe of workspaceSafes) {
+        safesByChain.set(safe.chainId, safe.safeAddress);
+      }
 
       // Fetch positions directly from on-chain
       // This is more reliable than GraphQL and gives us real-time data
@@ -1975,6 +2075,20 @@ export const earnRouter = router({
         vaultAddresses.map(async (vaultAddress) => {
           const chainId = getChainIdForVault(vaultAddress);
           const client = getPublicClientForChain(chainId);
+
+          // Get the Safe address for this vault's chain
+          const safeAddress = safesByChain.get(chainId);
+          if (!safeAddress) {
+            // No Safe on this chain, return zero balance
+            return {
+              vaultAddress,
+              shares: '0',
+              assets: '0',
+              assetsUsd: 0,
+              chainId,
+            };
+          }
+
           try {
             // Get shares balance
             const shares = await client.readContract({
@@ -1983,7 +2097,7 @@ export const earnRouter = router({
                 'function balanceOf(address) view returns (uint256)',
               ]),
               functionName: 'balanceOf',
-              args: [userSafe],
+              args: [safeAddress as Address],
             });
 
             if (shares > 0n) {
@@ -2005,6 +2119,7 @@ export const earnRouter = router({
                 shares: shares.toString(),
                 assets: assets.toString(),
                 assetsUsd,
+                chainId,
               };
             }
 
@@ -2013,6 +2128,7 @@ export const earnRouter = router({
               shares: '0',
               assets: '0',
               assetsUsd: 0,
+              chainId,
             };
           } catch (error) {
             console.error(
@@ -2024,6 +2140,7 @@ export const earnRouter = router({
               shares: '0',
               assets: '0',
               assetsUsd: 0,
+              chainId,
             };
           }
         }),
@@ -2146,4 +2263,541 @@ export const earnRouter = router({
         lastTrigger: config?.lastTrigger ?? null,
       };
     }),
+
+  // ============================================
+  // Multi-Chain Endpoints
+  // ============================================
+
+  /**
+   * Get multi-chain vault positions
+   * Returns all vault positions across all chains for the user
+   */
+  getMultiChainPositions: protectedProcedure.query(async ({ ctx }) => {
+    const privyDid = requirePrivyDid(ctx);
+
+    // Get user's Safes across all chains
+    const safes = await getMultiChainUserSafes(privyDid);
+
+    // Get RPC manager for balance queries
+    const rpcManager = getRPCManager();
+
+    // Get positions for each Safe
+    const positions = await Promise.all(
+      safes.map(async (safe) => {
+        const chainId = safe.chainId as SupportedChainId;
+        const safeAddress = safe.safeAddress as Address;
+
+        // Get USDC balance
+        const usdcAddress = getUSDCAddress(chainId);
+        const balance = await rpcManager.getBalance(
+          chainId,
+          usdcAddress,
+          safeAddress,
+        );
+
+        return {
+          safeId: safe.id,
+          safeAddress,
+          chainId,
+          safeType: safe.safeType,
+          usdcBalance: balance?.formatted || '0',
+          usdcBalanceRaw: balance?.raw.toString() || '0',
+        };
+      }),
+    );
+
+    // Calculate total balance across all chains
+    const totalBalance = positions.reduce((sum, pos) => {
+      return sum + parseFloat(pos.usdcBalance);
+    }, 0);
+
+    return {
+      safes: safes.map((s) => ({
+        id: s.id,
+        address: s.safeAddress,
+        chainId: s.chainId as SupportedChainId,
+        type: s.safeType,
+      })),
+      positions,
+      totalBalance: totalBalance.toFixed(2),
+    };
+  }),
+
+  /**
+   * Get bridge quote for vault deposit
+   * Returns fee breakdown and estimated time
+   */
+  getBridgeQuote: protectedProcedure
+    .input(
+      z.object({
+        amount: z.string(),
+        sourceChainId: z.number(),
+        destChainId: z.number(),
+        vaultAddress: z.string().length(42),
+      }),
+    )
+    .query(async ({ input }) => {
+      const quote = await getBridgeQuoteForVault({
+        amount: input.amount,
+        sourceChainId: input.sourceChainId as SupportedChainId,
+        destChainId: input.destChainId as SupportedChainId,
+        vaultAddress: input.vaultAddress as Address,
+        destinationSafeAddress:
+          '0x0000000000000000000000000000000000000000' as Address, // Placeholder
+      });
+
+      return {
+        inputAmount: quote.inputAmount.toString(),
+        outputAmount: quote.outputAmount.toString(),
+        bridgeFee: quote.bridgeFee.toString(),
+        lpFee: quote.lpFee.toString(),
+        relayerGasFee: quote.relayerGasFee.toString(),
+        totalFee: quote.totalFee.toString(),
+        estimatedFillTime: quote.estimatedFillTime,
+      };
+    }),
+
+  /**
+   * Deposit to vault on another chain (with bridge)
+   * Returns transaction data for user to sign
+   */
+  depositToVaultWithBridge: protectedProcedure
+    .input(
+      z.object({
+        vaultAddress: z.string().length(42),
+        amount: z.string(),
+        sourceChainId: z.number(),
+        destChainId: z.number(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const privyDid = requirePrivyDid(ctx);
+
+      // Get source Safe
+      const sourceSafe = await getSafeOnChain(
+        privyDid,
+        input.sourceChainId as SupportedChainId,
+        'primary',
+      );
+
+      if (!sourceSafe) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: `No Safe found on source chain ${input.sourceChainId}`,
+        });
+      }
+
+      // Check if destination Safe exists in database
+      const destSafe = await getSafeOnChain(
+        privyDid,
+        input.destChainId as SupportedChainId,
+        'primary',
+      );
+
+      // If no destination Safe exists, return deployment info instead of predicting
+      if (!destSafe) {
+        // Get deployment transaction data for the destination chain
+        const deploymentTx = await getSafeDeploymentTransaction(
+          privyDid,
+          input.destChainId as SupportedChainId,
+          'primary',
+        );
+
+        return {
+          needsDeployment: true,
+          destinationChainId: input.destChainId,
+          deploymentTransaction: {
+            to: deploymentTx.to,
+            data: deploymentTx.data,
+            value: deploymentTx.value,
+            chainId: input.destChainId,
+          },
+          predictedSafeAddress: deploymentTx.predictedAddress,
+          message: `You need to deploy a Safe on chain ${input.destChainId} before you can bridge funds there.`,
+        };
+      }
+
+      const destSafeAddress = destSafe.safeAddress as Address;
+
+      // Get bridge quote
+      const quote = await getBridgeQuoteForVault({
+        amount: input.amount,
+        sourceChainId: input.sourceChainId as SupportedChainId,
+        destChainId: input.destChainId as SupportedChainId,
+        vaultAddress: input.vaultAddress as Address,
+        destinationSafeAddress: destSafeAddress,
+      });
+
+      // Create bridge transaction record
+      const bridgeTxId = await createBridgeTransaction({
+        userDid: privyDid,
+        sourceChainId: input.sourceChainId as SupportedChainId,
+        destChainId: input.destChainId as SupportedChainId,
+        vaultAddress: input.vaultAddress,
+        amount: input.amount,
+        bridgeFee: quote.totalFee.toString(),
+        lpFee: quote.lpFee.toString(),
+        relayerGasFee: quote.relayerGasFee.toString(),
+        relayerCapitalFee: quote.relayerCapitalFee.toString(),
+      });
+
+      // Encode bridge transaction (returns array of [Approve, Deposit])
+      const bridgeTx = await encodeBridgeWithVaultDeposit({
+        depositor: sourceSafe.safeAddress as Address,
+        vaultAddress: input.vaultAddress as Address,
+        destinationSafeAddress: destSafeAddress,
+        amount: input.amount,
+        sourceChainId: input.sourceChainId as SupportedChainId,
+        destChainId: input.destChainId as SupportedChainId,
+      });
+
+      return {
+        needsDeployment: false,
+        bridgeTransactionId: bridgeTxId,
+        transaction: bridgeTx.map((tx) => ({
+          to: tx.to,
+          data: tx.data,
+          value: tx.value.toString(),
+          chainId: tx.chainId,
+        })),
+        destinationSafeAddress: destSafeAddress,
+        quote: {
+          inputAmount: quote.inputAmount.toString(),
+          outputAmount: quote.outputAmount.toString(),
+          totalFee: quote.totalFee.toString(),
+          estimatedFillTime: quote.estimatedFillTime,
+        },
+      };
+    }),
+
+  /**
+   * Bridge funds to another chain (without vault deposit)
+   */
+  bridgeFunds: protectedProcedure
+    .input(
+      z.object({
+        amount: z.string(),
+        sourceChainId: z.number(),
+        destChainId: z.number(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const privyDid = requirePrivyDid(ctx);
+
+      // Get source Safe
+      const sourceSafe = await getSafeOnChain(
+        privyDid,
+        input.sourceChainId as SupportedChainId,
+        'primary',
+      );
+
+      if (!sourceSafe) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: `No Safe found on source chain ${input.sourceChainId}`,
+        });
+      }
+
+      // Check if destination Safe exists in database
+      const destSafe = await getSafeOnChain(
+        privyDid,
+        input.destChainId as SupportedChainId,
+        'primary',
+      );
+
+      // If no destination Safe exists, return deployment info instead of predicting
+      if (!destSafe) {
+        // Get deployment transaction data for the destination chain
+        const deploymentTx = await getSafeDeploymentTransaction(
+          privyDid,
+          input.destChainId as SupportedChainId,
+          'primary',
+        );
+
+        return {
+          needsDeployment: true,
+          destinationChainId: input.destChainId,
+          deploymentTransaction: {
+            to: deploymentTx.to,
+            data: deploymentTx.data,
+            value: deploymentTx.value,
+            chainId: input.destChainId,
+          },
+          predictedSafeAddress: deploymentTx.predictedAddress,
+          message: `You need to deploy a Safe on chain ${input.destChainId} before you can bridge funds there.`,
+        };
+      }
+
+      const destSafeAddress = destSafe.safeAddress as Address;
+
+      // Get bridge quote
+      const quote = await getBridgeQuoteForVault({
+        amount: input.amount,
+        sourceChainId: input.sourceChainId as SupportedChainId,
+        destChainId: input.destChainId as SupportedChainId,
+        vaultAddress: '0x0000000000000000000000000000000000000000', // Not used for simple transfer
+        destinationSafeAddress: destSafeAddress,
+      });
+
+      // Create bridge transaction record
+      const bridgeTxId = await createBridgeTransaction({
+        userDid: privyDid,
+        sourceChainId: input.sourceChainId as SupportedChainId,
+        destChainId: input.destChainId as SupportedChainId,
+        vaultAddress: '0x0000000000000000000000000000000000000000', // Placeholder
+        amount: input.amount,
+        bridgeFee: quote.totalFee.toString(),
+        lpFee: quote.lpFee.toString(),
+        relayerGasFee: quote.relayerGasFee.toString(),
+        relayerCapitalFee: quote.relayerCapitalFee.toString(),
+      });
+
+      // Encode bridge transaction (returns array of [Approve, Deposit])
+      const bridgeTx = await encodeBridgeTransfer({
+        depositor: sourceSafe.safeAddress as Address,
+        destinationSafeAddress: destSafeAddress,
+        amount: input.amount,
+        sourceChainId: input.sourceChainId as SupportedChainId,
+        destChainId: input.destChainId as SupportedChainId,
+        vaultAddress: '0x0000000000000000000000000000000000000000', // Placeholder
+      });
+
+      return {
+        needsDeployment: false,
+        bridgeTransactionId: bridgeTxId,
+        transaction: bridgeTx.map((tx) => ({
+          to: tx.to,
+          data: tx.data,
+          value: tx.value.toString(),
+          chainId: tx.chainId,
+        })),
+        destinationSafeAddress: destSafeAddress,
+        quote: {
+          inputAmount: quote.inputAmount.toString(),
+          outputAmount: quote.outputAmount.toString(),
+          totalFee: quote.totalFee.toString(),
+          estimatedFillTime: quote.estimatedFillTime,
+        },
+      };
+    }),
+
+  /**
+   * Get Safe balance on a specific chain
+   */
+  getSafeBalanceOnChain: protectedProcedure
+    .input(
+      z.object({
+        safeAddress: z.string().length(42),
+        chainId: z.number(),
+      }),
+    )
+    .query(async ({ input }) => {
+      const rpcManager = getRPCManager();
+      const usdcAddress = getUSDCAddress(input.chainId as SupportedChainId);
+
+      const balance = await rpcManager.getBalance(
+        input.chainId as SupportedChainId,
+        usdcAddress,
+        input.safeAddress as Address,
+      );
+
+      return {
+        balance: balance?.raw.toString() || '0',
+        formatted: balance?.formatted || '0',
+      };
+    }),
+
+  /**
+   * Update bridge transaction after deposit is sent
+   */
+  updateBridgeDeposit: protectedProcedure
+    .input(
+      z.object({
+        bridgeTransactionId: z.string(),
+        depositTxHash: z.string().length(66),
+        depositId: z.string().optional(),
+      }),
+    )
+    .mutation(async ({ input }) => {
+      await updateBridgeDepositHash(
+        input.bridgeTransactionId,
+        input.depositTxHash,
+        input.depositId,
+      );
+
+      return { success: true };
+    }),
+
+  /**
+   * Get bridge transaction status
+   */
+  getBridgeStatus: protectedProcedure
+    .input(
+      z.object({
+        bridgeTransactionId: z.string(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const privyDid = requirePrivyDid(ctx);
+
+      const transactions = await getUserBridgeTransactions(privyDid);
+      const tx = transactions.find((t) => t.id === input.bridgeTransactionId);
+
+      if (!tx) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Bridge transaction not found',
+        });
+      }
+
+      // If pending and has deposit hash, check status
+      if (tx.status === 'pending' && tx.depositTxHash) {
+        try {
+          const status = await trackBridgeDeposit(
+            tx.depositTxHash,
+            tx.sourceChainId as SupportedChainId,
+          );
+
+          if (status === 'filled') {
+            await updateBridgeStatus(tx.id, 'filled');
+            return { status: 'filled' };
+          }
+        } catch (error) {
+          console.error('Error tracking bridge deposit:', error);
+        }
+      }
+
+      return { status: tx.status };
+    }),
+
+  /**
+   * Get user's bridge transaction history
+   */
+  getBridgeHistory: protectedProcedure.query(async ({ ctx }) => {
+    const privyDid = requirePrivyDid(ctx);
+
+    const transactions = await getUserBridgeTransactions(privyDid);
+
+    return transactions.map((tx) => ({
+      id: tx.id,
+      sourceChainId: tx.sourceChainId,
+      destChainId: tx.destChainId,
+      vaultAddress: tx.vaultAddress,
+      amount: tx.amount,
+      bridgeFee: tx.bridgeFee,
+      status: tx.status,
+      depositTxHash: tx.depositTxHash,
+      fillTxHash: tx.fillTxHash,
+      createdAt: tx.createdAt?.toISOString(),
+      filledAt: tx.filledAt?.toISOString(),
+    }));
+  }),
+
+  /**
+   * Get pending bridge transactions
+   */
+  getPendingBridges: protectedProcedure.query(async ({ ctx }) => {
+    const privyDid = requirePrivyDid(ctx);
+
+    const transactions = await getPendingBridgeTransactions(privyDid);
+
+    return transactions.map((tx) => ({
+      id: tx.id,
+      sourceChainId: tx.sourceChainId,
+      destChainId: tx.destChainId,
+      amount: tx.amount,
+      depositTxHash: tx.depositTxHash,
+      createdAt: tx.createdAt?.toISOString(),
+    }));
+  }),
+
+  /**
+   * Get Safe deployment transaction for new chain
+   */
+  getSafeDeploymentTx: protectedProcedure
+    .input(
+      z.object({
+        targetChainId: z.number(),
+        safeType: z.enum(['primary', 'tax', 'liquidity', 'yield']),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const privyDid = requirePrivyDid(ctx);
+
+      const deploymentTx = await getSafeDeploymentTransaction(
+        privyDid,
+        input.targetChainId as SupportedChainId,
+        input.safeType,
+      );
+
+      return {
+        to: deploymentTx.to,
+        data: deploymentTx.data,
+        value: deploymentTx.value,
+        predictedAddress: deploymentTx.predictedAddress,
+      };
+    }),
+
+  /**
+   * Register a deployed Safe on a specific chain
+   * Called after Safe deployment is confirmed
+   */
+  registerDeployedSafe: protectedProcedure
+    .input(
+      z.object({
+        safeAddress: z.string().length(42),
+        chainId: z.number(),
+        safeType: z.enum(['primary', 'tax', 'liquidity', 'yield']),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const privyDid = requirePrivyDid(ctx);
+      const workspaceId = requireWorkspaceId(ctx.workspaceId);
+
+      // Check if Safe already exists
+      const existingSafe = await getSafeOnChain(
+        privyDid,
+        input.chainId as SupportedChainId,
+        input.safeType,
+      );
+
+      if (existingSafe) {
+        // Already registered, just return success
+        return {
+          success: true,
+          safeId: existingSafe.id,
+          safeAddress: existingSafe.safeAddress,
+        };
+      }
+
+      // Create new Safe record
+      const newSafe = await createSafeRecord({
+        userDid: privyDid,
+        workspaceId,
+        safeAddress: input.safeAddress,
+        chainId: input.chainId,
+        safeType: input.safeType,
+        isEarnModuleEnabled: false,
+      });
+
+      return {
+        success: true,
+        safeId: newSafe.id,
+        safeAddress: newSafe.safeAddress,
+      };
+    }),
+
+  /**
+   * Check if multi-chain feature is enabled for the current workspace
+   */
+  isMultiChainEnabled: protectedProcedure.query(async ({ ctx }) => {
+    const workspaceId = requireWorkspaceId(ctx.workspaceId);
+
+    // Check if the workspace has the multi-chain feature enabled
+    const hasFeature = await hasMultiChainFeature(workspaceId);
+
+    return {
+      enabled: hasFeature,
+    };
+  }),
 });

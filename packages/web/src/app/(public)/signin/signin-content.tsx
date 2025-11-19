@@ -282,7 +282,8 @@ export default function SignInContent() {
                 <>
                   {/* Step 1: Email Input */}
                   {(state.status === 'initial' ||
-                    state.status === 'sending-code') && (
+                    state.status === 'sending-code' ||
+                    state.status === 'error') && (
                     <form onSubmit={handleSendCode} className="space-y-4">
                       <div className="space-y-2">
                         <label
@@ -309,9 +310,9 @@ export default function SignInContent() {
                           className="h-12 text-[15px] bg-white border-[#101010]/20 focus:border-[#1B29FF] focus:ring-[#1B29FF]/20"
                           disabled={state.status === 'sending-code'}
                         />
-                        {emailError && (
+                        {(emailError || state.status === 'error') && (
                           <p className="text-[12px] text-red-600 mt-1">
-                            {emailError}
+                            {emailError || state.error?.message}
                           </p>
                         )}
                       </div>
@@ -421,23 +422,6 @@ export default function SignInContent() {
                           Verifying code...
                         </p>
                       </div>
-                    </div>
-                  )}
-
-                  {/* Error State */}
-                  {state.status === 'error' && state.error && (
-                    <div className="p-4 bg-red-50 border border-red-200 rounded-md">
-                      <p className="text-[13px] text-red-800 mb-3">
-                        {state.error.message}
-                      </p>
-                      <Button
-                        onClick={handleBackToEmail}
-                        variant="outline"
-                        size="sm"
-                        className="w-full"
-                      >
-                        Try again
-                      </Button>
                     </div>
                   )}
                 </>
