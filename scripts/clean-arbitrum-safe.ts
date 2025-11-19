@@ -2,8 +2,8 @@ import { Client } from 'pg';
 import * as dotenv from 'dotenv';
 import path from 'path';
 
-// Load environment variables from .env.lite
-dotenv.config({ path: path.resolve(process.cwd(), '.env.lite') });
+// Load environment variables from packages/web/.env.local
+dotenv.config({ path: path.resolve(process.cwd(), 'packages/web/.env.local') });
 
 async function main() {
   const userDid = 'did:privy:cmfzy4jse000pjx0clx16p972';

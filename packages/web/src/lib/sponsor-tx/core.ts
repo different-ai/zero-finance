@@ -203,7 +203,7 @@ export async function relayNestedSafeTx(
   console.log('building nested safe tx', nestedSafe);
   const nestedSafeTx = await buildSafeTx(nestedTxs, {
     safeAddress: nestedSafe,
-    providerUrl,
+    chainId: chain?.id,
   });
   console.log('nestedSafeTx', nestedSafeTx);
   /* ---------- attach a v = 1 pre‑validated sig from the PRIMARY safe ---------- */
@@ -238,7 +238,7 @@ export async function relayNestedSafeTx(
   /* ---------- execute that meta‑tx from the primary Safe ---------- */
   const primarySafeTx = await buildSafeTx([nestedExecMeta], {
     safeAddress: primarySafe,
-    providerUrl,
+    chainId: chain?.id,
   });
 
   const txHash = await relaySafeTx(
