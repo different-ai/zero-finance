@@ -2380,7 +2380,7 @@ export const earnRouter = router({
         relayerCapitalFee: quote.relayerCapitalFee.toString(),
       });
 
-      // Encode bridge transaction
+      // Encode bridge transaction (returns array of [Approve, Deposit])
       const bridgeTx = await encodeBridgeWithVaultDeposit({
         depositor: sourceSafe.safeAddress as Address,
         vaultAddress: input.vaultAddress as Address,
@@ -2393,12 +2393,12 @@ export const earnRouter = router({
       return {
         needsDeployment: false,
         bridgeTransactionId: bridgeTxId,
-        transaction: {
-          to: bridgeTx.to,
-          data: bridgeTx.data,
-          value: bridgeTx.value.toString(),
-          chainId: bridgeTx.chainId,
-        },
+        transaction: bridgeTx.map(tx => ({
+          to: tx.to,
+          data: tx.data,
+          value: tx.value.toString(),
+          chainId: tx.chainId,
+        })),
         destinationSafeAddress: destSafeAddress,
         quote: {
           inputAmount: quote.inputAmount.toString(),
@@ -2491,7 +2491,7 @@ export const earnRouter = router({
         relayerCapitalFee: quote.relayerCapitalFee.toString(),
       });
 
-      // Encode bridge transaction
+      // Encode bridge transaction (returns array of [Approve, Deposit])
       const bridgeTx = await encodeBridgeTransfer({
         depositor: sourceSafe.safeAddress as Address,
         destinationSafeAddress: destSafeAddress,
@@ -2504,12 +2504,12 @@ export const earnRouter = router({
       return {
         needsDeployment: false,
         bridgeTransactionId: bridgeTxId,
-        transaction: {
-          to: bridgeTx.to,
-          data: bridgeTx.data,
-          value: bridgeTx.value.toString(),
-          chainId: bridgeTx.chainId,
-        },
+        transaction: bridgeTx.map(tx => ({
+          to: tx.to,
+          data: tx.data,
+          value: tx.value.toString(),
+          chainId: tx.chainId,
+        })),
         destinationSafeAddress: destSafeAddress,
         quote: {
           inputAmount: quote.inputAmount.toString(),

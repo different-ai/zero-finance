@@ -637,18 +637,19 @@ export function DepositEarnCard({
 
       const {
         bridgeTransactionId,
-        transaction: bridgeTx,
+        transaction: bridgeTxArray,
       } = bridgeResult as any;
 
       // Execute bridge transaction on Base (Source)
+      // Map the array of transactions (Approve + Deposit) to the format expected by relay
+      const txsToRelay = bridgeTxArray.map((tx: any) => ({
+        to: tx.to as Address,
+        value: tx.value,
+        data: tx.data as `0x${string}`,
+      }));
+
       const bridgeTxHash = await sendTxViaRelay(
-        [
-          {
-            to: bridgeTx.to as Address,
-            value: bridgeTx.value,
-            data: bridgeTx.data as `0x${string}`,
-          },
-        ],
+        txsToRelay,
         500_000n,
       );
 

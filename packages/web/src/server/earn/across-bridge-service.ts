@@ -14,6 +14,7 @@ import {
   type Hex,
   encodeFunctionData,
   encodeAbiParameters,
+  parseAbi,
 } from 'viem';
 import type { SupportedChainId } from '@/lib/types/multi-chain';
 import {
@@ -30,6 +31,13 @@ import {
   getChainConfig,
   SUPPORTED_CHAINS,
 } from '@/lib/constants/chains';
+
+/**
+ * ERC20 Approve ABI
+ */
+const ERC20_APPROVE_ABI = parseAbi([
+  'function approve(address spender, uint256 amount) public returns (bool)',
+]);
 
 /**
  * Across SpokePool addresses
@@ -182,11 +190,11 @@ function encodeCrossChainMessage(actions: CrossChainAction[]): Hex {
  * Encode simple bridge transfer (no multicall)
  *
  * @param params - Bridge deposit parameters
- * @returns Transaction ready to be signed
+ * @returns Array of Transactions ready to be signed (Approve + Deposit)
  */
 export async function encodeBridgeTransfer(
   params: BridgeDepositParams,
-): Promise<BridgeTransaction> {
+): Promise<BridgeTransaction[]> {
   const {
     depositor,
     destinationSafeAddress,
@@ -209,13 +217,28 @@ export async function encodeBridgeTransfer(
   // Get SpokePool address for source chain
   const spokePoolAddress = SPOKE_POOL_ADDRESSES[sourceChainId];
 
+  // 1. Construct Approve Transaction
+  const approveData = encodeFunctionData({
+    abi: ERC20_APPROVE_ABI,
+    functionName: 'approve',
+    args: [spokePoolAddress, BigInt(amount)],
+  });
+
+  const approveTx: BridgeTransaction = {
+    to: sourceUSDC,
+    data: approveData,
+    value: 0n,
+    chainId: sourceChainId,
+  };
+
   // Get deposit parameters from the raw quote
   const rawQuote = quote.rawQuote;
   const deposit = rawQuote.deposit;
 
+  // 2. Construct Deposit Transaction
   // Encode depositV3 call with EMPTY message and recipient = destinationSafeAddress
   // This will just transfer funds to the destination Safe
-  const data = encodeFunctionData({
+  const depositData = encodeFunctionData({
     abi: spokePoolDepositV3Abi,
     functionName: 'depositV3',
     args: [
@@ -234,17 +257,20 @@ export async function encodeBridgeTransfer(
     ],
   });
 
-  return {
+  const depositTx: BridgeTransaction = {
     to: spokePoolAddress,
-    data,
+    data: depositData,
     value: 0n,
     chainId: sourceChainId,
   };
+
+  // Return batch: [Approve, Deposit]
+  return [approveTx, depositTx];
 }
 
 export async function encodeBridgeWithVaultDeposit(
   params: BridgeDepositParams,
-): Promise<BridgeTransaction> {
+): Promise<BridgeTransaction[]> {
   const {
     depositor,
     vaultAddress,
@@ -270,6 +296,23 @@ export async function encodeBridgeWithVaultDeposit(
   const sourceUSDC = getUSDCAddress(sourceChainId);
   const destUSDC = getUSDCAddress(destChainId);
 
+  // Get SpokePool address for source chain
+  const spokePoolAddress = SPOKE_POOL_ADDRESSES[sourceChainId];
+
+  // 1. Construct Approve Transaction
+  const approveData = encodeFunctionData({
+    abi: ERC20_APPROVE_ABI,
+    functionName: 'approve',
+    args: [spokePoolAddress, BigInt(amount)],
+  });
+
+  const approveTx: BridgeTransaction = {
+    to: sourceUSDC,
+    data: approveData,
+    value: 0n,
+    chainId: sourceChainId,
+  };
+
   // Get MulticallHandler for destination chain
   const destChainConfig = getChainConfig(destChainId);
   const multicallHandler = destChainConfig.acrossMulticallHandler;
@@ -291,15 +334,12 @@ export async function encodeBridgeWithVaultDeposit(
   // Encode cross-chain message for MulticallHandler
   const message = encodeCrossChainMessage(actions);
 
-  // Get SpokePool address for source chain
-  const spokePoolAddress = SPOKE_POOL_ADDRESSES[sourceChainId];
-
   // Get deposit parameters from the raw quote
   const rawQuote = quote.rawQuote;
   const deposit = rawQuote.deposit;
 
-  // Encode depositV3 call
-  const data = encodeFunctionData({
+  // 2. Construct Deposit Transaction
+  const depositData = encodeFunctionData({
     abi: spokePoolDepositV3Abi,
     functionName: 'depositV3',
     args: [
@@ -318,12 +358,15 @@ export async function encodeBridgeWithVaultDeposit(
     ],
   });
 
-  return {
+  const depositTx: BridgeTransaction = {
     to: spokePoolAddress,
-    data,
+    data: depositData,
     value: 0n, // No ETH value for USDC bridge
     chainId: sourceChainId,
   };
+
+  // Return batch: [Approve, Deposit]
+  return [approveTx, depositTx];
 }
 
 /**
