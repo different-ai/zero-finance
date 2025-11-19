@@ -1045,6 +1045,9 @@ export function DepositEarnCard({
                 safeType: 'primary',
               });
               
+             // Invalidate query so the UI updates to show the safe
+             await trpcUtils.earn.getMultiChainPositions.invalidate();
+             
              console.log(`[DepositEarnCard] Arbitrum Safe linked: ${predictedSafeAddress}`);
              setTransactionState({ step: 'idle' });
              return;
@@ -1113,6 +1116,9 @@ export function DepositEarnCard({
           chainId: deploymentInfo.chainId,
           safeType: 'primary',
         });
+        
+        // Invalidate query so the UI updates to show the safe
+        await trpcUtils.earn.getMultiChainPositions.invalidate();
 
         // Reset to idle and let user retry the deposit
         setTransactionState({ step: 'idle' });
