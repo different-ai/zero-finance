@@ -6,6 +6,7 @@
     "lib": ["dom", "dom.iterable", "esnext"],
     "allowJs": true,
     "skipLibCheck": true,
+    "types": ["node", "react", "react-dom"],
     "strict": true,
     "noEmit": true,
     "esModuleInterop": true,
@@ -37,6 +38,7 @@
     "src/test/**/*",
     "scripts/auto-earn-worker.ts",
     "scripts/run-auto-earn-sweep.ts",
-    "scripts/test-auto-earn.ts"
+    "scripts/test-auto-earn.ts",
+    "src/**/*.backup.tsx"
   ]
 }

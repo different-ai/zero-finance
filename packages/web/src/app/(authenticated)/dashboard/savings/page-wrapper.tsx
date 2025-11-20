@@ -13,14 +13,25 @@ import {
 import { trpc, type RouterOutputs } from '@/utils/trpc';
 import { useMemo, useEffect, useState, useRef, useCallback } from 'react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Wallet, ExternalLink, AlertCircle, Shield } from 'lucide-react';
+import {
+  Wallet,
+  ExternalLink,
+  AlertCircle,
+  Shield,
+  TrendingUp,
+  Coins,
+} from 'lucide-react';
 import { WithdrawEarnCard } from '@/app/(authenticated)/dashboard/tools/earn-module/components/withdraw-earn-card';
 import { DepositEarnCard } from '@/app/(authenticated)/dashboard/tools/earn-module/components/deposit-earn-card';
 import { formatUsd, cn } from '@/lib/utils';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Address } from 'viem';
-import { BASE_USDC_VAULTS } from '@/server/earn/base-vaults';
+import {
+  BASE_USDC_VAULTS,
+  ALL_BASE_VAULTS,
+  BASE_CHAIN_ID,
+} from '@/server/earn/base-vaults';
 import { ALL_CROSS_CHAIN_VAULTS } from '@/server/earn/cross-chain-vaults';
 import { AnimatedYieldCounter } from '@/components/animated-yield-counter';
 import { toast } from 'sonner';
@@ -215,7 +226,8 @@ export default function SavingsPageWrapper({
       // Demo mode always uses base vaults for simplicity unless we want to demo multi-chain
       return BASE_USDC_VAULTS;
     }
-    return hasMultiChainFeature ? ALL_CROSS_CHAIN_VAULTS : BASE_USDC_VAULTS;
+    // Include all Base vaults (USDC + ETH) by default, or cross-chain vaults if enabled
+    return hasMultiChainFeature ? ALL_CROSS_CHAIN_VAULTS : ALL_BASE_VAULTS;
   }, [isDemoMode, hasMultiChainFeature]);
 
   const baseVaultAddresses = useMemo(
@@ -387,28 +399,31 @@ export default function SavingsPageWrapper({
       isContactOnly: true,
       insuranceSummary:
         'Dedicated coverage arranged by the 0 Finance insurance desk.',
+      // New required properties
+      principalUsd: 0,
+      recordedPrincipalUsd: 0,
+      rawEarnedUsd: null,
+      yieldCorrectionReason: null,
+      chainId: BASE_CHAIN_ID,
+      asset: {
+        symbol: 'USDC',
+        decimals: 6,
+        isNative: false,
+      },
+      category: 'stable' as const,
+      balanceNative: undefined,
+      earnedNative: undefined,
     }),
     [],
   );
 
+  // Display vaults without the mock insured vault - protection is now shown as a separate banner
   const displayVaults = useMemo(() => {
-    if (typeof document !== 'undefined') {
-      const existingStyle = document.getElementById('insured-pill-animation');
-      if (!existingStyle) {
-        const style = document.createElement('style');
-        style.id = 'insured-pill-animation';
-        style.innerHTML = insuredPillAnimation;
-        document.head.appendChild(style);
-      }
-    }
-
-    // Don't show the mock insured vault if user has real insurance
-    const insured = userIsInsured
-      ? [...vaultsVM.filter((vault) => vault.isInsured)]
-      : [insuredVaultEntry, ...vaultsVM.filter((vault) => vault.isInsured)];
-    const others = vaultsVM.filter((vault) => !vault.isInsured);
-    return [...insured, ...others];
-  }, [insuredVaultEntry, vaultsVM, userIsInsured]);
+    // Just return the actual vaults, sorted by balance/category
+    const stableVaults = vaultsVM.filter((v) => v.category === 'stable');
+    const growthVaults = vaultsVM.filter((v) => v.category === 'growth');
+    return [...stableVaults, ...growthVaults];
+  }, [vaultsVM]);
 
   const hasYieldCorrection = useMemo(
     () => vaultsVM.some((vault) => Boolean(vault.yieldCorrectionReason)),
@@ -521,8 +536,8 @@ export default function SavingsPageWrapper({
     <div className="space-y-10">
       {/* Always show the full savings interface - auto-earn module is now optional */}
       <div className="space-y-12">
-        {/* Account-Level Insurance Status Banner */}
-        {userIsInsured && (
+        {/* Protection Banner - Active Insurance or CTA */}
+        {userIsInsured ? (
           <div className="bg-gradient-to-r from-[#1B29FF]/10 via-[#1B29FF]/5 to-transparent border-2 border-[#1B29FF]/30 rounded-[16px] p-6 shadow-[0_4px_16px_rgba(27,41,255,0.12)]">
             <div className="flex items-start gap-4">
               <div className="flex-shrink-0 w-12 h-12 rounded-full bg-[#1B29FF]/15 flex items-center justify-center">
@@ -545,6 +560,59 @@ export default function SavingsPageWrapper({
                   additional cost. Coverage applies to all vaults automatically.
                 </p>
               </div>
+            </div>
+          </div>
+        ) : (
+          <div className="relative overflow-hidden bg-white border border-[#1B29FF]/20 rounded-[16px] p-6 shadow-[0_2px_12px_rgba(27,41,255,0.08)]">
+            {/* Blueprint Grid Background */}
+            <div
+              className="absolute inset-0 pointer-events-none opacity-40"
+              style={{
+                backgroundImage:
+                  'linear-gradient(to right, rgba(27,41,255,0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(27,41,255,0.05) 1px, transparent 1px)',
+                backgroundSize: '24px 24px',
+              }}
+            />
+
+            <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="flex items-start gap-4">
+                <div className="flex-shrink-0 w-12 h-12 rounded-full bg-[#1B29FF]/10 flex items-center justify-center">
+                  <Shield className="h-6 w-6 text-[#1B29FF]" />
+                </div>
+                <div>
+                  <h3 className="text-[18px] font-semibold text-[#101010] mb-1">
+                    Protect Your Savings
+                  </h3>
+                  <p className="text-[14px] text-[#101010]/70 leading-relaxed max-w-[400px]">
+                    Get institutional-grade insurance coverage for all your
+                    deposits. Sleep easy knowing your funds are protected.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() =>
+                  toggleVaultAction('insure', {
+                    address: 'insured-contact',
+                    name: 'Get Protection',
+                  })
+                }
+                className="group relative flex-shrink-0 inline-flex items-center gap-2 px-6 py-3 bg-[#1B29FF] hover:bg-[#1420CC] text-white font-medium text-[14px] rounded-lg transition-all duration-300 shadow-primary hover:shadow-[0_6px_20px_rgba(27,41,255,0.35)]"
+              >
+                <span>Get Protected</span>
+                <svg
+                  className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-1"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M13 7l5 5m0 0l-5 5m5-5H6"
+                  />
+                </svg>
+              </button>
             </div>
           </div>
         )}
@@ -603,9 +671,9 @@ export default function SavingsPageWrapper({
             <div className="hidden lg:block min-w-[800px]">
               {/* Table Header */}
               <div className="grid grid-cols-12 gap-3 p-4 border-b border-[#101010]/10 bg-[#F7F7F2]">
-                <div className="col-span-5">
+                <div className="col-span-4">
                   <p className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60">
-                    Vault Name
+                    Strategy
                   </p>
                 </div>
                 <div className="col-span-2 text-right">
@@ -613,9 +681,9 @@ export default function SavingsPageWrapper({
                     APY
                   </p>
                 </div>
-                <div className="col-span-2 text-right">
+                <div className="col-span-3 text-right">
                   <p className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60">
-                    Balance
+                    Your Position
                   </p>
                 </div>
                 <div className="col-span-3 text-right">
@@ -650,21 +718,61 @@ export default function SavingsPageWrapper({
                         'grid grid-cols-12 gap-3 p-4 items-center transition-all duration-200 relative z-10',
                         vault.isInsured
                           ? 'bg-[#1B29FF]/5 hover:bg-[#1B29FF]/10 border-l-2 border-[#1B29FF]'
-                          : 'hover:bg-[#F7F7F2]/30',
+                          : vault.category === 'growth'
+                            ? 'bg-gradient-to-r from-[#10b981]/5 to-transparent hover:from-[#10b981]/10 border-l-2 border-[#10b981]'
+                            : 'hover:bg-[#F7F7F2]/30',
                         isSelected &&
                           (vault.isInsured
                             ? 'ring-1 ring-[#1B29FF]/30 bg-[#1B29FF]/12'
-                            : 'bg-[#F7F7F2]/50'),
+                            : vault.category === 'growth'
+                              ? 'ring-1 ring-[#10b981]/30 bg-[#10b981]/8'
+                              : 'bg-[#F7F7F2]/50'),
                         (isExpanding || isCollapsing) && 'transition-none',
                       )}
                     >
-                      <div className="col-span-5">
-                        <div className="flex items-start gap-2">
-                          <div className="min-w-0">
+                      <div className="col-span-4">
+                        <div className="flex items-start gap-3">
+                          {/* Asset Icon */}
+                          <div
+                            className={cn(
+                              'flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center',
+                              vault.category === 'growth'
+                                ? 'bg-[#10b981]/10'
+                                : 'bg-[#1B29FF]/10',
+                            )}
+                          >
+                            {vault.category === 'growth' ? (
+                              <TrendingUp
+                                className={cn(
+                                  'h-5 w-5',
+                                  vault.category === 'growth'
+                                    ? 'text-[#10b981]'
+                                    : 'text-[#1B29FF]',
+                                )}
+                              />
+                            ) : (
+                              <Coins className="h-5 w-5 text-[#1B29FF]" />
+                            )}
+                          </div>
+                          <div className="min-w-0 flex-1">
                             <div className="flex flex-wrap items-center gap-2">
                               <p className="text-[15px] font-medium text-[#101010] truncate">
                                 {vault.displayName || vault.name}
                               </p>
+                              {/* Asset Badge */}
+                              <span
+                                className={cn(
+                                  'inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wide',
+                                  vault.asset.symbol === 'WETH' ||
+                                    vault.asset.symbol === 'ETH'
+                                    ? 'bg-[#627eea]/10 text-[#627eea]'
+                                    : 'bg-[#2775ca]/10 text-[#2775ca]',
+                                )}
+                              >
+                                {vault.asset.isNative
+                                  ? 'ETH'
+                                  : vault.asset.symbol}
+                              </span>
                             </div>
                             <p className="text-[12px] text-[#101010]/60 truncate mt-1">
                               {vault.curator}
@@ -675,20 +783,59 @@ export default function SavingsPageWrapper({
                       </div>
 
                       <div className="col-span-2 text-right">
-                        <p className="text-[24px] font-semibold tabular-nums text-[#1B29FF]">
+                        <p
+                          className={cn(
+                            'text-[24px] font-semibold tabular-nums',
+                            vault.category === 'growth'
+                              ? 'text-[#10b981]'
+                              : 'text-[#1B29FF]',
+                          )}
+                        >
                           {vault.apy.toFixed(1)}%
                         </p>
                       </div>
 
-                      <div className="col-span-2 text-right">
-                        <p className="text-[18px] font-medium tabular-nums text-[#101010]">
-                          {vault.isContactOnly
-                            ? '—'
-                            : formatUsd(vault.balanceUsd)}
-                        </p>
-                        {vault.earnedUsd > 0 && !vault.isContactOnly && (
-                          <p className="text-[13px] tabular-nums text-[#1B29FF] mt-0.5">
-                            +{formatUsd(vault.earnedUsd)} earned
+                      <div className="col-span-3 text-right">
+                        {vault.isContactOnly ? (
+                          <p className="text-[16px] text-[#101010]/40">—</p>
+                        ) : vault.balanceUsd > 0 ? (
+                          <div>
+                            {/* Show native amount for ETH vaults */}
+                            {vault.balanceNative !== undefined && (
+                              <p className="text-[18px] font-semibold tabular-nums text-[#101010]">
+                                {vault.balanceNative.toFixed(6)} ETH
+                              </p>
+                            )}
+                            <p
+                              className={cn(
+                                'tabular-nums',
+                                vault.balanceNative !== undefined
+                                  ? 'text-[13px] text-[#101010]/60'
+                                  : 'text-[18px] font-semibold text-[#101010]',
+                              )}
+                            >
+                              {formatUsd(vault.balanceUsd)}
+                            </p>
+                            {vault.earnedUsd > 0 && (
+                              <p
+                                className={cn(
+                                  'text-[12px] tabular-nums mt-0.5',
+                                  vault.category === 'growth'
+                                    ? 'text-[#10b981]'
+                                    : 'text-[#1B29FF]',
+                                )}
+                              >
+                                +
+                                {vault.earnedNative !== undefined
+                                  ? `${vault.earnedNative.toFixed(6)} ETH`
+                                  : formatUsd(vault.earnedUsd)}{' '}
+                                earned
+                              </p>
+                            )}
+                          </div>
+                        ) : (
+                          <p className="text-[14px] text-[#101010]/40">
+                            No position
                           </p>
                         )}
                       </div>
@@ -849,22 +996,64 @@ export default function SavingsPageWrapper({
                     <div
                       className={cn(
                         'p-4 space-y-3 transition-all duration-200',
-                        vault.isInsured ? 'bg-[#1B29FF]/10' : 'bg-white',
+                        vault.isInsured
+                          ? 'bg-[#1B29FF]/10'
+                          : vault.category === 'growth'
+                            ? 'bg-gradient-to-r from-[#10b981]/5 to-transparent'
+                            : 'bg-white',
                         isSelected &&
                           (vault.isInsured
                             ? 'ring-1 ring-[#1B29FF]/40 bg-[#1B29FF]/14'
-                            : 'bg-[#F7F7F2]/40'),
+                            : vault.category === 'growth'
+                              ? 'ring-1 ring-[#10b981]/30 bg-[#10b981]/8'
+                              : 'bg-[#F7F7F2]/40'),
                         (isExpanding || isCollapsing) && 'transition-none',
                       )}
                     >
                       {/* Vault Header */}
                       <div className="flex items-start justify-between">
-                        <div className="flex items-start gap-2">
+                        <div className="flex items-start gap-3">
+                          {/* Asset Icon */}
+                          <div
+                            className={cn(
+                              'flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center',
+                              vault.category === 'growth'
+                                ? 'bg-[#10b981]/10'
+                                : 'bg-[#1B29FF]/10',
+                            )}
+                          >
+                            {vault.category === 'growth' ? (
+                              <TrendingUp
+                                className={cn(
+                                  'h-4 w-4',
+                                  vault.category === 'growth'
+                                    ? 'text-[#10b981]'
+                                    : 'text-[#1B29FF]',
+                                )}
+                              />
+                            ) : (
+                              <Coins className="h-4 w-4 text-[#1B29FF]" />
+                            )}
+                          </div>
                           <div className="flex flex-col gap-1">
                             <div className="flex flex-wrap items-center gap-2">
                               <p className="text-[15px] font-medium text-[#101010]">
                                 {vault.displayName || vault.name}
                               </p>
+                              {/* Asset Badge */}
+                              <span
+                                className={cn(
+                                  'inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-semibold uppercase tracking-wide',
+                                  vault.asset.symbol === 'WETH' ||
+                                    vault.asset.symbol === 'ETH'
+                                    ? 'bg-[#627eea]/10 text-[#627eea]'
+                                    : 'bg-[#2775ca]/10 text-[#2775ca]',
+                                )}
+                              >
+                                {vault.asset.isNative
+                                  ? 'ETH'
+                                  : vault.asset.symbol}
+                              </span>
                             </div>
                             <p className="text-[12px] text-[#101010]/60">
                               {vault.curator}
@@ -872,26 +1061,68 @@ export default function SavingsPageWrapper({
                             </p>
                           </div>
                         </div>
-                        <p className="text-[22px] font-semibold tabular-nums text-[#1B29FF]">
+                        <p
+                          className={cn(
+                            'text-[22px] font-semibold tabular-nums',
+                            vault.category === 'growth'
+                              ? 'text-[#10b981]'
+                              : 'text-[#1B29FF]',
+                          )}
+                        >
                           {vault.apy.toFixed(1)}%
                         </p>
                       </div>
 
                       {/* Vault Stats */}
-                      <div className="flex justify-between text-[14px]">
-                        <span className="text-[#101010]/60">Balance</span>
-                        <span className="tabular-nums text-[#101010]">
-                          {vault.isContactOnly
-                            ? '—'
-                            : formatUsd(vault.balanceUsd)}
-                        </span>
-                      </div>
-                      {vault.earnedUsd > 0 && !vault.isContactOnly && (
+                      {vault.isContactOnly ? (
                         <div className="flex justify-between text-[14px]">
-                          <span className="text-[#101010]/60">Earned</span>
-                          <span className="tabular-nums text-[#1B29FF]">
-                            +{formatUsd(vault.earnedUsd)}
-                          </span>
+                          <span className="text-[#101010]/60">Position</span>
+                          <span className="text-[#101010]/40">—</span>
+                        </div>
+                      ) : vault.balanceUsd > 0 ? (
+                        <>
+                          {/* Show native amount for ETH vaults */}
+                          {vault.balanceNative !== undefined && (
+                            <div className="flex justify-between text-[14px]">
+                              <span className="text-[#101010]/60">Balance</span>
+                              <span className="tabular-nums font-medium text-[#101010]">
+                                {vault.balanceNative.toFixed(6)} ETH
+                              </span>
+                            </div>
+                          )}
+                          <div className="flex justify-between text-[14px]">
+                            <span className="text-[#101010]/60">
+                              {vault.balanceNative !== undefined
+                                ? 'Value'
+                                : 'Balance'}
+                            </span>
+                            <span className="tabular-nums text-[#101010]">
+                              {formatUsd(vault.balanceUsd)}
+                            </span>
+                          </div>
+                          {vault.earnedUsd > 0 && (
+                            <div className="flex justify-between text-[14px]">
+                              <span className="text-[#101010]/60">Earned</span>
+                              <span
+                                className={cn(
+                                  'tabular-nums',
+                                  vault.category === 'growth'
+                                    ? 'text-[#10b981]'
+                                    : 'text-[#1B29FF]',
+                                )}
+                              >
+                                +
+                                {vault.earnedNative !== undefined
+                                  ? `${vault.earnedNative.toFixed(6)} ETH`
+                                  : formatUsd(vault.earnedUsd)}
+                              </span>
+                            </div>
+                          )}
+                        </>
+                      ) : (
+                        <div className="flex justify-between text-[14px]">
+                          <span className="text-[#101010]/60">Position</span>
+                          <span className="text-[#101010]/40">No position</span>
                         </div>
                       )}
 

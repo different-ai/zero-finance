@@ -312,7 +312,10 @@ export default function SignInContent() {
                         />
                         {(emailError || state.status === 'error') && (
                           <p className="text-[12px] text-red-600 mt-1">
-                            {emailError || state.error?.message}
+                            {emailError ||
+                              (state.status === 'error'
+                                ? state.error?.message
+                                : '')}
                           </p>
                         )}
                       </div>

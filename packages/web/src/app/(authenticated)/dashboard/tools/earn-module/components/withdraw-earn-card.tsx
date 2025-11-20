@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -20,6 +20,8 @@ import {
 import { base, arbitrum } from 'viem/chains';
 import { useSafeRelay } from '@/hooks/use-safe-relay';
 import { SUPPORTED_CHAINS } from '@/lib/constants/chains';
+import { ALL_BASE_VAULTS } from '@/server/earn/base-vaults';
+import { ALL_CROSS_CHAIN_VAULTS } from '@/server/earn/cross-chain-vaults';
 
 interface WithdrawEarnCardProps {
   safeAddress: Address; // Base Safe address (used as fallback for Base chain)
@@ -52,6 +54,34 @@ export function WithdrawEarnCard({
   const [amount, setAmount] = useState('');
   const [isWithdrawing, setIsWithdrawing] = useState(false);
   const [vaultInfo, setVaultInfo] = useState<VaultInfo | null>(null);
+
+  // Look up vault config to determine asset symbol
+  const vaultConfig = useMemo(() => {
+    const allVaults = [...ALL_BASE_VAULTS, ...ALL_CROSS_CHAIN_VAULTS];
+    return allVaults.find(
+      (v) => v.address.toLowerCase() === vaultAddress.toLowerCase(),
+    );
+  }, [vaultAddress]);
+
+  // Determine asset symbol for display - handle type differences
+  const assetSymbol = useMemo(() => {
+    if (vaultConfig && 'asset' in vaultConfig) {
+      return (
+        (vaultConfig as { asset?: { symbol?: string } }).asset?.symbol || 'USD'
+      );
+    }
+    return 'USD';
+  }, [vaultConfig]);
+
+  const isNativeAsset = useMemo(() => {
+    if (vaultConfig && 'asset' in vaultConfig) {
+      return (
+        (vaultConfig as { asset?: { isNative?: boolean } }).asset?.isNative ||
+        false
+      );
+    }
+    return false;
+  }, [vaultConfig]);
 
   // Determine if this is a cross-chain withdrawal (vault on different chain than Base)
   const isCrossChain = chainId !== SUPPORTED_CHAINS.BASE;
@@ -293,7 +323,7 @@ export function WithdrawEarnCard({
         });
 
         toast.success('Withdrawal initiated', {
-          description: `Withdrawing ${amount} USDC. Transaction ID: ${userOpHash.slice(0, 10)}...`,
+          description: `Withdrawing ${amount} ${assetSymbol}. Transaction ID: ${userOpHash.slice(0, 10)}...`,
         });
 
         // Reset form
@@ -400,8 +430,11 @@ export function WithdrawEarnCard({
           Available Balance
         </div>
         <div className="text-2xl font-bold ">
-          <span className="text-[#0040FF]">${displayBalance}</span>{' '}
-          <span className="text-sm">USD</span>
+          <span className="text-[#0040FF]">
+            {isNativeAsset ? '' : '$'}
+            {displayBalance}
+          </span>{' '}
+          <span className="text-sm">{assetSymbol}</span>
         </div>
       </div>
 
@@ -421,7 +454,7 @@ export function WithdrawEarnCard({
             max={availableBalance}
           />
           <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
-            <span className="text-xs text-[#0040FF]">USD</span>
+            <span className="text-xs text-[#0040FF]">{assetSymbol}</span>
             <Button
               type="button"
               variant="ghost"
@@ -457,8 +490,9 @@ export function WithdrawEarnCard({
 
       {/* Help text */}
       <p className="text-xs text-muted-foreground text-center">
-        Withdrawals are processed through your Safe wallet and may take a few
-        moments to complete
+        {isNativeAsset
+          ? 'You will receive WETH. Withdrawals are processed through your Safe wallet and may take a few moments to complete.'
+          : 'Withdrawals are processed through your Safe wallet and may take a few moments to complete'}
       </p>
 
       {amountParseFailed && (

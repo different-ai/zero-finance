@@ -10,6 +10,8 @@ import {
   Globe,
   ArrowLeftRight,
   Wallet,
+  ChevronDown,
+  ChevronRight,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -27,7 +29,7 @@ import { usePrivy } from '@privy-io/react-auth';
 import { useSafeOwnerCheck } from '@/hooks/use-safe-owner-check';
 import { api } from '@/trpc/react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { formatUsd } from '@/lib/utils';
+import { formatUsd, cn } from '@/lib/utils';
 import { demoFundingSources, demoUserData } from '../demo-data';
 import {
   getChainDisplayName,
@@ -37,6 +39,64 @@ import {
 import { formatUnits } from 'viem';
 import { USDC_DECIMALS } from '@/lib/constants';
 import type { Address } from 'viem';
+import Image from 'next/image';
+
+// Chain logo mapping - using long logos that include chain names
+const CHAIN_LOGOS: Record<SupportedChainId, { src: string; hasName: boolean }> =
+  {
+    [SUPPORTED_CHAINS.BASE]: { src: '/logos/_base-logo.svg', hasName: true },
+    [SUPPORTED_CHAINS.ARBITRUM]: {
+      src: '/logos/_arbitrum-logo.png',
+      hasName: true,
+    },
+    [SUPPORTED_CHAINS.MAINNET]: {
+      src: '/logos/_ethereum-logo.svg',
+      hasName: false,
+    },
+  };
+
+// Asset icons as inline SVG components for better performance
+const UsdcIcon = () => (
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 32 32"
+    fill="none"
+    className="flex-shrink-0"
+  >
+    <circle cx="16" cy="16" r="16" fill="#2775CA" />
+    <path
+      d="M20.5 18.5c0-2-1.2-2.7-3.6-3-.6-.1-1.2-.2-1.8-.4-.9-.2-1.4-.6-1.4-1.3 0-.7.6-1.2 1.7-1.2.9 0 1.5.3 1.8.9.1.2.3.3.5.3h.7c.3 0 .5-.2.5-.5 0-.1 0-.1-.1-.2-.3-.8-1-1.4-2-1.6v-1c0-.3-.2-.5-.5-.5h-.6c-.3 0-.5.2-.5.5v1c-1.5.3-2.5 1.3-2.5 2.6 0 1.9 1.2 2.6 3.6 2.9.6.1 1.2.2 1.8.4.9.2 1.3.6 1.3 1.3 0 .8-.7 1.3-1.9 1.3-1 0-1.8-.4-2.1-1.1-.1-.2-.3-.3-.5-.3h-.7c-.3 0-.5.2-.5.5v.1c.3.9 1.2 1.6 2.4 1.8v1c0 .3.2.5.5.5h.6c.3 0 .5-.2.5-.5v-1c1.5-.3 2.7-1.3 2.7-2.7z"
+      fill="white"
+    />
+  </svg>
+);
+
+const EthIcon = () => (
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 32 32"
+    fill="none"
+    className="flex-shrink-0"
+  >
+    <circle cx="16" cy="16" r="16" fill="#627EEA" />
+    <path d="M16 4v8.87l7.5 3.35L16 4z" fill="white" fillOpacity="0.6" />
+    <path d="M16 4L8.5 16.22 16 12.87V4z" fill="white" />
+    <path
+      d="M16 21.97v6.03l7.5-10.39L16 21.97z"
+      fill="white"
+      fillOpacity="0.6"
+    />
+    <path d="M16 28V21.97l-7.5-4.36L16 28z" fill="white" />
+    <path d="M16 20.57l7.5-4.35L16 12.87v7.7z" fill="white" fillOpacity="0.2" />
+    <path
+      d="M8.5 16.22l7.5 4.35v-7.7l-7.5 3.35z"
+      fill="white"
+      fillOpacity="0.6"
+    />
+  </svg>
+);
 
 type CheckingActionsCardProps = {
   balanceUsd: number;
@@ -56,6 +116,7 @@ export function CheckingActionsCard({
     null,
   );
   const [showAdvancedDetails, setShowAdvancedDetails] = useState(false);
+  const [expandedAccount, setExpandedAccount] = useState<string | null>(null);
   const isMobile = useIsMobile();
   const { ready, authenticated, user } = usePrivy();
   const { isOwner, isChecking: isCheckingOwnership } =
@@ -73,6 +134,7 @@ export function CheckingActionsCard({
   const { data: multiChainData, isLoading: isLoadingMultiChain } =
     api.earn.getMultiChainPositions.useQuery(undefined, {
       enabled: !isDemoMode,
+      staleTime: 30000, // Cache for 30 seconds
     });
 
   // Fetch balances for all safes
@@ -83,6 +145,7 @@ export function CheckingActionsCard({
     (s) => s.chainId === SUPPORTED_CHAINS.ARBITRUM,
   );
 
+  // Fetch USDC balances with caching
   const { data: baseBalanceData } = api.earn.getSafeBalanceOnChain.useQuery(
     {
       safeAddress: baseSafe?.address || '',
@@ -90,6 +153,8 @@ export function CheckingActionsCard({
     },
     {
       enabled: !!baseSafe?.address,
+      staleTime: 30000, // Cache for 30 seconds
+      refetchInterval: 60000, // Refetch every minute
     },
   );
 
@@ -100,20 +165,66 @@ export function CheckingActionsCard({
     },
     {
       enabled: !!arbitrumSafe?.address,
+      staleTime: 30000,
+      refetchInterval: 60000,
+    },
+  );
+
+  // Fetch ETH balances (native balance) with caching
+  const { data: baseEthBalance } = api.earn.getNativeBalance.useQuery(
+    {
+      safeAddress: baseSafe?.address || '',
+      chainId: SUPPORTED_CHAINS.BASE,
+    },
+    {
+      enabled: !!baseSafe?.address,
+      staleTime: 30000,
+      refetchInterval: 60000,
+    },
+  );
+
+  const { data: arbitrumEthBalance } = api.earn.getNativeBalance.useQuery(
+    {
+      safeAddress: arbitrumSafe?.address || '',
+      chainId: SUPPORTED_CHAINS.ARBITRUM,
+    },
+    {
+      enabled: !!arbitrumSafe?.address,
+      staleTime: 30000,
+      refetchInterval: 60000,
     },
   );
 
   // Calculate total balance across all chains
-  const baseBalance = baseBalanceData
+  const baseUsdcBalance = baseBalanceData
     ? parseFloat(formatUnits(BigInt(baseBalanceData.balance), USDC_DECIMALS))
     : 0;
-  const arbitrumBalance = arbitrumBalanceData
+  const arbitrumUsdcBalance = arbitrumBalanceData
     ? parseFloat(
         formatUnits(BigInt(arbitrumBalanceData.balance), USDC_DECIMALS),
       )
     : 0;
-  const totalMultiChainBalance = baseBalance + arbitrumBalance;
-  const hasAnyBalance = totalMultiChainBalance > 0 || balanceUsd > 0;
+
+  // ETH balances
+  const baseEthBalanceNum = baseEthBalance
+    ? parseFloat(formatUnits(BigInt(baseEthBalance.balance), 18))
+    : 0;
+  const arbitrumEthBalanceNum = arbitrumEthBalance
+    ? parseFloat(formatUnits(BigInt(arbitrumEthBalance.balance), 18))
+    : 0;
+
+  // ETH USD values (approximate)
+  const ethPrice = 3000; // TODO: Fetch real-time price
+  const baseEthUsd = baseEthBalanceNum * ethPrice;
+  const arbitrumEthUsd = arbitrumEthBalanceNum * ethPrice;
+
+  // Total per chain (USDC + ETH in USD)
+  const baseTotalUsd = baseUsdcBalance + baseEthUsd;
+  const arbitrumTotalUsd = arbitrumUsdcBalance + arbitrumEthUsd;
+
+  // Total available balance (not in vaults)
+  const totalAvailableBalance = baseTotalUsd + arbitrumTotalUsd;
+  const hasAnyBalance = totalAvailableBalance > 0 || balanceUsd > 0;
 
   const [hasRequestedStarterAccounts, setHasRequestedStarterAccounts] =
     useState(false);
@@ -164,9 +275,13 @@ export function CheckingActionsCard({
       .catch((error) => console.error('Failed to copy address', error));
   };
 
+  const toggleAccountExpansion = (accountId: string) => {
+    setExpandedAccount(expandedAccount === accountId ? null : accountId);
+  };
+
   const hasOnlyStarterAccounts = !hasCompletedKyc && fundingSources.length > 0;
   const canInitiateMove =
-    (isDemoMode || balanceUsd > 0) &&
+    (isDemoMode || totalAvailableBalance > 0) &&
     !!safeAddress &&
     !hasOnlyStarterAccounts &&
     isOwner !== false;
@@ -174,7 +289,7 @@ export function CheckingActionsCard({
     ? 'Add a treasury safe to move funds'
     : isOwner === false
       ? 'You are not an owner of this Safe'
-      : balanceUsd <= 0
+      : totalAvailableBalance <= 0
         ? 'No withdrawable balance available'
         : hasOnlyStarterAccounts
           ? 'Complete business verification to enable withdrawals'
@@ -188,7 +303,7 @@ export function CheckingActionsCard({
             Available Balance
           </p>
           <p className="text-[32px] sm:text-[40px] font-semibold leading-[0.95] tabular-nums text-[#101010]">
-            {formatUsd(balanceUsd)}
+            {formatUsd(isDemoMode ? balanceUsd : totalAvailableBalance)}
           </p>
           <p className="mt-3 text-[13px] text-[#101010]/60">
             Ready to transfer or invest
@@ -196,7 +311,7 @@ export function CheckingActionsCard({
         </div>
       </div>
 
-      {/* Account Balances Section */}
+      {/* Account Balances Section - Expandable */}
       {!isDemoMode && (baseSafe || arbitrumSafe) && (
         <div className="border-t border-[#101010]/10 pt-4">
           <div className="flex items-center justify-between mb-3">
@@ -206,24 +321,156 @@ export function CheckingActionsCard({
             </p>
           </div>
           <div className="space-y-2">
+            {/* Base Account */}
             {baseSafe && (
-              <div className="flex items-center justify-between py-2 px-3 rounded-md bg-[#F7F7F2]">
-                <span className="text-[13px] text-[#101010]">
-                  {getChainDisplayName(SUPPORTED_CHAINS.BASE)}
-                </span>
-                <span className="text-[13px] font-medium tabular-nums text-[#101010]">
-                  {formatUsd(baseBalance)}
-                </span>
+              <div className="rounded-lg border border-[#101010]/10 overflow-hidden">
+                <button
+                  type="button"
+                  onClick={() => toggleAccountExpansion('base')}
+                  className="w-full flex items-center justify-between py-3 px-4 bg-[#F7F7F2] hover:bg-[#F7F7F2]/80 transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <Image
+                      src={CHAIN_LOGOS[SUPPORTED_CHAINS.BASE].src}
+                      alt="Base"
+                      width={60}
+                      height={15}
+                      className="h-[15px] w-auto object-contain"
+                    />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[14px] font-semibold tabular-nums text-[#101010]">
+                      {formatUsd(baseTotalUsd)}
+                    </span>
+                    {expandedAccount === 'base' ? (
+                      <ChevronDown className="h-4 w-4 text-[#101010]/40" />
+                    ) : (
+                      <ChevronRight className="h-4 w-4 text-[#101010]/40" />
+                    )}
+                  </div>
+                </button>
+                {/* Expanded asset breakdown */}
+                {expandedAccount === 'base' && (
+                  <div className="border-t border-[#101010]/10 bg-white p-3 space-y-2">
+                    {/* USDC */}
+                    <div className="flex items-center justify-between py-1.5">
+                      <div className="flex items-center gap-2">
+                        <UsdcIcon />
+                        <span className="text-[12px] text-[#101010]/70">
+                          USDC
+                        </span>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-[12px] font-medium tabular-nums text-[#101010]">
+                          {baseUsdcBalance.toLocaleString(undefined, {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          })}
+                        </span>
+                      </div>
+                    </div>
+                    {/* ETH */}
+                    <div className="flex items-center justify-between py-1.5">
+                      <div className="flex items-center gap-2">
+                        <EthIcon />
+                        <span className="text-[12px] text-[#101010]/70">
+                          ETH
+                        </span>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-[12px] font-medium tabular-nums text-[#101010]">
+                          {baseEthBalanceNum.toFixed(6)}
+                        </span>
+                        <span className="text-[11px] text-[#101010]/50 ml-1">
+                          ({formatUsd(baseEthUsd)})
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
+
+            {/* Arbitrum Account */}
             {arbitrumSafe && (
-              <div className="flex items-center justify-between py-2 px-3 rounded-md bg-[#F7F7F2]">
-                <span className="text-[13px] text-[#101010]">
-                  {getChainDisplayName(SUPPORTED_CHAINS.ARBITRUM)}
-                </span>
-                <span className="text-[13px] font-medium tabular-nums text-[#101010]">
-                  {formatUsd(arbitrumBalance)}
-                </span>
+              <div className="rounded-lg border border-[#101010]/10 overflow-hidden">
+                <button
+                  type="button"
+                  onClick={() => toggleAccountExpansion('arbitrum')}
+                  className="w-full flex items-center justify-between py-3 px-4 bg-[#F7F7F2] hover:bg-[#F7F7F2]/80 transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    {CHAIN_LOGOS[SUPPORTED_CHAINS.ARBITRUM].hasName ? (
+                      <Image
+                        src={CHAIN_LOGOS[SUPPORTED_CHAINS.ARBITRUM].src}
+                        alt="Arbitrum"
+                        width={60}
+                        height={15}
+                        className="h-[15px] w-auto object-contain"
+                      />
+                    ) : (
+                      <>
+                        <div className="w-5 h-5 rounded-full bg-[#28A0F0] flex items-center justify-center">
+                          <span className="text-[10px] font-bold text-white">
+                            A
+                          </span>
+                        </div>
+                        <span className="text-[13px] font-medium text-[#101010]">
+                          {getChainDisplayName(SUPPORTED_CHAINS.ARBITRUM)}
+                        </span>
+                      </>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[14px] font-semibold tabular-nums text-[#101010]">
+                      {formatUsd(arbitrumTotalUsd)}
+                    </span>
+                    {expandedAccount === 'arbitrum' ? (
+                      <ChevronDown className="h-4 w-4 text-[#101010]/40" />
+                    ) : (
+                      <ChevronRight className="h-4 w-4 text-[#101010]/40" />
+                    )}
+                  </div>
+                </button>
+                {/* Expanded asset breakdown */}
+                {expandedAccount === 'arbitrum' && (
+                  <div className="border-t border-[#101010]/10 bg-white p-3 space-y-2">
+                    {/* USDC */}
+                    <div className="flex items-center justify-between py-1.5">
+                      <div className="flex items-center gap-2">
+                        <UsdcIcon />
+                        <span className="text-[12px] text-[#101010]/70">
+                          USDC
+                        </span>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-[12px] font-medium tabular-nums text-[#101010]">
+                          {arbitrumUsdcBalance.toLocaleString(undefined, {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          })}
+                        </span>
+                      </div>
+                    </div>
+                    {/* ETH */}
+                    <div className="flex items-center justify-between py-1.5">
+                      <div className="flex items-center gap-2">
+                        <EthIcon />
+                        <span className="text-[12px] text-[#101010]/70">
+                          ETH
+                        </span>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-[12px] font-medium tabular-nums text-[#101010]">
+                          {arbitrumEthBalanceNum.toFixed(6)}
+                        </span>
+                        <span className="text-[11px] text-[#101010]/50 ml-1">
+                          ({formatUsd(arbitrumEthUsd)})
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -251,7 +498,7 @@ export function CheckingActionsCard({
           >
             <SimplifiedOffRamp
               fundingSources={fundingSources}
-              maxBalance={balanceUsd}
+              maxBalance={totalAvailableBalance}
             />
           </DialogContent>
         </Dialog>

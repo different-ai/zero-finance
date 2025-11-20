@@ -87,12 +87,12 @@ export interface CreateSafeCardProps {
   nextStepName?: string;
 }
 
-export function CreateSafeCard({ 
-  onSuccess, 
+export function CreateSafeCard({
+  onSuccess,
   onSkip,
   showSkipButton = false,
   nextStepPath,
-  nextStepName
+  nextStepName,
 }: CreateSafeCardProps) {
   const router = useRouter();
   const { user, ready } = usePrivy();
@@ -204,7 +204,10 @@ export function CreateSafeCard({
     setDeploymentError('');
     // Ensure deploymentStep is for Safe creation now
     setDeploymentStep('Configuring your new secure account...');
-    console.log('0xHypr - Starting handleCreateSafe with smartWalletAddress:', smartWalletAddress);
+    console.log(
+      '0xHypr - Starting handleCreateSafe with smartWalletAddress:',
+      smartWalletAddress,
+    );
 
     try {
       // Use the smartWalletAddress from state
@@ -252,9 +255,7 @@ export function CreateSafeCard({
         await protocolKit.createSafeDeploymentTransaction();
 
       // Send the transaction using Privy's sendTransaction with enhanced UI
-      setDeploymentStep(
-        'Activating your account on the network...',
-      );
+      setDeploymentStep('Activating your account on the network...');
       console.log(
         '0xHypr - Sending deployment transaction via smart wallet...',
       );
@@ -263,7 +264,8 @@ export function CreateSafeCard({
           to: deploymentTransaction.to as Address,
           value: BigInt(deploymentTransaction.value || '0'),
           data: deploymentTransaction.data as `0x${string}`,
-          chain: base,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          chain: base as any,
         },
         {
           uiOptions: {
@@ -311,7 +313,7 @@ export function CreateSafeCard({
           '0xHypr - Primary Safe address saved successfully via tRPC.',
         );
         setDeploymentStep('Your new account is active!');
-        
+
         // Call onSuccess callback if provided (but don't auto-navigate)
         if (onSuccess) {
           onSuccess(predictedSafeAddress);
@@ -352,9 +354,7 @@ export function CreateSafeCard({
     <>
       <Card className="w-full shadow-sm">
         <CardHeader className="pb-4">
-          <CardTitle className="text-xl">
-            Create a smart account
-          </CardTitle>
+          <CardTitle className="text-xl">Create a smart account</CardTitle>
         </CardHeader>
 
         <CardContent>
@@ -417,14 +417,16 @@ export function CreateSafeCard({
                 onClick={handleContinue}
                 className="w-full mt-2"
               >
-                {nextStepPath ? `Continue to ${nextStepName || 'Next Step'}` : 'Go to Dashboard'}
+                {nextStepPath
+                  ? `Continue to ${nextStepName || 'Next Step'}`
+                  : 'Go to Dashboard'}
                 <ArrowRight className="h-4 w-4 ml-2" />
               </Button>
             </div>
           ) : (
             // Two-step deployment: Smart Wallet then Safe
             <div className="flex flex-col gap-8 py-6">
-              {/* Step 1: Smart Wallet Creation */} 
+              {/* Step 1: Smart Wallet Creation */}
               {!hasSmartWallet && (
                 <div className="flex flex-col items-center gap-4">
                   <Shield className="h-12 w-12 text-primary/70" />
@@ -433,7 +435,8 @@ export function CreateSafeCard({
                       Create Your Smart Wallet
                     </h2>
                     <p className="text-sm text-muted-foreground max-w-md mt-1">
-                      This is your personal wallet on the Base network, required to create a secure account.
+                      This is your personal wallet on the Base network, required
+                      to create a secure account.
                     </p>
                   </div>
                   <Button
@@ -461,41 +464,54 @@ export function CreateSafeCard({
                       </AlertTitle>
                       <AlertDescription>
                         {smartWalletError}
-                        <Button variant="link" size="sm" onClick={resetSmartWalletError} className="pl-2 text-red-500 hover:text-red-700">Dismiss</Button>
+                        <Button
+                          variant="link"
+                          size="sm"
+                          onClick={resetSmartWalletError}
+                          className="pl-2 text-red-500 hover:text-red-700"
+                        >
+                          Dismiss
+                        </Button>
                       </AlertDescription>
                     </Alert>
                   )}
                 </div>
               )}
 
-              {/* Step 2: Safe Creation (shown if smart wallet exists or after its creation) */} 
+              {/* Step 2: Safe Creation (shown if smart wallet exists or after its creation) */}
               {hasSmartWallet && smartWalletAddress && (
-                 <div className="flex flex-col items-center gap-4 pt-4 border-t border-dashed">
-                  <Shield className="h-12 w-12 text-primary/80" /> 
+                <div className="flex flex-col items-center gap-4 pt-4 border-t border-dashed">
+                  <Shield className="h-12 w-12 text-primary/80" />
                   <div className="text-center">
                     <h2 className="text-lg font-medium">
                       Activate Your Secure Account
                     </h2>
-                     <p className="text-sm text-muted-foreground max-w-md mt-1">
-                       Your smart wallet is ready! Now, create your secure multi-signature account.
-                     </p>
-                     <Accordion type="single" collapsible className="w-full">
-                       <AccordionItem value="smart-wallet-details">
-                         <AccordionTrigger className="text-xs text-muted-foreground">
+                    <p className="text-sm text-muted-foreground max-w-md mt-1">
+                      Your smart wallet is ready! Now, create your secure
+                      multi-signature account.
+                    </p>
+                    <Accordion type="single" collapsible className="w-full">
+                      <AccordionItem value="smart-wallet-details">
+                        <AccordionTrigger className="text-xs text-muted-foreground">
                           Secure account details
-                         </AccordionTrigger>
-                         <AccordionContent>
-                           <div className="text-xs text-muted-foreground p-2 bg-muted/30 rounded">
-                             Smart Wallet: <code className='font-mono'>{smartWalletAddress}</code>
-                           </div>
-                         </AccordionContent>
-                       </AccordionItem>
-                     </Accordion>
+                        </AccordionTrigger>
+                        <AccordionContent>
+                          <div className="text-xs text-muted-foreground p-2 bg-muted/30 rounded">
+                            Smart Wallet:{' '}
+                            <code className="font-mono">
+                              {smartWalletAddress}
+                            </code>
+                          </div>
+                        </AccordionContent>
+                      </AccordionItem>
+                    </Accordion>
                   </div>
                   <Button
                     size="lg"
                     onClick={handleCreateSafe}
-                    disabled={!hasSmartWallet || isDeploying || isCreatingSmartWallet}
+                    disabled={
+                      !hasSmartWallet || isDeploying || isCreatingSmartWallet
+                    }
                     className="w-full"
                   >
                     {isDeploying ? (
@@ -526,14 +542,11 @@ export function CreateSafeCard({
       </Card>
       {showSkipButton && onSkip && (
         <div className="text-center mt-4">
-          <Button 
-            variant="ghost" 
-            onClick={onSkip}
-          >
+          <Button variant="ghost" onClick={onSkip}>
             Skip for now
           </Button>
         </div>
       )}
     </>
   );
-} 
+}

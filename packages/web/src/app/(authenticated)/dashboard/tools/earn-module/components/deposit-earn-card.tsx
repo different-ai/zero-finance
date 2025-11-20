@@ -23,11 +23,22 @@ import {
 import { base, arbitrum } from 'viem/chains';
 import { useSafeRelay } from '@/hooks/use-safe-relay';
 import { useSmartWallets } from '@privy-io/react-auth/smart-wallets';
-import { USDC_ADDRESS, USDC_DECIMALS } from '@/lib/constants';
+import {
+  USDC_ADDRESS,
+  USDC_DECIMALS,
+  WETH_ADDRESS,
+  WETH_DECIMALS,
+} from '@/lib/constants';
 import {
   SUPPORTED_CHAINS,
   type SupportedChainId,
 } from '@/lib/constants/chains';
+import {
+  ALL_BASE_VAULTS,
+  USDC_ASSET,
+  type VaultAsset,
+  type BaseVault,
+} from '@/server/earn/base-vaults';
 import Safe, {
   SafeAccountConfig,
   SafeDeploymentConfig,
@@ -52,6 +63,9 @@ interface DepositEarnCardProps {
   vaultAddress: Address;
   onDepositSuccess?: () => void;
   chainId?: SupportedChainId; // Target chain for the vault
+  // Asset configuration for dynamic token support
+  asset?: VaultAsset;
+  zapper?: Address; // Zapper contract for native ETH deposits
 }
 
 // ERC4626 Vault ABI for deposits
@@ -61,6 +75,12 @@ const VAULT_ABI = parseAbi([
   'function maxDeposit(address receiver) public view returns (uint256)',
   'function asset() public view returns (address)',
   'function allowance(address owner, address spender) public view returns (uint256)',
+]);
+
+// Origin Protocol Zapper ABI for native ETH deposits
+// Use depositETHForWrappedTokens to get wsuperOETH directly
+const ZAPPER_ABI = parseAbi([
+  'function depositETHForWrappedTokens(uint256 minReceived) external payable returns (uint256)',
 ]);
 
 type TransactionStep =
@@ -104,7 +124,26 @@ export function DepositEarnCard({
   vaultAddress,
   onDepositSuccess,
   chainId = SUPPORTED_CHAINS.BASE, // Default to Base
+  asset,
+  zapper,
 }: DepositEarnCardProps) {
+  // Look up vault configuration from address if not provided via props
+  const vaultConfig = ALL_BASE_VAULTS.find(
+    (v) => v.address.toLowerCase() === vaultAddress.toLowerCase(),
+  );
+
+  // Determine asset configuration - use lookup, then props, then default to USDC
+  const resolvedAsset = asset ?? vaultConfig?.asset ?? USDC_ASSET;
+  const resolvedZapper = zapper ?? vaultConfig?.zapper;
+
+  const isNativeAsset = resolvedAsset.isNative ?? false;
+  const assetAddress = resolvedAsset.address;
+  const assetDecimals = resolvedAsset.decimals;
+  const assetSymbol = resolvedAsset.symbol;
+
+  // For ETH deposits, we deposit to the Zapper which wraps and deposits to vault
+  const depositTarget =
+    isNativeAsset && resolvedZapper ? resolvedZapper : vaultAddress;
   const { wallets } = useWallets();
   const [amount, setAmount] = useState('');
   const [depositAmount, setDepositAmount] = useState(''); // Separate state for deposit on target chain
@@ -136,8 +175,8 @@ export function DepositEarnCard({
     setTransactionState({ step: 'idle' });
   }, [vaultAddress]);
 
-  // Fetch USDC balance
-  const [usdcBalance, setUsdcBalance] = useState<bigint>(0n);
+  // Fetch asset balance (USDC or ETH)
+  const [assetBalance, setAssetBalance] = useState<bigint>(0n);
   const [isLoadingBalance, setIsLoadingBalance] = useState(true);
   const [hasInitialLoad, setHasInitialLoad] = useState(false);
 
@@ -149,17 +188,27 @@ export function DepositEarnCard({
       if (!hasInitialLoad) {
         setIsLoadingBalance(true);
       }
-      const balance = await publicClient.readContract({
-        address: USDC_ADDRESS,
-        abi: erc20Abi,
-        functionName: 'balanceOf',
-        args: [safeAddress],
-      });
-      setUsdcBalance(balance);
+
+      let balance: bigint;
+      if (isNativeAsset) {
+        // Fetch native ETH balance
+        balance = await publicClient.getBalance({
+          address: safeAddress,
+        });
+      } else {
+        // Fetch ERC20 token balance (e.g., USDC)
+        balance = await publicClient.readContract({
+          address: assetAddress as Address,
+          abi: erc20Abi,
+          functionName: 'balanceOf',
+          args: [safeAddress],
+        });
+      }
+      setAssetBalance(balance);
       setHasInitialLoad(true);
     } catch (error) {
       console.error('Error fetching balance:', error);
-      setUsdcBalance(0n);
+      setAssetBalance(0n);
       setHasInitialLoad(true);
     } finally {
       setIsLoadingBalance(false);
@@ -358,19 +407,21 @@ export function DepositEarnCard({
     return () => clearTimeout(timeoutId);
   }, [amount, isCrossChain, chainId, vaultAddress, trpcUtils]);
 
-  // Check current allowance
+  // Check current allowance (only for ERC20 tokens, not native ETH)
   const {
     data: allowanceData,
     refetch: refetchAllowance,
     isLoading: isLoadingAllowance,
   } = trpc.earn.checkAllowance.useQuery(
     {
-      tokenAddress: USDC_ADDRESS,
+      tokenAddress: assetAddress,
       ownerAddress: safeAddress,
       spenderAddress: vaultAddress,
     },
     {
-      enabled: !!safeAddress && !!vaultAddress && !isCrossChain, // Only check allowance on Base for same-chain
+      // Only check allowance on Base for same-chain ERC20 tokens (not native ETH)
+      enabled:
+        !!safeAddress && !!vaultAddress && !isCrossChain && !isNativeAsset,
       refetchInterval: 30000, // Reduced from 10s to 30s
       staleTime: 20000, // Consider data fresh for 20s
     },
@@ -394,21 +445,25 @@ export function DepositEarnCard({
   const handleSameChainDeposit = async () => {
     if (!amount || !isRelayReady) return;
 
-    const amountInSmallestUnit = parseUnits(amount, USDC_DECIMALS);
+    const amountInSmallestUnit = parseUnits(amount, assetDecimals);
     const currentAllowance = allowanceData
       ? BigInt(allowanceData.allowance)
       : 0n;
-    const needsApproval = amountInSmallestUnit > currentAllowance;
+    // Native ETH deposits don't need approval
+    const needsApprovalForTx =
+      !isNativeAsset && amountInSmallestUnit > currentAllowance;
 
     console.log('[DepositEarnCard] Starting deposit flow:', {
       vault: vaultAddress,
       amount: amount,
       amountInSmallestUnit: amountInSmallestUnit.toString(),
       currentAllowance: currentAllowance.toString(),
-      needsApproval,
+      needsApproval: needsApprovalForTx,
       isRelayReady,
       isCrossChain,
       targetChainId: chainId,
+      isNativeAsset,
+      zapper,
     });
 
     try {
@@ -416,20 +471,87 @@ export function DepositEarnCard({
       setTransactionState({ step: 'checking' });
 
       // Check balance
-      if (amountInSmallestUnit > usdcBalance) {
+      if (amountInSmallestUnit > assetBalance) {
         throw new Error(
-          `Insufficient balance. You have ${formatUnits(usdcBalance, USDC_DECIMALS)} USDC`,
+          `Insufficient balance. You have ${formatUnits(assetBalance, assetDecimals)} ${assetSymbol}`,
         );
       }
 
+      // --- ETH DEPOSIT VIA ZAPPER ---
+      if (isNativeAsset && resolvedZapper) {
+        console.log('[DepositEarnCard] Using Zapper for native ETH deposit');
+
+        setTransactionState((prev) => ({ ...prev, step: 'depositing' }));
+
+        // Encode Zapper deposit call - use depositETHForWrappedTokens to get wsuperOETH
+        // Set minReceived to 0 for now (could add slippage protection later)
+        const zapperData = encodeFunctionData({
+          abi: ZAPPER_ABI,
+          functionName: 'depositETHForWrappedTokens',
+          args: [0n], // minReceived - set to 0 for no slippage protection
+        });
+
+        // Gas limit for Zapper (ETH wrapping + vault deposit + ERC4626 wrap)
+        const gasLimit = 600_000n;
+
+        console.log(
+          '[DepositEarnCard] Executing Zapper deposit for wsuperOETH:',
+          {
+            zapper: resolvedZapper,
+            value: amountInSmallestUnit.toString(),
+            safeAddress,
+          },
+        );
+
+        const depositTxHash = await sendTxViaRelay(
+          [
+            {
+              to: resolvedZapper,
+              value: amountInSmallestUnit.toString(),
+              data: zapperData,
+            },
+          ],
+          gasLimit,
+        );
+
+        if (!depositTxHash) throw new Error('Deposit transaction failed');
+
+        setTransactionState({
+          step: 'waiting-deposit',
+          txHash: depositTxHash,
+        });
+
+        // Wait for deposit to be mined
+        await new Promise((resolve) => setTimeout(resolve, 7000));
+
+        // Success!
+        setTransactionState({
+          step: 'success',
+          txHash: depositTxHash,
+          depositedAmount: amount,
+        });
+
+        // Reset form and refetch data
+        setAmount('');
+        await fetchBalance();
+
+        if (onDepositSuccess) {
+          onDepositSuccess();
+        }
+        return;
+      }
+
+      // --- STANDARD ERC20 DEPOSIT (USDC) ---
+
       // Step 2: Approve if needed
-      if (needsApproval) {
+      if (needsApprovalForTx) {
         setTransactionState((prev) => ({ ...prev, step: 'approving' }));
 
         console.log(
           'Approving',
-          formatUnits(amountInSmallestUnit, USDC_DECIMALS),
-          'USDC for vault:',
+          formatUnits(amountInSmallestUnit, assetDecimals),
+          assetSymbol,
+          'for vault:',
           vaultAddress,
         );
 
@@ -442,7 +564,7 @@ export function DepositEarnCard({
         const approvalTxHash = await sendTxViaRelay(
           [
             {
-              to: USDC_ADDRESS,
+              to: assetAddress as Address,
               value: '0',
               data: approveData,
             },
@@ -463,7 +585,7 @@ export function DepositEarnCard({
 
         // Verify the approval was successful
         const newAllowance = await publicClient.readContract({
-          address: USDC_ADDRESS,
+          address: assetAddress as Address,
           abi: erc20Abi,
           functionName: 'allowance',
           args: [safeAddress, vaultAddress],
@@ -489,7 +611,7 @@ export function DepositEarnCard({
         args: [],
       });
 
-      if (vaultAsset.toLowerCase() !== USDC_ADDRESS.toLowerCase()) {
+      if (vaultAsset.toLowerCase() !== assetAddress.toLowerCase()) {
         throw new Error('Invalid vault asset configuration');
       }
 
@@ -506,7 +628,7 @@ export function DepositEarnCard({
 
       if (amountInSmallestUnit > maxDepositLimit) {
         throw new Error(
-          `Deposit amount exceeds vault limit. Maximum allowed: ${formatUnits(maxDepositLimit, USDC_DECIMALS)} USDC`,
+          `Deposit amount exceeds vault limit. Maximum allowed: ${formatUnits(maxDepositLimit, assetDecimals)} ${assetSymbol}`,
         );
       }
 
@@ -784,8 +906,9 @@ export function DepositEarnCard({
         const ethereumProvider = await wallet.getEthereumProvider();
 
         // Initialize Safe SDK with EIP-1193 provider and EOA as signer
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const protocolKit = await Safe.init({
-          provider: ethereumProvider,
+          provider: ethereumProvider as any,
           signer: eoaAddress,
           safeAddress: targetSafe,
         });
@@ -1027,7 +1150,7 @@ export function DepositEarnCard({
     }
   };
   const handleMax = () => {
-    const maxAmount = formatUnits(usdcBalance, USDC_DECIMALS);
+    const maxAmount = formatUnits(assetBalance, assetDecimals);
     setAmount(maxAmount);
   };
 
@@ -1044,7 +1167,7 @@ export function DepositEarnCard({
   const showSkeleton = isLoadingBalance && !hasInitialLoad;
 
   const currentAllowance = allowanceData ? BigInt(allowanceData.allowance) : 0n;
-  const availableBalance = formatUnits(usdcBalance, USDC_DECIMALS);
+  const availableBalance = formatUnits(assetBalance, assetDecimals);
   const displayBalance = parseFloat(availableBalance).toLocaleString(
     undefined,
     {
@@ -1072,9 +1195,10 @@ export function DepositEarnCard({
     );
   }
 
-  // Check if we need approval (Component Scope)
-  const amountInSmallestUnit = amount ? parseUnits(amount, USDC_DECIMALS) : 0n;
-  const needsApproval = amountInSmallestUnit > currentAllowance;
+  // Check if we need approval (Component Scope) - Native assets don't need approval
+  const amountInSmallestUnit = amount ? parseUnits(amount, assetDecimals) : 0n;
+  const needsApproval =
+    !isNativeAsset && amountInSmallestUnit > currentAllowance;
 
   // Calculate progress
   const getProgress = () => {
@@ -1231,7 +1355,8 @@ export function DepositEarnCard({
             to: deploymentTransaction.to as Address,
             value: BigInt(deploymentTransaction.value || '0'),
             data: deploymentTransaction.data as `0x${string}`,
-            chain: arbitrum,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            chain: arbitrum as any,
           },
           {
             uiOptions: {
@@ -1397,13 +1522,6 @@ export function DepositEarnCard({
           </div>
 
           <div className="space-y-2">
-            {transactionState.step === 'checking' && (
-              <div className="flex items-center gap-2 text-[12px] text-[#101010]/60">
-                <Clock className="h-3 w-3" />
-                Checking requirements...
-              </div>
-            )}
-
             {(transactionState.step === 'approving' ||
               transactionState.step === 'waiting-approval') && (
               <div className="space-y-2">
@@ -1533,6 +1651,7 @@ export function DepositEarnCard({
   }
 
   // Bridge waiting for arrival state
+  // @ts-expect-error - Type narrowing issue with complex state machine
   if (transactionState.step === 'waiting-arrival') {
     return (
       <div className="space-y-4">
@@ -1605,6 +1724,7 @@ export function DepositEarnCard({
   // If we are cross-chain but don't have the target safe address yet,
   // and we are NOT in the "needs-deployment" flow (which handles its own UI),
   // show a skeleton to prevent flashing the default view.
+  // @ts-expect-error - Type narrowing issue with complex state machine
   if (
     isCrossChain &&
     (!targetSafeAddress || isLoadingPositions) &&
@@ -1759,7 +1879,8 @@ export function DepositEarnCard({
               Available Balance
             </p>
             <p className="text-[24px] font-medium tabular-nums text-[#101010]">
-              ${displayBalance}
+              {isNativeAsset ? '' : '$'}
+              {displayBalance} {isNativeAsset ? 'ETH' : ''}
             </p>
           </div>
           {currentAllowance > 0n && (
@@ -1794,23 +1915,25 @@ export function DepositEarnCard({
             step="0.000001"
             min="0"
             max={availableBalance}
-            disabled={usdcBalance === 0n}
+            disabled={assetBalance === 0n}
           />
           <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
-            <span className="text-[11px] text-[#101010]/50">USD</span>
+            <span className="text-[11px] text-[#101010]/50">
+              {isNativeAsset ? 'ETH' : 'USD'}
+            </span>
             <button
               type="button"
               onClick={handleMax}
               className="px-1.5 py-0.5 text-[10px] text-[#1B29FF] hover:text-[#1420CC] transition-colors"
-              disabled={usdcBalance === 0n}
+              disabled={assetBalance === 0n}
             >
               MAX
             </button>
           </div>
         </div>
-        {needsApproval && amount && (
+        {needsApproval && amount && !isNativeAsset && (
           <p className="text-[11px] text-[#101010]/50">
-            Will require approval for ${amount}
+            Will require approval for {amount} {assetSymbol}
           </p>
         )}
       </div>
@@ -1823,7 +1946,7 @@ export function DepositEarnCard({
           parseFloat(amount) <= 0 ||
           parseFloat(amount) > parseFloat(availableBalance) ||
           !isRelayReady ||
-          usdcBalance === 0n ||
+          assetBalance === 0n ||
           transactionState.step === 'checking'
         }
         className="w-full px-4 py-2.5 text-[14px] font-medium text-white bg-[#1B29FF] hover:bg-[#1420CC] disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
@@ -1833,17 +1956,22 @@ export function DepositEarnCard({
         ) : (
           <ArrowDownToLine className="h-4 w-4" />
         )}
-        {needsApproval ? 'Approve & Deposit' : 'Deposit'}
+        {isNativeAsset
+          ? 'Deposit'
+          : needsApproval
+            ? 'Approve & Deposit'
+            : 'Deposit'}
       </button>
 
       {/* No balance warning */}
-      {usdcBalance === 0n && (
+      {assetBalance === 0n && (
         <div className="bg-[#FFF8E6] border border-[#FFA500]/20 p-3">
           <div className="flex gap-2 items-start">
             <AlertCircle className="h-4 w-4 text-[#FFA500] flex-shrink-0 mt-0.5" />
             <p className="text-[12px] text-[#101010]/70">
-              No balance available to deposit. Wire funds to your account to get
-              started.
+              {isNativeAsset
+                ? 'No ETH balance available to deposit.'
+                : 'No balance available to deposit. Wire funds to your account to get started.'}
             </p>
           </div>
         </div>
@@ -1851,9 +1979,11 @@ export function DepositEarnCard({
 
       {/* Help text */}
       <p className="text-[11px] text-[#101010]/50 text-center">
-        {needsApproval
-          ? 'This will approve and deposit in a single transaction flow'
-          : 'Your deposit will start earning yield immediately'}
+        {isNativeAsset
+          ? ''
+          : needsApproval
+            ? 'This will approve and deposit in a single transaction flow'
+            : 'Your deposit will start earning yield immediately'}
       </p>
     </div>
   );

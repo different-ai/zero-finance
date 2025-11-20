@@ -26,7 +26,7 @@ export function AnimatedTotalEarnedV2({
   className = '',
 }: AnimatedTotalEarnedV2Props) {
   const [displayValue, setDisplayValue] = useState<number | null>(null);
-  const animationFrameRef = useRef<number>();
+  const animationFrameRef = useRef<number | undefined>(undefined);
   const startTimeRef = useRef<number>(0);
   const initialValueRef = useRef<number>(0);
   const earningsPerSecondRef = useRef<number>(0);
@@ -37,7 +37,7 @@ export function AnimatedTotalEarnedV2({
     {
       enabled: !!safeAddress,
       staleTime: 5 * 60 * 1000, // keep data warm for five minutes
-      cacheTime: 10 * 60 * 1000,
+      gcTime: 10 * 60 * 1000,
       refetchInterval: false,
     },
   );

@@ -68,7 +68,8 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 async function waitUntilDeployed(addr: Address) {
   const publicClient = createPublicClient({
-    chain: base,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          chain: base as any,
     transport: http(process.env.NEXT_PUBLIC_BASE_RPC_URL as string),
   });
 
@@ -204,7 +205,8 @@ export function usePrimaryAccountSetup() {
           to: deploymentTransaction.to as Address,
           value: BigInt(deploymentTransaction.value || '0'),
           data: deploymentTransaction.data as `0x${string}`,
-          chain: base,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          chain: base as any,
         },
         {
           uiOptions: {

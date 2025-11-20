@@ -76,12 +76,6 @@ async function checkIsUserAdmin(privyDid: string): Promise<boolean> {
   const normalizedId = privyDid.trim();
   console.log(`Admin check: Checking privileges for '${normalizedId}'`);
 
-  // Hardcoded whitelist for troubleshooting (user reported access issue)
-  if (normalizedId === 'did:privy:cmfzy4jse000pjx0clx16p972') {
-    console.log('Admin check: User allowed via whitelist');
-    return true;
-  }
-
   try {
     const admin = await db.query.admins.findFirst({
       where: eq(admins.privyDid, normalizedId),
@@ -96,7 +90,6 @@ async function checkIsUserAdmin(privyDid: string): Promise<boolean> {
     return false;
   } catch (error) {
     console.error('Admin check: Database error:', error);
-    // Fallback: assume false on error
     return false;
   }
 }

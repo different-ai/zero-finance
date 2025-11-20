@@ -33,6 +33,18 @@ export type BaseVault = {
   address: string;
   appUrl?: string;
   chainId?: SupportedChainId;
+  asset?: {
+    symbol: string;
+    decimals: number;
+    isNative?: boolean;
+  };
+  category?: 'stable' | 'growth';
+};
+
+export type VaultAssetInfo = {
+  symbol: string;
+  decimals: number;
+  isNative: boolean;
 };
 
 export type VaultViewModel = {
@@ -55,6 +67,12 @@ export type VaultViewModel = {
   isInsured: boolean;
   isContactOnly: boolean;
   chainId: SupportedChainId;
+  // Asset information
+  asset: VaultAssetInfo;
+  category: 'stable' | 'growth';
+  // Native asset amounts (for ETH vaults)
+  balanceNative?: number;
+  earnedNative?: number;
 };
 
 export function toNumberOrFallback(
@@ -179,6 +197,34 @@ export function calculateVaultViewModels(
       earnedUsd = 0;
     }
 
+    // Determine asset info
+    const assetInfo: VaultAssetInfo = v.asset
+      ? {
+          symbol: v.asset.symbol,
+          decimals: v.asset.decimals,
+          isNative: v.asset.isNative || false,
+        }
+      : {
+          symbol: 'USDC',
+          decimals: 6,
+          isNative: false,
+        };
+
+    const category = v.category || 'stable';
+
+    // Calculate native amounts for ETH vaults
+    // For ETH vaults, we need to convert USD back to ETH using approximate price
+    // This is a rough estimate - the actual conversion should use the real-time price
+    const ethPrice = 3000; // TODO: Use actual ETH price from context
+    const balanceNative =
+      assetInfo.symbol === 'WETH' || assetInfo.symbol === 'ETH'
+        ? balanceUsd / ethPrice
+        : undefined;
+    const earnedNative =
+      assetInfo.symbol === 'WETH' || assetInfo.symbol === 'ETH'
+        ? earnedUsd / ethPrice
+        : undefined;
+
     return {
       id: v.id,
       name: v.name,
@@ -201,6 +247,10 @@ export function calculateVaultViewModels(
         (userIsInsured && v.id === 'morphoGauntlet'),
       isContactOnly: false,
       chainId: vaultChainId,
+      asset: assetInfo,
+      category,
+      balanceNative,
+      earnedNative,
     };
   });
 }
@@ -210,15 +260,15 @@ export function calculateVaultViewModels(
  */
 export function calculateTotalSavedByChain(
   vaults: VaultViewModel[],
-): Record<SupportedChainId, number> {
-  const result: Record<SupportedChainId, number> = {
+): Partial<Record<SupportedChainId, number>> {
+  const result: Partial<Record<SupportedChainId, number>> = {
     [SUPPORTED_CHAINS.BASE]: 0,
     [SUPPORTED_CHAINS.ARBITRUM]: 0,
   };
 
   vaults.forEach((v) => {
     if (result[v.chainId] !== undefined) {
-      result[v.chainId] += v.balanceUsd;
+      result[v.chainId] = (result[v.chainId] || 0) + v.balanceUsd;
     }
   });
 
@@ -230,15 +280,15 @@ export function calculateTotalSavedByChain(
  */
 export function calculateTotalEarnedByChain(
   vaults: VaultViewModel[],
-): Record<SupportedChainId, number> {
-  const result: Record<SupportedChainId, number> = {
+): Partial<Record<SupportedChainId, number>> {
+  const result: Partial<Record<SupportedChainId, number>> = {
     [SUPPORTED_CHAINS.BASE]: 0,
     [SUPPORTED_CHAINS.ARBITRUM]: 0,
   };
 
   vaults.forEach((v) => {
     if (result[v.chainId] !== undefined) {
-      result[v.chainId] += v.earnedUsd;
+      result[v.chainId] = (result[v.chainId] || 0) + v.earnedUsd;
     }
   });
 

@@ -102,7 +102,8 @@ export function useAutoSafeCreation() {
             to: deploymentTransaction.to as Address,
             value: BigInt(deploymentTransaction.value || '0'),
             data: deploymentTransaction.data as `0x${string}`,
-            chain: base,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            chain: base as any,
           },
           {
             uiOptions: {
@@ -151,7 +152,8 @@ export function useAutoSafeCreation() {
 // Helper function to wait until Safe is deployed
 async function waitUntilDeployed(addr: Address) {
   const publicClient = createPublicClient({
-    chain: base,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            chain: base as any,
     transport: http(process.env.NEXT_PUBLIC_BASE_RPC_URL as string),
   });
   

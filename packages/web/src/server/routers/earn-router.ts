@@ -14,6 +14,7 @@ import { USDC_ADDRESS } from '@/lib/constants';
 import { getBaseRpcUrl } from '@/lib/base-rpc-url';
 import {
   BASE_USDC_VAULTS,
+  ALL_BASE_VAULTS,
   BASE_CHAIN_ID,
   ETHEREUM_CHAIN_ID,
 } from '../earn/base-vaults';
@@ -113,13 +114,19 @@ let ethereumPublicClient: ReturnType<typeof createPublicClient> | null = null;
 const toLowerAddress = (value: string) => value.toLowerCase();
 
 function getVaultConfig(vaultAddress: string) {
-  // First check cross-chain vaults (includes Base + Arbitrum)
+  // First check all Base vaults (USDC + ETH)
+  const baseVault = ALL_BASE_VAULTS.find(
+    (vault) => toLowerAddress(vault.address) === toLowerAddress(vaultAddress),
+  );
+  if (baseVault) return baseVault;
+
+  // Then check cross-chain vaults (includes Base + Arbitrum)
   const crossChainVault = ALL_CROSS_CHAIN_VAULTS.find(
     (vault) => toLowerAddress(vault.address) === toLowerAddress(vaultAddress),
   );
   if (crossChainVault) return crossChainVault;
 
-  // Fall back to Base vaults for backwards compatibility
+  // Fall back to legacy Base USDC vaults for backwards compatibility
   return BASE_USDC_VAULTS.find(
     (vault) => toLowerAddress(vault.address) === toLowerAddress(vaultAddress),
   );
@@ -127,6 +134,56 @@ function getVaultConfig(vaultAddress: string) {
 
 function getChainIdForVault(vaultAddress: string) {
   return getVaultConfig(vaultAddress)?.chainId ?? BASE_CHAIN_ID;
+}
+
+// Helper to get asset config from vault (handles type differences)
+function getVaultAssetConfig(vaultAddress: string): {
+  decimals: number;
+  isNative: boolean;
+} {
+  const vaultConfig = getVaultConfig(vaultAddress);
+  if (vaultConfig && 'asset' in vaultConfig) {
+    const asset = (
+      vaultConfig as { asset?: { decimals?: number; isNative?: boolean } }
+    ).asset;
+    return {
+      decimals: asset?.decimals ?? 6,
+      isNative: asset?.isNative ?? false,
+    };
+  }
+  return { decimals: 6, isNative: false };
+}
+
+// Cached ETH price (refreshes every 5 minutes)
+let cachedEthPrice: { price: number; timestamp: number } | null = null;
+const ETH_PRICE_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+async function getEthPriceUsd(): Promise<number> {
+  const now = Date.now();
+
+  // Return cached price if still valid
+  if (cachedEthPrice && now - cachedEthPrice.timestamp < ETH_PRICE_CACHE_TTL) {
+    return cachedEthPrice.price;
+  }
+
+  try {
+    // Use CoinGecko simple price API
+    const response = await fetch(
+      'https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd',
+    );
+
+    if (response.ok) {
+      const data = await response.json();
+      const price = data.ethereum?.usd ?? 3000;
+      cachedEthPrice = { price, timestamp: now };
+      return price;
+    }
+  } catch (e) {
+    console.warn('Failed to fetch ETH price from CoinGecko:', e);
+  }
+
+  // Fallback to cached price or default
+  return cachedEthPrice?.price ?? 3000;
 }
 
 // Arbitrum public client singleton
@@ -1855,58 +1912,88 @@ export const earnRouter = router({
       // Fetch stats for each vault
       const statsPromises = vaultAddresses.map(async (vaultAddress) => {
         try {
-          const chainId = getChainIdForVault(vaultAddress);
+          const vaultConfig = getVaultConfig(vaultAddress);
+          const chainId = vaultConfig?.chainId ?? BASE_CHAIN_ID;
           const client = getPublicClientForChain(chainId);
 
-          // Try to get APY from Morpho GraphQL
+          // Try to get APY based on vault type
           let apy = 0;
           let netApy = 0;
           let monthlyApy = 0;
           let monthlyNetApy = 0;
           let weeklyNetApy = 0;
 
-          try {
-            const response = await fetch(
-              'https://blue-api.morpho.org/graphql',
-              {
-                method: 'POST',
-                headers: { 'content-type': 'application/json' },
-                body: JSON.stringify({
-                  query: `
-                  query ($address: String!, $chainId: Int!) {
-                    vaultByAddress(address: $address, chainId: $chainId) {
-                      address
-                      state {
-                        apy
-                        netApy
-                        monthlyApy
-                        monthlyNetApy
-                        weeklyNetApy
-                      }
-                    }
-                  }`,
-                  variables: {
-                    address: vaultAddress.toLowerCase(),
-                    chainId,
-                  },
-                }),
-              },
-            );
+          // Check if this is an Origin Protocol vault
+          const isOriginVault = vaultConfig?.id === 'originSuperOeth';
 
-            if (response.ok) {
-              const result = await response.json();
-              if (result.data?.vaultByAddress?.state) {
-                apy = result.data.vaultByAddress.state.apy || 0;
-                netApy = result.data.vaultByAddress.state.netApy || 0;
-                monthlyApy = result.data.vaultByAddress.state.monthlyApy || 0;
-                monthlyNetApy =
-                  result.data.vaultByAddress.state.monthlyNetApy || 0;
-                weeklyNetApy =
-                  result.data.vaultByAddress.state.weeklyNetApy || 0;
+          if (isOriginVault) {
+            // Fetch APY from Origin Protocol API
+            try {
+              const response = await fetch(
+                `https://api.originprotocol.com/api/v2/superoethb/apr/trailing/7?chainId=${chainId}`,
+              );
+
+              if (response.ok) {
+                const result = await response.json();
+                // Origin API returns APY as a string like "8.43"
+                const apyValue = parseFloat(result.apy || '0');
+                apy = apyValue / 100; // Convert to decimal (e.g., 8.43% -> 0.0843)
+                netApy = apy;
+                monthlyApy = apy;
+                monthlyNetApy = apy;
+                weeklyNetApy = apy;
               }
+            } catch (e) {
+              console.warn(
+                `Failed to fetch APY for Origin vault ${vaultAddress}:`,
+                e,
+              );
             }
-          } catch (e) {
-            console.warn(`Failed to fetch APY for vault ${vaultAddress}:`, e);
+          } else {
+            // Fetch APY from Morpho GraphQL for other vaults
+            try {
+              const response = await fetch(
+                'https://blue-api.morpho.org/graphql',
+                {
+                  method: 'POST',
+                  headers: { 'content-type': 'application/json' },
+                  body: JSON.stringify({
+                    query: `
+                    query ($address: String!, $chainId: Int!) {
+                      vaultByAddress(address: $address, chainId: $chainId) {
+                        address
+                        state {
+                          apy
+                          netApy
+                          monthlyApy
+                          monthlyNetApy
+                          weeklyNetApy
+                        }
+                      }
+                    }`,
+                    variables: {
+                      address: vaultAddress.toLowerCase(),
+                      chainId,
+                    },
+                  }),
+                },
+              );
+
+              if (response.ok) {
+                const result = await response.json();
+                if (result.data?.vaultByAddress?.state) {
+                  apy = result.data.vaultByAddress.state.apy || 0;
+                  netApy = result.data.vaultByAddress.state.netApy || 0;
+                  monthlyApy = result.data.vaultByAddress.state.monthlyApy || 0;
+                  monthlyNetApy =
+                    result.data.vaultByAddress.state.monthlyNetApy || 0;
+                  weeklyNetApy =
+                    result.data.vaultByAddress.state.weeklyNetApy || 0;
+                }
+              }
+            } catch (e) {
+              console.warn(`Failed to fetch APY for vault ${vaultAddress}:`, e);
+            }
           }
 
           // Get deposits for this vault
@@ -2075,6 +2162,8 @@ export const earnRouter = router({
         vaultAddresses.map(async (vaultAddress) => {
           const chainId = getChainIdForVault(vaultAddress);
           const client = getPublicClientForChain(chainId);
+          const { decimals: assetDecimals, isNative: isNativeAsset } =
+            getVaultAssetConfig(vaultAddress);
 
           // Get the Safe address for this vault's chain
           const safeAddress = safesByChain.get(chainId);
@@ -2111,8 +2200,17 @@ export const earnRouter = router({
                 args: [shares],
               });
 
-              // Convert to USD (USDC has 6 decimals)
-              const assetsUsd = Number(assets) / 1e6;
+              // Convert to USD based on asset type
+              let assetsUsd: number;
+              if (isNativeAsset) {
+                // For ETH-based vaults, convert ETH to USD
+                const ethPrice = await getEthPriceUsd();
+                const assetsEth = Number(assets) / Math.pow(10, assetDecimals);
+                assetsUsd = assetsEth * ethPrice;
+              } else {
+                // For stablecoins, assets = USD value
+                assetsUsd = Number(assets) / Math.pow(10, assetDecimals);
+              }
 
               return {
                 vaultAddress,
@@ -2333,7 +2431,7 @@ export const earnRouter = router({
         amount: z.string(),
         sourceChainId: z.number(),
         destChainId: z.number(),
-        vaultAddress: z.string().length(42),
+        vaultAddress: z.string().length(42).optional(),
       }),
     )
     .query(async ({ input }) => {
@@ -2341,7 +2439,7 @@ export const earnRouter = router({
         amount: input.amount,
         sourceChainId: input.sourceChainId as SupportedChainId,
         destChainId: input.destChainId as SupportedChainId,
-        vaultAddress: input.vaultAddress as Address,
+        vaultAddress: input.vaultAddress as Address | undefined,
         destinationSafeAddress:
           '0x0000000000000000000000000000000000000000' as Address, // Placeholder
       });
@@ -2604,6 +2702,30 @@ export const earnRouter = router({
       return {
         balance: balance?.raw.toString() || '0',
         formatted: balance?.formatted || '0',
+      };
+    }),
+
+  /**
+   * Get native ETH balance for a Safe on a specific chain
+   */
+  getNativeBalance: protectedProcedure
+    .input(
+      z.object({
+        safeAddress: z.string().length(42),
+        chainId: z.number(),
+      }),
+    )
+    .query(async ({ input }) => {
+      const rpcManager = getRPCManager();
+      const client = rpcManager.getClient(input.chainId as SupportedChainId);
+
+      const balance = await client.getBalance({
+        address: input.safeAddress as Address,
+      });
+
+      return {
+        balance: balance.toString(),
+        formatted: (Number(balance) / 1e18).toFixed(6),
       };
     }),
 
