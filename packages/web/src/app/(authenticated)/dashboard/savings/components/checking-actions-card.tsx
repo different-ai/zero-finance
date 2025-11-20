@@ -561,7 +561,7 @@ export function CheckingActionsCard({
               className={cn(
                 'flex-1 min-w-[120px] inline-flex items-center justify-center gap-2 transition-all duration-200',
                 isTechnical
-                  ? 'border border-[#1B29FF] text-[#1B29FF] font-mono px-4 py-2 rounded-sm hover:bg-[#1B29FF]/5 text-[13px]'
+                  ? 'border-2 border-[#1B29FF] bg-white text-[#1B29FF] font-mono px-4 py-2.5 rounded-sm hover:bg-[#1B29FF] hover:text-white text-[13px] font-medium'
                   : 'px-5 py-3 text-[15px] font-semibold text-white bg-[#1B29FF] hover:bg-[#1420CC]',
               )}
               disabled={
@@ -572,7 +572,7 @@ export function CheckingActionsCard({
               }
             >
               <ArrowRightCircle className="h-5 w-5" />
-              {isTechnical ? 'WITHDRAW' : 'Withdraw'}
+              {isTechnical ? '[ WITHDRAW ]' : 'Withdraw'}
             </Button>
           </DialogTrigger>
           <DialogContent
@@ -594,7 +594,7 @@ export function CheckingActionsCard({
                 className={cn(
                   'flex-1 min-w-[120px] inline-flex items-center justify-center gap-2 transition-all duration-200',
                   isTechnical
-                    ? 'text-[#1B29FF]/70 font-mono underline underline-offset-2 hover:text-[#1B29FF] text-[13px] border-none'
+                    ? 'border border-[#1B29FF]/40 bg-white text-[#1B29FF] font-mono px-4 py-2.5 rounded-sm hover:border-[#1B29FF] hover:bg-[#1B29FF]/5 text-[13px]'
                     : 'px-5 py-3 text-[15px] font-semibold text-[#101010] border border-[#101010]/10 hover:border-[#1B29FF]/20 hover:text-[#1B29FF] hover:bg-[#F7F7F2]',
                 )}
                 disabled={!hasAnyBalance}
@@ -643,17 +643,17 @@ export function CheckingActionsCard({
               className={cn(
                 'flex-1 min-w-[120px] inline-flex items-center justify-center gap-2 transition-all duration-200',
                 isTechnical
-                  ? 'text-[#1B29FF]/70 font-mono underline underline-offset-2 hover:text-[#1B29FF] text-[13px] border-none'
+                  ? 'border border-[#1B29FF]/40 bg-white text-[#1B29FF] font-mono px-4 py-2.5 rounded-sm hover:border-[#1B29FF] hover:bg-[#1B29FF]/5 text-[13px]'
                   : 'px-5 py-3 text-[15px] font-semibold text-[#101010] border border-[#101010]/10 hover:border-[#1B29FF]/20 hover:text-[#1B29FF] hover:bg-[#F7F7F2]',
               )}
             >
               <Info
                 className={cn(
                   'h-5 w-5',
-                  isTechnical ? 'text-[#1B29FF]/60' : 'text-[#101010]/60',
+                  isTechnical ? 'text-[#1B29FF]' : 'text-[#101010]/60',
                 )}
               />
-              {isTechnical ? 'CONTRACTS' : 'Account Info'}
+              {isTechnical ? 'ACCOUNTS' : 'Account Info'}
             </Button>
           </DialogTrigger>
           <DialogContent className="bg-white border-[#101010]/10 max-w-3xl max-h-[90vh] overflow-y-auto">

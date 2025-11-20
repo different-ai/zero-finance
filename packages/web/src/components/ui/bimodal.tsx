@@ -272,16 +272,22 @@ export const BimodalButton = ({
 interface BimodalContextValue {
   isTechnical: boolean;
   setIsTechnical: (value: boolean) => void;
+  toggle: () => void;
+  isHydrated: boolean;
 }
 
 export const BimodalContext = React.createContext<BimodalContextValue>({
   isTechnical: false,
   setIsTechnical: () => {},
+  toggle: () => {},
+  isHydrated: false,
 });
 
 export const useBimodal = () => React.useContext(BimodalContext);
 
-// Provider component
+// Provider component with localStorage persistence
+const BIMODAL_STORAGE_KEY = 'zero-finance-bimodal-mode';
+
 export const BimodalProvider = ({
   children,
   defaultTechnical = false,
@@ -289,10 +295,41 @@ export const BimodalProvider = ({
   children: React.ReactNode;
   defaultTechnical?: boolean;
 }) => {
-  const [isTechnical, setIsTechnical] = React.useState(defaultTechnical);
+  const [isTechnical, setIsTechnicalState] = React.useState(defaultTechnical);
+  const [isHydrated, setIsHydrated] = React.useState(false);
+
+  // Load from localStorage on mount
+  React.useEffect(() => {
+    try {
+      const stored = localStorage.getItem(BIMODAL_STORAGE_KEY);
+      if (stored !== null) {
+        setIsTechnicalState(stored === 'true');
+      }
+    } catch (e) {
+      // localStorage not available
+    }
+    setIsHydrated(true);
+  }, []);
+
+  // Persist to localStorage when changed
+  const setIsTechnical = React.useCallback((value: boolean) => {
+    setIsTechnicalState(value);
+    try {
+      localStorage.setItem(BIMODAL_STORAGE_KEY, String(value));
+    } catch (e) {
+      // localStorage not available
+    }
+  }, []);
+
+  // Toggle function for convenience
+  const toggle = React.useCallback(() => {
+    setIsTechnical(!isTechnical);
+  }, [isTechnical, setIsTechnical]);
 
   return (
-    <BimodalContext.Provider value={{ isTechnical, setIsTechnical }}>
+    <BimodalContext.Provider
+      value={{ isTechnical, setIsTechnical, toggle, isHydrated }}
+    >
       {children}
     </BimodalContext.Provider>
   );

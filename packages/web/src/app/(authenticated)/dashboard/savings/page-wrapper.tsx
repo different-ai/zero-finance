@@ -957,14 +957,12 @@ export default function SavingsPageWrapper({
                                     : vault.asset.symbol}
                               </span>
                             </div>
-                            {/* Progressive Disclosure: Technical shows protocol/contract, Banking shows simple description */}
+                            {/* Progressive Disclosure: Technical shows protocol/curator, Banking shows simple description */}
                             {isTechnical ? (
                               <div className="mt-1">
-                                <div className="flex items-center gap-2 text-[11px] font-mono text-[#101010]/70">
-                                  <span>PROT: {vault.name.split(' ')[0]}</span>
-                                  <span className="text-[#1B29FF]/30">|</span>
-                                  <span>RISK: {vault.curator}</span>
-                                </div>
+                                <p className="text-[11px] font-mono text-[#101010]/70">
+                                  {vault.curator}
+                                </p>
                               </div>
                             ) : (
                               <p className="text-[12px] text-[#101010]/60 truncate mt-1">
@@ -1320,7 +1318,6 @@ export default function SavingsPageWrapper({
                             </div>
                             {isTechnical ? (
                               <p className="text-[11px] font-mono text-[#101010]/70">
-                                PROT: {vault.name.split(' ')[0]} | RISK:{' '}
                                 {vault.curator}
                               </p>
                             ) : (
