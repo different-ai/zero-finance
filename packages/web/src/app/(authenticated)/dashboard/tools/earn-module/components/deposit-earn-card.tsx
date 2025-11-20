@@ -216,13 +216,14 @@ export function DepositEarnCard({
   };
 
   // Fetch balance on mount and after transactions
+  // Also refetch when asset type changes (e.g., switching from USDC vault to ETH vault)
   useEffect(() => {
     fetchBalance();
     const interval = setInterval(fetchBalance, 30000); // Poll every 30 seconds instead of 10
     return () => {
       clearInterval(interval);
     };
-  }, [safeAddress]);
+  }, [safeAddress, isNativeAsset, assetAddress]);
 
   // tRPC utils for refetching
   const trpcUtils = trpc.useUtils();
