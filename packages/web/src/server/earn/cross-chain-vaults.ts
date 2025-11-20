@@ -9,7 +9,11 @@ import {
   type SupportedChainId,
 } from '@/lib/constants/chains';
 import { type CrossChainVault } from '@/lib/types/multi-chain';
-import { BASE_USDC_VAULTS, PRIMARY_VAULT } from './base-vaults';
+import {
+  BASE_USDC_VAULTS,
+  BASE_ETH_VAULTS,
+  PRIMARY_VAULT,
+} from './base-vaults';
 import { ARBITRUM_USDC_VAULTS } from './arbitrum-vaults';
 
 /**
@@ -17,6 +21,7 @@ import { ARBITRUM_USDC_VAULTS } from './arbitrum-vaults';
  */
 export const ALL_CROSS_CHAIN_VAULTS: CrossChainVault[] = [
   ...(BASE_USDC_VAULTS as CrossChainVault[]),
+  ...(BASE_ETH_VAULTS as CrossChainVault[]),
   ...ARBITRUM_USDC_VAULTS,
 ];
 
