@@ -563,7 +563,14 @@ export default function SavingsPageWrapper({
             </div>
           </div>
         ) : (
-          <div className="relative overflow-hidden bg-white border border-[#1B29FF]/20 rounded-[16px] p-6 shadow-[0_2px_12px_rgba(27,41,255,0.08)]">
+          <div
+            className={cn(
+              'relative overflow-hidden bg-white border rounded-[16px] shadow-[0_2px_12px_rgba(27,41,255,0.08)] transition-all duration-300',
+              selectedVault.vaultAddress === 'insured-contact'
+                ? 'border-[#1B29FF]/40'
+                : 'border-[#1B29FF]/20',
+            )}
+          >
             {/* Blueprint Grid Background */}
             <div
               className="absolute inset-0 pointer-events-none opacity-40"
@@ -574,45 +581,81 @@ export default function SavingsPageWrapper({
               }}
             />
 
-            <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-              <div className="flex items-start gap-4">
-                <div className="flex-shrink-0 w-12 h-12 rounded-full bg-[#1B29FF]/10 flex items-center justify-center">
-                  <Shield className="h-6 w-6 text-[#1B29FF]" />
+            <div className="relative z-10 p-6">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div className="flex items-start gap-4">
+                  <div className="flex-shrink-0 w-12 h-12 rounded-full bg-[#1B29FF]/10 flex items-center justify-center">
+                    <Shield className="h-6 w-6 text-[#1B29FF]" />
+                  </div>
+                  <div>
+                    <h3 className="text-[18px] font-semibold text-[#101010] mb-1">
+                      Protect Your Savings
+                    </h3>
+                    <p className="text-[14px] text-[#101010]/70 leading-relaxed max-w-[400px]">
+                      Get institutional-grade insurance coverage for all your
+                      deposits. Sleep easy knowing your funds are protected.
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="text-[18px] font-semibold text-[#101010] mb-1">
-                    Protect Your Savings
-                  </h3>
-                  <p className="text-[14px] text-[#101010]/70 leading-relaxed max-w-[400px]">
-                    Get institutional-grade insurance coverage for all your
-                    deposits. Sleep easy knowing your funds are protected.
-                  </p>
+                <button
+                  onClick={() =>
+                    toggleVaultAction('insure', {
+                      address: 'insured-contact',
+                      name: 'Get Protection',
+                    })
+                  }
+                  className={cn(
+                    'group relative flex-shrink-0 inline-flex items-center gap-2 px-6 py-3 font-medium text-[14px] rounded-lg transition-all duration-300',
+                    selectedVault.vaultAddress === 'insured-contact'
+                      ? 'bg-[#F7F7F2] text-[#101010] border border-[#101010]/10'
+                      : 'bg-[#1B29FF] hover:bg-[#1420CC] text-white shadow-primary hover:shadow-[0_6px_20px_rgba(27,41,255,0.35)]',
+                  )}
+                >
+                  <span>
+                    {selectedVault.vaultAddress === 'insured-contact'
+                      ? 'Close'
+                      : 'Get Protected'}
+                  </span>
+                  <svg
+                    className={cn(
+                      'w-4 h-4 transition-transform duration-300',
+                      selectedVault.vaultAddress === 'insured-contact'
+                        ? 'rotate-90'
+                        : 'group-hover:translate-x-1',
+                    )}
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d={
+                        selectedVault.vaultAddress === 'insured-contact'
+                          ? 'M6 18L18 6M6 6l12 12'
+                          : 'M13 7l5 5m0 0l-5 5m5-5H6'
+                      }
+                    />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            {/* Accordion Content - Insurance Contact Panel */}
+            <div
+              className={cn(
+                'transition-all duration-300 ease-out overflow-hidden',
+                selectedVault.vaultAddress === 'insured-contact'
+                  ? 'max-h-[800px] opacity-100'
+                  : 'max-h-0 opacity-0',
+              )}
+            >
+              <div className="px-6 pb-6">
+                <div className="bg-[#F7F7F2] border border-[#101010]/10 rounded-lg p-5 sm:p-6">
+                  <InsuranceContactPanel />
                 </div>
               </div>
-              <button
-                onClick={() =>
-                  toggleVaultAction('insure', {
-                    address: 'insured-contact',
-                    name: 'Get Protection',
-                  })
-                }
-                className="group relative flex-shrink-0 inline-flex items-center gap-2 px-6 py-3 bg-[#1B29FF] hover:bg-[#1420CC] text-white font-medium text-[14px] rounded-lg transition-all duration-300 shadow-primary hover:shadow-[0_6px_20px_rgba(27,41,255,0.35)]"
-              >
-                <span>Get Protected</span>
-                <svg
-                  className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-1"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M13 7l5 5m0 0l-5 5m5-5H6"
-                  />
-                </svg>
-              </button>
             </div>
           </div>
         )}
