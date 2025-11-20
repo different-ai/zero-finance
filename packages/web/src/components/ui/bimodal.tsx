@@ -65,7 +65,7 @@ export const BimodalToggle = ({
             isTechnical ? 'text-[#101010]/50' : 'text-[#101010] font-medium',
           )}
         >
-          Banking
+          Personal
         </span>
       )}
       <button
@@ -75,7 +75,7 @@ export const BimodalToggle = ({
           isTechnical ? 'bg-[#1B29FF]' : 'bg-[#101010]/10',
         )}
         aria-label={
-          isTechnical ? 'Switch to Banking mode' : 'Switch to Technical mode'
+          isTechnical ? 'Switch to Personal mode' : 'Switch to Business mode'
         }
       >
         <span
@@ -88,11 +88,11 @@ export const BimodalToggle = ({
       {showLabels && (
         <span
           className={cn(
-            'text-[12px] transition-colors duration-200 font-mono',
+            'text-[12px] transition-colors duration-200',
             isTechnical ? 'text-[#1B29FF] font-medium' : 'text-[#101010]/50',
           )}
         >
-          Technical
+          Business
         </span>
       )}
     </div>
@@ -274,6 +274,7 @@ interface BimodalContextValue {
   setIsTechnical: (value: boolean) => void;
   toggle: () => void;
   isHydrated: boolean;
+  mode: 'consumer' | 'business';
 }
 
 export const BimodalContext = React.createContext<BimodalContextValue>({
@@ -281,6 +282,7 @@ export const BimodalContext = React.createContext<BimodalContextValue>({
   setIsTechnical: () => {},
   toggle: () => {},
   isHydrated: false,
+  mode: 'consumer',
 });
 
 export const useBimodal = () => React.useContext(BimodalContext);
@@ -326,9 +328,12 @@ export const BimodalProvider = ({
     setIsTechnical(!isTechnical);
   }, [isTechnical, setIsTechnical]);
 
+  // Derive mode from isTechnical
+  const mode = isTechnical ? 'business' : 'consumer';
+
   return (
     <BimodalContext.Provider
-      value={{ isTechnical, setIsTechnical, toggle, isHydrated }}
+      value={{ isTechnical, setIsTechnical, toggle, isHydrated, mode }}
     >
       {children}
     </BimodalContext.Provider>

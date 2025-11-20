@@ -9,7 +9,7 @@ import { useBimodal } from '@/components/ui/bimodal';
 import { cn } from '@/lib/utils';
 
 export function HeroSection() {
-  const { isTechnical } = useBimodal();
+  const { isTechnical, mode } = useBimodal();
 
   return (
     <>
@@ -306,10 +306,14 @@ export function HeroSection() {
         </div>
         <div className="relative z-10 mx-auto max-w-[1200px] px-4 sm:px-6 lg:px-8">
           <p className="uppercase tracking-[0.14em] sm:tracking-[0.18em] text-[11px] sm:text-[12px] text-[#101010]/60">
-            Simple as any savings account
+            {mode === 'consumer'
+              ? 'Simple as any savings account'
+              : 'Simple as any savings account'}
           </p>
           <h2 className="mt-2 font-serif text-[24px] sm:text-[30px] lg:text-[36px] leading-[1.1] tracking-[-0.01em] text-[#101010]">
-            Connect → Sweep → Earn
+            {mode === 'consumer'
+              ? 'Sign Up → Deposit → Earn'
+              : 'Connect → Sweep → Earn'}
           </h2>
           <div className="mt-6 sm:mt-8 grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-[#101010]/10 border border-[#101010]/10 bg-white/95 backdrop-blur-sm shadow-[0_2px_8px_rgba(16,16,16,0.04)]">
             <div className="p-4 sm:p-6">
@@ -317,11 +321,14 @@ export function HeroSection() {
                 1
               </div>
               <h3 className="mt-2 text-[15px] sm:text-[16px] font-medium text-[#101010]">
-                Connect your bank
+                {mode === 'consumer'
+                  ? 'Create your account'
+                  : 'Connect your bank'}
               </h3>
               <p className="mt-1 text-[13px] sm:text-[14px] text-[#101010]/70">
-                Link Mercury, Brex, or any bank via Plaid. Set your operating
-                balance threshold.
+                {mode === 'consumer'
+                  ? 'Sign up with email or wallet in under 60 seconds. No bank connection required.'
+                  : 'Link Mercury, Brex, or any bank via Plaid. Set your operating balance threshold.'}
               </p>
             </div>
             <div className="p-4 sm:p-6">
@@ -329,11 +336,12 @@ export function HeroSection() {
                 2
               </div>
               <h3 className="mt-2 text-[15px] sm:text-[16px] font-medium text-[#101010]">
-                Auto-sweep idle cash
+                {mode === 'consumer' ? 'Deposit USDC' : 'Auto-sweep idle cash'}
               </h3>
               <p className="mt-1 text-[13px] sm:text-[14px] text-[#101010]/70">
-                Funds above your threshold automatically sweep to high-yield
-                strategies. No manual transfers.
+                {mode === 'consumer'
+                  ? 'Transfer USDC from any wallet or exchange. Your funds start earning immediately.'
+                  : 'Funds above your threshold automatically sweep to high-yield strategies. No manual transfers.'}
               </p>
             </div>
             <div className="p-4 sm:p-6">
@@ -341,19 +349,24 @@ export function HeroSection() {
                 3
               </div>
               <h3 className="mt-2 text-[15px] sm:text-[16px] font-medium text-[#101010]">
-                Spend & withdraw freely
+                {mode === 'consumer'
+                  ? 'Earn & withdraw anytime'
+                  : 'Spend & withdraw freely'}
               </h3>
               <p className="mt-1 text-[13px] sm:text-[14px] text-[#101010]/70">
-                Use your corporate card globally or withdraw anytime. No
-                penalties, no lock-ups, instant liquidity.
+                {mode === 'consumer'
+                  ? 'Watch your balance grow with daily compounding. Withdraw instantly, no penalties or lock-ups.'
+                  : 'Use your corporate card globally or withdraw anytime. No penalties, no lock-ups, instant liquidity.'}
               </p>
-              <div className="mt-3 flex items-center">
-                <img
-                  src="/Visa_Brandmark_Blue_RGB_2021.png"
-                  alt="Visa"
-                  className="h-6 w-auto"
-                />
-              </div>
+              {mode === 'business' && (
+                <div className="mt-3 flex items-center">
+                  <img
+                    src="/Visa_Brandmark_Blue_RGB_2021.png"
+                    alt="Visa"
+                    className="h-6 w-auto"
+                  />
+                </div>
+              )}
             </div>
           </div>
         </div>

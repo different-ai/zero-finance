@@ -26,11 +26,14 @@ export function Header() {
           </Link>
           <nav className="flex items-center gap-3 sm:gap-4">
             {/* Bimodal Toggle */}
-            <div className="hidden md:block">
+            <div className="hidden md:flex items-center gap-3">
+              <span className="text-[11px] text-[#101010]/60 uppercase tracking-wider">
+                View as
+              </span>
               <BimodalToggle
                 isTechnical={isTechnical}
                 onToggle={toggle}
-                showLabels={false}
+                showLabels={true}
               />
             </div>
             <Link

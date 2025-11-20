@@ -40,7 +40,7 @@ export function Sidebar() {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [showPromo, setShowPromo] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const { isTechnical, toggle } = useBimodal();
+  const { isTechnical, toggle, mode } = useBimodal();
 
   // Fetch workspace data
   const { data: workspaceData } = api.workspace.getOrCreateWorkspace.useQuery();
@@ -62,12 +62,16 @@ export function Sidebar() {
     : [
         // Show Dashboard instead of Banking in Lite mode
         {
-          name: featureConfigClient.banking.enabled ? 'Banking' : 'Dashboard',
+          name: featureConfigClient.banking.enabled
+            ? isTechnical
+              ? 'Treasury'
+              : 'Account'
+            : 'Dashboard',
           href: '/dashboard',
           icon: Banknote,
         },
         {
-          name: 'Contractors',
+          name: isTechnical ? 'Payroll' : 'Contractors',
           href: '/dashboard/contractors',
           icon: Users,
         },
@@ -120,11 +124,21 @@ export function Sidebar() {
   };
 
   return (
-    <aside className="bg-white flex flex-col h-full relative border-r border-[#101010]/10">
+    <aside
+      className={cn(
+        'flex flex-col h-full relative transition-colors duration-200',
+        isTechnical
+          ? 'bg-[#F8F9FA] border-r border-[#1B29FF]/20'
+          : 'bg-white border-r border-[#101010]/10',
+      )}
+    >
       {/* Logo section */}
       <Link
         href="/dashboard"
-        className="block px-6 py-7 border-b border-[#101010]/10"
+        className={cn(
+          'block px-6 py-7 border-b transition-colors duration-200',
+          isTechnical ? 'border-[#1B29FF]/20' : 'border-[#101010]/10',
+        )}
       >
         <div>
           <div className="flex items-center gap-2">
@@ -189,7 +203,12 @@ export function Sidebar() {
               >
                 {/* Active rail indicator */}
                 {isActive && (
-                  <span className="absolute left-0 top-1/2 -translate-y-1/2 h-6 w-[2px] bg-[#0050ff] rounded-full" />
+                  <span
+                    className={cn(
+                      'absolute left-0 top-1/2 -translate-y-1/2 h-6 w-[2px] rounded-full transition-colors duration-200',
+                      isTechnical ? 'bg-[#1B29FF]' : 'bg-[#0050ff]',
+                    )}
+                  />
                 )}
                 {React.createElement(item.icon, {
                   className: cn(
@@ -254,15 +273,37 @@ export function Sidebar() {
 
       {/* Bimodal Toggle */}
       <div className="px-4 pb-3 border-b border-[#101010]/10">
-        <div className="bg-[#F7F7F2] p-3 rounded-lg">
-          <p className="text-[10px] uppercase tracking-wider text-[#101010]/50 mb-2">
-            Interface Mode
+        <div
+          className={cn(
+            'p-3 rounded-lg transition-colors duration-200',
+            isTechnical
+              ? 'bg-[#1B29FF]/5 border border-[#1B29FF]/10'
+              : 'bg-[#F7F7F2]',
+          )}
+        >
+          <p
+            className={cn(
+              'text-[10px] uppercase tracking-wider mb-2',
+              isTechnical ? 'text-[#1B29FF]/70 font-mono' : 'text-[#101010]/50',
+            )}
+          >
+            {isTechnical ? 'MODE::SELECT' : 'View Mode'}
           </p>
           <BimodalToggle
             isTechnical={isTechnical}
             onToggle={toggle}
             showLabels={true}
           />
+          <p
+            className={cn(
+              'text-[10px] mt-2 leading-relaxed',
+              isTechnical ? 'text-[#1B29FF]/60 font-mono' : 'text-[#101010]/50',
+            )}
+          >
+            {isTechnical
+              ? 'Business treasury & API access'
+              : 'Personal savings & consumer view'}
+          </p>
         </div>
       </div>
 
