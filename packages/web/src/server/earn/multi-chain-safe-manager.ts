@@ -160,6 +160,7 @@ export async function getMultiChainSafeStatus(
     chains: {
       [SUPPORTED_CHAINS.BASE]: null,
       [SUPPORTED_CHAINS.ARBITRUM]: null,
+      [SUPPORTED_CHAINS.MAINNET]: null,
     },
   };
 

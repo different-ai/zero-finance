@@ -1724,12 +1724,14 @@ export function DepositEarnCard({
   // If we are cross-chain but don't have the target safe address yet,
   // and we are NOT in the "needs-deployment" flow (which handles its own UI),
   // show a skeleton to prevent flashing the default view.
-  // @ts-expect-error - Type narrowing issue with complex state machine
   if (
     isCrossChain &&
     (!targetSafeAddress || isLoadingPositions) &&
+    // @ts-expect-error - Type narrowing issue with complex state machine
     transactionState.step !== 'needs-deployment' &&
+    // @ts-expect-error - Type narrowing issue with complex state machine
     transactionState.step !== 'deploying-safe' &&
+    // @ts-expect-error - Type narrowing issue with complex state machine
     transactionState.step !== 'waiting-deployment'
   ) {
     return (
