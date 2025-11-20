@@ -11,6 +11,7 @@ import {
 import { usePhoneCollection } from '@/hooks/use-phone-collection';
 import { PostAuthRedirect } from '@/components/auth/post-auth-redirect';
 import { EnsureEmbeddedWallet } from '@/components/auth/ensure-embedded-wallet';
+import { BimodalProvider } from '@/components/ui/bimodal';
 
 const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
@@ -65,7 +66,7 @@ export default function DashboardClientLayout({
   };
 
   return (
-    <>
+    <BimodalProvider>
       <PostAuthRedirect />
       <EnsureEmbeddedWallet />
       <div className="flex h-screen bg-[#F7F7F2]">
@@ -92,7 +93,7 @@ export default function DashboardClientLayout({
 
         {/* Main content area */}
         <div className="flex-1 flex flex-col overflow-hidden">
-          <Header onMenuClick={toggleMobileMenu}  />
+          <Header onMenuClick={toggleMobileMenu} />
 
           <main className="flex-1 overflow-x-hidden overflow-y-auto">
             <Breadcrumbs
@@ -103,6 +104,6 @@ export default function DashboardClientLayout({
           </main>
         </div>
       </div>
-    </>
+    </BimodalProvider>
   );
 }

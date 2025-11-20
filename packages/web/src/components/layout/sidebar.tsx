@@ -23,6 +23,7 @@ import { cn } from '@/lib/utils';
 import { usePrivy } from '@privy-io/react-auth';
 import { featureConfigClient } from '@/lib/feature-config-client';
 import { api } from '@/trpc/react';
+import { useBimodal, BimodalToggle } from '@/components/ui/bimodal';
 
 // Navigation items types
 type NavigationItem = {
@@ -39,6 +40,7 @@ export function Sidebar() {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [showPromo, setShowPromo] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const { isTechnical, toggle } = useBimodal();
 
   // Fetch workspace data
   const { data: workspaceData } = api.workspace.getOrCreateWorkspace.useQuery();
@@ -249,6 +251,20 @@ export function Sidebar() {
 
       {/* Spacer to push bottom content down */}
       <div className="flex-1" />
+
+      {/* Bimodal Toggle */}
+      <div className="px-4 pb-3 border-b border-[#101010]/10">
+        <div className="bg-[#F7F7F2] p-3 rounded-lg">
+          <p className="text-[10px] uppercase tracking-wider text-[#101010]/50 mb-2">
+            Interface Mode
+          </p>
+          <BimodalToggle
+            isTechnical={isTechnical}
+            onToggle={toggle}
+            showLabels={true}
+          />
+        </div>
+      </div>
 
       {/* Bottom utility navigation */}
       <div className="px-4 pb-3 space-y-1">

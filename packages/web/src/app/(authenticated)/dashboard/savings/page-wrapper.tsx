@@ -26,6 +26,7 @@ import {
   BimodalCard,
   BlueprintGrid,
   Crosshairs,
+  useBimodal,
 } from '@/components/ui/bimodal';
 import { WithdrawEarnCard } from '@/app/(authenticated)/dashboard/tools/earn-module/components/withdraw-earn-card';
 import { DepositEarnCard } from '@/app/(authenticated)/dashboard/tools/earn-module/components/deposit-earn-card';
@@ -84,7 +85,7 @@ export default function SavingsPageWrapper({
   const refetchTimeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
 
   // Bimodal Interface State - Technical mode shows multi-chain, ETH vaults, protocol details
-  const [isTechnical, setIsTechnical] = useState(false);
+  const { isTechnical, toggle: toggleTechnical } = useBimodal();
 
   const activationSteps = [
     'Verifying account...',
@@ -557,10 +558,7 @@ export default function SavingsPageWrapper({
             View Mode
           </p>
         </div>
-        <BimodalToggle
-          isTechnical={isTechnical}
-          onToggle={() => setIsTechnical(!isTechnical)}
-        />
+        <BimodalToggle isTechnical={isTechnical} onToggle={toggleTechnical} />
       </div>
 
       {/* Always show the full savings interface - auto-earn module is now optional */}
