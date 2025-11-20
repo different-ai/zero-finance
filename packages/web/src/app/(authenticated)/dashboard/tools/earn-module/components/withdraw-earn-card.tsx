@@ -1,14 +1,17 @@
 'use client';
 
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, AlertCircle } from 'lucide-react';
+import {
+  Loader2,
+  AlertCircle,
+  ArrowUpFromLine,
+  CheckCircle,
+  ExternalLink,
+} from 'lucide-react';
 import { trpc } from '@/utils/trpc';
 import { toast } from 'sonner';
 import type { Address } from 'viem';
+import { cn } from '@/lib/utils';
 import {
   formatUnits,
   parseUnits,
@@ -353,10 +356,13 @@ export function WithdrawEarnCard({
     setAmount(maxAmount);
   };
 
+  // Loading state
   if (isLoadingVault || (isCrossChain && isLoadingPositions)) {
     return (
-      <div className="flex items-center justify-center py-8">
-        <Loader2 className="h-6 w-6 animate-spin" />
+      <div className="space-y-4">
+        <div className="h-20 w-full bg-[#101010]/5 animate-pulse" />
+        <div className="h-12 w-full bg-[#101010]/5 animate-pulse" />
+        <div className="h-12 w-full bg-[#101010]/5 animate-pulse" />
       </div>
     );
   }
@@ -364,24 +370,29 @@ export function WithdrawEarnCard({
   // For cross-chain vaults, we need the target Safe to exist
   if (isCrossChain && !targetSafeAddress) {
     return (
-      <Alert>
-        <AlertCircle className="h-4 w-4" />
-        <AlertDescription>
-          No account found on this chain. Please make a deposit first to create
-          your account.
-        </AlertDescription>
-      </Alert>
+      <div className="bg-[#FFF7ED] border border-[#F59E0B]/20 p-4">
+        <div className="flex gap-3">
+          <AlertCircle className="h-4 w-4 text-[#F59E0B] flex-shrink-0 mt-0.5" />
+          <div className="text-[12px] text-[#101010]/70">
+            No account found on this chain. Please make a deposit first to
+            create your account.
+          </div>
+        </div>
+      </div>
     );
   }
 
+  // No balance state
   if (!vaultInfo || vaultInfo.assets === 0n) {
     return (
-      <Alert>
-        <AlertCircle className="h-4 w-4" />
-        <AlertDescription>
-          No funds available to withdraw from this vault.
-        </AlertDescription>
-      </Alert>
+      <div className="bg-[#F7F7F2] border border-[#101010]/10 p-4">
+        <div className="flex gap-3">
+          <AlertCircle className="h-4 w-4 text-[#101010]/40 flex-shrink-0 mt-0.5" />
+          <div className="text-[12px] text-[#101010]/60">
+            No funds available to withdraw from this vault.
+          </div>
+        </div>
+      </div>
     );
   }
 
@@ -425,87 +436,98 @@ export function WithdrawEarnCard({
   return (
     <div className="space-y-4">
       {/* Current Balance */}
-      <div className="rounded-lg p-4 bg-white">
-        <div className="text-sm text-muted-foreground mb-1 ">
-          Available Balance
-        </div>
-        <div className="text-2xl font-bold ">
-          <span className="text-[#0040FF]">
-            {isNativeAsset ? '' : '$'}
-            {displayBalance}
-          </span>{' '}
-          <span className="text-sm">{assetSymbol}</span>
+      <div className="bg-[#F7F7F2] border border-[#101010]/10 p-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60 mb-1">
+              Available to Withdraw
+            </p>
+            <p className="text-[24px] font-medium tabular-nums text-[#101010]">
+              {isNativeAsset ? '' : '$'}
+              {displayBalance} {isNativeAsset ? assetSymbol : ''}
+            </p>
+          </div>
         </div>
       </div>
 
       {/* Amount Input */}
       <div className="space-y-2">
-        <Label htmlFor="amount">Amount to Withdraw</Label>
+        <label
+          htmlFor="withdraw-amount"
+          className="text-[12px] font-medium text-[#101010]"
+        >
+          Amount to Withdraw
+        </label>
         <div className="relative">
-          <Input
-            id="amount"
+          <input
+            id="withdraw-amount"
             type="number"
             placeholder="0.0"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
-            className="pr-24 "
+            className="w-full px-3 py-2 pr-20 text-[14px] bg-white border border-[#101010]/10 focus:border-[#1B29FF] focus:outline-none transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
             step="0.000001"
             min="0"
             max={availableBalance}
           />
           <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
-            <span className="text-xs text-[#0040FF]">{assetSymbol}</span>
-            <Button
+            <span className="text-[11px] text-[#101010]/50">
+              {isNativeAsset ? assetSymbol : 'USD'}
+            </span>
+            <button
               type="button"
-              variant="ghost"
-              size="sm"
               onClick={handleMax}
-              className="h-6 px-1.5 text-xs"
+              className="px-1.5 py-0.5 text-[10px] text-[#1B29FF] hover:text-[#1420CC] transition-colors"
             >
-              Max
-            </Button>
+              MAX
+            </button>
           </div>
         </div>
-        <p className="text-xs text-[#0040FF]">
-          Enter the amount you want to withdraw
-        </p>
       </div>
 
       {/* Withdraw Button */}
-      <Button
+      <button
         onClick={handleWithdraw}
         disabled={disableWithdraw}
-        className="w-full"
-        size="lg"
+        className="w-full px-4 py-2.5 text-[14px] font-medium text-white bg-[#1B29FF] hover:bg-[#1420CC] disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
       >
         {isWithdrawing ? (
-          <>
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            Processing...
-          </>
+          <Loader2 className="h-4 w-4 animate-spin" />
         ) : (
-          'Withdraw'
+          <ArrowUpFromLine className="h-4 w-4" />
         )}
-      </Button>
+        {isWithdrawing ? 'Processing...' : 'Withdraw'}
+      </button>
 
-      {/* Help text */}
-      <p className="text-xs text-muted-foreground text-center">
-        {isNativeAsset
-          ? 'You will receive WETH. Withdrawals are processed through your Safe wallet and may take a few moments to complete.'
-          : 'Withdrawals are processed through your Safe wallet and may take a few moments to complete'}
-      </p>
-
+      {/* Error states */}
       {amountParseFailed && (
-        <p className="text-xs text-red-500 text-center">
-          Unable to parse the withdrawal amount. Please check the format.
-        </p>
+        <div className="bg-[#FEF2F2] border border-[#EF4444]/20 p-3">
+          <div className="flex gap-2 items-start">
+            <AlertCircle className="h-4 w-4 text-[#EF4444] flex-shrink-0 mt-0.5" />
+            <p className="text-[12px] text-[#101010]/70">
+              Unable to parse the withdrawal amount. Please check the format.
+            </p>
+          </div>
+        </div>
       )}
 
       {amountExceedsBalance && (
-        <p className="text-xs text-red-500 text-center">
-          Amount exceeds your available vault balance.
-        </p>
+        <div className="bg-[#FEF2F2] border border-[#EF4444]/20 p-3">
+          <div className="flex gap-2 items-start">
+            <AlertCircle className="h-4 w-4 text-[#EF4444] flex-shrink-0 mt-0.5" />
+            <p className="text-[12px] text-[#101010]/70">
+              Amount exceeds your available vault balance.
+            </p>
+          </div>
+        </div>
       )}
+
+      {/* Help text */}
+      <p className="text-[11px] text-[#101010]/50 text-center">
+        {isNativeAsset
+          ? 'You will receive WETH which can be unwrapped to ETH'
+          : 'Your funds will be available in your account immediately'}
+      </p>
     </div>
   );
 }

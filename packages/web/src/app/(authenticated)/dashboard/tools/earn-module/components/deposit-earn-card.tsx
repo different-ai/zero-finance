@@ -1878,23 +1878,13 @@ export function DepositEarnCard({
         <div className="flex items-center justify-between">
           <div>
             <p className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60 mb-1">
-              Available Balance
+              Available to Deposit
             </p>
             <p className="text-[24px] font-medium tabular-nums text-[#101010]">
               {isNativeAsset ? '' : '$'}
               {displayBalance} {isNativeAsset ? 'ETH' : ''}
             </p>
           </div>
-          {currentAllowance > 0n && (
-            <div className="text-right">
-              <p className="text-[10px] uppercase tracking-wider text-[#101010]/50">
-                Pre-approved
-              </p>
-              <p className="text-[14px] font-medium tabular-nums text-[#10B981]">
-                ${formatUnits(currentAllowance, USDC_DECIMALS)}
-              </p>
-            </div>
-          )}
         </div>
       </div>
 
@@ -1933,11 +1923,6 @@ export function DepositEarnCard({
             </button>
           </div>
         </div>
-        {needsApproval && amount && !isNativeAsset && (
-          <p className="text-[11px] text-[#101010]/50">
-            Will require approval for {amount} {assetSymbol}
-          </p>
-        )}
       </div>
 
       {/* Deposit Button */}
@@ -1967,9 +1952,9 @@ export function DepositEarnCard({
 
       {/* No balance warning */}
       {assetBalance === 0n && (
-        <div className="bg-[#FFF8E6] border border-[#FFA500]/20 p-3">
+        <div className="bg-[#FFF7ED] border border-[#F59E0B]/20 p-3">
           <div className="flex gap-2 items-start">
-            <AlertCircle className="h-4 w-4 text-[#FFA500] flex-shrink-0 mt-0.5" />
+            <AlertCircle className="h-4 w-4 text-[#F59E0B] flex-shrink-0 mt-0.5" />
             <p className="text-[12px] text-[#101010]/70">
               {isNativeAsset
                 ? 'No ETH balance available to deposit.'
@@ -1982,9 +1967,9 @@ export function DepositEarnCard({
       {/* Help text */}
       <p className="text-[11px] text-[#101010]/50 text-center">
         {isNativeAsset
-          ? ''
+          ? 'Your ETH will start earning yield immediately'
           : needsApproval
-            ? 'This will approve and deposit in a single transaction flow'
+            ? 'This will approve and deposit in a single transaction'
             : 'Your deposit will start earning yield immediately'}
       </p>
     </div>

@@ -859,22 +859,6 @@ export default function SavingsPageWrapper({
                             >
                               {formatUsd(vault.balanceUsd)}
                             </p>
-                            {vault.earnedUsd > 0 && (
-                              <p
-                                className={cn(
-                                  'text-[12px] tabular-nums mt-0.5',
-                                  vault.category === 'growth'
-                                    ? 'text-[#10b981]'
-                                    : 'text-[#1B29FF]',
-                                )}
-                              >
-                                +
-                                {vault.earnedNative !== undefined
-                                  ? `${vault.earnedNative.toFixed(6)} ETH`
-                                  : formatUsd(vault.earnedUsd)}{' '}
-                                earned
-                              </p>
-                            )}
                           </div>
                         ) : (
                           <p className="text-[14px] text-[#101010]/40">
@@ -1143,24 +1127,6 @@ export default function SavingsPageWrapper({
                               {formatUsd(vault.balanceUsd)}
                             </span>
                           </div>
-                          {vault.earnedUsd > 0 && (
-                            <div className="flex justify-between text-[14px]">
-                              <span className="text-[#101010]/60">Earned</span>
-                              <span
-                                className={cn(
-                                  'tabular-nums',
-                                  vault.category === 'growth'
-                                    ? 'text-[#10b981]'
-                                    : 'text-[#1B29FF]',
-                                )}
-                              >
-                                +
-                                {vault.earnedNative !== undefined
-                                  ? `${vault.earnedNative.toFixed(6)} ETH`
-                                  : formatUsd(vault.earnedUsd)}
-                              </span>
-                            </div>
-                          )}
                         </>
                       ) : (
                         <div className="flex justify-between text-[14px]">
