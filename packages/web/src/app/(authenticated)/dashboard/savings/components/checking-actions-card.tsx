@@ -40,6 +40,13 @@ import { formatUnits } from 'viem';
 import { USDC_DECIMALS } from '@/lib/constants';
 import type { Address } from 'viem';
 import Image from 'next/image';
+import {
+  BimodalCard,
+  BimodalLabel,
+  BimodalAmount,
+  BlueprintGrid,
+  Crosshairs,
+} from '@/components/ui/bimodal';
 
 // Chain logo mapping - using long logos that include chain names
 const CHAIN_LOGOS: Record<SupportedChainId, { src: string; hasName: boolean }> =
@@ -102,12 +109,14 @@ type CheckingActionsCardProps = {
   balanceUsd: number;
   safeAddress: string | null;
   isDemoMode: boolean;
+  isTechnical?: boolean;
 };
 
 export function CheckingActionsCard({
   balanceUsd,
   safeAddress,
   isDemoMode,
+  isTechnical = false,
 }: CheckingActionsCardProps) {
   const [isMoveModalOpen, setIsMoveModalOpen] = useState(false);
   const [isBridgeModalOpen, setIsBridgeModalOpen] = useState(false);
@@ -295,29 +304,97 @@ export function CheckingActionsCard({
           ? 'Complete business verification to enable withdrawals'
           : undefined;
 
+  // In banking mode, only show Base USDC balance
+  const displayBalance = isTechnical
+    ? isDemoMode
+      ? balanceUsd
+      : totalAvailableBalance
+    : isDemoMode
+      ? balanceUsd
+      : baseUsdcBalance;
+
   return (
-    <div className="bg-white border border-[#101010]/10 rounded-[12px] p-6 space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-4">
+    <div
+      className={cn(
+        'relative overflow-hidden p-6 space-y-6 transition-all duration-300',
+        isTechnical
+          ? 'bg-white border border-[#1B29FF]/20 rounded-sm shadow-none'
+          : 'bg-white border border-[#101010]/10 rounded-[12px] shadow-[0_2px_8px_rgba(16,16,16,0.04)]',
+      )}
+    >
+      {/* Blueprint Grid (Technical only) */}
+      {isTechnical && <BlueprintGrid />}
+
+      {/* Crosshairs (Technical only) */}
+      {isTechnical && (
+        <>
+          <Crosshairs position="top-left" />
+          <Crosshairs position="top-right" />
+        </>
+      )}
+
+      {/* Meta Tag (Technical only) */}
+      {isTechnical && (
+        <div className="absolute top-2 right-8 font-mono text-[9px] text-[#101010]/40 tracking-wider">
+          ID::TREASURY_001
+        </div>
+      )}
+
+      <div className="relative z-10 flex flex-wrap items-start justify-between gap-4">
         <div className="flex-1">
-          <p className="uppercase tracking-[0.16em] text-[11px] text-[#101010]/60 mb-2">
-            Available Balance
-          </p>
-          <p className="text-[32px] sm:text-[40px] font-semibold leading-[0.95] tabular-nums text-[#101010]">
-            {formatUsd(isDemoMode ? balanceUsd : totalAvailableBalance)}
-          </p>
-          <p className="mt-3 text-[13px] text-[#101010]/60">
-            Ready to transfer or invest
-          </p>
+          {isTechnical ? (
+            <>
+              <p className="font-mono text-[10px] text-[#1B29FF] tracking-wider uppercase mb-2">
+                BALANCE::AVAILABLE
+              </p>
+              <p className="font-mono text-[28px] tabular-nums text-[#101010]">
+                {displayBalance.toLocaleString('en-US', {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}
+                <span className="ml-1 text-[14px] text-[#1B29FF]">USDC</span>
+              </p>
+              <p className="mt-2 font-mono text-[11px] text-[#101010]/60">
+                ≈ {formatUsd(displayBalance)} USD
+              </p>
+            </>
+          ) : (
+            <>
+              <p className="uppercase tracking-[0.16em] text-[11px] text-[#101010]/60 mb-2">
+                Available Balance
+              </p>
+              <p className="text-[32px] sm:text-[40px] font-semibold leading-[0.95] tabular-nums text-[#101010]">
+                {formatUsd(displayBalance)}
+              </p>
+              <p className="mt-3 text-[13px] text-[#101010]/60">
+                Ready to transfer or invest
+              </p>
+            </>
+          )}
         </div>
       </div>
 
-      {/* Account Balances Section - Expandable */}
-      {!isDemoMode && (baseSafe || arbitrumSafe) && (
-        <div className="border-t border-[#101010]/10 pt-4">
+      {/* Account Balances Section - Only in Technical Mode */}
+      {isTechnical && !isDemoMode && (baseSafe || arbitrumSafe) && (
+        <div
+          className={cn(
+            'relative z-10 pt-4',
+            isTechnical
+              ? 'border-t border-[#1B29FF]/10'
+              : 'border-t border-[#101010]/10',
+          )}
+        >
           <div className="flex items-center justify-between mb-3">
-            <p className="uppercase tracking-[0.12em] text-[10px] text-[#101010]/50 flex items-center gap-1.5">
+            <p
+              className={cn(
+                'flex items-center gap-1.5',
+                isTechnical
+                  ? 'font-mono text-[10px] text-[#1B29FF] tracking-wider uppercase'
+                  : 'uppercase tracking-[0.12em] text-[10px] text-[#101010]/50',
+              )}
+            >
               <Wallet className="h-3 w-3" />
-              Accounts
+              {isTechnical ? 'ACCOUNTS::MULTI_CHAIN' : 'Accounts'}
             </p>
           </div>
           <div className="space-y-2">
@@ -477,11 +554,16 @@ export function CheckingActionsCard({
         </div>
       )}
 
-      <div className="flex flex-col sm:flex-row flex-wrap gap-3">
+      <div className="relative z-10 flex flex-col sm:flex-row flex-wrap gap-3">
         <Dialog open={isMoveModalOpen} onOpenChange={setIsMoveModalOpen}>
           <DialogTrigger asChild>
             <Button
-              className="flex-1 min-w-[120px] inline-flex items-center justify-center gap-2 px-5 py-3 text-[15px] font-semibold text-white bg-[#1B29FF] hover:bg-[#1420CC] transition-colors"
+              className={cn(
+                'flex-1 min-w-[120px] inline-flex items-center justify-center gap-2 transition-all duration-200',
+                isTechnical
+                  ? 'border border-[#1B29FF] text-[#1B29FF] font-mono px-4 py-2 rounded-sm hover:bg-[#1B29FF]/5 text-[13px]'
+                  : 'px-5 py-3 text-[15px] font-semibold text-white bg-[#1B29FF] hover:bg-[#1420CC]',
+              )}
               disabled={
                 !isDemoMode && (!canInitiateMove || isCheckingOwnership)
               }
@@ -490,7 +572,7 @@ export function CheckingActionsCard({
               }
             >
               <ArrowRightCircle className="h-5 w-5" />
-              Withdraw
+              {isTechnical ? 'WITHDRAW' : 'Withdraw'}
             </Button>
           </DialogTrigger>
           <DialogContent
@@ -509,7 +591,12 @@ export function CheckingActionsCard({
             <DialogTrigger asChild>
               <Button
                 variant="outline"
-                className="flex-1 min-w-[120px] inline-flex items-center justify-center gap-2 px-5 py-3 text-[15px] font-semibold text-[#101010] border border-[#101010]/10 hover:border-[#1B29FF]/20 hover:text-[#1B29FF] hover:bg-[#F7F7F2] transition-colors"
+                className={cn(
+                  'flex-1 min-w-[120px] inline-flex items-center justify-center gap-2 transition-all duration-200',
+                  isTechnical
+                    ? 'text-[#1B29FF]/70 font-mono underline underline-offset-2 hover:text-[#1B29FF] text-[13px] border-none'
+                    : 'px-5 py-3 text-[15px] font-semibold text-[#101010] border border-[#101010]/10 hover:border-[#1B29FF]/20 hover:text-[#1B29FF] hover:bg-[#F7F7F2]',
+                )}
                 disabled={!hasAnyBalance}
                 title={
                   !hasAnyBalance
@@ -518,7 +605,7 @@ export function CheckingActionsCard({
                 }
               >
                 <ArrowLeftRight className="h-5 w-5" />
-                Transfer
+                {isTechnical ? 'BRIDGE' : 'Transfer'}
               </Button>
             </DialogTrigger>
             <DialogContent className="bg-white border-[#101010]/10 max-w-md">
@@ -553,10 +640,20 @@ export function CheckingActionsCard({
           <DialogTrigger asChild>
             <Button
               variant="outline"
-              className="flex-1 min-w-[120px] inline-flex items-center justify-center gap-2 px-5 py-3 text-[15px] font-semibold text-[#101010] border border-[#101010]/10 hover:border-[#1B29FF]/20 hover:text-[#1B29FF] hover:bg-[#F7F7F2] transition-colors"
+              className={cn(
+                'flex-1 min-w-[120px] inline-flex items-center justify-center gap-2 transition-all duration-200',
+                isTechnical
+                  ? 'text-[#1B29FF]/70 font-mono underline underline-offset-2 hover:text-[#1B29FF] text-[13px] border-none'
+                  : 'px-5 py-3 text-[15px] font-semibold text-[#101010] border border-[#101010]/10 hover:border-[#1B29FF]/20 hover:text-[#1B29FF] hover:bg-[#F7F7F2]',
+              )}
             >
-              <Info className="h-5 w-5 text-[#101010]/60" />
-              Account Info
+              <Info
+                className={cn(
+                  'h-5 w-5',
+                  isTechnical ? 'text-[#1B29FF]/60' : 'text-[#101010]/60',
+                )}
+              />
+              {isTechnical ? 'CONTRACTS' : 'Account Info'}
             </Button>
           </DialogTrigger>
           <DialogContent className="bg-white border-[#101010]/10 max-w-3xl max-h-[90vh] overflow-y-auto">
@@ -684,11 +781,20 @@ export function CheckingActionsCard({
         </Dialog>
       </div>
 
-      <p className="text-[12px] text-[#101010]/60">
+      <p
+        className={cn(
+          'relative z-10',
+          isTechnical
+            ? 'font-mono text-[11px] text-[#101010]/50'
+            : 'text-[12px] text-[#101010]/60',
+        )}
+      >
         {isDemoMode
           ? 'Use these controls to explore how deposits and withdrawals work in Zero Finance.'
           : hasVirtualAccounts
-            ? 'Transfers settle directly into your Zero treasury safe.'
+            ? isTechnical
+              ? 'Transfers settle to Safe contracts on respective chains.'
+              : 'Transfers settle directly into your Zero treasury safe.'
             : 'Once your virtual account is approved, you can pull cash into savings here.'}
       </p>
     </div>

@@ -66,18 +66,20 @@ Hide complexity. Show clarity.
 
 ### Technical Identity (Structural Accent)
 
-*Used strictly for Advanced/Developer views, Smart Contract interactions, and Technical Details.*
+_Used strictly for Advanced/Developer views, Smart Contract interactions, and Technical Details._
 
 **Core Aesthetic: Architectural Blueprint**
 Integrating the precision of CAD into the elegance of modern banking. Instead of a black void, we use the "Blueprint" metaphor on our existing light canvas.
 
 **Key Characteristics:**
+
 - **Structure over Decoration**: Reveal the grid lines and alignment points that define the UI.
 - **Monospace Elegance**: Use `IBM Plex Mono` for transactional data to suggest precision.
 - **Brand Integration**: Use the Brand Blue (`#1B29FF`) for technical lines and grids instead of neon greens.
 - **Subtle Dimensions**: Add "measurement" lines or coordinate markers (`[x:001]`) as subtle decorative elements in advanced cards.
 
 **Visual Elements:**
+
 - **Grid Overlays**: Faint, technical grids (`#1B29FF` at 5% opacity).
 - **Crosshairs**: Corner markers on advanced cards.
 - **Technical Labels**: Small, uppercase, monospace labels (`TX_HASH`, `BLOCK_ID`) in muted blue.
@@ -143,11 +145,11 @@ Integrating the precision of CAD into the elegance of modern banking. Instead of
 --warning: #f59e0b; /* Warnings */
 
 /* Technical / CAD Accents (Blueprint Mode) */
---tech-line: rgba(27, 41, 255, 0.15);   /* Structural lines (Brand Blue) */
---tech-grid: rgba(27, 41, 255, 0.05);   /* Subtle background grid */
---tech-mono: #1B29FF;                   /* Monospace data text */
---tech-label: rgba(16, 16, 16, 0.5);    /* Technical labels */
---tech-accent: #0050ff;                 /* Highlights */
+--tech-line: rgba(27, 41, 255, 0.15); /* Structural lines (Brand Blue) */
+--tech-grid: rgba(27, 41, 255, 0.05); /* Subtle background grid */
+--tech-mono: #1b29ff; /* Monospace data text */
+--tech-label: rgba(16, 16, 16, 0.5); /* Technical labels */
+--tech-accent: #0050ff; /* Highlights */
 ```
 
 #### Usage Guidelines
@@ -559,8 +561,8 @@ When a user toggles "Advanced Details" or "Technical View", the UI reveals the u
         </span>
         {/* Decorative CAD crosshair */}
         <div className="h-3 w-3 relative">
-            <div className="absolute top-1/2 w-full h-px bg-[#1B29FF]/40"></div>
-            <div className="absolute left-1/2 h-full w-px bg-[#1B29FF]/40"></div>
+          <div className="absolute top-1/2 w-full h-px bg-[#1B29FF]/40"></div>
+          <div className="absolute left-1/2 h-full w-px bg-[#1B29FF]/40"></div>
         </div>
       </div>
 
@@ -604,6 +606,7 @@ When a user toggles "Advanced Details" or "Technical View", the UI reveals the u
 ```
 
 **Key Changes:**
+
 - **Container**: Maintains `bg-white` to fit the dashboard, but adds `border-[#1B29FF]/20`.
 - **Visuals**: Faint blueprint grid background (`rgba(27,41,255,0.05)`).
 - **Typography**: Monospace for all labels and data, but dark/blue text instead of white/neon.
@@ -1161,6 +1164,291 @@ rounded - md; // 6px (buttons, inputs)
 rounded - card - lg; // 12px (cards)
 rounded - full; // Pills, avatars
 ```
+
+---
+
+## Bimodal Interface Pattern (The "DeFi Mullet")
+
+### Philosophy
+
+Most apps try to find a middle ground between "Simple" and "Technical" and end up pleasing no one. The Bimodal Interface accepts that there are two distinct user modes and serves them both fully, rather than compromising on either.
+
+**Core Insight**: The biggest problem in crypto UX is the tension between Simplicity and Transparency. Our solution: serve both modes completely, with an instant toggle.
+
+### The Two Modes
+
+#### Mode A: Banking View (Default)
+
+Designed to look like a modern neobank or fintech app. Emphasizes trust, clarity, and ease of use.
+
+**Visual Language:**
+
+- **Background**: Warm, premium off-white canvas (`bg-[#F7F7F2]`)
+- **Typography**:
+  - Headlines: Serif fonts (`font-serif`) for high-end, editorial feel
+  - Body: Clean sans-serif (`font-sans`) for readability
+  - Labels: Uppercase, tracked-out (`tracking-[0.14em]`) in muted ink (`#101010/60`)
+- **Cards**: Friendly rounded corners (`rounded-[12px]`), soft ambient shadows
+- **Depth**: Subtle shadows that lift on hover
+
+**UX Characteristics:**
+
+- Focuses on _Outcomes_: "How much money do I have? What is the APY? Is it safe?"
+- Uses friendly names: "High-Yield Savings" instead of "Morpho Blue"
+- Shows USD values primarily
+- High-contrast action buttons (Solid Brand Blue `#1B29FF`)
+
+```jsx
+// Banking Mode Card
+<div className="bg-white border border-[#101010]/10 rounded-[12px] p-6 shadow-[0_2px_8px_rgba(16,16,16,0.04)] hover:shadow-[0_6px_16px_rgba(16,16,16,0.08)] transition-all duration-300">
+  <p className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60 mb-2">
+    Available Balance
+  </p>
+  <p className="text-[32px] font-semibold tabular-nums text-[#101010]">
+    $2,500,000.00
+  </p>
+  <p className="mt-2 text-[13px] text-[#101010]/60">
+    Ready to transfer or invest
+  </p>
+</div>
+```
+
+#### Mode B: Technical View (Blueprint)
+
+Designed to look like an architectural blueprint or developer terminal. Emphasizes precision, raw data, and structure.
+
+**Visual Language:**
+
+- **Background**: Blueprint grid overlay using CSS linear gradients (`24px` grid squares)
+- **Typography**:
+  - Global: Monospace (`font-mono`, IBM Plex Mono)
+  - Color: Brand Blue (`#1B29FF`) to mimic blueprint lines
+  - Data: `tabular-nums` for alignment
+- **Cards**: Sharper corners (`rounded-sm`), flat shadows (`shadow-none`)
+- **Decorations**: "Architectural Crosshairs" in corners, meta-data tags (`ID::STRAT_01`)
+
+**UX Characteristics:**
+
+- Focuses on _Architecture_: "Which protocol? Which contract? What's the utilization rate?"
+- Reveals underlying protocol ("Morpho Blue") and risk provider ("Gauntlet")
+- Shows raw token amounts first (`1.00 USDC`), USD as secondary
+- Ghost buttons (outlined or text-only) to reduce visual noise
+
+```jsx
+// Technical Mode Card
+<div className="relative bg-white border border-[#1B29FF]/20 rounded-sm shadow-none">
+  {/* Blueprint Grid Background */}
+  <div
+    className="absolute inset-0 pointer-events-none opacity-100"
+    style={{
+      backgroundImage:
+        'linear-gradient(to right, rgba(27,41,255,0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(27,41,255,0.05) 1px, transparent 1px)',
+      backgroundSize: '24px 24px',
+    }}
+  />
+
+  {/* Crosshair Decorations */}
+  <div className="absolute top-2 left-2 h-3 w-3">
+    <div className="absolute top-1/2 w-full h-px bg-[#1B29FF]/40" />
+    <div className="absolute left-1/2 h-full w-px bg-[#1B29FF]/40" />
+  </div>
+
+  <div className="relative z-10 p-6">
+    <div className="flex items-center justify-between mb-3">
+      <span className="font-mono text-[10px] text-[#1B29FF] tracking-wider uppercase">
+        BALANCE::PRIMARY
+      </span>
+      <span className="font-mono text-[10px] text-[#101010]/50">
+        ID::ACC_001
+      </span>
+    </div>
+    <p className="font-mono text-[28px] tabular-nums text-[#101010]">
+      2,500,000.00
+      <span className="ml-1 text-[14px] text-[#1B29FF]">USDC</span>
+    </p>
+    <p className="mt-2 font-mono text-[11px] text-[#101010]/60">
+      ≈ $2,500,000.00 USD
+    </p>
+  </div>
+</div>
+```
+
+### Semantic Typography
+
+The font itself changes the user's expectations:
+
+| Font              | Signal                                  | Use Case                         |
+| ----------------- | --------------------------------------- | -------------------------------- |
+| **Inter (Sans)**  | "This is a finished product. Trust us." | Banking mode, default UI         |
+| **IBM Plex Mono** | "This is raw data. Verify this."        | Technical mode, contract details |
+
+By switching typography instantly, we signal to the user's brain that they have entered a different level of granularity without needing a warning label.
+
+### Abstraction as a Feature, Not a Lie
+
+**Bad Abstraction**: Hiding the protocol entirely so the user doesn't know risks exist.
+
+**Good Abstraction (Our Approach)**: Giving it a friendly name for scanning, but allowing the user to hit the toggle and instantly see the contract address and protocol name to verify the underlying tech.
+
+| Banking Mode       | Technical Mode          |
+| ------------------ | ----------------------- |
+| High-Yield Savings | Morpho Blue (Gauntlet)  |
+| Your Balance       | 1,234,567.89 USDC       |
+| 8% APY             | 7.89% instantaneous APY |
+| Transfer           | Execute Transaction     |
+| Account Info       | Contract: 0x742d...     |
+
+### Mode Toggle Component
+
+```jsx
+// Bimodal Toggle Switch
+<button
+  onClick={() => setIsTechnical(!isTechnical)}
+  className={cn(
+    "relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-300",
+    isTechnical ? "bg-[#1B29FF]" : "bg-[#101010]/10"
+  )}
+>
+  <span
+    className={cn(
+      "inline-block h-4 w-4 rounded-full bg-white transition-transform duration-300 shadow-sm",
+      isTechnical ? "translate-x-6" : "translate-x-1"
+    )}
+  />
+</button>
+
+// Toggle Label
+<div className="flex items-center gap-2">
+  <span className={cn(
+    "text-[12px] transition-colors",
+    isTechnical ? "text-[#101010]/50" : "text-[#101010]"
+  )}>
+    Banking
+  </span>
+  {/* Toggle here */}
+  <span className={cn(
+    "text-[12px] transition-colors font-mono",
+    isTechnical ? "text-[#1B29FF]" : "text-[#101010]/50"
+  )}>
+    Technical
+  </span>
+</div>
+```
+
+### Blueprint Grid Background Component
+
+```jsx
+const BlueprintGrid = ({ className }: { className?: string }) => (
+  <div
+    className={cn("absolute inset-0 pointer-events-none", className)}
+    style={{
+      backgroundImage: `
+        linear-gradient(to right, rgba(27,41,255,0.05) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(27,41,255,0.05) 1px, transparent 1px)
+      `,
+      backgroundSize: '24px 24px',
+    }}
+  />
+);
+
+// Architectural Crosshairs (corner decorations)
+const Crosshairs = ({ position = 'top-left' }: { position?: string }) => {
+  const positionClasses = {
+    'top-left': 'top-2 left-2',
+    'top-right': 'top-2 right-2',
+    'bottom-left': 'bottom-2 left-2',
+    'bottom-right': 'bottom-2 right-2',
+  };
+
+  return (
+    <div className={cn("absolute h-3 w-3", positionClasses[position])}>
+      <div className="absolute top-1/2 w-full h-px bg-[#1B29FF]/40" />
+      <div className="absolute left-1/2 h-full w-px bg-[#1B29FF]/40" />
+    </div>
+  );
+};
+```
+
+### Styling Reference Tables
+
+**Card Styling by Mode:**
+
+| Property      | Banking Mode                              | Technical Mode        |
+| ------------- | ----------------------------------------- | --------------------- |
+| Background    | `bg-white`                                | `bg-white`            |
+| Border        | `border-[#101010]/10`                     | `border-[#1B29FF]/20` |
+| Border Radius | `rounded-[12px]`                          | `rounded-sm`          |
+| Shadow        | `shadow-[0_2px_8px_rgba(16,16,16,0.04)]`  | `shadow-none`         |
+| Hover Shadow  | `shadow-[0_6px_16px_rgba(16,16,16,0.08)]` | none                  |
+| Grid Overlay  | none                                      | Blueprint grid        |
+
+**Typography by Mode:**
+
+| Element   | Banking Mode                                                | Technical Mode                                                  |
+| --------- | ----------------------------------------------------------- | --------------------------------------------------------------- |
+| Labels    | `uppercase tracking-[0.14em] text-[11px] text-[#101010]/60` | `font-mono text-[10px] text-[#1B29FF] tracking-wider uppercase` |
+| Amounts   | `text-[32px] font-semibold tabular-nums text-[#101010]`     | `font-mono text-[28px] tabular-nums text-[#101010]`             |
+| Secondary | `text-[13px] text-[#101010]/60`                             | `font-mono text-[11px] text-[#101010]/60`                       |
+
+**Button Styling by Mode:**
+
+| Button Type | Banking Mode                                   | Technical Mode                                                          |
+| ----------- | ---------------------------------------------- | ----------------------------------------------------------------------- |
+| Primary     | `bg-[#1B29FF] text-white px-6 py-3 rounded-md` | `border border-[#1B29FF] text-[#1B29FF] font-mono px-4 py-2 rounded-sm` |
+| Secondary   | `border border-[#101010]/10 text-[#101010]`    | `text-[#1B29FF]/70 font-mono underline`                                 |
+
+### Implementation Pattern
+
+```jsx
+function BimodalCard({ isTechnical, children }) {
+  return (
+    <div
+      className={cn(
+        'relative overflow-hidden transition-all duration-300',
+        isTechnical
+          ? 'bg-white border-[#1B29FF]/20 rounded-sm shadow-none'
+          : 'bg-white border-[#101010]/10 rounded-[12px] shadow-[0_2px_8px_rgba(16,16,16,0.04)]',
+      )}
+    >
+      {/* Blueprint Grid (Technical only) */}
+      {isTechnical && <BlueprintGrid />}
+
+      {/* Crosshairs (Technical only) */}
+      {isTechnical && (
+        <>
+          <Crosshairs position="top-left" />
+          <Crosshairs position="top-right" />
+        </>
+      )}
+
+      {/* Content */}
+      <div className="relative z-10 p-6">{children}</div>
+    </div>
+  );
+}
+```
+
+### When to Use Bimodal
+
+Use the Bimodal Interface pattern when:
+
+- The component deals with financial data that has underlying technical complexity
+- Users may need to verify contract addresses or protocol details
+- There's a clear distinction between "outcome" and "architecture" views
+- The feature involves blockchain transactions or smart contracts
+
+Don't use for:
+
+- Simple informational content
+- Marketing pages
+- Settings that don't have technical depth
+
+### Transition Guidelines
+
+- Use `transition-all duration-300` for smooth morphing between modes
+- Content should reflow gracefully - never jump
+- Grid and crosshairs should fade in/out with the transition
+- Typography changes should feel "liquid and premium"
 
 ---
 

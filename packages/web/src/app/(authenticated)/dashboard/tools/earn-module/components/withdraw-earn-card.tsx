@@ -31,6 +31,7 @@ interface WithdrawEarnCardProps {
   vaultAddress: Address;
   onWithdrawSuccess?: () => void;
   chainId?: number; // Target chain for the vault (default: Base)
+  isTechnical?: boolean; // Bimodal interface toggle
 }
 
 interface VaultInfo {
@@ -53,6 +54,7 @@ export function WithdrawEarnCard({
   vaultAddress,
   onWithdrawSuccess,
   chainId = 8453, // Default to Base
+  isTechnical = false,
 }: WithdrawEarnCardProps) {
   const [amount, setAmount] = useState('');
   const [isWithdrawing, setIsWithdrawing] = useState(false);
@@ -434,29 +436,78 @@ export function WithdrawEarnCard({
     !effectiveSafeAddress;
 
   return (
-    <div className="space-y-4">
+    <div
+      className={cn(
+        'space-y-4 relative',
+        isTechnical && 'p-4 bg-[#F7F7F2] border border-[#1B29FF]/20',
+      )}
+    >
+      {/* Blueprint grid overlay for technical mode */}
+      {isTechnical && (
+        <div
+          className="absolute inset-0 pointer-events-none opacity-[0.03]"
+          style={{
+            backgroundImage: `
+              linear-gradient(to right, #1B29FF 1px, transparent 1px),
+              linear-gradient(to bottom, #1B29FF 1px, transparent 1px)
+            `,
+            backgroundSize: '20px 20px',
+          }}
+        />
+      )}
+
       {/* Current Balance */}
-      <div className="bg-[#F7F7F2] border border-[#101010]/10 p-4">
+      <div
+        className={cn(
+          'p-4 relative',
+          isTechnical
+            ? 'bg-white border border-[#1B29FF]/30'
+            : 'bg-[#F7F7F2] border border-[#101010]/10',
+        )}
+      >
         <div className="flex items-center justify-between">
           <div>
-            <p className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60 mb-1">
-              Available to Withdraw
+            <p
+              className={cn(
+                'uppercase tracking-[0.14em] text-[11px] mb-1',
+                isTechnical ? 'font-mono text-[#1B29FF]' : 'text-[#101010]/60',
+              )}
+            >
+              {isTechnical ? 'BALANCE::REDEEMABLE' : 'Available to Withdraw'}
             </p>
-            <p className="text-[24px] font-medium tabular-nums text-[#101010]">
-              {isNativeAsset ? '' : '$'}
-              {displayBalance} {isNativeAsset ? assetSymbol : ''}
-            </p>
+            {isTechnical ? (
+              <div>
+                <p className="text-[24px] font-mono tabular-nums text-[#101010]">
+                  {displayBalance} {isNativeAsset ? assetSymbol : 'USDC'}
+                </p>
+                {!isNativeAsset && (
+                  <p className="text-[12px] font-mono text-[#101010]/50">
+                    ≈ ${displayBalance} USD
+                  </p>
+                )}
+              </div>
+            ) : (
+              <p className="text-[24px] font-medium tabular-nums text-[#101010]">
+                {isNativeAsset ? '' : '$'}
+                {displayBalance} {isNativeAsset ? assetSymbol : ''}
+              </p>
+            )}
           </div>
         </div>
       </div>
 
       {/* Amount Input */}
-      <div className="space-y-2">
+      <div className="space-y-2 relative">
         <label
           htmlFor="withdraw-amount"
-          className="text-[12px] font-medium text-[#101010]"
+          className={cn(
+            'text-[12px] font-medium',
+            isTechnical
+              ? 'font-mono text-[#1B29FF] uppercase'
+              : 'text-[#101010]',
+          )}
         >
-          Amount to Withdraw
+          {isTechnical ? 'INPUT::AMOUNT' : 'Amount to Withdraw'}
         </label>
         <div className="relative">
           <input
@@ -465,19 +516,34 @@ export function WithdrawEarnCard({
             placeholder="0.0"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
-            className="w-full px-3 py-2 pr-20 text-[14px] bg-white border border-[#101010]/10 focus:border-[#1B29FF] focus:outline-none transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+            className={cn(
+              'w-full px-3 py-2 pr-20 text-[14px] transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none',
+              isTechnical
+                ? 'font-mono bg-white border border-[#1B29FF]/30 text-[#101010] placeholder:text-[#101010]/30 focus:border-[#1B29FF] focus:outline-none'
+                : 'bg-white border border-[#101010]/10 focus:border-[#1B29FF] focus:outline-none',
+            )}
             step="0.000001"
             min="0"
             max={availableBalance}
           />
           <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
-            <span className="text-[11px] text-[#101010]/50">
-              {isNativeAsset ? assetSymbol : 'USD'}
+            <span
+              className={cn(
+                'text-[11px]',
+                isTechnical ? 'font-mono text-[#1B29FF]' : 'text-[#101010]/50',
+              )}
+            >
+              {isNativeAsset ? assetSymbol : isTechnical ? 'USDC' : 'USD'}
             </span>
             <button
               type="button"
               onClick={handleMax}
-              className="px-1.5 py-0.5 text-[10px] text-[#1B29FF] hover:text-[#1420CC] transition-colors"
+              className={cn(
+                'px-1.5 py-0.5 text-[10px] transition-colors',
+                isTechnical
+                  ? 'font-mono text-[#1B29FF] hover:text-[#1420CC] border border-[#1B29FF]/30 hover:border-[#1B29FF]'
+                  : 'text-[#1B29FF] hover:text-[#1420CC]',
+              )}
             >
               MAX
             </button>
@@ -489,44 +555,92 @@ export function WithdrawEarnCard({
       <button
         onClick={handleWithdraw}
         disabled={disableWithdraw}
-        className="w-full px-4 py-2.5 text-[14px] font-medium text-white bg-[#1B29FF] hover:bg-[#1420CC] disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+        className={cn(
+          'w-full px-4 py-2.5 text-[14px] font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2 relative',
+          isTechnical
+            ? 'font-mono uppercase bg-white border-2 border-[#1B29FF] text-[#1B29FF] hover:bg-[#1B29FF] hover:text-white'
+            : 'text-white bg-[#1B29FF] hover:bg-[#1420CC]',
+        )}
       >
         {isWithdrawing ? (
           <Loader2 className="h-4 w-4 animate-spin" />
         ) : (
           <ArrowUpFromLine className="h-4 w-4" />
         )}
-        {isWithdrawing ? 'Processing...' : 'Withdraw'}
+        {isTechnical
+          ? isWithdrawing
+            ? 'PROCESSING...'
+            : '[ EXECUTE ]'
+          : isWithdrawing
+            ? 'Processing...'
+            : 'Withdraw'}
       </button>
 
       {/* Error states */}
       {amountParseFailed && (
-        <div className="bg-[#FEF2F2] border border-[#EF4444]/20 p-3">
+        <div
+          className={cn(
+            'p-3 relative',
+            isTechnical
+              ? 'bg-[#EF4444]/5 border border-[#EF4444]/30'
+              : 'bg-[#FEF2F2] border border-[#EF4444]/20',
+          )}
+        >
           <div className="flex gap-2 items-start">
             <AlertCircle className="h-4 w-4 text-[#EF4444] flex-shrink-0 mt-0.5" />
-            <p className="text-[12px] text-[#101010]/70">
-              Unable to parse the withdrawal amount. Please check the format.
+            <p
+              className={cn(
+                'text-[12px]',
+                isTechnical ? 'font-mono text-[#EF4444]' : 'text-[#101010]/70',
+              )}
+            >
+              {isTechnical
+                ? 'ERR: PARSE_FAILED'
+                : 'Unable to parse the withdrawal amount. Please check the format.'}
             </p>
           </div>
         </div>
       )}
 
       {amountExceedsBalance && (
-        <div className="bg-[#FEF2F2] border border-[#EF4444]/20 p-3">
+        <div
+          className={cn(
+            'p-3 relative',
+            isTechnical
+              ? 'bg-[#EF4444]/5 border border-[#EF4444]/30'
+              : 'bg-[#FEF2F2] border border-[#EF4444]/20',
+          )}
+        >
           <div className="flex gap-2 items-start">
             <AlertCircle className="h-4 w-4 text-[#EF4444] flex-shrink-0 mt-0.5" />
-            <p className="text-[12px] text-[#101010]/70">
-              Amount exceeds your available vault balance.
+            <p
+              className={cn(
+                'text-[12px]',
+                isTechnical ? 'font-mono text-[#EF4444]' : 'text-[#101010]/70',
+              )}
+            >
+              {isTechnical
+                ? 'ERR: AMOUNT > BALANCE'
+                : 'Amount exceeds your available vault balance.'}
             </p>
           </div>
         </div>
       )}
 
       {/* Help text */}
-      <p className="text-[11px] text-[#101010]/50 text-center">
-        {isNativeAsset
-          ? 'You will receive WETH which can be unwrapped to ETH'
-          : 'Your funds will be available in your account immediately'}
+      <p
+        className={cn(
+          'text-[11px] text-center relative',
+          isTechnical ? 'font-mono text-[#1B29FF]/60' : 'text-[#101010]/50',
+        )}
+      >
+        {isTechnical
+          ? isNativeAsset
+            ? 'OUTPUT: WETH (UNWRAP_REQUIRED)'
+            : 'SETTLEMENT: IMMEDIATE'
+          : isNativeAsset
+            ? 'You will receive WETH which can be unwrapped to ETH'
+            : 'Your funds will be available in your account immediately'}
       </p>
     </div>
   );

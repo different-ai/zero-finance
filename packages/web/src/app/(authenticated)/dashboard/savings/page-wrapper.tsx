@@ -21,6 +21,12 @@ import {
   TrendingUp,
   Coins,
 } from 'lucide-react';
+import {
+  BimodalToggle,
+  BimodalCard,
+  BlueprintGrid,
+  Crosshairs,
+} from '@/components/ui/bimodal';
 import { WithdrawEarnCard } from '@/app/(authenticated)/dashboard/tools/earn-module/components/withdraw-earn-card';
 import { DepositEarnCard } from '@/app/(authenticated)/dashboard/tools/earn-module/components/deposit-earn-card';
 import { formatUsd, cn } from '@/lib/utils';
@@ -76,6 +82,9 @@ export default function SavingsPageWrapper({
     null,
   );
   const refetchTimeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+
+  // Bimodal Interface State - Technical mode shows multi-chain, ETH vaults, protocol details
+  const [isTechnical, setIsTechnical] = useState(false);
 
   const activationSteps = [
     'Verifying account...',
@@ -220,15 +229,22 @@ export default function SavingsPageWrapper({
 
   const vaultStats = isDemoMode ? demoVaultStats : realVaultStats.data;
 
-  // Base vaults configuration
+  // Base vaults configuration - controlled by technical mode toggle
   const BASE_VAULTS = useMemo(() => {
     if (isDemoMode) {
-      // Demo mode always uses base vaults for simplicity unless we want to demo multi-chain
+      // Demo mode always uses base vaults for simplicity
       return BASE_USDC_VAULTS;
     }
-    // Include all Base vaults (USDC + ETH) by default, or cross-chain vaults if enabled
-    return hasMultiChainFeature ? ALL_CROSS_CHAIN_VAULTS : ALL_BASE_VAULTS;
-  }, [isDemoMode, hasMultiChainFeature]);
+
+    // Banking mode: Only USDC vaults on Base (simple view)
+    // Technical mode: All vaults including ETH and cross-chain
+    if (isTechnical) {
+      return hasMultiChainFeature ? ALL_CROSS_CHAIN_VAULTS : ALL_BASE_VAULTS;
+    }
+
+    // Default banking mode - just USDC on Base
+    return BASE_USDC_VAULTS;
+  }, [isDemoMode, hasMultiChainFeature, isTechnical]);
 
   const baseVaultAddresses = useMemo(
     () => BASE_VAULTS.map((v) => v.address),
@@ -534,30 +550,82 @@ export default function SavingsPageWrapper({
 
   return (
     <div className="space-y-10">
+      {/* Bimodal Toggle - Banking/Technical Mode */}
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60 mb-1">
+            View Mode
+          </p>
+        </div>
+        <BimodalToggle
+          isTechnical={isTechnical}
+          onToggle={() => setIsTechnical(!isTechnical)}
+        />
+      </div>
+
       {/* Always show the full savings interface - auto-earn module is now optional */}
       <div className="space-y-12">
         {/* Protection Banner - Active Insurance or CTA */}
         {userIsInsured ? (
-          <div className="bg-gradient-to-r from-[#1B29FF]/10 via-[#1B29FF]/5 to-transparent border-2 border-[#1B29FF]/30 rounded-[16px] p-6 shadow-[0_4px_16px_rgba(27,41,255,0.12)]">
+          <div
+            className={cn(
+              'p-6 transition-all duration-300',
+              isTechnical
+                ? 'bg-white border border-[#1B29FF]/20 rounded-sm'
+                : 'bg-gradient-to-r from-[#1B29FF]/10 via-[#1B29FF]/5 to-transparent border-2 border-[#1B29FF]/30 rounded-[16px] shadow-[0_4px_16px_rgba(27,41,255,0.12)]',
+            )}
+          >
             <div className="flex items-start gap-4">
-              <div className="flex-shrink-0 w-12 h-12 rounded-full bg-[#1B29FF]/15 flex items-center justify-center">
-                <Shield className="h-6 w-6 text-[#1B29FF]" />
-              </div>
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-2">
-                  <h3 className="text-[18px] font-semibold text-[#101010]">
-                    Insurance Protection Active
+                  <h3
+                    className={cn(
+                      isTechnical
+                        ? 'font-mono text-[16px] text-[#1B29FF]'
+                        : 'text-[18px] font-semibold text-[#101010]',
+                    )}
+                  >
+                    {isTechnical
+                      ? 'COVERAGE::ACTIVE'
+                      : 'Insurance Protection Active'}
                   </h3>
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-green-50 border border-green-200">
-                    <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
-                    <span className="text-[11px] font-semibold text-green-700 uppercase tracking-wide">
-                      Protected
+                  <span
+                    className={cn(
+                      'inline-flex items-center gap-1.5 px-2.5 py-1',
+                      isTechnical
+                        ? 'bg-[#1B29FF]/10 border border-[#1B29FF]/20 rounded-sm'
+                        : 'rounded-full bg-green-50 border border-green-200',
+                    )}
+                  >
+                    <div
+                      className={cn(
+                        'h-2 w-2 rounded-full animate-pulse',
+                        isTechnical ? 'bg-[#1B29FF]' : 'bg-green-500',
+                      )}
+                    />
+                    <span
+                      className={cn(
+                        'text-[11px] font-semibold uppercase tracking-wide',
+                        isTechnical
+                          ? 'text-[#1B29FF] font-mono'
+                          : 'text-green-700',
+                      )}
+                    >
+                      {isTechnical ? 'ONLINE' : 'Protected'}
                     </span>
                   </span>
                 </div>
-                <p className="text-[14px] text-[#101010]/70 leading-relaxed">
-                  All your savings are covered by 0 Finance insurance at no
-                  additional cost. Coverage applies to all vaults automatically.
+                <p
+                  className={cn(
+                    'leading-relaxed',
+                    isTechnical
+                      ? 'font-mono text-[12px] text-[#101010]/60'
+                      : 'text-[14px] text-[#101010]/70',
+                  )}
+                >
+                  {isTechnical
+                    ? 'Coverage applies to all vault positions. No additional configuration required.'
+                    : 'All your savings are covered by 0 Finance insurance at no additional cost. Coverage applies to all vaults automatically.'}
                 </p>
               </div>
             </div>
@@ -565,63 +633,46 @@ export default function SavingsPageWrapper({
         ) : (
           <div
             className={cn(
-              'relative overflow-hidden bg-white border rounded-[16px] shadow-[0_2px_12px_rgba(27,41,255,0.08)] transition-all duration-300',
-              selectedVault.vaultAddress === 'insured-contact'
-                ? 'border-[#1B29FF]/40'
-                : 'border-[#1B29FF]/20',
+              'bg-white border border-[#101010]/10 rounded-[12px] overflow-hidden transition-all duration-300',
+              selectedVault.vaultAddress === 'insured-contact' &&
+                'border-[#1B29FF]/20',
             )}
           >
-            {/* Blueprint Grid Background */}
-            <div
-              className="absolute inset-0 pointer-events-none opacity-40"
-              style={{
-                backgroundImage:
-                  'linear-gradient(to right, rgba(27,41,255,0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(27,41,255,0.05) 1px, transparent 1px)',
-                backgroundSize: '24px 24px',
-              }}
-            />
-
-            <div className="relative z-10 p-6">
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                <div className="flex items-start gap-4">
-                  <div className="flex-shrink-0 w-12 h-12 rounded-full bg-[#1B29FF]/10 flex items-center justify-center">
-                    <Shield className="h-6 w-6 text-[#1B29FF]" />
+            <button
+              type="button"
+              onClick={() =>
+                toggleVaultAction('insure', {
+                  address: 'insured-contact',
+                  name: 'Get Protection',
+                })
+              }
+              className="w-full p-6 text-left hover:bg-[#F7F7F2]/50 transition-colors"
+            >
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center gap-4">
+                  <div className="flex-shrink-0 w-10 h-10 rounded-full bg-[#1B29FF]/10 flex items-center justify-center">
+                    <Shield className="h-5 w-5 text-[#1B29FF]" />
                   </div>
                   <div>
-                    <h3 className="text-[18px] font-semibold text-[#101010] mb-1">
-                      Protect Your Savings
+                    <h3 className="text-[15px] font-semibold text-[#101010] mb-0.5">
+                      Insurance Coverage
                     </h3>
-                    <p className="text-[14px] text-[#101010]/70 leading-relaxed max-w-[400px]">
-                      Get institutional-grade insurance coverage for all your
-                      deposits. Sleep easy knowing your funds are protected.
+                    <p className="text-[13px] text-[#101010]/60">
+                      Protect your deposits with institutional-grade coverage
                     </p>
                   </div>
                 </div>
-                <button
-                  onClick={() =>
-                    toggleVaultAction('insure', {
-                      address: 'insured-contact',
-                      name: 'Get Protection',
-                    })
-                  }
-                  className={cn(
-                    'group relative flex-shrink-0 inline-flex items-center gap-2 px-6 py-3 font-medium text-[14px] rounded-lg transition-all duration-300',
-                    selectedVault.vaultAddress === 'insured-contact'
-                      ? 'bg-[#F7F7F2] text-[#101010] border border-[#101010]/10'
-                      : 'bg-[#1B29FF] hover:bg-[#1420CC] text-white shadow-primary hover:shadow-[0_6px_20px_rgba(27,41,255,0.35)]',
-                  )}
-                >
-                  <span>
+                <div className="flex items-center gap-3">
+                  <span className="hidden sm:inline-block text-[13px] font-medium text-[#1B29FF]">
                     {selectedVault.vaultAddress === 'insured-contact'
                       ? 'Close'
-                      : 'Get Protected'}
+                      : 'Learn more'}
                   </span>
                   <svg
                     className={cn(
-                      'w-4 h-4 transition-transform duration-300',
-                      selectedVault.vaultAddress === 'insured-contact'
-                        ? 'rotate-90'
-                        : 'group-hover:translate-x-1',
+                      'w-4 h-4 text-[#101010]/40 transition-transform duration-200',
+                      selectedVault.vaultAddress === 'insured-contact' &&
+                        'rotate-180',
                     )}
                     fill="none"
                     viewBox="0 0 24 24"
@@ -631,16 +682,12 @@ export default function SavingsPageWrapper({
                       strokeLinecap="round"
                       strokeLinejoin="round"
                       strokeWidth={2}
-                      d={
-                        selectedVault.vaultAddress === 'insured-contact'
-                          ? 'M6 18L18 6M6 6l12 12'
-                          : 'M13 7l5 5m0 0l-5 5m5-5H6'
-                      }
+                      d="M19 9l-7 7-7-7"
                     />
                   </svg>
-                </button>
+                </div>
               </div>
-            </div>
+            </button>
 
             {/* Accordion Content - Insurance Contact Panel */}
             <div
@@ -651,8 +698,8 @@ export default function SavingsPageWrapper({
                   : 'max-h-0 opacity-0',
               )}
             >
-              <div className="px-6 pb-6">
-                <div className="bg-[#F7F7F2] border border-[#101010]/10 rounded-lg p-5 sm:p-6">
+              <div className="px-6 pb-6 border-t border-[#101010]/10">
+                <div className="pt-4">
                   <InsuranceContactPanel />
                 </div>
               </div>
@@ -666,6 +713,7 @@ export default function SavingsPageWrapper({
             balanceUsd={withdrawableBalanceUsd}
             safeAddress={safeAddress}
             isDemoMode={isDemoMode}
+            isTechnical={isTechnical}
           />
 
           <PortfolioOverview
@@ -677,64 +725,154 @@ export default function SavingsPageWrapper({
             animatedBalance={animatedBalance}
             animatedInitialEarned={animatedInitialEarned}
             vaultCount={vaultsVM.length}
+            isTechnical={isTechnical}
           />
         </div>
 
         {/* Live Yield Counter - Premium Card */}
         {totalSaved > 0 && (
-          <div className="bg-white border border-[#101010]/10 p-8">
-            <p className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60 mb-6">
-              Real-Time Yield Accumulation
-            </p>
-            <AnimatedYieldCounter
-              principal={totalSaved}
-              apy={averageApy}
-              showDaily={true}
-              showMonthly={true}
-              showYearly={true}
-              formatOptions={{
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 6,
-              }}
-            />
+          <div
+            className={cn(
+              'relative overflow-hidden p-8 transition-all duration-300',
+              isTechnical
+                ? 'bg-white border border-[#1B29FF]/20 rounded-sm'
+                : 'bg-white border border-[#101010]/10 rounded-[12px]',
+            )}
+          >
+            {isTechnical && (
+              <div
+                className="absolute inset-0 pointer-events-none opacity-40"
+                style={{
+                  backgroundImage: `
+                    linear-gradient(to right, rgba(27,41,255,0.03) 1px, transparent 1px),
+                    linear-gradient(to bottom, rgba(27,41,255,0.03) 1px, transparent 1px)
+                  `,
+                  backgroundSize: '24px 24px',
+                }}
+              />
+            )}
+            {isTechnical && (
+              <div className="absolute top-2 right-2 font-mono text-[9px] text-[#1B29FF]/40">
+                CALC::REALTIME
+              </div>
+            )}
+
+            <div className="relative z-10">
+              <p
+                className={cn(
+                  'mb-6',
+                  isTechnical
+                    ? 'font-mono text-[10px] text-[#1B29FF] tracking-wider uppercase'
+                    : 'uppercase tracking-[0.14em] text-[11px] text-[#101010]/60',
+                )}
+              >
+                {isTechnical
+                  ? 'YIELD::REALTIME_CALC'
+                  : 'Real-Time Yield Accumulation'}
+              </p>
+              <AnimatedYieldCounter
+                principal={totalSaved}
+                apy={averageApy}
+                showDaily={true}
+                showMonthly={true}
+                showYearly={true}
+                formatOptions={{
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 6,
+                }}
+              />
+            </div>
           </div>
         )}
 
-        {/* Vaults Section - Editorial Table Style */}
-        <div id="vaults-section">
-          <div className="mb-8">
-            <p className="uppercase tracking-[0.18em] text-[11px] text-[#101010]/60">
-              Available Strategies
+        {/* Vaults Section - Bimodal Design */}
+        <div id="vaults-section" className="relative">
+          {/* Blueprint Grid Background (Technical only) */}
+          {isTechnical && (
+            <div
+              className="absolute inset-0 pointer-events-none z-0 opacity-60"
+              style={{
+                backgroundImage: `
+                  linear-gradient(to right, rgba(27,41,255,0.03) 1px, transparent 1px),
+                  linear-gradient(to bottom, rgba(27,41,255,0.03) 1px, transparent 1px)
+                `,
+                backgroundSize: '24px 24px',
+              }}
+            >
+              {/* Architectural Crosshairs */}
+              <div className="absolute top-0 left-0 w-4 h-4 border-l border-t border-[#1B29FF]/30" />
+              <div className="absolute top-0 right-0 w-4 h-4 border-r border-t border-[#1B29FF]/30" />
+              <div className="absolute bottom-0 left-0 w-4 h-4 border-l border-b border-[#1B29FF]/30" />
+              <div className="absolute bottom-0 right-0 w-4 h-4 border-r border-b border-[#1B29FF]/30" />
+            </div>
+          )}
+
+          <div className="relative z-10 mb-8">
+            <p
+              className={cn(
+                isTechnical
+                  ? 'font-mono text-[10px] text-[#1B29FF] tracking-wider uppercase'
+                  : 'uppercase tracking-[0.18em] text-[11px] text-[#101010]/60',
+              )}
+            >
+              {isTechnical ? 'VAULT::STRATEGIES' : 'Available Strategies'}
             </p>
           </div>
 
+          {/* Technical Mode Headers */}
+          {isTechnical && (
+            <div className="relative z-10 px-4 py-2 grid grid-cols-12 gap-3 border-b border-[#1B29FF]/10 mb-2">
+              <span className="col-span-4 font-mono text-[10px] text-[#1B29FF]/50">
+                STRATEGY_ID
+              </span>
+              <span className="col-span-2 font-mono text-[10px] text-[#1B29FF]/50 text-right">
+                APY_VAR
+              </span>
+              <span className="col-span-3 font-mono text-[10px] text-[#1B29FF]/50 text-right">
+                POSITION
+              </span>
+              <span className="col-span-3 font-mono text-[10px] text-[#1B29FF]/50 text-right">
+                EXECUTE
+              </span>
+            </div>
+          )}
+
           {/* Vault Table - Responsive */}
-          <div className="bg-white border border-[#101010]/10 overflow-x-auto">
+          <div
+            className={cn(
+              'relative z-10 overflow-x-auto transition-all duration-300',
+              isTechnical
+                ? 'bg-white border border-[#1B29FF]/20 rounded-sm shadow-none'
+                : 'bg-white border border-[#101010]/10',
+            )}
+          >
             {/* Desktop Table View */}
             <div className="hidden lg:block min-w-[800px]">
-              {/* Table Header */}
-              <div className="grid grid-cols-12 gap-3 p-4 border-b border-[#101010]/10 bg-[#F7F7F2]">
-                <div className="col-span-4">
-                  <p className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60">
-                    Strategy
-                  </p>
+              {/* Table Header - Hidden in technical mode (we show it above) */}
+              {!isTechnical && (
+                <div className="grid grid-cols-12 gap-3 p-4 border-b border-[#101010]/10 bg-[#F7F7F2]">
+                  <div className="col-span-4">
+                    <p className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60">
+                      Strategy
+                    </p>
+                  </div>
+                  <div className="col-span-2 text-right">
+                    <p className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60">
+                      APY
+                    </p>
+                  </div>
+                  <div className="col-span-3 text-right">
+                    <p className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60">
+                      Your Position
+                    </p>
+                  </div>
+                  <div className="col-span-3 text-right">
+                    <p className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60">
+                      Actions
+                    </p>
+                  </div>
                 </div>
-                <div className="col-span-2 text-right">
-                  <p className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60">
-                    APY
-                  </p>
-                </div>
-                <div className="col-span-3 text-right">
-                  <p className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60">
-                    Your Position
-                  </p>
-                </div>
-                <div className="col-span-3 text-right">
-                  <p className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60">
-                    Actions
-                  </p>
-                </div>
-              </div>
+              )}
 
               {/* Vault Rows */}
               {displayVaults.map((vault, index) => {
@@ -759,110 +897,170 @@ export default function SavingsPageWrapper({
                     <div
                       className={cn(
                         'grid grid-cols-12 gap-3 p-4 items-center transition-all duration-200 relative z-10',
-                        vault.isInsured
-                          ? 'bg-[#1B29FF]/5 hover:bg-[#1B29FF]/10 border-l-2 border-[#1B29FF]'
-                          : vault.category === 'growth'
-                            ? 'bg-gradient-to-r from-[#10b981]/5 to-transparent hover:from-[#10b981]/10 border-l-2 border-[#10b981]'
-                            : 'hover:bg-[#F7F7F2]/30',
-                        isSelected &&
-                          (vault.isInsured
-                            ? 'ring-1 ring-[#1B29FF]/30 bg-[#1B29FF]/12'
-                            : vault.category === 'growth'
-                              ? 'ring-1 ring-[#10b981]/30 bg-[#10b981]/8'
-                              : 'bg-[#F7F7F2]/50'),
+                        isTechnical
+                          ? cn(
+                              'bg-white border-b border-[#1B29FF]/10',
+                              isSelected && 'bg-[#1B29FF]/5',
+                            )
+                          : cn(
+                              vault.isInsured
+                                ? 'bg-[#1B29FF]/5 hover:bg-[#1B29FF]/10 border-l-2 border-[#1B29FF]'
+                                : vault.category === 'growth'
+                                  ? 'bg-gradient-to-r from-[#10b981]/5 to-transparent hover:from-[#10b981]/10 border-l-2 border-[#10b981]'
+                                  : 'hover:bg-[#F7F7F2]/30',
+                              isSelected &&
+                                (vault.isInsured
+                                  ? 'ring-1 ring-[#1B29FF]/30 bg-[#1B29FF]/12'
+                                  : vault.category === 'growth'
+                                    ? 'ring-1 ring-[#10b981]/30 bg-[#10b981]/8'
+                                    : 'bg-[#F7F7F2]/50'),
+                            ),
                         (isExpanding || isCollapsing) && 'transition-none',
                       )}
                     >
+                      {/* Technical Mode ID Tag */}
+                      {isTechnical && (
+                        <div className="absolute top-2 right-2 font-mono text-[9px] text-[#1B29FF]/40">
+                          ID::{vault.id.toUpperCase().replace(/-/g, '_')}
+                        </div>
+                      )}
                       <div className="col-span-4">
                         <div className="flex items-start gap-3">
-                          {/* Asset Icon */}
-                          <div
-                            className={cn(
-                              'flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center',
-                              vault.category === 'growth'
-                                ? 'bg-[#10b981]/10'
-                                : 'bg-[#1B29FF]/10',
-                            )}
-                          >
-                            {vault.category === 'growth' ? (
-                              <TrendingUp
-                                className={cn(
-                                  'h-5 w-5',
-                                  vault.category === 'growth'
-                                    ? 'text-[#10b981]'
-                                    : 'text-[#1B29FF]',
-                                )}
-                              />
-                            ) : (
-                              <Coins className="h-5 w-5 text-[#1B29FF]" />
-                            )}
-                          </div>
                           <div className="min-w-0 flex-1">
                             <div className="flex flex-wrap items-center gap-2">
-                              <p className="text-[15px] font-medium text-[#101010] truncate">
+                              <p
+                                className={cn(
+                                  'truncate',
+                                  isTechnical
+                                    ? 'text-[15px] font-mono text-[#1B29FF]'
+                                    : 'text-[15px] font-medium text-[#101010]',
+                                )}
+                              >
                                 {vault.displayName || vault.name}
                               </p>
                               {/* Asset Badge */}
                               <span
                                 className={cn(
                                   'inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wide',
-                                  vault.asset.symbol === 'WETH' ||
-                                    vault.asset.symbol === 'ETH'
-                                    ? 'bg-[#627eea]/10 text-[#627eea]'
-                                    : 'bg-[#2775ca]/10 text-[#2775ca]',
+                                  isTechnical
+                                    ? 'bg-[#1B29FF]/10 text-[#1B29FF] font-mono'
+                                    : vault.asset.symbol === 'WETH' ||
+                                        vault.asset.symbol === 'ETH'
+                                      ? 'bg-[#627eea]/10 text-[#627eea]'
+                                      : 'bg-[#2775ca]/10 text-[#2775ca]',
                                 )}
                               >
-                                {vault.asset.isNative
-                                  ? 'ETH'
-                                  : vault.asset.symbol}
+                                {isTechnical
+                                  ? 'ERC-4626'
+                                  : vault.asset.isNative
+                                    ? 'ETH'
+                                    : vault.asset.symbol}
                               </span>
                             </div>
-                            <p className="text-[12px] text-[#101010]/60 truncate mt-1">
-                              {vault.curator}
-                              {vault.risk ? ` · ${vault.risk}` : ''}
-                            </p>
+                            {/* Progressive Disclosure: Technical shows protocol/contract, Banking shows simple description */}
+                            {isTechnical ? (
+                              <div className="mt-1">
+                                <div className="flex items-center gap-2 text-[11px] font-mono text-[#101010]/70">
+                                  <span>PROT: {vault.name.split(' ')[0]}</span>
+                                  <span className="text-[#1B29FF]/30">|</span>
+                                  <span>RISK: {vault.curator}</span>
+                                </div>
+                              </div>
+                            ) : (
+                              <p className="text-[12px] text-[#101010]/60 truncate mt-1">
+                                {vault.curator}
+                                {vault.risk ? ` · ${vault.risk}` : ''}
+                              </p>
+                            )}
                           </div>
                         </div>
                       </div>
 
                       <div className="col-span-2 text-right">
-                        <p
-                          className={cn(
-                            'text-[24px] font-semibold tabular-nums',
-                            vault.category === 'growth'
-                              ? 'text-[#10b981]'
-                              : 'text-[#1B29FF]',
+                        <div className="flex items-baseline justify-end gap-1">
+                          <p
+                            className={cn(
+                              'tabular-nums',
+                              isTechnical
+                                ? 'text-[18px] font-mono text-[#1B29FF]'
+                                : cn(
+                                    'text-[24px] font-semibold',
+                                    vault.category === 'growth'
+                                      ? 'text-[#10b981]'
+                                      : 'text-[#1B29FF]',
+                                  ),
+                            )}
+                          >
+                            {vault.apy.toFixed(1)}%
+                          </p>
+                          {isTechnical && (
+                            <span className="text-[10px] text-[#1B29FF]/60 font-mono">
+                              VAR
+                            </span>
                           )}
-                        >
-                          {vault.apy.toFixed(1)}%
-                        </p>
+                        </div>
                       </div>
 
                       <div className="col-span-3 text-right">
                         {vault.isContactOnly ? (
-                          <p className="text-[16px] text-[#101010]/40">—</p>
+                          <p
+                            className={cn(
+                              isTechnical
+                                ? 'font-mono text-[#1B29FF]/40'
+                                : 'text-[16px] text-[#101010]/40',
+                            )}
+                          >
+                            —
+                          </p>
                         ) : vault.balanceUsd > 0 ? (
                           <div>
-                            {/* Show native amount for ETH vaults */}
-                            {vault.balanceNative !== undefined && (
-                              <p className="text-[18px] font-semibold tabular-nums text-[#101010]">
-                                {vault.balanceNative.toFixed(6)} ETH
-                              </p>
+                            {/* Technical mode: Token amount first, USD second */}
+                            {isTechnical ? (
+                              <>
+                                <p className="text-[15px] font-mono tabular-nums text-[#101010]">
+                                  {vault.balanceNative !== undefined
+                                    ? vault.balanceNative.toFixed(6)
+                                    : vault.balanceUsd.toFixed(2)}
+                                  <span className="ml-1 text-[11px] text-[#101010]/50">
+                                    {vault.asset.isNative
+                                      ? 'ETH'
+                                      : vault.asset.symbol}
+                                  </span>
+                                </p>
+                                <p className="text-[11px] font-mono text-[#101010]/50 tabular-nums">
+                                  ≈ {formatUsd(vault.balanceUsd)}
+                                </p>
+                              </>
+                            ) : (
+                              <>
+                                {/* Banking mode: USD first */}
+                                {vault.balanceNative !== undefined && (
+                                  <p className="text-[18px] font-semibold tabular-nums text-[#101010]">
+                                    {vault.balanceNative.toFixed(6)} ETH
+                                  </p>
+                                )}
+                                <p
+                                  className={cn(
+                                    'tabular-nums',
+                                    vault.balanceNative !== undefined
+                                      ? 'text-[13px] text-[#101010]/60'
+                                      : 'text-[18px] font-semibold text-[#101010]',
+                                  )}
+                                >
+                                  {formatUsd(vault.balanceUsd)}
+                                </p>
+                              </>
                             )}
-                            <p
-                              className={cn(
-                                'tabular-nums',
-                                vault.balanceNative !== undefined
-                                  ? 'text-[13px] text-[#101010]/60'
-                                  : 'text-[18px] font-semibold text-[#101010]',
-                              )}
-                            >
-                              {formatUsd(vault.balanceUsd)}
-                            </p>
                           </div>
                         ) : (
-                          <p className="text-[14px] text-[#101010]/40">
-                            No position
+                          <p
+                            className={cn(
+                              isTechnical
+                                ? 'text-[13px] font-mono text-[#101010]/40'
+                                : 'text-[14px] text-[#101010]/40',
+                            )}
+                          >
+                            {isTechnical ? '0.00' : 'No position'}
                           </p>
                         )}
                       </div>
@@ -888,7 +1086,12 @@ export default function SavingsPageWrapper({
                                   'Sign in to deposit funds from your real account.',
                                 )
                               }
-                              className="px-2.5 py-1 text-[12px] text-white bg-[#1B29FF] hover:bg-[#1420CC] transition-colors"
+                              className={cn(
+                                'px-2.5 py-1 text-[12px] transition-colors',
+                                isTechnical
+                                  ? 'bg-transparent border border-[#1B29FF] text-[#1B29FF] hover:bg-[#1B29FF]/5 font-mono uppercase'
+                                  : 'text-white bg-[#1B29FF] hover:bg-[#1420CC]',
+                              )}
                             >
                               Deposit
                             </button>
@@ -898,7 +1101,12 @@ export default function SavingsPageWrapper({
                                   'Sign in to withdraw from live vault positions.',
                                 )
                               }
-                              className="px-2.5 py-1 text-[12px] text-[#101010] border border-[#101010]/10 hover:bg-[#F7F7F2] transition-colors"
+                              className={cn(
+                                'px-2.5 py-1 text-[12px] transition-colors',
+                                isTechnical
+                                  ? 'text-[#101010]/60 hover:text-[#1B29FF] font-mono uppercase underline decoration-dotted underline-offset-4'
+                                  : 'text-[#101010] border border-[#101010]/10 hover:bg-[#F7F7F2]',
+                              )}
                             >
                               Withdraw
                             </button>
@@ -907,7 +1115,12 @@ export default function SavingsPageWrapper({
                                 href={vault.appUrl}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="px-2 py-1 text-[#101010]/60 hover:text-[#101010] transition-colors flex items-center"
+                                className={cn(
+                                  'px-2 py-1 transition-colors flex items-center',
+                                  isTechnical
+                                    ? 'text-[#1B29FF] hover:bg-[#1B29FF]/5'
+                                    : 'text-[#101010]/60 hover:text-[#101010]',
+                                )}
                               >
                                 <ExternalLink className="h-3 w-3" />
                               </a>
@@ -920,10 +1133,20 @@ export default function SavingsPageWrapper({
                                 toggleVaultAction('deposit', vault)
                               }
                               className={cn(
-                                'px-2.5 py-1 text-[12px] text-white transition-colors',
-                                expandedAction === 'deposit' && isSelected
-                                  ? 'bg-[#1420CC]'
-                                  : 'bg-[#1B29FF] hover:bg-[#1420CC]',
+                                'px-2.5 py-1 text-[12px] transition-colors',
+                                isTechnical
+                                  ? cn(
+                                      'bg-transparent border border-[#1B29FF] text-[#1B29FF] hover:bg-[#1B29FF]/5 font-mono uppercase',
+                                      expandedAction === 'deposit' &&
+                                        isSelected &&
+                                        'bg-[#1B29FF]/10',
+                                    )
+                                  : cn(
+                                      'text-white',
+                                      expandedAction === 'deposit' && isSelected
+                                        ? 'bg-[#1420CC]'
+                                        : 'bg-[#1B29FF] hover:bg-[#1420CC]',
+                                    ),
                               )}
                             >
                               Deposit
@@ -933,10 +1156,21 @@ export default function SavingsPageWrapper({
                                 toggleVaultAction('withdraw', vault)
                               }
                               className={cn(
-                                'px-2.5 py-1 text-[12px] text-[#101010] border border-[#101010]/10 transition-colors',
-                                expandedAction === 'withdraw' && isSelected
-                                  ? 'bg-[#F7F7F2]'
-                                  : 'bg-white hover:bg-[#F7F7F2]',
+                                'px-2.5 py-1 text-[12px] transition-colors',
+                                isTechnical
+                                  ? cn(
+                                      'text-[#101010]/60 hover:text-[#1B29FF] font-mono uppercase underline decoration-dotted underline-offset-4',
+                                      expandedAction === 'withdraw' &&
+                                        isSelected &&
+                                        'text-[#1B29FF]',
+                                    )
+                                  : cn(
+                                      'text-[#101010] border border-[#101010]/10',
+                                      expandedAction === 'withdraw' &&
+                                        isSelected
+                                        ? 'bg-[#F7F7F2]'
+                                        : 'bg-white hover:bg-[#F7F7F2]',
+                                    ),
                               )}
                             >
                               Withdraw
@@ -946,7 +1180,12 @@ export default function SavingsPageWrapper({
                                 href={vault.appUrl}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="px-2 py-1 text-[#101010]/60 hover:text-[#101010] transition-colors flex items-center"
+                                className={cn(
+                                  'px-2 py-1 transition-colors flex items-center',
+                                  isTechnical
+                                    ? 'text-[#1B29FF] hover:bg-[#1B29FF]/5'
+                                    : 'text-[#101010]/60 hover:text-[#101010]',
+                                )}
                               >
                                 <ExternalLink className="h-3 w-3" />
                               </a>
@@ -969,8 +1208,8 @@ export default function SavingsPageWrapper({
                             'animate-in fade-in slide-in-from-top-1',
                         )}
                       >
-                        <div className="px-4 pb-4 bg-[#F7F7F2]/50">
-                          <div className="bg-white border border-[#101010]/10 p-5 sm:p-6">
+                        <div className="">
+                          <div className={cn('')}>
                             {expandedAction === 'insure' && isSelected ? (
                               <InsuranceContactPanel />
                             ) : expandedAction === 'deposit' && isSelected ? (
@@ -980,6 +1219,7 @@ export default function SavingsPageWrapper({
                                 vaultAddress={vault.address as Address}
                                 onDepositSuccess={handleDepositSuccess}
                                 chainId={vault.chainId}
+                                isTechnical={isTechnical}
                               />
                             ) : expandedAction === 'withdraw' && isSelected ? (
                               <WithdrawEarnCard
@@ -988,6 +1228,7 @@ export default function SavingsPageWrapper({
                                 vaultAddress={vault.address as Address}
                                 onWithdrawSuccess={handleWithdrawSuccess}
                                 chainId={vault.chainId}
+                                isTechnical={isTechnical}
                               />
                             ) : null}
                           </div>
@@ -1023,115 +1264,186 @@ export default function SavingsPageWrapper({
                     <div
                       className={cn(
                         'p-4 space-y-3 transition-all duration-200',
-                        vault.isInsured
-                          ? 'bg-[#1B29FF]/10'
-                          : vault.category === 'growth'
-                            ? 'bg-gradient-to-r from-[#10b981]/5 to-transparent'
-                            : 'bg-white',
-                        isSelected &&
-                          (vault.isInsured
-                            ? 'ring-1 ring-[#1B29FF]/40 bg-[#1B29FF]/14'
-                            : vault.category === 'growth'
-                              ? 'ring-1 ring-[#10b981]/30 bg-[#10b981]/8'
-                              : 'bg-[#F7F7F2]/40'),
+                        isTechnical
+                          ? cn(
+                              'bg-white border-b border-[#1B29FF]/10',
+                              isSelected && 'bg-[#1B29FF]/5',
+                            )
+                          : cn(
+                              vault.isInsured
+                                ? 'bg-[#1B29FF]/10'
+                                : vault.category === 'growth'
+                                  ? 'bg-gradient-to-r from-[#10b981]/5 to-transparent'
+                                  : 'bg-white',
+                              isSelected &&
+                                (vault.isInsured
+                                  ? 'ring-1 ring-[#1B29FF]/40 bg-[#1B29FF]/14'
+                                  : vault.category === 'growth'
+                                    ? 'ring-1 ring-[#10b981]/30 bg-[#10b981]/8'
+                                    : 'bg-[#F7F7F2]/40'),
+                            ),
                         (isExpanding || isCollapsing) && 'transition-none',
                       )}
                     >
                       {/* Vault Header */}
                       <div className="flex items-start justify-between">
                         <div className="flex items-start gap-3">
-                          {/* Asset Icon */}
-                          <div
-                            className={cn(
-                              'flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center',
-                              vault.category === 'growth'
-                                ? 'bg-[#10b981]/10'
-                                : 'bg-[#1B29FF]/10',
-                            )}
-                          >
-                            {vault.category === 'growth' ? (
-                              <TrendingUp
-                                className={cn(
-                                  'h-4 w-4',
-                                  vault.category === 'growth'
-                                    ? 'text-[#10b981]'
-                                    : 'text-[#1B29FF]',
-                                )}
-                              />
-                            ) : (
-                              <Coins className="h-4 w-4 text-[#1B29FF]" />
-                            )}
-                          </div>
                           <div className="flex flex-col gap-1">
                             <div className="flex flex-wrap items-center gap-2">
-                              <p className="text-[15px] font-medium text-[#101010]">
+                              <p
+                                className={cn(
+                                  isTechnical
+                                    ? 'text-[15px] font-mono text-[#1B29FF]'
+                                    : 'text-[15px] font-medium text-[#101010]',
+                                )}
+                              >
                                 {vault.displayName || vault.name}
                               </p>
                               {/* Asset Badge */}
                               <span
                                 className={cn(
                                   'inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-semibold uppercase tracking-wide',
-                                  vault.asset.symbol === 'WETH' ||
-                                    vault.asset.symbol === 'ETH'
-                                    ? 'bg-[#627eea]/10 text-[#627eea]'
-                                    : 'bg-[#2775ca]/10 text-[#2775ca]',
+                                  isTechnical
+                                    ? 'bg-[#1B29FF]/10 text-[#1B29FF] font-mono'
+                                    : vault.asset.symbol === 'WETH' ||
+                                        vault.asset.symbol === 'ETH'
+                                      ? 'bg-[#627eea]/10 text-[#627eea]'
+                                      : 'bg-[#2775ca]/10 text-[#2775ca]',
                                 )}
                               >
-                                {vault.asset.isNative
-                                  ? 'ETH'
-                                  : vault.asset.symbol}
+                                {isTechnical
+                                  ? 'ERC-4626'
+                                  : vault.asset.isNative
+                                    ? 'ETH'
+                                    : vault.asset.symbol}
                               </span>
                             </div>
-                            <p className="text-[12px] text-[#101010]/60">
-                              {vault.curator}
-                              {vault.risk ? ` · ${vault.risk}` : ''}
-                            </p>
+                            {isTechnical ? (
+                              <p className="text-[11px] font-mono text-[#101010]/70">
+                                PROT: {vault.name.split(' ')[0]} | RISK:{' '}
+                                {vault.curator}
+                              </p>
+                            ) : (
+                              <p className="text-[12px] text-[#101010]/60">
+                                {vault.curator}
+                                {vault.risk ? ` · ${vault.risk}` : ''}
+                              </p>
+                            )}
                           </div>
                         </div>
-                        <p
-                          className={cn(
-                            'text-[22px] font-semibold tabular-nums',
-                            vault.category === 'growth'
-                              ? 'text-[#10b981]'
-                              : 'text-[#1B29FF]',
+                        <div className="flex items-baseline gap-1">
+                          <p
+                            className={cn(
+                              'tabular-nums',
+                              isTechnical
+                                ? 'text-[18px] font-mono text-[#1B29FF]'
+                                : cn(
+                                    'text-[22px] font-semibold',
+                                    vault.category === 'growth'
+                                      ? 'text-[#10b981]'
+                                      : 'text-[#1B29FF]',
+                                  ),
+                            )}
+                          >
+                            {vault.apy.toFixed(1)}%
+                          </p>
+                          {isTechnical && (
+                            <span className="text-[9px] text-[#1B29FF]/60 font-mono">
+                              VAR
+                            </span>
                           )}
-                        >
-                          {vault.apy.toFixed(1)}%
-                        </p>
+                        </div>
                       </div>
 
                       {/* Vault Stats */}
                       {vault.isContactOnly ? (
                         <div className="flex justify-between text-[14px]">
-                          <span className="text-[#101010]/60">Position</span>
-                          <span className="text-[#101010]/40">—</span>
+                          <span
+                            className={
+                              isTechnical
+                                ? 'font-mono text-[11px] text-[#1B29FF]/70'
+                                : 'text-[#101010]/60'
+                            }
+                          >
+                            {isTechnical ? 'POSITION' : 'Position'}
+                          </span>
+                          <span
+                            className={
+                              isTechnical
+                                ? 'font-mono text-[#1B29FF]/40'
+                                : 'text-[#101010]/40'
+                            }
+                          >
+                            —
+                          </span>
                         </div>
                       ) : vault.balanceUsd > 0 ? (
-                        <>
-                          {/* Show native amount for ETH vaults */}
-                          {vault.balanceNative !== undefined && (
+                        isTechnical ? (
+                          <div className="flex justify-between text-[14px]">
+                            <span className="font-mono text-[11px] text-[#1B29FF]/70">
+                              BALANCE
+                            </span>
+                            <div className="text-right">
+                              <span className="font-mono tabular-nums text-[#101010]">
+                                {vault.balanceNative !== undefined
+                                  ? vault.balanceNative.toFixed(6)
+                                  : vault.balanceUsd.toFixed(2)}
+                                <span className="ml-1 text-[11px] text-[#101010]/50">
+                                  {vault.asset.isNative
+                                    ? 'ETH'
+                                    : vault.asset.symbol}
+                                </span>
+                              </span>
+                              <p className="text-[10px] font-mono text-[#101010]/50">
+                                ≈ {formatUsd(vault.balanceUsd)}
+                              </p>
+                            </div>
+                          </div>
+                        ) : (
+                          <>
+                            {/* Show native amount for ETH vaults */}
+                            {vault.balanceNative !== undefined && (
+                              <div className="flex justify-between text-[14px]">
+                                <span className="text-[#101010]/60">
+                                  Balance
+                                </span>
+                                <span className="tabular-nums font-medium text-[#101010]">
+                                  {vault.balanceNative.toFixed(6)} ETH
+                                </span>
+                              </div>
+                            )}
                             <div className="flex justify-between text-[14px]">
-                              <span className="text-[#101010]/60">Balance</span>
-                              <span className="tabular-nums font-medium text-[#101010]">
-                                {vault.balanceNative.toFixed(6)} ETH
+                              <span className="text-[#101010]/60">
+                                {vault.balanceNative !== undefined
+                                  ? 'Value'
+                                  : 'Balance'}
+                              </span>
+                              <span className="tabular-nums text-[#101010]">
+                                {formatUsd(vault.balanceUsd)}
                               </span>
                             </div>
-                          )}
-                          <div className="flex justify-between text-[14px]">
-                            <span className="text-[#101010]/60">
-                              {vault.balanceNative !== undefined
-                                ? 'Value'
-                                : 'Balance'}
-                            </span>
-                            <span className="tabular-nums text-[#101010]">
-                              {formatUsd(vault.balanceUsd)}
-                            </span>
-                          </div>
-                        </>
+                          </>
+                        )
                       ) : (
                         <div className="flex justify-between text-[14px]">
-                          <span className="text-[#101010]/60">Position</span>
-                          <span className="text-[#101010]/40">No position</span>
+                          <span
+                            className={
+                              isTechnical
+                                ? 'font-mono text-[11px] text-[#1B29FF]/70'
+                                : 'text-[#101010]/60'
+                            }
+                          >
+                            {isTechnical ? 'POSITION' : 'Position'}
+                          </span>
+                          <span
+                            className={
+                              isTechnical
+                                ? 'font-mono text-[#101010]/40'
+                                : 'text-[#101010]/40'
+                            }
+                          >
+                            {isTechnical ? '0.00' : 'No position'}
+                          </span>
                         </div>
                       )}
 
@@ -1157,7 +1469,12 @@ export default function SavingsPageWrapper({
                                   'Sign in to deposit funds from your real account.',
                                 )
                               }
-                              className="flex-1 px-3 py-2 text-[13px] text-white bg-[#1B29FF] hover:bg-[#1420CC] transition-colors"
+                              className={cn(
+                                'flex-1 px-3 py-2 text-[13px] transition-colors',
+                                isTechnical
+                                  ? 'bg-transparent border border-[#1B29FF] text-[#1B29FF] hover:bg-[#1B29FF]/5 font-mono uppercase'
+                                  : 'text-white bg-[#1B29FF] hover:bg-[#1420CC]',
+                              )}
                             >
                               Deposit
                             </button>
@@ -1167,7 +1484,12 @@ export default function SavingsPageWrapper({
                                   'Sign in to withdraw from live vault positions.',
                                 )
                               }
-                              className="flex-1 px-3 py-2 text-[13px] text-[#101010] border border-[#101010]/10 hover:bg-[#F7F7F2] transition-colors"
+                              className={cn(
+                                'flex-1 px-3 py-2 text-[13px] transition-colors',
+                                isTechnical
+                                  ? 'text-[#101010]/60 hover:text-[#1B29FF] font-mono uppercase underline decoration-dotted underline-offset-4'
+                                  : 'text-[#101010] border border-[#101010]/10 hover:bg-[#F7F7F2]',
+                              )}
                             >
                               Withdraw
                             </button>
@@ -1176,7 +1498,12 @@ export default function SavingsPageWrapper({
                                 href={vault.appUrl}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="px-3 py-2 text-[13px] text-[#101010]/60 hover:text-[#101010] border border-[#101010]/10 hover:bg-[#F7F7F2] transition-colors flex items-center justify-center"
+                                className={cn(
+                                  'px-3 py-2 text-[13px] transition-colors flex items-center justify-center',
+                                  isTechnical
+                                    ? 'text-[#1B29FF] hover:bg-[#1B29FF]/5 border border-[#1B29FF]/20'
+                                    : 'text-[#101010]/60 hover:text-[#101010] border border-[#101010]/10 hover:bg-[#F7F7F2]',
+                                )}
                               >
                                 <ExternalLink className="h-3 w-3" />
                               </a>
@@ -1189,10 +1516,20 @@ export default function SavingsPageWrapper({
                                 toggleVaultAction('deposit', vault)
                               }
                               className={cn(
-                                'flex-1 px-3 py-2 text-[13px] text-white transition-colors',
-                                expandedAction === 'deposit' && isSelected
-                                  ? 'bg-[#1420CC]'
-                                  : 'bg-[#1B29FF] hover:bg-[#1420CC]',
+                                'flex-1 px-3 py-2 text-[13px] transition-colors',
+                                isTechnical
+                                  ? cn(
+                                      'bg-transparent border border-[#1B29FF] text-[#1B29FF] hover:bg-[#1B29FF]/5 font-mono uppercase',
+                                      expandedAction === 'deposit' &&
+                                        isSelected &&
+                                        'bg-[#1B29FF]/10',
+                                    )
+                                  : cn(
+                                      'text-white',
+                                      expandedAction === 'deposit' && isSelected
+                                        ? 'bg-[#1420CC]'
+                                        : 'bg-[#1B29FF] hover:bg-[#1420CC]',
+                                    ),
                               )}
                             >
                               Deposit
@@ -1202,10 +1539,21 @@ export default function SavingsPageWrapper({
                                 toggleVaultAction('withdraw', vault)
                               }
                               className={cn(
-                                'flex-1 px-3 py-2 text-[13px] text-[#101010] border border-[#101010]/10 transition-colors',
-                                expandedAction === 'withdraw' && isSelected
-                                  ? 'bg-[#F7F7F2]'
-                                  : 'bg-white hover:bg-[#F7F7F2]',
+                                'flex-1 px-3 py-2 text-[13px] transition-colors',
+                                isTechnical
+                                  ? cn(
+                                      'text-[#101010]/60 hover:text-[#1B29FF] font-mono uppercase underline decoration-dotted underline-offset-4',
+                                      expandedAction === 'withdraw' &&
+                                        isSelected &&
+                                        'text-[#1B29FF]',
+                                    )
+                                  : cn(
+                                      'text-[#101010] border border-[#101010]/10',
+                                      expandedAction === 'withdraw' &&
+                                        isSelected
+                                        ? 'bg-[#F7F7F2]'
+                                        : 'bg-white hover:bg-[#F7F7F2]',
+                                    ),
                               )}
                             >
                               Withdraw
@@ -1215,7 +1563,12 @@ export default function SavingsPageWrapper({
                                 href={vault.appUrl}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="px-3 py-2 text-[13px] text-[#101010]/60 hover:text-[#101010] border border-[#101010]/10 hover:bg-[#F7F7F2] transition-colors flex items-center justify-center"
+                                className={cn(
+                                  'px-3 py-2 text-[13px] transition-colors flex items-center justify-center',
+                                  isTechnical
+                                    ? 'text-[#1B29FF] hover:bg-[#1B29FF]/5 border border-[#1B29FF]/20'
+                                    : 'text-[#101010]/60 hover:text-[#101010] border border-[#101010]/10 hover:bg-[#F7F7F2]',
+                                )}
                               >
                                 <ExternalLink className="h-3 w-3" />
                               </a>
@@ -1238,7 +1591,14 @@ export default function SavingsPageWrapper({
                           )}
                         >
                           <div className="px-4 pt-3 pb-4">
-                            <div className="bg-white border border-[#101010]/10 p-4">
+                            <div
+                              className={cn(
+                                'p-4',
+                                isTechnical
+                                  ? 'bg-white border border-[#1B29FF]/20'
+                                  : 'bg-white border border-[#101010]/10',
+                              )}
+                            >
                               {expandedAction === 'insure' && isSelected ? (
                                 <InsuranceContactPanel />
                               ) : expandedAction === 'deposit' && isSelected ? (
@@ -1248,6 +1608,7 @@ export default function SavingsPageWrapper({
                                   vaultAddress={vault.address as Address}
                                   onDepositSuccess={handleDepositSuccess}
                                   chainId={vault.chainId}
+                                  isTechnical={isTechnical}
                                 />
                               ) : expandedAction === 'withdraw' &&
                                 isSelected ? (
@@ -1257,6 +1618,7 @@ export default function SavingsPageWrapper({
                                   vaultAddress={vault.address as Address}
                                   onWithdrawSuccess={handleWithdrawSuccess}
                                   chainId={vault.chainId}
+                                  isTechnical={isTechnical}
                                 />
                               ) : null}
                             </div>
@@ -1268,6 +1630,20 @@ export default function SavingsPageWrapper({
                 );
               })}
             </div>
+          </div>
+
+          {/* Footer Status */}
+          <div className="mt-8 flex items-center justify-center">
+            {isTechnical ? (
+              <div className="font-mono text-[11px] text-[#1B29FF]/60 text-center p-4 border border-dashed border-[#1B29FF]/20 bg-[#1B29FF]/5 rounded">
+                SYS_STATUS: ONLINE | CHAIN: BASE | CONTRACTS: ERC-4626
+              </div>
+            ) : (
+              <p className="flex items-center gap-2 text-[13px] text-[#101010]/40">
+                <Shield className="w-4 h-4" />
+                Funds are held in non-custodial smart contracts
+              </p>
+            )}
           </div>
         </div>
 
