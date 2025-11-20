@@ -5,62 +5,142 @@ import Link from 'next/link';
 import { GradientBackground } from './gradient-background';
 import { BrowserFrame } from '@/components/BrowserFrame';
 import { Dithering } from '@paper-design/shaders-react';
+import { useBimodal } from '@/components/ui/bimodal';
+import { cn } from '@/lib/utils';
 
 export function HeroSection() {
+  const { isTechnical } = useBimodal();
+
   return (
     <>
       {/* Demo Panel - Bank Statement Style */}
       <section className="relative border-y border-[#101010]/10 bg-white/90 overflow-hidden">
         <GradientBackground variant="demo" className="z-0 bg-[#F6F5EF]" />
+
+        {/* Blueprint grid overlay for technical mode */}
+        {isTechnical && (
+          <div
+            className="absolute inset-0 z-[1] pointer-events-none opacity-[0.02]"
+            style={{
+              backgroundImage: `
+                linear-gradient(to right, #1B29FF 1px, transparent 1px),
+                linear-gradient(to bottom, #1B29FF 1px, transparent 1px)
+              `,
+              backgroundSize: '24px 24px',
+            }}
+          />
+        )}
+
         <>
-          {/* <GradientBackground variant="hero" className="z-10 bg-transparent top-[-100px]" /> */}
-          {/* <GradientBackground variant="hero" className="z-0 bg-[#F6F5EF] rotate-180 bottom-[-100px]" /> */}
-          {/* <GradientBackground variant="hero" className="z-0 bg-[#F6F5EF] " /> */}
           <div className="relative z-10 mx-auto max-w-[1200px] px-4 sm:px-6 lg:px-8 pt-16 sm:pt-20 lg:pt-24 w-full">
-            <p className="uppercase tracking-[0.14em] sm:tracking-[0.18em] text-[11px] sm:text-[12px] lg:text-[13px] font-medium text-[#101010]/70">
-              High-Yield Business Savings
+            <p
+              className={cn(
+                'uppercase tracking-[0.14em] sm:tracking-[0.18em] text-[11px] sm:text-[12px] lg:text-[13px] font-medium',
+                isTechnical ? 'font-mono text-[#1B29FF]' : 'text-[#101010]/70',
+              )}
+            >
+              {isTechnical
+                ? 'PROTOCOL::TREASURY_AUTOMATION'
+                : 'High-Yield Business Savings'}
             </p>
             <h1 className="mt-3 font-serif text-[36px] sm:text-[52px] md:text-[72px] lg:text-[88px] leading-[0.96] tracking-[-0.015em] text-[#101010]">
               <span className="text-[#1B29FF] text-[44px] sm:text-[64px] md:text-[88px] lg:text-[108px] leading-[0.9]">
-                High-yield savings
+                {isTechnical ? 'Yield infrastructure' : 'High-yield savings'}
               </span>{' '}
-              for your startup's runway
+              {isTechnical ? 'for builders' : "for your startup's runway"}
             </h1>
             <p className="mt-4 sm:mt-6 max-w-[62ch] text-[15px] sm:text-[16px] lg:text-[18px] leading-[1.5] text-[#222]">
-              Open US or EU account numbers, wire USD or USDC. We automatically
-              place your idle funds into vetted yield strategies. Withdraw
-              anytime with zero penalties or lock-ups.
+              {isTechnical
+                ? 'Embeddable treasury API for your app. Turn idle balances into yield with 4 lines of code. Self-custodial architecture on battle-tested DeFi protocols securing $8B+.'
+                : 'Open US or EU account numbers, wire USD or USDC. We automatically place your idle funds into vetted yield strategies. Withdraw anytime with zero penalties or lock-ups.'}
             </p>
-            <div className="mt-3 flex items-center gap-2 text-[13px] text-[#101010]/60">
-              <svg
-                className="w-4 h-4 text-[#1B29FF]"
-                fill="currentColor"
-                viewBox="0 0 20 20"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                  clipRule="evenodd"
-                />
-              </svg>
-              <span>
-                Built on battle-tested money markets securing $8B+ in assets
-              </span>
+            <div className="mt-3 space-y-2">
+              {isTechnical ? (
+                <>
+                  <div className="flex items-center gap-2 text-[13px] text-[#101010]/60">
+                    <svg
+                      className="w-4 h-4 text-[#1B29FF]"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                    <span className="font-mono text-[12px]">
+                      RESTful API • Sub-1 week integration • White-label ready
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 text-[13px] text-[#101010]/60">
+                    <svg
+                      className="w-4 h-4 text-[#1B29FF]"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                    <span className="font-mono text-[12px]">
+                      Non-custodial • Users own keys • Programmable withdrawals
+                    </span>
+                  </div>
+                </>
+              ) : (
+                <div className="flex items-center gap-2 text-[13px] text-[#101010]/60">
+                  <svg
+                    className="w-4 h-4 text-[#1B29FF]"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                  <span>
+                    Built on battle-tested money markets securing $8B+ in assets
+                  </span>
+                </div>
+              )}
             </div>
             <div className="mt-8 sm:mt-10 flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6">
-              <Link
-                className="inline-flex items-center px-6 py-3 text-[15px] sm:text-[16px] font-medium text-white bg-[#1B29FF] hover:bg-[#1420CC] rounded-md transition-colors"
-                href="/signin?source=crypto"
-              >
-                Sign up →
-              </Link>
-
-              <Link
-                className="inline-flex items-center text-[14px] sm:text-[15px] lg:text-[16px] text-[#101010] hover:text-[#1B29FF] underline decoration-[#101010]/30 underline-offset-[4px] hover:decoration-[#1B29FF] transition-colors"
-                href="https://cal.com/team/0finance/30"
-              >
-                Book call
-              </Link>
+              {isTechnical ? (
+                <>
+                  <a
+                    href="#api-access"
+                    className="inline-flex items-center px-6 py-3 text-[15px] sm:text-[16px] font-mono font-medium text-white bg-[#1B29FF] hover:bg-[#1420CC] border-2 border-[#1B29FF] hover:border-[#1420CC] transition-all uppercase tracking-wide"
+                  >
+                    [ Join API Waitlist ]
+                  </a>
+                  <Link
+                    className="inline-flex items-center px-6 py-3 text-[15px] sm:text-[16px] font-mono border-2 border-[#101010]/20 hover:border-[#1B29FF] hover:bg-[#1B29FF]/5 transition-all"
+                    href="/signin?source=crypto"
+                  >
+                    Try product →
+                  </Link>
+                </>
+              ) : (
+                <>
+                  <Link
+                    className="inline-flex items-center px-6 py-3 text-[15px] sm:text-[16px] font-medium text-white bg-[#1B29FF] hover:bg-[#1420CC] rounded-md transition-colors"
+                    href="/signin?source=crypto"
+                  >
+                    Sign up →
+                  </Link>
+                  <Link
+                    className="inline-flex items-center text-[14px] sm:text-[15px] lg:text-[16px] text-[#101010] hover:text-[#1B29FF] underline decoration-[#101010]/30 underline-offset-[4px] hover:decoration-[#1B29FF] transition-colors"
+                    href="https://cal.com/team/0finance/30"
+                  >
+                    Book call
+                  </Link>
+                </>
+              )}
             </div>
           </div>
         </>

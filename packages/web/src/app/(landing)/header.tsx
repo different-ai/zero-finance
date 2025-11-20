@@ -3,8 +3,11 @@
 import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { useBimodal, BimodalToggle } from '@/components/ui/bimodal';
 
 export function Header() {
+  const { isTechnical, toggle } = useBimodal();
+
   return (
     <header className="border-b border-[#101010]/10 bg-transparent">
       <div className="mx-auto max-w-[1200px] px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
@@ -21,7 +24,15 @@ export function Header() {
               finance
             </span>
           </Link>
-          <nav className="flex items-center gap-2 sm:gap-3">
+          <nav className="flex items-center gap-3 sm:gap-4">
+            {/* Bimodal Toggle */}
+            <div className="hidden md:block">
+              <BimodalToggle
+                isTechnical={isTechnical}
+                onToggle={toggle}
+                showLabels={false}
+              />
+            </div>
             <Link
               className="hidden sm:inline-flex px-3 sm:px-4 py-1.5 sm:py-2 text-[#101010] hover:text-[#0050ff] text-[12px] sm:text-[13px] font-medium transition-colors"
               href="#api-access"
