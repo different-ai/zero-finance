@@ -20,7 +20,7 @@ Hide complexity. Show clarity.
 - ✅ "Secure authentication" → ❌ "Embedded wallet with MPC key shares"
 - ✅ "View transaction details" (shows Advanced toggle for hash/block) → ❌ "Tx: 0xabc...def"
 
-### 2. **Two-Track Design System**
+### 2. **Three-Track Design System**
 
 **Marketing/Landing** (Expressive)
 
@@ -29,19 +29,20 @@ Hide complexity. Show clarity.
 - Bright blue CTAs (`#1B29FF`)
 - Emotional, aspirational messaging
 
-**Onboarding/Auth** (Welcoming)
-
-- Animated gradient backgrounds (mesh gradients allowed)
-- Glassmorphism cards with `backdrop-blur-sm`
-- Large serif headlines for impact
-- Clear, step-by-step guidance
-
-**Dashboard/App** (Functional)
+**Dashboard/App** (Functional - Default)
 
 - Compact sans-serif typography
 - Clean white cards on `#F7F7F2` canvas
 - Tight spacing, efficient layouts
 - Clear, actionable content
+
+**Technical/Developer** (Deep Dive - Advanced Mode)
+
+- **Aesthetic**: Engineering Precision (Blueprint Style)
+- **Background**: Consistent Light Theme (`#FFFFFF` / `#F7F7F2`)
+- **Typography**: Monospace (`IBM Plex Mono`) for data density
+- **Visuals**: Fine hairlines, measuring guides, coordinate annotations
+- **Role**: Reveals structure via "Architectural" overlays without breaking the elegant banking atmosphere
 
 ---
 
@@ -62,6 +63,26 @@ Hide complexity. Show clarity.
 - Colors: `['#1B29FF', '#668fff', '#F6F5EF', 'rgba(246, 245, 239, 0.3)']`
 - Use for: Flyers, print materials, promotional content
 - Speed: 0.3 with 45° angle for dynamic feel
+
+### Technical Identity (Structural Accent)
+
+*Used strictly for Advanced/Developer views, Smart Contract interactions, and Technical Details.*
+
+**Core Aesthetic: Architectural Blueprint**
+Integrating the precision of CAD into the elegance of modern banking. Instead of a black void, we use the "Blueprint" metaphor on our existing light canvas.
+
+**Key Characteristics:**
+- **Structure over Decoration**: Reveal the grid lines and alignment points that define the UI.
+- **Monospace Elegance**: Use `IBM Plex Mono` for transactional data to suggest precision.
+- **Brand Integration**: Use the Brand Blue (`#1B29FF`) for technical lines and grids instead of neon greens.
+- **Subtle Dimensions**: Add "measurement" lines or coordinate markers (`[x:001]`) as subtle decorative elements in advanced cards.
+
+**Visual Elements:**
+- **Grid Overlays**: Faint, technical grids (`#1B29FF` at 5% opacity).
+- **Crosshairs**: Corner markers on advanced cards.
+- **Technical Labels**: Small, uppercase, monospace labels (`TX_HASH`, `BLOCK_ID`) in muted blue.
+
+---
 
 ### Logo & Branding
 
@@ -120,12 +141,20 @@ Hide complexity. Show clarity.
 --positive: #10b981; /* Success, gains */
 --destructive: #ef4444; /* Errors, destructive actions */
 --warning: #f59e0b; /* Warnings */
+
+/* Technical / CAD Accents (Blueprint Mode) */
+--tech-line: rgba(27, 41, 255, 0.15);   /* Structural lines (Brand Blue) */
+--tech-grid: rgba(27, 41, 255, 0.05);   /* Subtle background grid */
+--tech-mono: #1B29FF;                   /* Monospace data text */
+--tech-label: rgba(16, 16, 16, 0.5);    /* Technical labels */
+--tech-accent: #0050ff;                 /* Highlights */
 ```
 
 #### Usage Guidelines
 
 - **Landing pages**: Use `#1B29FF` for CTAs, gradients, and emphasis
 - **Dashboard**: Use white cards on `#F7F7F2` canvas
+- **Advanced/Technical**: Use `Blueprint` styles (Light grid + Mono type)
 - **Text hierarchy**: `#101010` → `rgba(16,16,16,0.80)` → `rgba(16,16,16,0.60)`
 - **Borders**: Always `border-[#101010]/10` for subtle division
 
@@ -145,6 +174,9 @@ font-family:
 
 /* Serif (marketing headlines only) */
 font-family: ui-serif, Georgia, Cambria, 'Times New Roman', Times, serif;
+
+/* Monospace (Technical/CAD) */
+font-family: 'IBM Plex Mono', 'Courier New', Consolas, monospace;
 ```
 
 ### Scale & Hierarchy
@@ -491,7 +523,9 @@ Styling: White background, `#1B29FF` focus ring, 12px height, 11px width per slo
 - Keep headlines at `text-[56-72px]` for impact
 - Accent spans use `text-[#1B29FF]` not `text-[#0050ff]`
 
-### Advanced/Power User Pattern
+### Advanced/Power User Pattern (Blueprint Aesthetic)
+
+When a user toggles "Advanced Details" or "Technical View", the UI reveals the underlying structure (Blueprint Mode) while maintaining the elegant light theme.
 
 ```jsx
 {
@@ -502,33 +536,78 @@ Styling: White background, `#1B29FF` focus ring, 12px height, 11px width per slo
     onClick={() => setShowAdvanced(!showAdvanced)}
     className="text-[13px] text-ink-60 hover:text-[#1B29FF] transition-colors flex items-center gap-1"
   >
-    <ChevronRight
-      className={cn(
-        'h-4 w-4 transition-transform',
-        showAdvanced && 'rotate-90',
-      )}
-    />
-    Advanced Details
+    <TerminalSquare className="h-4 w-4" />
+    <span>Technical Details</span>
   </button>
 
   {showAdvanced && (
-    <div className="mt-3 p-4 bg-ink-5 border border-[#101010]/10 rounded-md space-y-2">
-      <div className="flex justify-between text-[12px]">
-        <span className="text-ink-60">Transaction Hash</span>
-        <code className="text-ink-80 font-mono">0xabc...def</code>
+    <div className="mt-3 relative overflow-hidden rounded-md bg-white border border-[#1B29FF]/20 shadow-sm">
+      {/* Blueprint Grid Background */}
+      <div
+        className="absolute inset-0 pointer-events-none opacity-100"
+        style={{
+          backgroundImage:
+            'linear-gradient(to right, rgba(27,41,255,0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(27,41,255,0.05) 1px, transparent 1px)',
+          backgroundSize: '20px 20px',
+        }}
+      />
+
+      {/* Header with Crosshairs */}
+      <div className="flex justify-between items-center px-4 py-2 border-b border-[#1B29FF]/10 bg-[#F7F7F2]/50 relative z-10">
+        <span className="font-mono text-[10px] text-[#1B29FF] tracking-wider uppercase">
+          STRUCT::TX_DETAILS
+        </span>
+        {/* Decorative CAD crosshair */}
+        <div className="h-3 w-3 relative">
+            <div className="absolute top-1/2 w-full h-px bg-[#1B29FF]/40"></div>
+            <div className="absolute left-1/2 h-full w-px bg-[#1B29FF]/40"></div>
+        </div>
       </div>
-      <div className="flex justify-between text-[12px]">
-        <span className="text-ink-60">Block Number</span>
-        <code className="text-ink-80 font-mono tabular-nums">12,345,678</code>
-      </div>
-      <div className="flex justify-between text-[12px]">
-        <span className="text-ink-60">Safe Address</span>
-        <code className="text-ink-80 font-mono">0x742...891</code>
+
+      {/* Main Content */}
+      <div className="p-4 space-y-3 relative z-10">
+        <div className="grid grid-cols-[120px_1fr] gap-2 items-baseline">
+          <span className="font-mono text-[11px] text-ink-60 uppercase tracking-wide">
+            TX_HASH
+          </span>
+          <code className="font-mono text-[12px] text-[#1B29FF] break-all bg-[#1B29FF]/5 px-1 py-0.5 rounded">
+            0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb
+          </code>
+        </div>
+
+        <div className="grid grid-cols-[120px_1fr] gap-2 items-baseline">
+          <span className="font-mono text-[11px] text-ink-60 uppercase tracking-wide">
+            BLOCK_ID
+          </span>
+          <div className="flex items-center gap-2">
+            <span className="font-mono text-[12px] text-[#101010] tabular-nums">
+              12,345,678
+            </span>
+            <span className="font-mono text-[10px] text-[#10b981]">
+              [CONFIRMED]
+            </span>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-[120px_1fr] gap-2 items-baseline">
+          <span className="font-mono text-[11px] text-ink-60 uppercase tracking-wide">
+            GAS_EST
+          </span>
+          <span className="font-mono text-[12px] text-[#101010] tabular-nums">
+            21,000 GWEI
+          </span>
+        </div>
       </div>
     </div>
   )}
 </div>;
 ```
+
+**Key Changes:**
+- **Container**: Maintains `bg-white` to fit the dashboard, but adds `border-[#1B29FF]/20`.
+- **Visuals**: Faint blueprint grid background (`rgba(27,41,255,0.05)`).
+- **Typography**: Monospace for all labels and data, but dark/blue text instead of white/neon.
+- **Vibe**: "Architectural Plan" vs "Hacker Terminal". Elegant, precise, readable.
 
 ---
 
