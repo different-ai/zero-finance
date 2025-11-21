@@ -44,6 +44,102 @@ Hide complexity. Show clarity.
 - **Visuals**: Fine hairlines, measuring guides, coordinate annotations
 - **Role**: Reveals structure via "Architectural" overlays without breaking the elegant banking atmosphere
 
+### 3. **Bimodal Content Strategy**
+
+**Philosophy:** Progressive disclosure for different audience types. Allow users to toggle between business-first and technical-first experiences while maintaining consistent visual design.
+
+**Implementation:**
+
+The bimodal system uses a React context provider (`BimodalProvider`) and hook (`useBimodal`) to manage content switching across the application.
+
+```typescript
+// Content structure
+interface BimodalContent<T> {
+  company: T;
+  technical: T;
+}
+
+// Usage in components
+const { isTechnical, toggle } = useBimodal();
+const content = CONTENT[isTechnical ? 'technical' : 'company'];
+```
+
+**Key Components:**
+
+- **BimodalProvider**: Wraps the app, manages state in `localStorage` (`zero-finance-bimodal-mode`)
+- **useBimodal**: Hook to access current mode and toggle function
+- **BimodalToggle**: UI component for switching modes (labeled "Experience")
+
+**Content Guidelines:**
+
+**Company Mode:**
+- Banking-first language ("Business Savings Account", "High-Yield")
+- Serif headlines for warmth and approachability
+- Feature bullets emphasize safety, insurance, ease of use
+- Example: "Insurance included — 100% coverage on all deposits"
+
+**Technical Mode:**
+- Protocol-first language ("PROTOCOL::TREASURY_AUTOMATION")
+- Monospace typography for precision and technical feel
+- Feature bullets emphasize architecture, audits, on-chain details
+- Example: "Direct protocol interaction • Non-custodial architecture"
+
+**Styling Patterns:**
+
+```jsx
+// Badge
+<p className={`uppercase tracking-[0.14em] text-[12px] mb-3 ${
+  isTechnical 
+    ? 'font-mono text-[#1B29FF]' 
+    : 'text-[#101010]/60'
+}`}>
+  {content.badge}
+</p>
+
+// Headline
+<h1 className={`leading-[0.96] tracking-[-0.015em] text-[#101010] mb-6 ${
+  isTechnical 
+    ? 'font-mono text-[48px] sm:text-[56px] lg:text-[64px]' 
+    : 'font-serif text-[56px] sm:text-[64px] lg:text-[72px]'
+}`}>
+  <span className="text-[#1B29FF]">{content.headline.highlight}</span>
+  {content.headline.suffix}
+</h1>
+
+// Feature text
+<span className={`text-[14px] text-[#101010]/70 ${
+  isTechnical ? 'font-mono text-[13px]' : ''
+}`}>
+  {feature}
+</span>
+```
+
+**Where to Use:**
+
+- ✅ Landing page hero sections
+- ✅ Signin/signup pages
+- ✅ Feature comparison sections
+- ✅ Marketing content with technical depth
+- ❌ Dashboard/app (always functional, no toggle)
+- ❌ Transactional flows (consistency required)
+
+**Toggle Placement:**
+
+Place the `BimodalToggle` in the header with the label "Experience":
+
+```jsx
+<div className="hidden md:flex items-center gap-3">
+  <span className="text-[11px] text-[#101010]/60 uppercase tracking-wider">
+    Experience
+  </span>
+  <BimodalToggle
+    isTechnical={isTechnical}
+    onToggle={toggle}
+    showLabels={true}
+  />
+</div>
+```
+
 ---
 
 ## Visual Identity
