@@ -91,7 +91,7 @@ export function BankTransfersList() {
   const displaySyncError = syncError && !isError;
 
   return (
-    <Card className="bg-white border-gray-200 rounded-2xl shadow-sm">
+    <Card className="bg-white border-gray-200 rounded-lg shadow-sm">
       <CardHeader className="pb-4">
         <h3 className="text-lg font-semibold text-gray-800">Bank Transfers</h3>
         <p className="text-sm text-gray-500">
