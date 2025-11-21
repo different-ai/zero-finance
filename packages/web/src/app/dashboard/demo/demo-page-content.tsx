@@ -3,12 +3,53 @@
 import { FundsDisplayWithDemo } from '@/app/(authenticated)/dashboard/(bank)/components/dashboard/funds-display-with-demo';
 import { TransactionTabsDemo } from '@/app/(authenticated)/dashboard/(bank)/components/dashboard/transaction-tabs-demo';
 import SavingsPageWrapper from '@/app/(authenticated)/dashboard/savings/page-wrapper';
+import { BankingInstructionsDisplay } from '@/components/virtual-accounts/banking-instructions-display';
+
+const DEMO_ACCOUNTS = [
+  {
+    id: 'demo-ach',
+    accountTier: 'starter' as const,
+    sourceAccountType: 'us_ach' as const,
+    sourceCurrency: 'USD',
+    sourceBankName: 'JPMorgan Chase',
+    sourceRoutingNumber: '021000021',
+    sourceAccountNumber: '****5678',
+    sourceIban: null,
+    sourceBicSwift: null,
+    sourceBankBeneficiaryName: 'Demo Company Inc.',
+    destinationAddress: '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb',
+    destinationBankName: 'Mercury',
+    destinationCurrency: 'USDC',
+    status: 'active',
+  },
+  {
+    id: 'demo-iban',
+    accountTier: 'starter' as const,
+    sourceAccountType: 'iban' as const,
+    sourceCurrency: 'EUR',
+    sourceBankName: 'Deutsche Bank',
+    sourceRoutingNumber: null,
+    sourceAccountNumber: null,
+    sourceIban: 'DE89 3704 0044 0532 0130 00',
+    sourceBicSwift: 'DEUTDEFF',
+    sourceBankBeneficiaryName: 'Bridge Building Sp.z.o.o.',
+    destinationAddress: '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb',
+    destinationCurrency: 'EURC',
+    status: 'active',
+  },
+];
+
+const DEMO_USER_DATA = {
+  firstName: 'Demo',
+  lastName: 'User',
+  companyName: 'Demo Company Inc.',
+};
 
 // Demo funds component that always shows demo data
 function DemoFunds() {
   return (
     <FundsDisplayWithDemo
-      totalBalance={2500000} // $2.5M demo balance in checking
+      totalBalance={800000} // $800k demo balance in checking
       walletAddress="0xDemo...1234"
       isDemo={true}
     />
@@ -44,34 +85,10 @@ export default function DemoPageContent() {
       <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-8 sm:pb-12">
         <div className="space-y-6">
           {/* Welcome Section */}
-          <div className="bg-white border border-[#101010]/10 rounded-[12px] shadow-[0_2px_8px_rgba(16,16,16,0.04)] p-6">
-            <h1 className="font-serif text-[32px] sm:text-[40px] leading-[1.1] tracking-[-0.01em] text-[#101010]">
-              Welcome to Zero Finance Demo
-            </h1>
-            <p className="mt-3 text-[16px] text-[#101010]/70">
-              Your startup's idle cash earning 8% APY. $2.5M demo portfolio
-              below.
-            </p>
-            <div className="mt-4 flex gap-4">
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                <span className="text-sm text-[#101010]/60">Live Demo</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-[#101010]/60">
-                  $2.5M in Savings · $2.5M in Checking
-                </span>
-              </div>
-            </div>
-          </div>
+       
 
           {/* Balance Section - Checking Account */}
-          <div>
-            <h2 className="font-serif text-[24px] sm:text-[28px] leading-[1.1] tracking-[-0.01em] text-[#101010] mb-4">
-              Checking Account
-            </h2>
-            <DemoFunds />
-          </div>
+
 
           {/* Savings/Yield Section */}
           <div>
@@ -90,6 +107,25 @@ export default function DemoPageContent() {
             </div>
           </div>
 
+
+          {/* Banking Information Section */}
+          <div className="bg-white border border-[#101010]/10 rounded-[12px] shadow-[0_2px_8px_rgba(16,16,16,0.04)] overflow-hidden">
+            <div className="p-6 border-b border-[#101010]/10">
+              <h2 className="font-serif text-[24px] sm:text-[28px] leading-[1.1] tracking-[-0.01em] text-[#101010]">
+                Banking Information
+              </h2>
+              <p className="mt-1 text-[14px] text-[#101010]/60">
+                Your assigned virtual accounts for deposits
+              </p>
+            </div>
+            <div className="px-1 sm:px-2">
+              <BankingInstructionsDisplay
+                accounts={DEMO_ACCOUNTS}
+                userData={DEMO_USER_DATA}
+              />
+            </div>
+          </div>
+
           {/* Transactions Section */}
           <div className="bg-white border border-[#101010]/10 rounded-[12px] shadow-[0_2px_8px_rgba(16,16,16,0.04)]">
             <div className="p-5 sm:p-6 border-b border-[#101010]/10">
@@ -104,17 +140,17 @@ export default function DemoPageContent() {
           </div>
 
           {/* CTA Section */}
-          <div className="bg-gradient-to-br from-[#1B29FF] to-[#0A1172] rounded-[12px] p-8 text-white text-center">
-            <h3 className="font-serif text-[28px] sm:text-[32px] leading-[1.1] tracking-[-0.01em] mb-4">
+          <div className="bg-white border border-[#101010]/10 rounded-[12px] p-8 text-center shadow-[0_2px_8px_rgba(16,16,16,0.04)]">
+            <h3 className="font-serif text-[24px] sm:text-[28px] leading-[1.1] tracking-[-0.01em] text-[#101010] mb-3">
               Ready to start earning 8% APY?
             </h3>
-            <p className="text-[16px] text-white/90 mb-6 max-w-2xl mx-auto">
+            <p className="text-[15px] text-[#101010]/60 mb-8 max-w-2xl mx-auto">
               Join hundreds of startups already maximizing their idle cash with
               Zero Finance. Get started in minutes with bank-level security.
             </p>
             <a
               href="/signin"
-              className="inline-flex items-center px-6 py-3 bg-[#1B29FF] text-white rounded-lg font-semibold hover:opacity-90 transition-opacity"
+              className="inline-flex items-center px-6 py-3 bg-[#1B29FF] hover:bg-[#1420CC] text-white rounded-md font-medium transition-colors shadow-[0_4px_12px_rgba(27,41,255,0.2)]"
             >
               Start Earning 8% APY →
             </a>

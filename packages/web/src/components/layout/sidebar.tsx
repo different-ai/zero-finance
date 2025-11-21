@@ -18,6 +18,8 @@ import {
   Banknote,
   Users,
   Building,
+  Activity,
+  Cpu,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { usePrivy } from '@privy-io/react-auth';
@@ -149,12 +151,26 @@ export function Sidebar() {
               height={32}
               className="h-8 w-8"
             />
-            <span className="text-xl font-medium text-[#0050ff]">finance</span>
+            <span
+              className={cn(
+                'text-xl font-medium',
+                isTechnical ? 'text-[#1B29FF] font-mono' : 'text-[#0050ff]',
+              )}
+            >
+              {isTechnical ? 'ZERO::FINANCE' : 'finance'}
+            </span>
           </div>
           {workspaceData?.workspace?.name && (
             <div className="mt-2 flex items-center gap-1.5">
               <Building className="h-3.5 w-3.5 text-[#101010]/40" />
-              <span className="text-[12px] text-[#101010]/60">
+              <span
+                className={cn(
+                  'text-[12px]',
+                  isTechnical
+                    ? 'text-[#1B29FF]/70 font-mono'
+                    : 'text-[#101010]/60',
+                )}
+              >
                 {workspaceData.workspace.name}
               </span>
             </div>
@@ -198,6 +214,10 @@ export function Sidebar() {
                   isActive
                     ? 'text-[#101010]'
                     : 'hover:bg-[#F7F7F2] text-[#101010]/70 hover:text-[#101010]',
+                  isTechnical && isActive && 'bg-[#1B29FF]/5 text-[#1B29FF]',
+                  isTechnical &&
+                    !isActive &&
+                    'hover:bg-[#1B29FF]/5 hover:text-[#1B29FF]',
                 )}
                 aria-current={isActive ? 'page' : undefined}
               >
@@ -214,16 +234,24 @@ export function Sidebar() {
                   className: cn(
                     'h-4 w-4 transition-colors duration-150',
                     isActive
-                      ? 'text-[#101010]'
-                      : 'text-[#101010]/60 group-hover:text-[#101010]',
+                      ? isTechnical
+                        ? 'text-[#1B29FF]'
+                        : 'text-[#101010]'
+                      : isTechnical
+                        ? 'text-[#101010]/60 group-hover:text-[#1B29FF]'
+                        : 'text-[#101010]/60 group-hover:text-[#101010]',
                   ),
                 })}
                 <span
                   className={cn(
                     'text-[13px] font-medium transition-colors duration-150',
                     isActive
-                      ? 'text-[#101010]'
-                      : 'text-[#101010]/70 group-hover:text-[#101010]',
+                      ? isTechnical
+                        ? 'text-[#1B29FF] font-mono'
+                        : 'text-[#101010]'
+                      : isTechnical
+                        ? 'text-[#101010]/70 group-hover:text-[#1B29FF] font-mono'
+                        : 'text-[#101010]/70 group-hover:text-[#101010]',
                   )}
                 >
                   {item.name}
@@ -234,42 +262,41 @@ export function Sidebar() {
         </div>
       </nav>
 
-      {/* Promotional CTA Section */}
-      {false && (
-        <div className="mx-4 mb-4 p-4 bg-[#F7F7F2] border border-[#101010]/10 relative overflow-hidden mt-auto">
-          {/* Close button */}
-          <button
-            onClick={handleDismissPromo}
-            className="absolute top-2 right-2 p-1 hover:bg-[#101010]/5 transition-colors"
-            aria-label="Dismiss promotion"
-          >
-            <X className="h-4 w-4 text-[#101010]/40" />
-          </button>
+      {/* Spacer to push bottom content down */}
+      <div className="flex-1" />
 
-          {/* Content */}
-          <div className="relative z-10">
-            <h3 className="text-sm font-medium mb-2 flex items-center gap-2 text-[#101010]">
-              Get 0 Finance AI
-              <Sparkles className="h-4 w-4 text-[#0050ff] flex-shrink-0" />
-            </h3>
-            <p className="text-xs text-[#101010]/60 mb-4 leading-relaxed">
-              Your own AI CFO. Unlimited categorizations, auto-labeling, and
-              more.
-            </p>
-            <a
-              href="https://buy.polar.sh/polar_cl_FJM7jQ61Kj8vMDH4H1KrcsGdstxyeozSXdgvc2FL0yb"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="block w-full py-2.5 px-4 bg-[#0050ff] hover:bg-[#0050ff]/90 text-white text-xs uppercase tracking-wider text-center transition-all duration-200"
-            >
-              Purchase now
-            </a>
+      {/* Network Status for Technical Mode */}
+      {isTechnical && (
+        <div className="px-4 pb-3">
+          <div className="p-3 border border-[#1B29FF]/20 bg-[#1B29FF]/5 rounded-sm">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[10px] font-mono text-[#1B29FF]/70 uppercase tracking-wider">
+                Network Status
+              </span>
+              <div className="flex items-center gap-1.5">
+                <div className="w-1.5 h-1.5 rounded-full bg-[#1B29FF] animate-pulse" />
+                <span className="text-[10px] font-mono text-[#1B29FF] font-bold">
+                  ONLINE
+                </span>
+              </div>
+            </div>
+            <div className="space-y-1">
+              <div className="flex justify-between text-[10px] font-mono">
+                <span className="text-[#101010]/50">Protocol</span>
+                <span className="text-[#101010]/80">BASE::MAINNET</span>
+              </div>
+              <div className="flex justify-between text-[10px] font-mono">
+                <span className="text-[#101010]/50">Latency</span>
+                <span className="text-[#101010]/80">24ms</span>
+              </div>
+              <div className="flex justify-between text-[10px] font-mono">
+                <span className="text-[#101010]/50">Block</span>
+                <span className="text-[#101010]/80">1849201</span>
+              </div>
+            </div>
           </div>
         </div>
       )}
-
-      {/* Spacer to push bottom content down */}
-      <div className="flex-1" />
 
       {/* Bimodal Toggle */}
       <div className="px-4 pb-3 border-b border-[#101010]/10">
@@ -301,8 +328,8 @@ export function Sidebar() {
             )}
           >
             {isTechnical
-              ? 'Business treasury & API access'
-              : 'Personal savings & consumer view'}
+              ? 'I bank in crypto (On-chain view)'
+              : 'I bank in dollars (Fiat view)'}
           </p>
         </div>
       </div>

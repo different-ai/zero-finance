@@ -34,12 +34,21 @@ export default async function AuthenticatedLayout({
   const smartWalletAddress = smartWalletAccount?.address;
 
   // Get user profile (will create if it doesn't exist, and update email/wallet addresses)
-  const userProfile = await userProfileService.getOrCreateProfile(
-    privyDid,
-    email,
-    embeddedWalletAddress,
-    smartWalletAddress,
-  );
+  // Get user profile (will create if it doesn't exist, and update email/wallet addresses)
+  let userProfile;
+  try {
+    userProfile = await userProfileService.getOrCreateProfile(
+      privyDid,
+      email,
+      embeddedWalletAddress,
+      smartWalletAddress,
+    );
+  } catch (error) {
+    console.error('Failed to get or create user profile:', error);
+    // If we can't get a profile, we can't proceed. Redirect to signin or show error.
+    // For now, let's redirect to signin to avoid the crash loop.
+    redirect('/signin?error=profile_creation_failed');
+  }
 
   console.log('userProfile', userProfile);
 

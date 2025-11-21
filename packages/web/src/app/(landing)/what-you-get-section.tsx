@@ -3,9 +3,11 @@
 import React from 'react';
 import { useBimodal } from '@/components/ui/bimodal';
 import { cn } from '@/lib/utils';
+import { LANDING_CONTENT } from './content';
 
 export function WhatYouGetSection() {
   const { isTechnical } = useBimodal();
+  const features = LANDING_CONTENT.features[isTechnical ? 'technical' : 'company'];
 
   return (
     <section className="relative bg-[#F7F7F2] border-t border-[#101010]/10 py-8 sm:py-12 lg:py-16 overflow-hidden">
@@ -39,148 +41,88 @@ export function WhatYouGetSection() {
         </h2>
 
         <div className="mt-6 sm:mt-8 grid grid-cols-1 sm:grid-cols-2 gap-px bg-[#101010]/10">
-          <div
-            className={cn(
-              'bg-white p-4 sm:p-6',
-              isTechnical && 'border-l-2 border-[#1B29FF]',
-            )}
-          >
-            <h3
+          {features.map((feature) => (
+            <div
+              key={feature.id}
               className={cn(
-                'uppercase tracking-[0.12em] sm:tracking-[0.14em] text-[12px] sm:text-[13px]',
-                isTechnical ? 'font-mono text-[#1B29FF]' : 'text-[#101010]/70',
+                'bg-white p-4 sm:p-6',
+                isTechnical && 'border-l-2 border-[#1B29FF]',
               )}
             >
-              {isTechnical ? 'INTEGRATION::API' : 'Competitive Yield'}
-            </h3>
-            <p
-              className={cn(
-                'mt-3 text-[13px] sm:text-[14px] leading-[1.5]',
-                isTechnical
-                  ? 'font-mono text-[#101010]/70'
-                  : 'text-[#101010]/80',
-              )}
-            >
-              {isTechnical
-                ? 'RESTful API with comprehensive docs. Embed treasury management in your app with 4 lines of code. Sub-1 week integration time with white-label support.'
-                : 'Earn significantly more than traditional banks on your idle cash. Your funds are automatically allocated to vetted yield strategies with institutional-grade insurance coverage. Withdraw anytime with zero penalties or lock-ups.'}
-            </p>
-          </div>
-
-          <div
-            className={cn(
-              'bg-white p-4 sm:p-6',
-              isTechnical && 'border-l-2 border-[#1B29FF]',
-            )}
-          >
-            <h3
-              className={cn(
-                'uppercase tracking-[0.12em] sm:tracking-[0.14em] text-[12px] sm:text-[13px]',
-                isTechnical ? 'font-mono text-[#1B29FF]' : 'text-[#101010]/70',
-              )}
-            >
-              {isTechnical
-                ? 'ARCHITECTURE::NON_CUSTODIAL'
-                : 'No Minimums, Full Liquidity'}
-            </h3>
-            <p
-              className={cn(
-                'mt-3 text-[13px] sm:text-[14px] leading-[1.5]',
-                isTechnical
-                  ? 'font-mono text-[#101010]/70'
-                  : 'text-[#101010]/80',
-              )}
-            >
-              {isTechnical
-                ? 'Self-custodial architecture. Users own private keys. Programmable withdrawals via smart contracts. Built on Safe{Wallet} and battle-tested DeFi protocols.'
-                : 'Start earning from day one with no minimum balance requirements. Your funds remain fully liquid — withdraw any amount, any time. Perfect for managing runway while maximizing returns on idle capital.'}
-            </p>
-          </div>
-
-          <div
-            className={cn(
-              'bg-white p-4 sm:p-6',
-              isTechnical && 'border-l-2 border-[#1B29FF]',
-            )}
-          >
-            <h3
-              className={cn(
-                'uppercase tracking-[0.12em] sm:tracking-[0.14em] text-[12px] sm:text-[13px]',
-                isTechnical ? 'font-mono text-[#1B29FF]' : 'text-[#101010]/70',
-              )}
-            >
-              {isTechnical ? 'PROTOCOLS::VETTED' : 'Instant Global Banking'}
-            </h3>
-            <p
-              className={cn(
-                'mt-3 text-[13px] sm:text-[14px] leading-[1.5]',
-                isTechnical
-                  ? 'font-mono text-[#101010]/70'
-                  : 'text-[#101010]/80',
-              )}
-            >
-              {isTechnical
-                ? 'Integration with Origin Protocol, Morpho, Gauntlet. Audited smart contracts. Real-time yield optimization. Transparent on-chain settlement.'
-                : 'Open US and EU bank accounts in seconds. Get ACH routing numbers and SEPA IBANs instantly. Receive wire transfers, ACH payments, and SEPA transfers directly to your high-yield account.'}
-            </p>
-          </div>
-
-          <div
-            className={cn(
-              'bg-white p-4 sm:p-6',
-              isTechnical && 'border-l-2 border-[#1B29FF]',
-            )}
-          >
-            <h3
-              className={cn(
-                'uppercase tracking-[0.12em] sm:tracking-[0.14em] text-[12px] sm:text-[13px]',
-                isTechnical ? 'font-mono text-[#1B29FF]' : 'text-[#101010]/70',
-              )}
-            >
-              {isTechnical
-                ? 'DEPLOYMENT::WHITE_LABEL'
-                : 'Institutional-Grade Security'}
-            </h3>
-            <p
-              className={cn(
-                'mt-3 text-[13px] sm:text-[14px] leading-[1.5]',
-                isTechnical
-                  ? 'font-mono text-[#101010]/70'
-                  : 'text-[#101010]/80',
-              )}
-            >
-              {isTechnical
-                ? 'Fully customizable UI. Your branding, your domain. Embed as iframe or native component. Full control over user experience and flows.'
-                : 'Bank-level security with self-custody benefits. Your funds are protected by multi-layer insurance coverage and battle-tested DeFi protocols securing $8B+ in assets. Email login for easy access.'}
-            </p>
-            <div className="mt-4 flex items-center gap-6">
-              <a
-                href="https://privy.io"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="opacity-70 hover:opacity-100 transition-opacity flex items-center"
+              <div className="flex justify-between items-start">
+                <h3
+                  className={cn(
+                    'uppercase tracking-[0.12em] sm:tracking-[0.14em] text-[12px] sm:text-[13px]',
+                    isTechnical
+                      ? 'font-mono text-[#1B29FF]'
+                      : 'text-[#101010]/70',
+                  )}
+                >
+                  {feature.title}
+                </h3>
+                {isTechnical && feature.technicalMetadata && (
+                  <span className="font-mono text-[10px] text-[#101010]/40 bg-[#101010]/5 px-1.5 py-0.5 rounded">
+                    {feature.technicalMetadata.label}
+                  </span>
+                )}
+              </div>
+              <p
+                className={cn(
+                  'mt-3 text-[13px] sm:text-[14px] leading-[1.5]',
+                  isTechnical
+                    ? 'font-mono text-[#101010]/70'
+                    : 'text-[#101010]/80',
+                )}
               >
-                <img
-                  src="/Privy_Brandmark_Black.svg"
-                  alt="Privy"
-                  className="h-5 w-auto"
-                />
-              </a>
-              <span className="text-[#101010]/30">×</span>
-              <a
-                href="https://safe.global"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="opacity-70 hover:opacity-100 transition-opacity flex items-center"
-              >
-                <img
-                  src="https://github.com/safe-global/safe-core-sdk/blob/main/assets/logo.png?raw=true"
-                  alt="Safe"
-                  className="h-5 w-auto"
-                />
-              </a>
+                {feature.description}
+              </p>
+              {isTechnical && feature.technicalMetadata?.specs && (
+                <div className="mt-4 grid grid-cols-2 gap-2 border-t border-[#101010]/10 pt-3">
+                  {Object.entries(feature.technicalMetadata.specs).map(
+                    ([key, value]) => (
+                      <div key={key}>
+                        <div className="text-[10px] uppercase tracking-wider text-[#101010]/40 font-mono">
+                          {key}
+                        </div>
+                        <div className="text-[12px] font-mono text-[#101010] tabular-nums">
+                          {value}
+                        </div>
+                      </div>
+                    ),
+                  )}
+                </div>
+              )}
+              {feature.id === 'security' && !isTechnical && (
+                <div className="mt-4 flex items-center gap-6">
+                  <a
+                    href="https://privy.io"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="opacity-70 hover:opacity-100 transition-opacity flex items-center"
+                  >
+                    <img
+                      src="/Privy_Brandmark_Black.svg"
+                      alt="Privy"
+                      className="h-5 w-auto"
+                    />
+                  </a>
+                  <span className="text-[#101010]/30">×</span>
+                  <a
+                    href="https://safe.global"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="opacity-70 hover:opacity-100 transition-opacity flex items-center"
+                  >
+                    <img
+                      src="https://github.com/safe-global/safe-core-sdk/blob/main/assets/logo.png?raw=true"
+                      alt="Safe"
+                      className="h-5 w-auto"
+                    />
+                  </a>
+                </div>
+              )}
             </div>
-          </div>
+          ))}
         </div>
       </div>
     </section>

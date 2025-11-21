@@ -28,7 +28,7 @@ export function Header() {
             {/* Bimodal Toggle */}
             <div className="hidden md:flex items-center gap-3">
               <span className="text-[11px] text-[#101010]/60 uppercase tracking-wider">
-                View as
+                Experience
               </span>
               <BimodalToggle
                 isTechnical={isTechnical}

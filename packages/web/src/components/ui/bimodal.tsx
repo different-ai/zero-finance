@@ -65,7 +65,7 @@ export const BimodalToggle = ({
             isTechnical ? 'text-[#101010]/50' : 'text-[#101010] font-medium',
           )}
         >
-          Company
+          I bank in dollars
         </span>
       )}
       <button
@@ -92,7 +92,7 @@ export const BimodalToggle = ({
             isTechnical ? 'text-[#1B29FF] font-medium' : 'text-[#101010]/50',
           )}
         >
-          Technical
+          I bank in crypto
         </span>
       )}
     </div>

@@ -10,6 +10,10 @@ import {
 } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
+import {
+  BimodalCard,
+  useBimodal,
+} from '@/components/ui/bimodal';
 
 type VirtualAccount = {
   id: string;
@@ -62,7 +66,7 @@ function getRecipientName(
   return 'Your account';
 }
 
-function CopyButton({ value }: { value: string | null | undefined }) {
+function CopyButton({ value, isTechnical }: { value: string | null | undefined, isTechnical?: boolean }) {
   const [copied, setCopied] = useState(false);
 
   if (!value) return null;
@@ -76,12 +80,15 @@ function CopyButton({ value }: { value: string | null | undefined }) {
   return (
     <button
       onClick={handleCopy}
-      className="ml-2 p-1 rounded hover:bg-[#101010]/5 transition-colors"
+      className={cn(
+        "ml-2 p-1 rounded transition-colors",
+        isTechnical ? "hover:bg-[#1B29FF]/10" : "hover:bg-[#101010]/5"
+      )}
     >
       {copied ? (
-        <Check className="h-3 w-3 text-green-600" />
+        <Check className={cn("h-3 w-3", isTechnical ? "text-[#1B29FF]" : "text-green-600")} />
       ) : (
-        <Copy className="h-3 w-3 text-[#101010]/40" />
+        <Copy className={cn("h-3 w-3", isTechnical ? "text-[#1B29FF]/60" : "text-[#101010]/40")} />
       )}
     </button>
   );
@@ -94,6 +101,7 @@ function AccountCard({
   account: VirtualAccount;
   userData?: UserData | null;
 }) {
+  const { isTechnical } = useBimodal();
   const [showAdvanced, setShowAdvanced] = useState(false);
   const isAch = account.sourceAccountType === 'us_ach';
   const isFullAccount = account.accountTier === 'full';
@@ -104,10 +112,17 @@ function AccountCard({
     account.destinationCurrency;
 
   return (
-    <section className="rounded-[14px] border border-[#101010]/10 bg-[#F7F7F2] p-5 sm:p-6">
+    <BimodalCard isTechnical={isTechnical} className="p-5 sm:p-6">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3 text-[#101010]">
-          <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white border border-[#101010]/10 text-[#1B29FF]">
+          <span
+            className={cn(
+              'inline-flex h-9 w-9 items-center justify-center',
+              isTechnical
+                ? 'rounded-sm bg-[#1B29FF]/5 border border-[#1B29FF]/20 text-[#1B29FF]'
+                : 'rounded-full bg-white border border-[#101010]/10 text-[#1B29FF]',
+            )}
+          >
             {isAch ? (
               <DollarSign className="h-4 w-4" />
             ) : (
@@ -115,30 +130,81 @@ function AccountCard({
             )}
           </span>
           <div>
-            <p className="text-[15px] font-semibold tracking-[-0.01em]">
-              {isAch ? 'US ACH & wire' : 'SEPA / IBAN'}
+            <p
+              className={cn(
+                'text-[15px] font-semibold tracking-[-0.01em]',
+                isTechnical && 'font-mono text-[#1B29FF] uppercase',
+              )}
+            >
+              {isTechnical
+                ? isAch
+                  ? 'RAIL::US_ACH_WIRE'
+                  : 'RAIL::SEPA_IBAN'
+                : isAch
+                  ? 'US ACH & wire'
+                  : 'SEPA / IBAN'}
             </p>
-            <p className="text-[12px] text-[#101010]/60">
-              {isAch
-                ? 'Domestic USD transfers'
-                : 'Eurozone & international wires'}
+            <p
+              className={cn(
+                'text-[12px] text-[#101010]/60',
+                isTechnical && 'font-mono text-[10px]',
+              )}
+            >
+              {isTechnical
+                ? isAch
+                  ? 'SETTLEMENT::DOMESTIC_USD'
+                  : 'SETTLEMENT::INTL_EUR'
+                : isAch
+                  ? 'Domestic USD transfers'
+                  : 'Eurozone & international wires'}
             </p>
           </div>
         </div>
         {account.status && (
-          <span className="inline-flex items-center rounded-full bg-green-500/10 px-2.5 py-0.5 text-[10px] font-medium uppercase tracking-[0.12em] text-green-700">
+          <span
+            className={cn(
+              'inline-flex items-center px-2.5 py-0.5 text-[10px] font-medium uppercase tracking-[0.12em]',
+              isTechnical
+                ? 'bg-[#1B29FF]/10 text-[#1B29FF] font-mono rounded-sm border border-[#1B29FF]/20'
+                : 'bg-green-500/10 text-green-700 rounded-full',
+            )}
+          >
             {account.status}
           </span>
         )}
       </div>
 
       <div className="space-y-2 mb-4">
-        <div className="p-3 bg-white/60 border border-[#101010]/5 rounded-md">
+        <div
+          className={cn(
+            'p-3 rounded-md',
+            isTechnical
+              ? 'bg-[#1B29FF]/5 border border-[#1B29FF]/10'
+              : 'bg-white/60 border border-[#101010]/5',
+          )}
+        >
           <div className="flex items-start gap-2">
-            <Info className="h-4 w-4 text-[#101010]/40 mt-0.5 flex-shrink-0" />
-            <div className="text-[11px] text-[#101010]/60 leading-relaxed">
-              <span className="font-semibold text-[#101010]">
-                Source currency:
+            <Info
+              className={cn(
+                'h-4 w-4 mt-0.5 flex-shrink-0',
+                isTechnical ? 'text-[#1B29FF]' : 'text-[#101010]/40',
+              )}
+            />
+            <div
+              className={cn(
+                'text-[11px] leading-relaxed',
+                isTechnical
+                  ? 'font-mono text-[#1B29FF]'
+                  : 'text-[#101010]/60',
+              )}
+            >
+              <span
+                className={cn(
+                  'font-semibold',
+                  isTechnical ? 'text-[#1B29FF]' : 'text-[#101010]',
+                )}
+              >
+                {isTechnical ? 'ASSET::' : 'Source currency:'}
               </span>{' '}
               {account.sourceCurrency?.toUpperCase() || (isAch ? 'USD' : 'EUR')}
             </div>
@@ -162,10 +228,22 @@ function AccountCard({
 
       <dl className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-[13px] text-[#101010]/80">
         <div>
-          <dt className="uppercase tracking-[0.16em] text-[10px] text-[#101010]/45 mb-1">
-            Bank name
+          <dt
+            className={cn(
+              'uppercase tracking-[0.16em] text-[10px] mb-1',
+              isTechnical
+                ? 'font-mono text-[#1B29FF]/70'
+                : 'text-[#101010]/45',
+            )}
+          >
+            {isTechnical ? 'INSTITUTION' : 'Bank name'}
           </dt>
-          <dd className="text-[14px] font-medium text-[#101010]">
+          <dd
+            className={cn(
+              'text-[14px] font-medium text-[#101010]',
+              isTechnical && 'font-mono',
+            )}
+          >
             {account.sourceBankName}
           </dd>
         </div>
@@ -173,52 +251,112 @@ function AccountCard({
         {isAch ? (
           <>
             <div>
-              <dt className="uppercase tracking-[0.16em] text-[10px] text-[#101010]/45 mb-1">
-                Routing number
+              <dt
+                className={cn(
+                  'uppercase tracking-[0.16em] text-[10px] mb-1',
+                  isTechnical
+                    ? 'font-mono text-[#1B29FF]/70'
+                    : 'text-[#101010]/45',
+                )}
+              >
+                {isTechnical ? 'ROUTING_NUM' : 'Routing number'}
               </dt>
-              <dd className="text-[14px] font-medium text-[#101010] flex items-center">
+              <dd
+                className={cn(
+                  'text-[14px] font-medium text-[#101010] flex items-center',
+                  isTechnical && 'font-mono',
+                )}
+              >
                 {account.sourceRoutingNumber}
-                <CopyButton value={account.sourceRoutingNumber} />
+                <CopyButton value={account.sourceRoutingNumber} isTechnical={isTechnical} />
               </dd>
             </div>
             <div>
-              <dt className="uppercase tracking-[0.16em] text-[10px] text-[#101010]/45 mb-1">
-                Account number
+              <dt
+                className={cn(
+                  'uppercase tracking-[0.16em] text-[10px] mb-1',
+                  isTechnical
+                    ? 'font-mono text-[#1B29FF]/70'
+                    : 'text-[#101010]/45',
+                )}
+              >
+                {isTechnical ? 'ACCOUNT_ID' : 'Account number'}
               </dt>
-              <dd className="text-[14px] font-medium text-[#101010] flex items-center">
+              <dd
+                className={cn(
+                  'text-[14px] font-medium text-[#101010] flex items-center',
+                  isTechnical && 'font-mono',
+                )}
+              >
                 {account.sourceAccountNumber}
-                <CopyButton value={account.sourceAccountNumber} />
+                <CopyButton value={account.sourceAccountNumber} isTechnical={isTechnical} />
               </dd>
             </div>
           </>
         ) : (
           <>
             <div>
-              <dt className="uppercase tracking-[0.16em] text-[10px] text-[#101010]/45 mb-1">
+              <dt
+                className={cn(
+                  'uppercase tracking-[0.16em] text-[10px] mb-1',
+                  isTechnical
+                    ? 'font-mono text-[#1B29FF]/70'
+                    : 'text-[#101010]/45',
+                )}
+              >
                 IBAN
               </dt>
-              <dd className="text-[14px] font-medium text-[#101010] flex items-center">
+              <dd
+                className={cn(
+                  'text-[14px] font-medium text-[#101010] flex items-center',
+                  isTechnical && 'font-mono',
+                )}
+              >
                 {account.sourceIban}
-                <CopyButton value={account.sourceIban} />
+                <CopyButton value={account.sourceIban} isTechnical={isTechnical} />
               </dd>
             </div>
             <div>
-              <dt className="uppercase tracking-[0.16em] text-[10px] text-[#101010]/45 mb-1">
-                BIC / SWIFT
+              <dt
+                className={cn(
+                  'uppercase tracking-[0.16em] text-[10px] mb-1',
+                  isTechnical
+                    ? 'font-mono text-[#1B29FF]/70'
+                    : 'text-[#101010]/45',
+                )}
+              >
+                {isTechnical ? 'BIC_SWIFT' : 'BIC / SWIFT'}
               </dt>
-              <dd className="text-[14px] font-medium text-[#101010] flex items-center">
+              <dd
+                className={cn(
+                  'text-[14px] font-medium text-[#101010] flex items-center',
+                  isTechnical && 'font-mono',
+                )}
+              >
                 {account.sourceBicSwift}
-                <CopyButton value={account.sourceBicSwift} />
+                <CopyButton value={account.sourceBicSwift} isTechnical={isTechnical} />
               </dd>
             </div>
           </>
         )}
 
         <div>
-          <dt className="uppercase tracking-[0.16em] text-[10px] text-[#101010]/45 mb-1">
-            Beneficiary
+          <dt
+            className={cn(
+              'uppercase tracking-[0.16em] text-[10px] mb-1',
+              isTechnical
+                ? 'font-mono text-[#1B29FF]/70'
+                : 'text-[#101010]/45',
+            )}
+          >
+            {isTechnical ? 'BENEFICIARY' : 'Beneficiary'}
           </dt>
-          <dd className="text-[14px] font-medium text-[#101010]">
+          <dd
+            className={cn(
+              'text-[14px] font-medium text-[#101010]',
+              isTechnical && 'font-mono',
+            )}
+          >
             {getRecipientName(account, userData)}
           </dd>
         </div>
@@ -228,7 +366,12 @@ function AccountCard({
         <div className="mt-4">
           <button
             onClick={() => setShowAdvanced(!showAdvanced)}
-            className="text-[13px] text-[#101010]/60 hover:text-[#1B29FF] transition-colors flex items-center gap-1"
+            className={cn(
+              'text-[13px] transition-colors flex items-center gap-1',
+              isTechnical
+                ? 'font-mono text-[#1B29FF] hover:text-[#1B29FF]/80'
+                : 'text-[#101010]/60 hover:text-[#1B29FF]',
+            )}
           >
             <ChevronRight
               className={cn(
@@ -236,70 +379,173 @@ function AccountCard({
                 showAdvanced && 'rotate-90',
               )}
             />
-            Technical details
+            {isTechnical ? 'STRUCT::DETAILS' : 'Technical details'}
           </button>
 
           {showAdvanced && (
-            <div className="mt-3 p-4 bg-[#101010]/5 border border-[#101010]/10 rounded-md space-y-3">
+            <div
+              className={cn(
+                'mt-3 p-4 rounded-md space-y-3',
+                isTechnical
+                  ? 'bg-[#1B29FF]/5 border border-[#1B29FF]/10'
+                  : 'bg-[#101010]/5 border border-[#101010]/10',
+              )}
+            >
               <div className="space-y-3">
                 <div className="flex justify-between items-start text-[12px]">
-                  <span className="text-[#101010]/60 uppercase tracking-[0.14em] text-[10px]">
-                    Platform
+                  <span
+                    className={cn(
+                      'uppercase tracking-[0.14em] text-[10px]',
+                      isTechnical
+                        ? 'font-mono text-[#1B29FF]/70'
+                        : 'text-[#101010]/60',
+                    )}
+                  >
+                    {isTechnical ? 'ENTITY' : 'Platform'}
                   </span>
-                  <span className="text-[#101010] font-medium text-right">
+                  <span
+                    className={cn(
+                      'font-medium text-right',
+                      isTechnical
+                        ? 'font-mono text-[#1B29FF]'
+                        : 'text-[#101010]',
+                    )}
+                  >
                     Different AI Inc. (0 Finance)
                   </span>
                 </div>
                 <div className="flex justify-between items-start text-[12px]">
-                  <span className="text-[#101010]/60 uppercase tracking-[0.14em] text-[10px]">
-                    Payments
+                  <span
+                    className={cn(
+                      'uppercase tracking-[0.14em] text-[10px]',
+                      isTechnical
+                        ? 'font-mono text-[#1B29FF]/70'
+                        : 'text-[#101010]/60',
+                    )}
+                  >
+                    {isTechnical ? 'PROCESSOR' : 'Payments'}
                   </span>
-                  <span className="text-[#101010] font-medium text-right max-w-[60%]">
+                  <span
+                    className={cn(
+                      'font-medium text-right max-w-[60%]',
+                      isTechnical
+                        ? 'font-mono text-[#1B29FF]'
+                        : 'text-[#101010]',
+                    )}
+                  >
                     Bridge Building Sp. Z.o.o. (via Fractal)
                   </span>
                 </div>
                 <div className="flex justify-between items-start text-[12px]">
-                  <span className="text-[#101010]/60 uppercase tracking-[0.14em] text-[10px]">
-                    Custody
+                  <span
+                    className={cn(
+                      'uppercase tracking-[0.14em] text-[10px]',
+                      isTechnical
+                        ? 'font-mono text-[#1B29FF]/70'
+                        : 'text-[#101010]/60',
+                    )}
+                  >
+                    {isTechnical ? 'CUSTODY_MODEL' : 'Custody'}
                   </span>
-                  <span className="text-[#101010] font-medium text-right">
-                    Self-custodied (you own the funds)
+                  <span
+                    className={cn(
+                      'font-medium text-right',
+                      isTechnical
+                        ? 'font-mono text-[#1B29FF]'
+                        : 'text-[#101010]',
+                    )}
+                  >
+                    {isTechnical
+                      ? 'SELF_CUSTODY::EOA_OWNED'
+                      : 'Self-custodied (you own the funds)'}
                   </span>
                 </div>
               </div>
-              <div className="pt-3 border-t border-[#101010]/10">
-                <p className="text-[11px] text-[#101010]/60 leading-relaxed">
+              <div
+                className={cn(
+                  'pt-3 border-t',
+                  isTechnical ? 'border-[#1B29FF]/10' : 'border-[#101010]/10',
+                )}
+              >
+                <p
+                  className={cn(
+                    'text-[11px] leading-relaxed',
+                    isTechnical
+                      ? 'font-mono text-[#1B29FF]/60'
+                      : 'text-[#101010]/60',
+                  )}
+                >
                   Email receipts will show &quot;Bridge&quot; as the payment
                   processor. This is normal.
                 </p>
               </div>
               {account.destinationCurrency && (
                 <div className="flex justify-between text-[12px]">
-                  <span className="text-[#101010]/60 uppercase tracking-[0.14em] text-[10px]">
-                    Destination currency
+                  <span
+                    className={cn(
+                      'uppercase tracking-[0.14em] text-[10px]',
+                      isTechnical
+                        ? 'font-mono text-[#1B29FF]/70'
+                        : 'text-[#101010]/60',
+                    )}
+                  >
+                    {isTechnical ? 'DEST_ASSET' : 'Destination currency'}
                   </span>
-                  <span className="text-[#101010]/80 font-medium">
+                  <span
+                    className={cn(
+                      'font-medium',
+                      isTechnical
+                        ? 'font-mono text-[#1B29FF]'
+                        : 'text-[#101010]/80',
+                    )}
+                  >
                     {account.destinationCurrency.toUpperCase()}
                   </span>
                 </div>
               )}
               {account.destinationAddress && (
                 <div className="space-y-1">
-                  <dt className="text-[#101010]/60 uppercase tracking-[0.14em] text-[10px]">
-                    Settlement address
+                  <dt
+                    className={cn(
+                      'uppercase tracking-[0.14em] text-[10px]',
+                      isTechnical
+                        ? 'font-mono text-[#1B29FF]/70'
+                        : 'text-[#101010]/60',
+                    )}
+                  >
+                    {isTechnical ? 'SETTLEMENT_ADDR' : 'Settlement address'}
                   </dt>
-                  <dd className="text-[12px] text-[#101010]/80 font-mono break-all flex items-start gap-2">
+                  <dd
+                    className={cn(
+                      'text-[12px] font-mono break-all flex items-start gap-2',
+                      isTechnical ? 'text-[#1B29FF]' : 'text-[#101010]/80',
+                    )}
+                  >
                     <span className="flex-1">{account.destinationAddress}</span>
-                    <CopyButton value={account.destinationAddress} />
+                    <CopyButton value={account.destinationAddress} isTechnical={isTechnical} />
                   </dd>
                 </div>
               )}
               {account.destinationBankName && (
                 <div className="flex justify-between text-[12px]">
-                  <span className="text-[#101010]/60 uppercase tracking-[0.14em] text-[10px]">
-                    Destination bank
+                  <span
+                    className={cn(
+                      'uppercase tracking-[0.14em] text-[10px]',
+                      isTechnical
+                        ? 'font-mono text-[#1B29FF]/70'
+                        : 'text-[#101010]/60',
+                    )}
+                  >
+                    {isTechnical ? 'DEST_INSTITUTION' : 'Destination bank'}
                   </span>
-                  <span className="text-[#101010]/80 font-medium">
+                  <span
+                    className={cn(
+                      'font-medium',
+                      isTechnical
+                        ? 'font-mono text-[#1B29FF]'
+                        : 'text-[#101010]/80',
+                    )}
+                  >
                     {account.destinationBankName}
                   </span>
                 </div>
@@ -308,7 +554,7 @@ function AccountCard({
           )}
         </div>
       )}
-    </section>
+    </BimodalCard>
   );
 }
 
@@ -316,6 +562,7 @@ export function BankingInstructionsDisplay({
   accounts,
   userData,
 }: Omit<BankingInstructionsDisplayProps, 'hasCompletedKyc'>) {
+  const { isTechnical } = useBimodal();
   const starterAccounts = accounts.filter(
     (acc) => acc.accountTier === 'starter',
   );
@@ -344,25 +591,59 @@ export function BankingInstructionsDisplay({
         <div>
           <div className="mb-4">
             <div className="flex items-center gap-2 mb-2">
-              <h3 className="text-[15px] font-semibold tracking-[-0.01em] text-[#101010]">
-                Instant access accounts
+              <h3
+                className={cn(
+                  'text-[15px] font-semibold tracking-[-0.01em]',
+                  isTechnical ? 'font-mono text-[#1B29FF] uppercase' : 'text-[#101010]',
+                )}
+              >
+                {isTechnical ? 'ACCESS::INSTANT_TIER' : 'Instant access accounts'}
               </h3>
-              <span className="inline-flex items-center rounded-full bg-[#1B29FF]/10 px-2.5 py-0.5 text-[10px] font-medium uppercase tracking-[0.12em] text-[#1B29FF]">
-                Starter
+              <span
+                className={cn(
+                  'inline-flex items-center px-2.5 py-0.5 text-[10px] font-medium uppercase tracking-[0.12em]',
+                  isTechnical
+                    ? 'bg-[#1B29FF]/10 text-[#1B29FF] font-mono rounded-sm border border-[#1B29FF]/20'
+                    : 'bg-[#1B29FF]/10 text-[#1B29FF] rounded-full',
+                )}
+              >
+                {isTechnical ? 'TIER::STARTER' : 'Starter'}
               </span>
             </div>
-            <div className="flex items-start gap-2 rounded-[10px] border border-[#1B29FF]/20 bg-[#1B29FF]/5 px-3 py-2.5">
+            <div
+              className={cn(
+                'flex items-start gap-2 px-3 py-2.5',
+                isTechnical
+                  ? 'rounded-sm border border-[#1B29FF]/20 bg-[#1B29FF]/5'
+                  : 'rounded-[10px] border border-[#1B29FF]/20 bg-[#1B29FF]/5',
+              )}
+            >
               <Info className="h-4 w-4 text-[#1B29FF] mt-0.5 flex-shrink-0" />
-              <div className="text-[12px] text-[#101010]/70 leading-relaxed">
+              <div
+                className={cn(
+                  'text-[12px] leading-relaxed',
+                  isTechnical
+                    ? 'font-mono text-[#1B29FF]/80'
+                    : 'text-[#101010]/70',
+                )}
+              >
                 <p className="mb-1">
-                  <span className="font-semibold text-[#101010]">
-                    Deposits only:
+                  <span
+                    className={cn(
+                      'font-semibold',
+                      isTechnical ? 'text-[#1B29FF]' : 'text-[#101010]',
+                    )}
+                  >
+                    {isTechnical ? 'LIMITS::' : 'Deposits only:'}
                   </span>{' '}
-                  Accept up to $10,000 total. Funds arrive directly to your
-                  account.
+                  {isTechnical
+                    ? 'CAP_IN::10K_USD // SETTLEMENT::DIRECT'
+                    : 'Accept up to $10,000 total. Funds arrive directly to your account.'}
                 </p>
                 <p>
-                  Complete verification to remove limits and enable transfers.
+                  {isTechnical
+                    ? 'REQ::KYC_VERIFICATION -> UNLOCK::TRANSFERS'
+                    : 'Complete verification to remove limits and enable transfers.'}
                 </p>
               </div>
             </div>
@@ -383,15 +664,36 @@ export function BankingInstructionsDisplay({
         <div>
           <div className="mb-4">
             <div className="flex items-center gap-2 mb-2">
-              <h3 className="text-[15px] font-semibold tracking-[-0.01em] text-[#101010]">
-                Your personal accounts
+              <h3
+                className={cn(
+                  'text-[15px] font-semibold tracking-[-0.01em]',
+                  isTechnical ? 'font-mono text-[#1B29FF] uppercase' : 'text-[#101010]',
+                )}
+              >
+                {isTechnical ? 'ACCESS::FULL_TIER' : 'Your personal accounts'}
               </h3>
-              <span className="inline-flex items-center rounded-full bg-green-500/10 px-2.5 py-0.5 text-[10px] font-medium uppercase tracking-[0.12em] text-green-700">
-                Unlimited
+              <span
+                className={cn(
+                  'inline-flex items-center px-2.5 py-0.5 text-[10px] font-medium uppercase tracking-[0.12em]',
+                  isTechnical
+                    ? 'bg-[#1B29FF]/10 text-[#1B29FF] font-mono rounded-sm border border-[#1B29FF]/20'
+                    : 'bg-green-500/10 text-green-700 rounded-full',
+                )}
+              >
+                {isTechnical ? 'CAP::UNLIMITED' : 'Unlimited'}
               </span>
             </div>
-            <p className="text-[12px] text-[#101010]/60">
-              No deposit limits. Backed by your verified business.
+            <p
+              className={cn(
+                'text-[12px]',
+                isTechnical
+                  ? 'font-mono text-[#1B29FF]/60'
+                  : 'text-[#101010]/60',
+              )}
+            >
+              {isTechnical
+                ? 'VERIFIED::BUSINESS_ENTITY // LIMITS::REMOVED'
+                : 'No deposit limits. Backed by your verified business.'}
             </p>
           </div>
 

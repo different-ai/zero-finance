@@ -25,14 +25,62 @@ import { usePostHog } from 'posthog-js/react';
 import { api } from '@/trpc/react';
 import { OrangeDAOLogo } from '@/components/orange-dao-logo';
 import GeneratedComponent from '@/app/(landing)/welcome-gradient';
+import { useBimodal, BimodalToggle, BimodalContent } from '@/components/ui/bimodal';
 
 export type SourceType = 'adhd' | 'e-commerce' | 'solo' | null;
+
+interface SigninContent {
+  badge: string;
+  headline: {
+    prefix: string;
+    highlight: string;
+    suffix: string;
+  };
+  description: string;
+  features: string[];
+}
+
+const SIGNIN_CONTENT: BimodalContent<SigninContent> = {
+  company: {
+    badge: "High-Yield Business Savings",
+    headline: {
+      prefix: "",
+      highlight: "High-Yield",
+      suffix: "on your idle treasury",
+    },
+    description: "High-yield savings for startups. No minimums, no lock-ups, full liquidity.",
+    features: [
+      "Insurance included — 100% coverage on all deposits",
+      "Wire USD — automatic conversion to earning balance",
+      "Same-day ACH transfers in and out",
+      "Start earning 8-10% APY in 2 minutes",
+    ],
+  },
+  technical: {
+    badge: "PROTOCOL::TREASURY_AUTOMATION",
+    headline: {
+      prefix: "",
+      highlight: "High-Yield",
+      suffix: "on your idle treasury",
+    },
+    description: "Algorithmic yield optimization on battle-tested DeFi protocols. Non-custodial, audited, insured.",
+    features: [
+      "Direct protocol interaction • Non-custodial architecture",
+      "Audited smart contracts • Real-time on-chain settlement",
+      "Insurance via Chainproof • $8B+ TVL protocols",
+      "Zero lock-ups • Instant withdrawals",
+    ],
+  },
+};
 
 export default function SignInContent() {
   const { authenticated, user } = usePrivy();
   const { sendCode, loginWithCode, state } = useLoginWithEmail();
   const searchParams = useSearchParams();
   const posthog = usePostHog();
+  const { isTechnical, toggle } = useBimodal();
+
+  const content = SIGNIN_CONTENT[isTechnical ? 'technical' : 'company'];
 
   const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
@@ -164,18 +212,32 @@ export default function SignInContent() {
       {/* Header */}
       <div className="relative z-10 border-b border-[#101010]/10 bg-white/80 backdrop-blur-sm">
         <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <Link href="/" className="flex items-center">
-            <Image
-              src="/new-logo-bluer.png"
-              alt="Zero Finance"
-              width={24}
-              height={24}
-              className="w-6 h-6 object-contain"
-            />
-            <span className="ml-1 text-[14px] font-bold text-[#0050ff] tracking-tight">
-              finance
-            </span>
-          </Link>
+          <div className="flex items-center justify-between">
+            <Link href="/" className="flex items-center">
+              <Image
+                src="/new-logo-bluer.png"
+                alt="Zero Finance"
+                width={24}
+                height={24}
+                className="w-6 h-6 object-contain"
+              />
+              <span className="ml-1 text-[14px] font-bold text-[#0050ff] tracking-tight">
+                finance
+              </span>
+            </Link>
+            
+            {/* Bimodal Toggle */}
+            <div className="hidden md:flex items-center gap-3">
+              <span className="text-[11px] text-[#101010]/60 uppercase tracking-wider">
+                Experience
+              </span>
+              <BimodalToggle
+                isTechnical={isTechnical}
+                onToggle={toggle}
+                showLabels={true}
+              />
+            </div>
+          </div>
         </div>
       </div>
 
@@ -184,53 +246,43 @@ export default function SignInContent() {
           {/* Left side - Value Proposition - Hidden on mobile */}
           <div className="hidden lg:block bg-white/95 backdrop-blur-sm p-8 lg:p-12">
             <div className="mb-8">
-              <p className="uppercase tracking-[0.14em] text-[12px] text-[#101010]/60 mb-3">
-                Business Savings Account
+              <p className={`uppercase tracking-[0.14em] text-[12px] mb-3 ${
+                isTechnical 
+                  ? 'font-mono text-[#1B29FF]' 
+                  : 'text-[#101010]/60'
+              }`}>
+                {content.badge}
               </p>
-              <h1 className="font-serif text-[56px] sm:text-[64px] lg:text-[72px] leading-[0.96] tracking-[-0.015em] text-[#101010] mb-6">
-                Earn <span className="text-[#1B29FF]">8% APY</span>
+              <h1 className={`leading-[0.96] tracking-[-0.015em] text-[#101010] mb-6 ${
+                isTechnical 
+                  ? 'font-mono text-[48px] sm:text-[56px] lg:text-[64px]' 
+                  : 'font-serif text-[56px] sm:text-[64px] lg:text-[72px]'
+              }`}>
+                {content.headline.prefix && <span>{content.headline.prefix} </span>}
+                <span className={isTechnical ? 'text-[#1B29FF]' : 'text-[#1B29FF]'}>
+                  {content.headline.highlight}
+                </span>
+                {content.headline.suffix && <span> {content.headline.suffix}</span>}
               </h1>
               <p className="text-[16px] leading-[1.5] text-[#101010]/80 max-w-[400px]">
-                High-yield savings for startups. No minimums, no lock-ups, full
-                liquidity.
+                {content.description}
               </p>
             </div>
 
             <div className="space-y-4 mb-8">
-              {[
-                'Insurance included — 100% coverage on all deposits',
-                'Wire USD — automatic conversion to earning balance',
-                'Same-day ACH transfers in and out',
-                'Start earning 8-10% APY in 2 minutes',
-              ].map((item, index) => (
+              {content.features.map((item, index) => (
                 <div key={index} className="flex items-start gap-3">
                   <div className="h-5 w-5 rounded-full bg-[#1B29FF]/10 flex items-center justify-center flex-shrink-0 mt-0.5">
                     <Check className="h-3 w-3 text-[#1B29FF]" />
                   </div>
-                  <span className="text-[14px] text-[#101010]/70">{item}</span>
+                  <span className={`text-[14px] text-[#101010]/70 ${
+                    isTechnical ? 'font-mono text-[13px]' : ''
+                  }`}>
+                    {item}
+                  </span>
                 </div>
               ))}
             </div>
-
-            {/* Stats */}
-            {/* <div className="grid grid-cols-2 gap-6 pt-8 border-t border-[#101010]/10">
-              <div>
-                <p className="text-[24px] font-medium tabular-nums text-[#101010]">
-                  $1M+
-                </p>
-                <p className="text-[12px] uppercase tracking-[0.14em] text-[#101010]/60 mt-1">
-                  Total Deposits
-                </p>
-              </div>
-              <div>
-                <p className="text-[24px] font-medium tabular-nums text-[#101010]">
-                  100+
-                </p>
-                <p className="text-[12px] uppercase tracking-[0.14em] text-[#101010]/60 mt-1">
-                  Active Companies
-                </p>
-              </div>
-            </div> */}
           </div>
 
           {/* Right side - Sign In */}

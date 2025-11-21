@@ -89,16 +89,16 @@ export function useDemoSavingsState(
       };
     }
 
-    const dailyYield = (2500000 * 0.08) / 365;
+    const dailyYield = (901323.0005 * 0.08) / 365;
     const accumulatedYield = dailyYield * 30; // Approximate 30 days of earnings
 
     return {
       enabled: true,
       allocation: 100,
       apy: 8.0,
-      totalSaved: 2500000,
+      totalSaved: 901323.0005,
       totalEarned: accumulatedYield,
-      currentBalance: 2500000 + accumulatedYield,
+      currentBalance: 901323.0005 + accumulatedYield,
       vaultAddress: '0x616a4E1db48e22028f6bbf20444Cd3b8e3273738',
     };
   }, [isDemoMode, isActivated]);
@@ -162,7 +162,7 @@ export function useDemoVaultStats(mode?: SavingsExperienceMode) {
     ];
   }
 
-  const dailyYield = (2500000 * 0.08) / 365;
+  const dailyYield = (901323.0005 * 0.08) / 365;
   const yieldAmount = dailyYield * 1e6; // Convert to USDC decimals
 
   return [
@@ -193,8 +193,8 @@ export function useDemoUserPositions(mode?: SavingsExperienceMode) {
     {
       vaultAddress: '0x616a4E1db48e22028f6bbf20444Cd3b8e3273738',
       vaultName: 'Seamless USDC',
-      assetsUsd: isActivated ? 2500000 : 0,
-      earned: calculateEarned(2500000),
+      assetsUsd: isActivated ? 901323.0005 : 0,
+      earned: calculateEarned(901323.0005),
     },
     {
       vaultAddress: '0xTreasuryBills',
@@ -221,8 +221,8 @@ export function useDemoRecentDeposits(mode?: SavingsExperienceMode) {
   return [
     {
       id: 'demo-deposit-1',
-      amount: 2500000,
-      skimmedAmount: 2500000,
+      amount: 901323.0005,
+      skimmedAmount: 901323.0005,
       timestamp: Date.now() - 1800000,
       status: 'completed',
       transactionHash: '0xdemo123',

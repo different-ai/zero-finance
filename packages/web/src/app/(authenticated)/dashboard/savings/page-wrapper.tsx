@@ -171,13 +171,13 @@ export default function SavingsPageWrapper({
   const checkingBalanceUsd = effectiveCheckingBalance
     ? Number(effectiveCheckingBalance.balance) / 1e6
     : 0;
-  const withdrawableBalanceUsd = isDemoMode ? 2500000 : checkingBalanceUsd;
+  const withdrawableBalanceUsd = isDemoMode ? 800000 : checkingBalanceUsd;
 
   // Get user profile to check insurance status
   const { data: userProfile } = trpc.user.getProfile.useQuery(undefined, {
     enabled: !isDemoMode,
   });
-  const userIsInsured = userProfile?.isInsured || false;
+  const userIsInsured = isDemoMode ? true : (userProfile?.isInsured || false);
 
   // Check workspace features
   const workspaceId = primarySafe?.workspaceId;
@@ -463,7 +463,7 @@ export default function SavingsPageWrapper({
   const averageInstantApy = calculateWeightedInstantApy(vaultsVM, totalSaved);
 
   const animatedInitialEarned = isDemoMode ? 0 : totalEarned;
-  const animatedBalance = isDemoMode ? totalSaved || 2500000 : totalSaved;
+  const animatedBalance = isDemoMode ? totalSaved || 901323.0005 : totalSaved;
   const fallbackApyPercent = Number.isFinite(averageInstantApy)
     ? averageInstantApy * 100
     : 8;
@@ -551,15 +551,7 @@ export default function SavingsPageWrapper({
 
   return (
     <div className="space-y-10">
-      {/* Bimodal Toggle - Banking/Technical Mode */}
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60 mb-1">
-            View Mode
-          </p>
-        </div>
-        <BimodalToggle isTechnical={isTechnical} onToggle={toggleTechnical} />
-      </div>
+
 
       {/* Always show the full savings interface - auto-earn module is now optional */}
       <div className="space-y-12">
@@ -567,65 +559,71 @@ export default function SavingsPageWrapper({
         {userIsInsured ? (
           <div
             className={cn(
-              'p-6 transition-all duration-300',
+              'relative overflow-hidden transition-all duration-300',
               isTechnical
-                ? 'bg-white border border-[#1B29FF]/20 rounded-sm'
-                : 'bg-gradient-to-r from-[#1B29FF]/10 via-[#1B29FF]/5 to-transparent border-2 border-[#1B29FF]/30 rounded-[16px] shadow-[0_4px_16px_rgba(27,41,255,0.12)]',
+                ? 'rounded-sm border border-[#1B29FF]/20 bg-[#1B29FF]/5 p-4'
+                : 'rounded-[12px] border border-[#1B29FF]/10 bg-white p-6 shadow-[0_2px_8px_rgba(27,41,255,0.04)]',
             )}
           >
-            <div className="flex items-start gap-4">
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-2">
+            {/* Technical Background Grid */}
+            {isTechnical && (
+              <div
+                className="absolute inset-0 pointer-events-none opacity-30"
+                style={{
+                  backgroundImage:
+                    'linear-gradient(to right, #1B29FF 1px, transparent 1px), linear-gradient(to bottom, #1B29FF 1px, transparent 1px)',
+                  backgroundSize: '20px 20px',
+                  maskImage:
+                    'linear-gradient(to bottom, black 40%, transparent 100%)',
+                }}
+              />
+            )}
+
+            <div className="relative z-10 flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div
+                  className={cn(
+                    'flex items-center justify-center',
+                    isTechnical
+                      ? 'h-8 w-8 rounded-sm bg-[#1B29FF]/10 text-[#1B29FF] border border-[#1B29FF]/20'
+                      : 'h-10 w-10 rounded-full bg-[#1B29FF]/10 text-[#1B29FF]',
+                  )}
+                >
+                  <Shield className={cn('w-5 h-5', isTechnical && 'w-4 h-4')} />
+                </div>
+                <div>
                   <h3
                     className={cn(
+                      'font-medium',
                       isTechnical
-                        ? 'font-mono text-[16px] text-[#1B29FF]'
-                        : 'text-[18px] font-semibold text-[#101010]',
+                        ? 'font-mono text-[13px] text-[#1B29FF] uppercase tracking-wide'
+                        : 'text-[15px] text-[#101010]',
                     )}
                   >
                     {isTechnical
-                      ? 'COVERAGE::ACTIVE'
+                      ? 'RISK_COVERAGE::ACTIVE'
                       : 'Insurance Protection Active'}
                   </h3>
-                  <span
+                  <p
                     className={cn(
-                      'inline-flex items-center gap-1.5 px-2.5 py-1',
+                      'mt-0.5',
                       isTechnical
-                        ? 'bg-[#1B29FF]/10 border border-[#1B29FF]/20 rounded-sm'
-                        : 'rounded-full bg-green-50 border border-green-200',
+                        ? 'font-mono text-[11px] text-[#1B29FF]/70'
+                        : 'text-[13px] text-[#101010]/60',
                     )}
                   >
-                    <div
-                      className={cn(
-                        'h-2 w-2 rounded-full animate-pulse',
-                        isTechnical ? 'bg-[#1B29FF]' : 'bg-green-500',
-                      )}
-                    />
-                    <span
-                      className={cn(
-                        'text-[11px] font-semibold uppercase tracking-wide',
-                        isTechnical
-                          ? 'text-[#1B29FF] font-mono'
-                          : 'text-green-700',
-                      )}
-                    >
-                      {isTechnical ? 'ONLINE' : 'Protected'}
-                    </span>
-                  </span>
+                    {isTechnical
+                      ? 'PROTOCOL::NEXUS_MUTUAL // CAPACITY::200M // COVERAGE::100%'
+                      : 'Your deposits are covered by Chainproof up to $1M'}
+                  </p>
                 </div>
-                <p
-                  className={cn(
-                    'leading-relaxed',
-                    isTechnical
-                      ? 'font-mono text-[12px] text-[#101010]/60'
-                      : 'text-[14px] text-[#101010]/70',
-                  )}
-                >
-                  {isTechnical
-                    ? 'Coverage applies to all vault positions. No additional configuration required.'
-                    : 'All your savings are covered by 0 Finance insurance at no additional cost. Coverage applies to all vaults automatically.'}
-                </p>
               </div>
+              {isTechnical && (
+                <div className="hidden sm:block font-mono text-[10px] text-[#1B29FF]/50 text-right">
+                  <div className="uppercase tracking-wider">Contract</div>
+                  <div>0xCA...45A</div>
+                </div>
+              )}
             </div>
           </div>
         ) : (
@@ -634,6 +632,7 @@ export default function SavingsPageWrapper({
               'bg-white border border-[#101010]/10 rounded-[12px] overflow-hidden transition-all duration-300',
               selectedVault.vaultAddress === 'insured-contact' &&
                 'border-[#1B29FF]/20',
+              isTechnical && 'rounded-sm border-[#1B29FF]/20',
             )}
           >
             <button
@@ -648,23 +647,53 @@ export default function SavingsPageWrapper({
             >
               <div className="flex items-center justify-between gap-4">
                 <div className="flex items-center gap-4">
-                  <div className="flex-shrink-0 w-10 h-10 rounded-full bg-[#1B29FF]/10 flex items-center justify-center">
+                  <div
+                    className={cn(
+                      'flex-shrink-0 w-10 h-10 flex items-center justify-center',
+                      isTechnical
+                        ? 'rounded-sm bg-[#1B29FF]/5 border border-[#1B29FF]/20'
+                        : 'rounded-full bg-[#1B29FF]/10',
+                    )}
+                  >
                     <Shield className="h-5 w-5 text-[#1B29FF]" />
                   </div>
                   <div>
-                    <h3 className="text-[15px] font-semibold text-[#101010] mb-0.5">
-                      Insurance Coverage
+                    <h3
+                      className={cn(
+                        'text-[15px] font-semibold text-[#101010] mb-0.5',
+                        isTechnical && 'font-mono text-[#1B29FF] uppercase',
+                      )}
+                    >
+                      {isTechnical
+                        ? 'RISK_COVERAGE::AVAILABLE'
+                        : 'Insurance Coverage'}
                     </h3>
-                    <p className="text-[13px] text-[#101010]/60">
-                      Protect your deposits with institutional-grade coverage
+                    <p
+                      className={cn(
+                        'text-[13px] text-[#101010]/60',
+                        isTechnical && 'font-mono text-[11px]',
+                      )}
+                    >
+                      {isTechnical
+                        ? 'PROTOCOL::NEXUS_MUTUAL // COVERAGE_RATIO::100%'
+                        : 'Protect your deposits with institutional-grade coverage'}
                     </p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
-                  <span className="hidden sm:inline-block text-[13px] font-medium text-[#1B29FF]">
+                  <span
+                    className={cn(
+                      'hidden sm:inline-block text-[13px] font-medium text-[#1B29FF]',
+                      isTechnical && 'font-mono text-[11px] uppercase',
+                    )}
+                  >
                     {selectedVault.vaultAddress === 'insured-contact'
-                      ? 'Close'
-                      : 'Learn more'}
+                      ? isTechnical
+                        ? 'CLOSE'
+                        : 'Close'
+                      : isTechnical
+                        ? 'VIEW_SPECS'
+                        : 'Learn more'}
                   </span>
                   <svg
                     className={cn(
@@ -765,9 +794,17 @@ export default function SavingsPageWrapper({
                 )}
               >
                 {isTechnical
-                  ? 'YIELD::REALTIME_CALC'
+                  ? 'YIELD_STREAM::BLOCK_BY_BLOCK'
                   : 'Real-Time Yield Accumulation'}
               </p>
+              {isTechnical && (
+                <div className="absolute top-0 right-0 flex gap-2">
+                  <span className="font-mono text-[9px] text-[#1B29FF]/60 bg-[#1B29FF]/5 px-1.5 py-0.5 rounded">
+                    GAS_SAVED::OPTIMIZED
+                  </span>
+                </div>
+              )}
+
               <AnimatedYieldCounter
                 principal={totalSaved}
                 apy={averageApy}
