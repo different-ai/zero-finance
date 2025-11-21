@@ -368,35 +368,70 @@ export function Sidebar() {
       </div>
 
       {/* User section */}
-      <div className="border-t-2 border-[#101010]/10 bg-[#F7F7F2]">
+      <div
+        className={cn(
+          'border-t-2 transition-colors duration-200',
+          isTechnical
+            ? 'border-[#1B29FF]/20 bg-[#1B29FF]/5'
+            : 'border-[#101010]/10 bg-[#F7F7F2]',
+        )}
+      >
         {authenticated && user && (
           <div className="p-4">
             <div className="relative" ref={dropdownRef}>
               <button
                 onClick={() => setDropdownOpen(!dropdownOpen)}
-                className="w-full flex items-center gap-3 p-3 hover:bg-white/50 transition-colors"
+                className={cn(
+                  'w-full flex items-center gap-3 p-3 transition-colors',
+                  isTechnical
+                    ? 'hover:bg-[#1B29FF]/10'
+                    : 'hover:bg-white/50',
+                )}
               >
                 <div className="relative">
-                  <div className="h-10 w-10 bg-[#0050ff] flex items-center justify-center text-white font-medium text-sm">
+                  <div
+                    className={cn(
+                      'h-10 w-10 flex items-center justify-center text-white font-medium text-sm',
+                      isTechnical ? 'bg-[#1B29FF]' : 'bg-[#0050ff]',
+                    )}
+                  >
                     {user?.email?.address?.[0]?.toUpperCase() || (
                       <User className="h-5 w-5" />
                     )}
                   </div>
-                  <div className="absolute -bottom-0.5 -right-0.5 h-3 w-3 bg-[#0050ff] border-2 border-white" />
+                  <div
+                    className={cn(
+                      'absolute -bottom-0.5 -right-0.5 h-3 w-3 border-2 border-white',
+                      isTechnical ? 'bg-[#1B29FF]' : 'bg-[#0050ff]',
+                    )}
+                  />
                 </div>
                 <div className="flex-1 text-left">
-                  <p className="text-sm font-medium text-[#101010] truncate">
+                  <p
+                    className={cn(
+                      'text-sm font-medium text-[#101010] truncate',
+                      isTechnical && 'font-mono',
+                    )}
+                  >
                     {user?.email?.address?.split('@')[0] || 'User'}
                   </p>
                   {workspaceData?.workspace?.name && (
-                    <p className="text-xs text-[#101010]/50 truncate">
+                    <p
+                      className={cn(
+                        'text-xs truncate',
+                        isTechnical
+                          ? 'text-[#1B29FF]/60 font-mono'
+                          : 'text-[#101010]/50',
+                      )}
+                    >
                       {workspaceData.workspace.name}
                     </p>
                   )}
                 </div>
                 <ChevronDown
                   className={cn(
-                    'h-4 w-4 text-[#101010]/40 transition-transform duration-200',
+                    'h-4 w-4 transition-transform duration-200',
+                    isTechnical ? 'text-[#1B29FF]/60' : 'text-[#101010]/40',
                     dropdownOpen && 'rotate-180',
                   )}
                 />
@@ -404,30 +439,74 @@ export function Sidebar() {
 
               {/* Dropdown menu */}
               {dropdownOpen && (
-                <div className="absolute bottom-full left-0 right-0 mb-2 bg-white border border-[#101010]/10 shadow-lg py-2 z-50">
+                <div
+                  className={cn(
+                    'absolute bottom-full left-0 right-0 mb-2 bg-white shadow-lg py-2 z-50',
+                    isTechnical
+                      ? 'border border-[#1B29FF]/20'
+                      : 'border border-[#101010]/10',
+                  )}
+                >
                   <Link
                     href="/dashboard"
-                    className="flex items-center gap-3 px-4 py-2.5 text-sm text-[#101010]/70 hover:bg-[#F7F7F2] hover:text-[#101010] transition-colors"
+                    className={cn(
+                      'flex items-center gap-3 px-4 py-2.5 text-sm transition-colors',
+                      isTechnical
+                        ? 'text-[#101010]/70 hover:bg-[#1B29FF]/5 hover:text-[#1B29FF] font-mono'
+                        : 'text-[#101010]/70 hover:bg-[#F7F7F2] hover:text-[#101010]',
+                    )}
                     onClick={() => setDropdownOpen(false)}
                   >
-                    <LayoutDashboard className="h-4 w-4 text-[#101010]/40" />
-                    Dashboard
+                    <LayoutDashboard
+                      className={cn(
+                        'h-4 w-4',
+                        isTechnical ? 'text-[#1B29FF]/60' : 'text-[#101010]/40',
+                      )}
+                    />
+                    {isTechnical ? 'DASHBOARD' : 'Dashboard'}
                   </Link>
                   <Link
                     href="/dashboard/settings"
-                    className="flex items-center gap-3 px-4 py-2.5 text-sm text-[#101010]/70 hover:bg-[#F7F7F2] hover:text-[#101010] transition-colors"
+                    className={cn(
+                      'flex items-center gap-3 px-4 py-2.5 text-sm transition-colors',
+                      isTechnical
+                        ? 'text-[#101010]/70 hover:bg-[#1B29FF]/5 hover:text-[#1B29FF] font-mono'
+                        : 'text-[#101010]/70 hover:bg-[#F7F7F2] hover:text-[#101010]',
+                    )}
                     onClick={() => setDropdownOpen(false)}
                   >
-                    <Settings className="h-4 w-4 text-[#101010]/40" />
-                    Settings
+                    <Settings
+                      className={cn(
+                        'h-4 w-4',
+                        isTechnical ? 'text-[#1B29FF]/60' : 'text-[#101010]/40',
+                      )}
+                    />
+                    {isTechnical ? 'SETTINGS' : 'Settings'}
                   </Link>
-                  <div className="border-t border-[#101010]/10 my-2"></div>
+                  <div
+                    className={cn(
+                      'border-t my-2',
+                      isTechnical
+                        ? 'border-[#1B29FF]/20'
+                        : 'border-[#101010]/10',
+                    )}
+                  ></div>
                   <button
                     onClick={handleLogout}
-                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-[#101010]/70 hover:bg-[#F7F7F2] hover:text-[#101010] transition-colors text-left"
+                    className={cn(
+                      'w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors text-left',
+                      isTechnical
+                        ? 'text-[#101010]/70 hover:bg-[#1B29FF]/5 hover:text-[#1B29FF] font-mono'
+                        : 'text-[#101010]/70 hover:bg-[#F7F7F2] hover:text-[#101010]',
+                    )}
                   >
-                    <LogOut className="h-4 w-4 text-[#101010]/40" />
-                    Sign Out
+                    <LogOut
+                      className={cn(
+                        'h-4 w-4',
+                        isTechnical ? 'text-[#1B29FF]/60' : 'text-[#101010]/40',
+                      )}
+                    />
+                    {isTechnical ? 'DISCONNECT' : 'Sign Out'}
                   </button>
                 </div>
               )}

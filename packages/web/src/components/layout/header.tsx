@@ -3,14 +3,25 @@
 import { Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { WorkspaceSwitcher } from '@/components/workspace-switcher';
+import { useBimodal } from '@/components/ui/bimodal';
+import { cn } from '@/lib/utils';
 
 interface HeaderProps {
   onMenuClick: () => void;
 }
 
 export function Header({ onMenuClick }: HeaderProps) {
+  const { isTechnical } = useBimodal();
+
   return (
-    <header className="h-16 border-b border-[#101010]/10 bg-white flex items-center justify-between px-4 sm:px-6">
+    <header
+      className={cn(
+        'h-16 border-b flex items-center justify-between px-4 sm:px-6 transition-colors duration-200',
+        isTechnical
+          ? 'border-[#1B29FF]/20 bg-[#F8F9FA]'
+          : 'border-[#101010]/10 bg-white',
+      )}
+    >
       <div className="flex items-center gap-4">
         <Button
           variant="ghost"

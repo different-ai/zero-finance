@@ -37,22 +37,28 @@ export function Header() {
               />
             </div>
             <Link
-              className="hidden sm:inline-flex px-3 sm:px-4 py-1.5 sm:py-2 text-[#101010] hover:text-[#0050ff] text-[12px] sm:text-[13px] font-medium transition-colors"
+              className={`hidden sm:inline-flex px-3 sm:px-4 py-1.5 sm:py-2 text-[#101010] hover:text-[#0050ff] text-[12px] sm:text-[13px] font-medium transition-colors ${
+                isTechnical ? 'font-mono' : ''
+              }`}
               href="#api-access"
             >
-              API
+              {isTechnical ? 'API::ACCESS' : 'API'}
             </Link>
             <Link
-              className="px-3 sm:px-4 py-1.5 sm:py-2 text-[#101010] hover:text-[#0050ff] text-[12px] sm:text-[13px] font-medium transition-colors"
+              className={`px-3 sm:px-4 py-1.5 sm:py-2 text-[#101010] hover:text-[#0050ff] text-[12px] sm:text-[13px] font-medium transition-colors ${
+                isTechnical ? 'font-mono' : ''
+              }`}
               href="/dashboard?demo=true"
             >
-              Demo
+              {isTechnical ? 'DEMO::MODE' : 'Demo'}
             </Link>
             <Link
-              className="px-3 sm:px-4 py-1.5 sm:py-2 bg-[#1B29FF] hover:bg-[#1420CC] text-white text-[12px] sm:text-[13px] font-medium rounded-md transition-all"
+              className={`px-3 sm:px-4 py-1.5 sm:py-2 bg-[#1B29FF] hover:bg-[#1420CC] text-white text-[12px] sm:text-[13px] font-medium rounded-md transition-all ${
+                isTechnical ? 'font-mono' : ''
+              }`}
               href="/signin"
             >
-              Sign in
+              {isTechnical ? 'CONNECT::WALLET' : 'Sign in'}
             </Link>
           </nav>
         </div>
