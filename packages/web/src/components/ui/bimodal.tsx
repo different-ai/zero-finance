@@ -339,3 +339,4 @@ export const BimodalProvider = ({
     </BimodalContext.Provider>
   );
 };
+

@@ -705,7 +705,7 @@ export function BankingInstructionsDisplay({
                     >
                       DifferentAI Inc.
                     </span>{' '}
-                    is the company name of Zero Finance
+                    is the company name of Zero Finance. You will own the underlying funds and Zero Finance cannot move or access them. If you do the KYB process, you get a full account named after your company.
                   </p>
                 </div>
               </>
