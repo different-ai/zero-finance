@@ -4,12 +4,8 @@ import React, { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { ArrowRight } from 'lucide-react';
 import { OnboardingTasksCard } from './onboarding-tasks-card';
-import {
-  useBimodal,
-  BimodalCard,
-  BlueprintGrid,
-  Crosshairs,
-} from '@/components/ui/bimodal';
+import { AccountInfoDialog } from '@/components/virtual-accounts/account-info-dialog';
+import { useBimodal, BlueprintGrid, Crosshairs } from '@/components/ui/bimodal';
 import { cn } from '@/lib/utils';
 
 type OnboardingStepStatus =
@@ -38,14 +34,17 @@ interface OnboardingInitialData {
 
 interface Props {
   initialData?: OnboardingInitialData;
-  onOpenAccountInfo?: () => void;
+  safeAddress?: string | null;
+  isDemoMode?: boolean;
 }
 
 export function VirtualAccountOnboardingLayer({
   initialData,
-  onOpenAccountInfo,
+  safeAddress,
+  isDemoMode = false,
 }: Props) {
   const [showTasks, setShowTasks] = useState(false);
+  const [isAccountInfoOpen, setIsAccountInfoOpen] = useState(false);
   const { isTechnical } = useBimodal();
 
   const isFullyCompleted = useMemo(() => {
@@ -116,17 +115,24 @@ export function VirtualAccountOnboardingLayer({
             </p>
 
             <div className="flex flex-col sm:flex-row gap-3 pt-2">
-              <Button
-                className={cn(
-                  'gap-2 transition-colors',
-                  isTechnical
-                    ? 'border border-[#1B29FF] bg-transparent text-[#1B29FF] font-mono px-4 py-2 rounded-sm hover:bg-[#1B29FF] hover:text-white'
-                    : 'bg-[#1B29FF] hover:bg-[#1420CC] text-white font-medium px-6 py-3 rounded-md',
-                )}
-                onClick={onOpenAccountInfo}
-              >
-                {isTechnical ? '[ DEPOSIT ]' : 'Deposit Now'}
-              </Button>
+              <AccountInfoDialog
+                open={isAccountInfoOpen}
+                onOpenChange={setIsAccountInfoOpen}
+                isDemoMode={isDemoMode}
+                safeAddress={safeAddress}
+                trigger={
+                  <Button
+                    className={cn(
+                      'gap-2 transition-colors',
+                      isTechnical
+                        ? 'border border-[#1B29FF] bg-transparent text-[#1B29FF] font-mono px-4 py-2 rounded-sm hover:bg-[#1B29FF] hover:text-white'
+                        : 'bg-[#1B29FF] hover:bg-[#1420CC] text-white font-medium px-6 py-3 rounded-md',
+                    )}
+                  >
+                    {isTechnical ? '[ DEPOSIT ]' : 'Deposit Now'}
+                  </Button>
+                }
+              />
             </div>
 
             <button
