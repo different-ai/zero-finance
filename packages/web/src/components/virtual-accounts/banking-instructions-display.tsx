@@ -10,10 +10,7 @@ import {
 } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
-import {
-  BimodalCard,
-  useBimodal,
-} from '@/components/ui/bimodal';
+import { BimodalCard, useBimodal } from '@/components/ui/bimodal';
 
 type VirtualAccount = {
   id: string;
@@ -66,7 +63,13 @@ function getRecipientName(
   return 'Your account';
 }
 
-function CopyButton({ value, isTechnical }: { value: string | null | undefined, isTechnical?: boolean }) {
+function CopyButton({
+  value,
+  isTechnical,
+}: {
+  value: string | null | undefined;
+  isTechnical?: boolean;
+}) {
   const [copied, setCopied] = useState(false);
 
   if (!value) return null;
@@ -81,14 +84,24 @@ function CopyButton({ value, isTechnical }: { value: string | null | undefined, 
     <button
       onClick={handleCopy}
       className={cn(
-        "ml-2 p-1 rounded transition-colors",
-        isTechnical ? "hover:bg-[#1B29FF]/10" : "hover:bg-[#101010]/5"
+        'ml-2 p-1 rounded transition-colors',
+        isTechnical ? 'hover:bg-[#1B29FF]/10' : 'hover:bg-[#101010]/5',
       )}
     >
       {copied ? (
-        <Check className={cn("h-3 w-3", isTechnical ? "text-[#1B29FF]" : "text-green-600")} />
+        <Check
+          className={cn(
+            'h-3 w-3',
+            isTechnical ? 'text-[#1B29FF]' : 'text-green-600',
+          )}
+        />
       ) : (
-        <Copy className={cn("h-3 w-3", isTechnical ? "text-[#1B29FF]/60" : "text-[#101010]/40")} />
+        <Copy
+          className={cn(
+            'h-3 w-3',
+            isTechnical ? 'text-[#1B29FF]/60' : 'text-[#101010]/40',
+          )}
+        />
       )}
     </button>
   );
@@ -193,9 +206,7 @@ function AccountCard({
             <div
               className={cn(
                 'text-[11px] leading-relaxed',
-                isTechnical
-                  ? 'font-mono text-[#1B29FF]'
-                  : 'text-[#101010]/60',
+                isTechnical ? 'font-mono text-[#1B29FF]' : 'text-[#101010]/60',
               )}
             >
               <span
@@ -231,9 +242,7 @@ function AccountCard({
           <dt
             className={cn(
               'uppercase tracking-[0.16em] text-[10px] mb-1',
-              isTechnical
-                ? 'font-mono text-[#1B29FF]/70'
-                : 'text-[#101010]/45',
+              isTechnical ? 'font-mono text-[#1B29FF]/70' : 'text-[#101010]/45',
             )}
           >
             {isTechnical ? 'INSTITUTION' : 'Bank name'}
@@ -268,7 +277,10 @@ function AccountCard({
                 )}
               >
                 {account.sourceRoutingNumber}
-                <CopyButton value={account.sourceRoutingNumber} isTechnical={isTechnical} />
+                <CopyButton
+                  value={account.sourceRoutingNumber}
+                  isTechnical={isTechnical}
+                />
               </dd>
             </div>
             <div>
@@ -289,7 +301,10 @@ function AccountCard({
                 )}
               >
                 {account.sourceAccountNumber}
-                <CopyButton value={account.sourceAccountNumber} isTechnical={isTechnical} />
+                <CopyButton
+                  value={account.sourceAccountNumber}
+                  isTechnical={isTechnical}
+                />
               </dd>
             </div>
           </>
@@ -313,7 +328,10 @@ function AccountCard({
                 )}
               >
                 {account.sourceIban}
-                <CopyButton value={account.sourceIban} isTechnical={isTechnical} />
+                <CopyButton
+                  value={account.sourceIban}
+                  isTechnical={isTechnical}
+                />
               </dd>
             </div>
             <div>
@@ -334,7 +352,10 @@ function AccountCard({
                 )}
               >
                 {account.sourceBicSwift}
-                <CopyButton value={account.sourceBicSwift} isTechnical={isTechnical} />
+                <CopyButton
+                  value={account.sourceBicSwift}
+                  isTechnical={isTechnical}
+                />
               </dd>
             </div>
           </>
@@ -344,9 +365,7 @@ function AccountCard({
           <dt
             className={cn(
               'uppercase tracking-[0.16em] text-[10px] mb-1',
-              isTechnical
-                ? 'font-mono text-[#1B29FF]/70'
-                : 'text-[#101010]/45',
+              isTechnical ? 'font-mono text-[#1B29FF]/70' : 'text-[#101010]/45',
             )}
           >
             {isTechnical ? 'BENEFICIARY' : 'Beneficiary'}
@@ -522,7 +541,10 @@ function AccountCard({
                     )}
                   >
                     <span className="flex-1">{account.destinationAddress}</span>
-                    <CopyButton value={account.destinationAddress} isTechnical={isTechnical} />
+                    <CopyButton
+                      value={account.destinationAddress}
+                      isTechnical={isTechnical}
+                    />
                   </dd>
                 </div>
               )}
@@ -594,10 +616,14 @@ export function BankingInstructionsDisplay({
               <h3
                 className={cn(
                   'text-[15px] font-semibold tracking-[-0.01em]',
-                  isTechnical ? 'font-mono text-[#1B29FF] uppercase' : 'text-[#101010]',
+                  isTechnical
+                    ? 'font-mono text-[#1B29FF] uppercase'
+                    : 'text-[#101010]',
                 )}
               >
-                {isTechnical ? 'ACCESS::INSTANT_TIER' : 'Instant access accounts'}
+                {isTechnical
+                  ? 'ACCESS::INSTANT_TIER'
+                  : 'Instant access accounts'}
               </h3>
               <span
                 className={cn(
@@ -651,10 +677,72 @@ export function BankingInstructionsDisplay({
 
           <div className="space-y-4">
             {starterAchAccount && (
-              <AccountCard account={starterAchAccount} userData={userData} />
+              <>
+                <AccountCard account={starterAchAccount} userData={userData} />
+                {/* Provider clarification for US ACH */}
+                <div
+                  className={cn(
+                    'flex items-start gap-2 px-3 py-2.5',
+                    isTechnical
+                      ? 'rounded-sm border border-[#1B29FF]/10 bg-[#1B29FF]/5'
+                      : 'rounded-[10px] border border-[#1B29FF]/10 bg-[#1B29FF]/5',
+                  )}
+                >
+                  <Info className="h-4 w-4 text-[#1B29FF] mt-0.5 flex-shrink-0" />
+                  <p
+                    className={cn(
+                      'text-[12px] leading-relaxed',
+                      isTechnical
+                        ? 'font-mono text-[#1B29FF]/80'
+                        : 'text-[#101010]/70',
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        'font-semibold',
+                        isTechnical ? 'text-[#1B29FF]' : 'text-[#101010]',
+                      )}
+                    >
+                      DifferentAI Inc.
+                    </span>{' '}
+                    is the company name of Zero Finance
+                  </p>
+                </div>
+              </>
             )}
             {starterIbanAccount && (
-              <AccountCard account={starterIbanAccount} userData={userData} />
+              <>
+                <AccountCard account={starterIbanAccount} userData={userData} />
+                {/* Provider clarification for EUR IBAN */}
+                <div
+                  className={cn(
+                    'flex items-start gap-2 px-3 py-2.5',
+                    isTechnical
+                      ? 'rounded-sm border border-[#1B29FF]/10 bg-[#1B29FF]/5'
+                      : 'rounded-[10px] border border-[#1B29FF]/10 bg-[#1B29FF]/5',
+                  )}
+                >
+                  <Info className="h-4 w-4 text-[#1B29FF] mt-0.5 flex-shrink-0" />
+                  <p
+                    className={cn(
+                      'text-[12px] leading-relaxed',
+                      isTechnical
+                        ? 'font-mono text-[#1B29FF]/80'
+                        : 'text-[#101010]/70',
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        'font-semibold',
+                        isTechnical ? 'text-[#1B29FF]' : 'text-[#101010]',
+                      )}
+                    >
+                      Bridge
+                    </span>{' '}
+                    is our banking partner for EUR transfers
+                  </p>
+                </div>
+              </>
             )}
           </div>
         </div>
@@ -667,7 +755,9 @@ export function BankingInstructionsDisplay({
               <h3
                 className={cn(
                   'text-[15px] font-semibold tracking-[-0.01em]',
-                  isTechnical ? 'font-mono text-[#1B29FF] uppercase' : 'text-[#101010]',
+                  isTechnical
+                    ? 'font-mono text-[#1B29FF] uppercase'
+                    : 'text-[#101010]',
                 )}
               >
                 {isTechnical ? 'ACCESS::FULL_TIER' : 'Your personal accounts'}
@@ -699,10 +789,72 @@ export function BankingInstructionsDisplay({
 
           <div className="space-y-4">
             {fullAchAccount && (
-              <AccountCard account={fullAchAccount} userData={userData} />
+              <>
+                <AccountCard account={fullAchAccount} userData={userData} />
+                {/* Provider clarification for US ACH */}
+                <div
+                  className={cn(
+                    'flex items-start gap-2 px-3 py-2.5',
+                    isTechnical
+                      ? 'rounded-sm border border-[#1B29FF]/10 bg-[#1B29FF]/5'
+                      : 'rounded-[10px] border border-[#1B29FF]/10 bg-[#1B29FF]/5',
+                  )}
+                >
+                  <Info className="h-4 w-4 text-[#1B29FF] mt-0.5 flex-shrink-0" />
+                  <p
+                    className={cn(
+                      'text-[12px] leading-relaxed',
+                      isTechnical
+                        ? 'font-mono text-[#1B29FF]/80'
+                        : 'text-[#101010]/70',
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        'font-semibold',
+                        isTechnical ? 'text-[#1B29FF]' : 'text-[#101010]',
+                      )}
+                    >
+                      DifferentAI Inc.
+                    </span>{' '}
+                    is the company name of Zero Finance
+                  </p>
+                </div>
+              </>
             )}
             {fullIbanAccount && (
-              <AccountCard account={fullIbanAccount} userData={userData} />
+              <>
+                <AccountCard account={fullIbanAccount} userData={userData} />
+                {/* Provider clarification for EUR IBAN */}
+                <div
+                  className={cn(
+                    'flex items-start gap-2 px-3 py-2.5',
+                    isTechnical
+                      ? 'rounded-sm border border-[#1B29FF]/10 bg-[#1B29FF]/5'
+                      : 'rounded-[10px] border border-[#1B29FF]/10 bg-[#1B29FF]/5',
+                  )}
+                >
+                  <Info className="h-4 w-4 text-[#1B29FF] mt-0.5 flex-shrink-0" />
+                  <p
+                    className={cn(
+                      'text-[12px] leading-relaxed',
+                      isTechnical
+                        ? 'font-mono text-[#1B29FF]/80'
+                        : 'text-[#101010]/70',
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        'font-semibold',
+                        isTechnical ? 'text-[#1B29FF]' : 'text-[#101010]',
+                      )}
+                    >
+                      Bridge
+                    </span>{' '}
+                    is our banking partner for EUR transfers
+                  </p>
+                </div>
+              </>
             )}
           </div>
         </div>

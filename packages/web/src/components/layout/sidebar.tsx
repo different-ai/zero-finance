@@ -265,39 +265,6 @@ export function Sidebar() {
       {/* Spacer to push bottom content down */}
       <div className="flex-1" />
 
-      {/* Network Status for Technical Mode */}
-      {isTechnical && (
-        <div className="px-4 pb-3">
-          <div className="p-3 border border-[#1B29FF]/20 bg-[#1B29FF]/5 rounded-sm">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-[10px] font-mono text-[#1B29FF]/70 uppercase tracking-wider">
-                Network Status
-              </span>
-              <div className="flex items-center gap-1.5">
-                <div className="w-1.5 h-1.5 rounded-full bg-[#1B29FF] animate-pulse" />
-                <span className="text-[10px] font-mono text-[#1B29FF] font-bold">
-                  ONLINE
-                </span>
-              </div>
-            </div>
-            <div className="space-y-1">
-              <div className="flex justify-between text-[10px] font-mono">
-                <span className="text-[#101010]/50">Protocol</span>
-                <span className="text-[#101010]/80">BASE::MAINNET</span>
-              </div>
-              <div className="flex justify-between text-[10px] font-mono">
-                <span className="text-[#101010]/50">Latency</span>
-                <span className="text-[#101010]/80">24ms</span>
-              </div>
-              <div className="flex justify-between text-[10px] font-mono">
-                <span className="text-[#101010]/50">Block</span>
-                <span className="text-[#101010]/80">1849201</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Bimodal Toggle */}
       <div className="px-4 pb-3 border-b border-[#101010]/10">
         <div
@@ -383,9 +350,7 @@ export function Sidebar() {
                 onClick={() => setDropdownOpen(!dropdownOpen)}
                 className={cn(
                   'w-full flex items-center gap-3 p-3 transition-colors',
-                  isTechnical
-                    ? 'hover:bg-[#1B29FF]/10'
-                    : 'hover:bg-white/50',
+                  isTechnical ? 'hover:bg-[#1B29FF]/10' : 'hover:bg-white/50',
                 )}
               >
                 <div className="relative">

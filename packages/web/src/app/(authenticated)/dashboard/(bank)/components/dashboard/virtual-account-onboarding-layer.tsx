@@ -1,10 +1,16 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { CheckCircle, ArrowRight } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import { OnboardingTasksCard } from './onboarding-tasks-card';
+import {
+  useBimodal,
+  BimodalCard,
+  BlueprintGrid,
+  Crosshairs,
+} from '@/components/ui/bimodal';
+import { cn } from '@/lib/utils';
 
 type OnboardingStepStatus =
   | 'not_started'
@@ -32,10 +38,15 @@ interface OnboardingInitialData {
 
 interface Props {
   initialData?: OnboardingInitialData;
+  onOpenAccountInfo?: () => void;
 }
 
-export function VirtualAccountOnboardingLayer({ initialData }: Props) {
+export function VirtualAccountOnboardingLayer({
+  initialData,
+  onOpenAccountInfo,
+}: Props) {
   const [showTasks, setShowTasks] = useState(false);
+  const { isTechnical } = useBimodal();
 
   const isFullyCompleted = useMemo(() => {
     if (!initialData) return false;
@@ -47,71 +58,93 @@ export function VirtualAccountOnboardingLayer({ initialData }: Props) {
 
   if (!showTasks) {
     return (
-      <Card className="w-full border-[#101010]/10 bg-white rounded-[12px] shadow-[0_2px_8px_rgba(16,16,16,0.04)]">
-        <CardHeader className="pb-4">
-          <CardTitle className="text-[15px] sm:text-[16px] font-medium tracking-[-0.01em] text-[#101010]">
-            Enable higher limits & transfers
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-5">
-          <div className="bg-[#10b981]/5 border border-[#10b981]/20 p-4 rounded-md">
-            <p className="text-[14px] leading-[1.5] text-[#101010] font-medium">
-              Start earning today! Deposit USDC or USD to begin.
+      <div
+        className={cn(
+          'relative w-full overflow-hidden transition-all duration-300',
+          isTechnical
+            ? 'bg-white border border-[#1B29FF]/20 rounded-sm shadow-none'
+            : 'bg-white border border-[#101010]/10 rounded-[12px] shadow-[0_2px_8px_rgba(16,16,16,0.04)]',
+        )}
+      >
+        {/* Blueprint Grid (Technical only) */}
+        {isTechnical && <BlueprintGrid />}
+
+        {/* Crosshairs (Technical only) */}
+        {isTechnical && (
+          <>
+            <Crosshairs position="top-left" />
+            <Crosshairs position="top-right" />
+          </>
+        )}
+
+        {/* Meta Tag (Technical only) */}
+        {isTechnical && (
+          <div className="absolute top-2 right-8 font-mono text-[9px] text-[#101010]/40 tracking-wider">
+            ID::ONBOARD_001
+          </div>
+        )}
+
+        <div className="relative z-10 p-5 sm:p-6">
+          {/* Header */}
+          <div className="pb-4">
+            <h3
+              className={cn(
+                isTechnical
+                  ? 'font-mono text-[14px] text-[#1B29FF] uppercase tracking-wider'
+                  : 'text-[15px] sm:text-[16px] font-medium tracking-[-0.01em] text-[#101010]',
+              )}
+            >
+              {isTechnical
+                ? 'INIT::SAVINGS_DEPOSIT'
+                : 'Get started with savings'}
+            </h3>
+          </div>
+
+          {/* Content */}
+          <div className="space-y-5">
+            <p
+              className={cn(
+                'leading-[1.5]',
+                isTechnical
+                  ? 'font-mono text-[12px] text-[#101010]/60'
+                  : 'text-[14px] text-[#101010]/70',
+              )}
+            >
+              {isTechnical
+                ? 'Transfer USDC or USD to begin yield accumulation on your treasury.'
+                : 'Deposit funds to start earning yield automatically.'}
             </p>
-          </div>
 
-          <p className="text-[14px] leading-[1.5] text-[#101010]/70">
-            Complete verification to unlock:
-          </p>
+            <div className="flex flex-col sm:flex-row gap-3 pt-2">
+              <Button
+                className={cn(
+                  'gap-2 transition-colors',
+                  isTechnical
+                    ? 'border border-[#1B29FF] bg-transparent text-[#1B29FF] font-mono px-4 py-2 rounded-sm hover:bg-[#1B29FF] hover:text-white'
+                    : 'bg-[#1B29FF] hover:bg-[#1420CC] text-white font-medium px-6 py-3 rounded-md',
+                )}
+                onClick={onOpenAccountInfo}
+              >
+                {isTechnical ? '[ DEPOSIT ]' : 'Deposit Now'}
+              </Button>
+            </div>
 
-          <ul className="space-y-4">
-            <li className="flex items-start gap-3">
-              <div className="h-5 w-5 rounded-full bg-[#1B29FF]/10 flex items-center justify-center flex-shrink-0 mt-0.5">
-                <CheckCircle className="h-3 w-3 text-[#1B29FF]" />
-              </div>
-              <span className="text-[14px] text-[#101010]/70">
-                Remove $10,000 deposit limit
-              </span>
-            </li>
-            <li className="flex items-start gap-3">
-              <div className="h-5 w-5 rounded-full bg-[#1B29FF]/10 flex items-center justify-center flex-shrink-0 mt-0.5">
-                <CheckCircle className="h-3 w-3 text-[#1B29FF]" />
-              </div>
-              <span className="text-[14px] text-[#101010]/70">
-                Enable bank transfers in and out
-              </span>
-            </li>
-            <li className="flex items-start gap-3">
-              <div className="h-5 w-5 rounded-full bg-[#1B29FF]/10 flex items-center justify-center flex-shrink-0 mt-0.5">
-                <CheckCircle className="h-3 w-3 text-[#1B29FF]" />
-              </div>
-              <span className="text-[14px] text-[#101010]/70">
-                Full access to all features
-              </span>
-            </li>
-          </ul>
-
-          <div className="flex flex-col sm:flex-row gap-3 pt-2">
-            <Button
+            <button
+              type="button"
               onClick={() => setShowTasks(true)}
-              className="gap-2 bg-[#1B29FF] hover:bg-[#1420CC] text-white font-medium px-6 py-3 rounded-md transition-colors"
+              className={cn(
+                'inline-flex items-center gap-1 transition-colors',
+                isTechnical
+                  ? 'font-mono text-[11px] text-[#1B29FF]/60 hover:text-[#1B29FF]'
+                  : 'text-[13px] text-[#101010]/60 hover:text-[#1B29FF]',
+              )}
             >
-              Complete Verification
-              <ArrowRight className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="outline"
-              className="gap-2 border-[#101010]/20 text-[#101010] hover:bg-[#F7F7F2] hover:border-[#101010]/40 font-medium px-6 py-3 rounded-md transition-colors"
-              onClick={() => {
-                // Navigate to deposit page or open deposit modal
-                window.location.href = '/dashboard/deposit';
-              }}
-            >
-              Deposit Now
-            </Button>
+              {isTechnical ? 'UNLOCK::HIGHER_LIMITS' : 'Want higher limits?'}
+              <ArrowRight className="h-3 w-3" />
+            </button>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     );
   }
 
