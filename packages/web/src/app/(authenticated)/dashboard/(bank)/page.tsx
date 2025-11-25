@@ -46,7 +46,21 @@ async function OnboardingData() {
       return null;
     }
 
-    return <VirtualAccountOnboardingLayer initialData={onboardingData} />;
+    // Fetch the primary safe address
+    const primarySafe = await db.query.userSafes.findFirst({
+      where: and(
+        eq(userSafes.userDid, userId),
+        eq(userSafes.safeType, 'primary'),
+      ),
+      columns: { safeAddress: true },
+    });
+
+    return (
+      <VirtualAccountOnboardingLayer
+        initialData={onboardingData}
+        safeAddress={primarySafe?.safeAddress || null}
+      />
+    );
   } catch (error) {
     // If there's an error fetching onboarding data, show default tasks
     return <OnboardingTasks />;
@@ -59,11 +73,9 @@ type DashboardSearchParams = {
   [key: string]: string | string[] | undefined;
 };
 
-export default async function DashboardPage(
-  props: {
-    searchParams?: Promise<DashboardSearchParams>;
-  }
-) {
+export default async function DashboardPage(props: {
+  searchParams?: Promise<DashboardSearchParams>;
+}) {
   const searchParams = await props.searchParams;
   const userId = await getUserId();
 

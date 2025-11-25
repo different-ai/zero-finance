@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Building2, Globe, Copy, Check } from 'lucide-react';
+import { Building2, Globe, Copy, Check, Loader2 } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -181,34 +181,43 @@ export function AccountInfoDialog({
         </DialogHeader>
 
         {isLoadingFundingSources || createStarterAccountsMutation.isPending ? (
-          <div className="space-y-3 py-6">
-            <div className="text-center mb-4">
-              <p
+          <div className="py-12 text-center">
+            <div className="flex justify-center mb-4">
+              <Loader2
                 className={cn(
-                  'text-[13px]',
-                  isTechnical
-                    ? 'font-mono text-[#1B29FF]/60'
-                    : 'text-[#101010]/60',
-                )}
-              >
-                {createStarterAccountsMutation.isPending
-                  ? isTechnical
-                    ? 'INIT::STARTER_ACCOUNTS...'
-                    : 'Creating your starter accounts...'
-                  : isTechnical
-                    ? 'LOADING::ACCOUNT_DATA...'
-                    : 'Loading account details...'}
-              </p>
-            </div>
-            {[1, 2, 3].map((item) => (
-              <Skeleton
-                key={item}
-                className={cn(
-                  'h-12 w-full',
-                  isTechnical ? 'bg-[#1B29FF]/5' : 'bg-[#101010]/5',
+                  'h-8 w-8 animate-spin',
+                  isTechnical ? 'text-[#1B29FF]' : 'text-[#1B29FF]',
                 )}
               />
-            ))}
+            </div>
+            <p
+              className={cn(
+                'text-[14px] mb-1',
+                isTechnical
+                  ? 'font-mono text-[#1B29FF]'
+                  : 'font-medium text-[#101010]',
+              )}
+            >
+              {createStarterAccountsMutation.isPending
+                ? isTechnical
+                  ? 'INIT::STARTER_ACCOUNTS'
+                  : 'Setting up your accounts'
+                : isTechnical
+                  ? 'LOADING::ACCOUNT_DATA'
+                  : 'Loading account details'}
+            </p>
+            <p
+              className={cn(
+                'text-[13px] max-w-[400px] mx-auto',
+                isTechnical
+                  ? 'font-mono text-[#101010]/60'
+                  : 'text-[#101010]/60',
+              )}
+            >
+              {createStarterAccountsMutation.isPending
+                ? 'Creating your virtual bank accounts for deposits and transfers.'
+                : 'Please wait while we fetch your banking information.'}
+            </p>
           </div>
         ) : hasVirtualAccounts ? (
           <BankingInstructionsDisplay
