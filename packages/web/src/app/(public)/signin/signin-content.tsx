@@ -25,7 +25,7 @@ import { usePostHog } from 'posthog-js/react';
 import { api } from '@/trpc/react';
 import { OrangeDAOLogo } from '@/components/orange-dao-logo';
 import GeneratedComponent from '@/app/(landing)/welcome-gradient';
-import { useBimodal, BimodalToggle, BimodalContent } from '@/components/ui/bimodal';
+import { useBimodal, BimodalToggle } from '@/components/ui/bimodal';
 
 export type SourceType = 'adhd' | 'e-commerce' | 'solo' | null;
 
@@ -40,35 +40,42 @@ interface SigninContent {
   features: string[];
 }
 
+type BimodalContent<T> = {
+  company: T;
+  technical: T;
+};
+
 const SIGNIN_CONTENT: BimodalContent<SigninContent> = {
   company: {
-    badge: "High-Yield Business Savings",
+    badge: 'High-Yield Business Savings',
     headline: {
-      prefix: "",
-      highlight: "High-Yield",
-      suffix: "on your idle treasury",
+      prefix: '',
+      highlight: 'High-Yield',
+      suffix: 'on your idle treasury',
     },
-    description: "High-yield savings for startups. No minimums, no lock-ups, full liquidity.",
+    description:
+      'High-yield savings for startups. No minimums, no lock-ups, full liquidity.',
     features: [
-      "Insurance included — 100% coverage on all deposits",
-      "Wire USD — automatic conversion to earning balance",
-      "Same-day ACH transfers in and out",
-      "Start earning 8-10% APY in 2 minutes",
+      'Insurance included — 100% coverage on all deposits',
+      'Wire USD — automatic conversion to earning balance',
+      'Same-day ACH transfers in and out',
+      'Start earning 8-10% APY in 2 minutes',
     ],
   },
   technical: {
-    badge: "PROTOCOL::TREASURY_AUTOMATION",
+    badge: 'PROTOCOL::TREASURY_AUTOMATION',
     headline: {
-      prefix: "",
-      highlight: "High-Yield",
-      suffix: "on your idle treasury",
+      prefix: '',
+      highlight: 'High-Yield',
+      suffix: 'on your idle treasury',
     },
-    description: "Algorithmic yield optimization on battle-tested DeFi protocols. Non-custodial, audited, insured.",
+    description:
+      'Algorithmic yield optimization on battle-tested DeFi protocols. Non-custodial, audited, insured.',
     features: [
-      "Direct protocol interaction • Non-custodial architecture",
-      "Audited smart contracts • Real-time on-chain settlement",
-      "Insurance via Chainproof • $8B+ TVL protocols",
-      "Zero lock-ups • Instant withdrawals",
+      'Direct protocol interaction • Non-custodial architecture',
+      'Audited smart contracts • Real-time on-chain settlement',
+      'Insurance via Chainproof • $8B+ TVL protocols',
+      'Zero lock-ups • Instant withdrawals',
     ],
   },
 };
@@ -225,7 +232,7 @@ export default function SignInContent() {
                 finance
               </span>
             </Link>
-            
+
             {/* Bimodal Toggle */}
             <div className="hidden md:flex items-center gap-3">
               <span className="text-[11px] text-[#101010]/60 uppercase tracking-wider">
@@ -246,23 +253,31 @@ export default function SignInContent() {
           {/* Left side - Value Proposition - Hidden on mobile */}
           <div className="hidden lg:block bg-white/95 backdrop-blur-sm p-8 lg:p-12">
             <div className="mb-8">
-              <p className={`uppercase tracking-[0.14em] text-[12px] mb-3 ${
-                isTechnical 
-                  ? 'font-mono text-[#1B29FF]' 
-                  : 'text-[#101010]/60'
-              }`}>
+              <p
+                className={`uppercase tracking-[0.14em] text-[12px] mb-3 ${
+                  isTechnical ? 'font-mono text-[#1B29FF]' : 'text-[#101010]/60'
+                }`}
+              >
                 {content.badge}
               </p>
-              <h1 className={`leading-[0.96] tracking-[-0.015em] text-[#101010] mb-6 ${
-                isTechnical 
-                  ? 'font-mono text-[48px] sm:text-[56px] lg:text-[64px]' 
-                  : 'font-serif text-[56px] sm:text-[64px] lg:text-[72px]'
-              }`}>
-                {content.headline.prefix && <span>{content.headline.prefix} </span>}
-                <span className={isTechnical ? 'text-[#1B29FF]' : 'text-[#1B29FF]'}>
+              <h1
+                className={`leading-[0.96] tracking-[-0.015em] text-[#101010] mb-6 ${
+                  isTechnical
+                    ? 'font-mono text-[48px] sm:text-[56px] lg:text-[64px]'
+                    : 'font-serif text-[56px] sm:text-[64px] lg:text-[72px]'
+                }`}
+              >
+                {content.headline.prefix && (
+                  <span>{content.headline.prefix} </span>
+                )}
+                <span
+                  className={isTechnical ? 'text-[#1B29FF]' : 'text-[#1B29FF]'}
+                >
                   {content.headline.highlight}
                 </span>
-                {content.headline.suffix && <span> {content.headline.suffix}</span>}
+                {content.headline.suffix && (
+                  <span> {content.headline.suffix}</span>
+                )}
               </h1>
               <p className="text-[16px] leading-[1.5] text-[#101010]/80 max-w-[400px]">
                 {content.description}
@@ -270,14 +285,16 @@ export default function SignInContent() {
             </div>
 
             <div className="space-y-4 mb-8">
-              {content.features.map((item, index) => (
+              {content.features.map((item: string, index: number) => (
                 <div key={index} className="flex items-start gap-3">
                   <div className="h-5 w-5 rounded-full bg-[#1B29FF]/10 flex items-center justify-center flex-shrink-0 mt-0.5">
                     <Check className="h-3 w-3 text-[#1B29FF]" />
                   </div>
-                  <span className={`text-[14px] text-[#101010]/70 ${
-                    isTechnical ? 'font-mono text-[13px]' : ''
-                  }`}>
+                  <span
+                    className={`text-[14px] text-[#101010]/70 ${
+                      isTechnical ? 'font-mono text-[13px]' : ''
+                    }`}
+                  >
                     {item}
                   </span>
                 </div>
