@@ -747,26 +747,22 @@ export default function VaultAnalyticsPanel() {
                 </Badge>
               </h3>
 
-              <div className="border rounded-lg overflow-hidden">
+              <div className="border rounded-lg overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-[#F7F7F2]">
-                      <TableHead className="w-[220px]">Vault</TableHead>
-                      <TableHead className="text-right">APY</TableHead>
-                      <TableHead className="text-right">TVL</TableHead>
-                      <TableHead className="text-right">30d Avg</TableHead>
-                      <TableHead className="w-[70px] text-center">
+                      <TableHead>Vault</TableHead>
+                      <TableHead className="text-right w-[80px]">APY</TableHead>
+                      <TableHead className="text-right w-[90px]">TVL</TableHead>
+                      <TableHead className="text-center w-[50px]">
                         Age
                       </TableHead>
-                      <TableHead className="w-[120px]">Status</TableHead>
-                      <TableHead className="w-[60px]"></TableHead>
+                      <TableHead className="w-[100px]"></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {chainVaults.map((vault) => {
                       const apy = vault.metrics?.apy || 0;
-                      const avgApy = vault.metrics?.avgApy || 0;
-                      const trend = apy >= avgApy ? 'up' : 'down';
 
                       return (
                         <TableRow
@@ -777,12 +773,15 @@ export default function VaultAnalyticsPanel() {
                           onClick={() => setSelectedVault(vault)}
                         >
                           <TableCell>
-                            <div className="flex items-start gap-2">
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2">
-                                  <p className="font-medium text-[13px] truncate">
-                                    {vault.displayName || vault.name}
+                            <div className="flex items-center gap-2">
+                              <div className="min-w-0">
+                                <div className="flex items-center gap-1.5">
+                                  <p className="font-medium text-[13px]">
+                                    {vault.name}
                                   </p>
+                                  {vault.isInsured && (
+                                    <ShieldCheck className="h-3.5 w-3.5 text-emerald-600 flex-shrink-0" />
+                                  )}
                                   {vault.isPrimary && (
                                     <Star className="h-3 w-3 text-yellow-500 fill-yellow-500 flex-shrink-0" />
                                   )}
@@ -798,40 +797,25 @@ export default function VaultAnalyticsPanel() {
                               {formatApy(apy)}
                             </span>
                           </TableCell>
-                          <TableCell className="text-right tabular-nums">
+                          <TableCell className="text-right tabular-nums text-[13px]">
                             {formatUsd(vault.metrics?.totalAssetsUsd)}
                           </TableCell>
-                          <TableCell className="text-right tabular-nums">
-                            {formatApy(avgApy)}
-                          </TableCell>
                           <TableCell className="text-center">
-                            <span className="text-[12px] text-[#101010]/70 tabular-nums">
+                            <span className="text-[11px] text-[#101010]/60 tabular-nums">
                               {vault.vaultAge?.formatted || '-'}
                             </span>
                           </TableCell>
-                          <TableCell>
-                            <div className="flex flex-wrap gap-1">
-                              {vault.isInsured ? (
-                                <InsuranceBadge
-                                  isInsured={vault.isInsured}
-                                  coverage={vault.insuranceCoverage}
-                                />
-                              ) : (
-                                <RiskBadge risk={vault.risk} />
-                              )}
-                            </div>
-                          </TableCell>
-                          <TableCell>
+                          <TableCell className="text-right">
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="h-8 w-8 p-0"
+                              className="h-7 w-7 p-0"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 window.open(vault.appUrl, '_blank');
                               }}
                             >
-                              <ExternalLink className="h-4 w-4" />
+                              <ExternalLink className="h-3.5 w-3.5" />
                             </Button>
                           </TableCell>
                         </TableRow>
