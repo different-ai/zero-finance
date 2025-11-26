@@ -751,13 +751,15 @@ export default function VaultAnalyticsPanel() {
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-[#F7F7F2]">
-                      <TableHead className="w-[240px]">Vault</TableHead>
+                      <TableHead className="w-[220px]">Vault</TableHead>
                       <TableHead className="text-right">APY</TableHead>
                       <TableHead className="text-right">TVL</TableHead>
                       <TableHead className="text-right">30d Avg</TableHead>
-                      <TableHead className="w-[140px]">Trend</TableHead>
+                      <TableHead className="w-[70px] text-center">
+                        Age
+                      </TableHead>
                       <TableHead className="w-[120px]">Status</TableHead>
-                      <TableHead className="w-[80px]"></TableHead>
+                      <TableHead className="w-[60px]"></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -802,23 +804,10 @@ export default function VaultAnalyticsPanel() {
                           <TableCell className="text-right tabular-nums">
                             {formatApy(avgApy)}
                           </TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-1">
-                              {trend === 'up' ? (
-                                <TrendingUp className="h-3 w-3 text-green-600" />
-                              ) : (
-                                <TrendingDown className="h-3 w-3 text-red-600" />
-                              )}
-                              <span
-                                className={`text-[11px] ${
-                                  trend === 'up'
-                                    ? 'text-green-600'
-                                    : 'text-red-600'
-                                }`}
-                              >
-                                {trend === 'up' ? 'Above' : 'Below'} avg
-                              </span>
-                            </div>
+                          <TableCell className="text-center">
+                            <span className="text-[12px] text-[#101010]/70 tabular-nums">
+                              {vault.vaultAge?.formatted || '-'}
+                            </span>
                           </TableCell>
                           <TableCell>
                             <div className="flex flex-wrap gap-1">

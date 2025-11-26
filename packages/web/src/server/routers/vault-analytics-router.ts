@@ -8,6 +8,7 @@ import {
   fetchVaultMetrics,
   fetchVaultHistoricalData,
   fetchComprehensiveVaultData,
+  fetchVaultDeploymentInfo,
   parseMorphoVaultUrl,
   CHAIN_NAMES,
   MORPHO_CHAIN_IDS,
@@ -61,10 +62,29 @@ export const vaultAnalyticsRouter = router({
 
     const trackedVaults = getTrackedVaultsConfig();
 
-    // Fetch live metrics for all vaults in parallel
+    // Fetch live metrics and deployment info for all vaults in parallel
     const vaultsWithMetrics = await Promise.all(
       trackedVaults.map(async (vault) => {
-        const metrics = await fetchVaultMetrics(vault.address, vault.chainId);
+        const [metrics, deployment] = await Promise.all([
+          fetchVaultMetrics(vault.address, vault.chainId),
+          fetchVaultDeploymentInfo(vault.address, vault.chainId),
+        ]);
+
+        // Calculate vault age
+        let vaultAge = null;
+        if (deployment?.createdAt) {
+          const deployDate = new Date(deployment.createdAt);
+          const now = new Date();
+          const diffMs = now.getTime() - deployDate.getTime();
+          const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+          const months = Math.floor(days / 30);
+          vaultAge = {
+            days,
+            months,
+            formatted: months > 0 ? `${months}mo` : `${days}d`,
+            createdAt: deployment.createdAt,
+          };
+        }
 
         return {
           // Config from centralized tracked vaults
@@ -83,6 +103,8 @@ export const vaultAnalyticsRouter = router({
           isPrimary: vault.isPrimary,
           isActive: vault.isActive,
           notes: vault.notes,
+          // Vault age
+          vaultAge,
           // Live metrics from Morpho API
           metrics: metrics
             ? {
