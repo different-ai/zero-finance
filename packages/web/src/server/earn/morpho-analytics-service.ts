@@ -54,8 +54,9 @@ export interface MorphoVaultMetrics {
     image?: string;
     forumLink?: string;
   };
-  // Deployment info (from first transaction)
-  createdAt?: string;
+  // Creation info
+  creationTimestamp?: number;
+  creationBlockNumber?: number;
   // Warnings
   warnings?: Array<{
     type: string;
@@ -130,6 +131,8 @@ export async function fetchVaultMetrics(
               address
               name
               symbol
+              creationTimestamp
+              creationBlockNumber
               asset {
                 address
                 symbol
@@ -205,6 +208,8 @@ export async function fetchVaultMetrics(
         priceUsd: vault.asset?.priceUsd || 0,
       },
       metadata: vault.metadata,
+      creationTimestamp: vault.creationTimestamp,
+      creationBlockNumber: vault.creationBlockNumber,
       warnings: vault.warnings,
     };
   } catch (error) {

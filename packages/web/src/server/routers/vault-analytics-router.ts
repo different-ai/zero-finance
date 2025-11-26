@@ -8,7 +8,6 @@ import {
   fetchVaultMetrics,
   fetchVaultHistoricalData,
   fetchComprehensiveVaultData,
-  fetchVaultDeploymentInfo,
   parseMorphoVaultUrl,
   CHAIN_NAMES,
   MORPHO_CHAIN_IDS,
@@ -62,18 +61,15 @@ export const vaultAnalyticsRouter = router({
 
     const trackedVaults = getTrackedVaultsConfig();
 
-    // Fetch live metrics and deployment info for all vaults in parallel
+    // Fetch live metrics for all vaults in parallel
     const vaultsWithMetrics = await Promise.all(
       trackedVaults.map(async (vault) => {
-        const [metrics, deployment] = await Promise.all([
-          fetchVaultMetrics(vault.address, vault.chainId),
-          fetchVaultDeploymentInfo(vault.address, vault.chainId),
-        ]);
+        const metrics = await fetchVaultMetrics(vault.address, vault.chainId);
 
-        // Calculate vault age
+        // Calculate vault age from creationTimestamp
         let vaultAge = null;
-        if (deployment?.createdAt) {
-          const deployDate = new Date(deployment.createdAt);
+        if (metrics?.creationTimestamp) {
+          const deployDate = new Date(metrics.creationTimestamp * 1000);
           const now = new Date();
           const diffMs = now.getTime() - deployDate.getTime();
           const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
@@ -82,7 +78,7 @@ export const vaultAnalyticsRouter = router({
             days,
             months,
             formatted: months > 0 ? `${months}mo` : `${days}d`,
-            createdAt: deployment.createdAt,
+            createdAt: deployDate.toISOString(),
           };
         }
 
@@ -189,6 +185,7 @@ export const vaultAnalyticsRouter = router({
           days,
           months,
           formatted: months > 0 ? `${months} months` : `${days} days`,
+          createdAt: deployDate.toISOString(),
         };
       }
 
