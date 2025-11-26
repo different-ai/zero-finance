@@ -6,6 +6,7 @@ import AdminPanel from '@/components/admin/admin-panel';
 import KycKanbanBoard from '@/components/admin/kyc-kanban-board';
 import WorkspacesPanel from '@/components/admin/workspaces-panel';
 import { PlatformOverviewStats } from '@/components/admin/platform-overview-stats';
+import VaultAnalyticsPanel from '@/components/admin/vault-analytics-panel';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { api } from '@/trpc/react';
@@ -23,6 +24,7 @@ import {
   RefreshCw,
   ShieldAlert,
   Building2,
+  TrendingUp,
 } from 'lucide-react';
 import {
   Dialog,
@@ -35,7 +37,7 @@ import {
 export default function AdminPage() {
   const { user, authenticated, login } = usePrivy();
   const [activeView, setActiveView] = useState<
-    'workspaces' | 'table' | 'kanban'
+    'workspaces' | 'table' | 'kanban' | 'vaults'
   >('workspaces');
   const [isSyncing, setIsSyncing] = useState(false);
 
@@ -199,7 +201,7 @@ export default function AdminPage() {
       <Tabs
         value={activeView}
         onValueChange={(v) =>
-          setActiveView(v as 'workspaces' | 'table' | 'kanban')
+          setActiveView(v as 'workspaces' | 'table' | 'kanban' | 'vaults')
         }
       >
         <TabsList className="mb-6">
@@ -214,6 +216,10 @@ export default function AdminPage() {
           <TabsTrigger value="table" className="flex items-center gap-2">
             <TableIcon className="h-4 w-4" />
             Users
+          </TabsTrigger>
+          <TabsTrigger value="vaults" className="flex items-center gap-2">
+            <TrendingUp className="h-4 w-4" />
+            Vaults
           </TabsTrigger>
         </TabsList>
 
@@ -232,6 +238,10 @@ export default function AdminPage() {
 
         <TabsContent value="table">
           <AdminPanel />
+        </TabsContent>
+
+        <TabsContent value="vaults">
+          <VaultAnalyticsPanel />
         </TabsContent>
       </Tabs>
 
