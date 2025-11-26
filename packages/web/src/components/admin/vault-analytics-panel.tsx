@@ -604,9 +604,15 @@ export default function VaultAnalyticsPanel() {
   const {
     data: vaultsData,
     isLoading,
+    error,
     refetch,
     isRefetching,
   } = api.vaultAnalytics.getTrackedVaults.useQuery();
+
+  // Debug: log any errors
+  if (error) {
+    console.error('Vault analytics error:', error);
+  }
 
   if (isLoading) {
     return (
@@ -619,6 +625,35 @@ export default function VaultAnalyticsPanel() {
             <Skeleton className="h-12 w-full" />
             <Skeleton className="h-12 w-full" />
             <Skeleton className="h-12 w-full" />
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Vault Analytics</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-8">
+            <AlertTriangle className="h-8 w-8 text-red-500 mx-auto mb-2" />
+            <p className="text-red-600 font-medium">Failed to load vaults</p>
+            <p className="text-[13px] text-[#101010]/60 mt-1">
+              {error.message}
+            </p>
+            <Button
+              variant="outline"
+              size="sm"
+              className="mt-4"
+              onClick={() => refetch()}
+            >
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Retry
+            </Button>
           </div>
         </CardContent>
       </Card>

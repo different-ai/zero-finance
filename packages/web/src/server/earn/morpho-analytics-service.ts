@@ -32,8 +32,6 @@ export interface MorphoVaultMetrics {
   // Current metrics
   totalAssetsUsd: number;
   totalAssets: string;
-  liquidity: string;
-  liquidityUsd: number;
   // APY metrics
   apy: number;
   netApy: number;
@@ -146,7 +144,6 @@ export async function fetchVaultMetrics(
               state {
                 totalAssets
                 totalAssetsUsd
-                liquidity
                 sharePrice
                 sharePriceUsd
                 apy
@@ -194,9 +191,6 @@ export async function fetchVaultMetrics(
       curator: vault.state?.curator,
       totalAssetsUsd: vault.state?.totalAssetsUsd || 0,
       totalAssets: vault.state?.totalAssets || '0',
-      liquidity: vault.state?.liquidity || '0',
-      liquidityUsd:
-        (vault.state?.liquidity || 0) * (vault.asset?.priceUsd || 0),
       apy: normalizeApy(vault.state?.apy),
       netApy: normalizeApy(vault.state?.netApy),
       avgApy: normalizeApy(vault.state?.avgApy),
@@ -377,7 +371,6 @@ export async function listMorphoVaults(
                 state {
                   totalAssets
                   totalAssetsUsd
-                  liquidity
                   sharePrice
                   sharePriceUsd
                   apy
@@ -410,8 +403,6 @@ export async function listMorphoVaults(
       curator: vault.state?.curator,
       totalAssetsUsd: vault.state?.totalAssetsUsd || 0,
       totalAssets: vault.state?.totalAssets || '0',
-      liquidity: vault.state?.liquidity || '0',
-      liquidityUsd: 0,
       apy: vault.state?.apy || 0,
       netApy: vault.state?.netApy || 0,
       avgApy: 0,
