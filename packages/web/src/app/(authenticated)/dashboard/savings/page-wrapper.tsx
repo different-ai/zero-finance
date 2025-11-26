@@ -177,7 +177,7 @@ export default function SavingsPageWrapper({
   const { data: userProfile } = trpc.user.getProfile.useQuery(undefined, {
     enabled: !isDemoMode,
   });
-  const userIsInsured = isDemoMode ? true : (userProfile?.isInsured || false);
+  const userIsInsured = isDemoMode ? true : userProfile?.isInsured || false;
 
   // Check workspace features
   const workspaceId = primarySafe?.workspaceId;
@@ -551,8 +551,6 @@ export default function SavingsPageWrapper({
 
   return (
     <div className="space-y-10">
-
-
       {/* Always show the full savings interface - auto-earn module is now optional */}
       <div className="space-y-12">
         {/* Protection Banner - Active Insurance or CTA */}
@@ -963,16 +961,21 @@ export default function SavingsPageWrapper({
                         <div className="flex items-start gap-3">
                           <div className="min-w-0 flex-1">
                             <div className="flex flex-wrap items-center gap-2">
-                              <p
-                                className={cn(
-                                  'truncate',
-                                  isTechnical
-                                    ? 'text-[15px] font-mono text-[#1B29FF]'
-                                    : 'text-[15px] font-medium text-[#101010]',
-                                )}
-                              >
-                                {vault.displayName || vault.name}
-                              </p>
+                              {isTechnical ? (
+                                <a
+                                  href={`https://basescan.org/address/${vault.address}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-[15px] font-mono text-[#1B29FF] hover:underline truncate inline-flex items-center gap-1"
+                                >
+                                  {vault.name}
+                                  <ExternalLink className="h-3 w-3 flex-shrink-0" />
+                                </a>
+                              ) : (
+                                <p className="text-[15px] font-medium text-[#101010] truncate">
+                                  {vault.displayName || vault.name}
+                                </p>
+                              )}
                               {/* Asset Badge */}
                               <span
                                 className={cn(
@@ -1323,15 +1326,21 @@ export default function SavingsPageWrapper({
                         <div className="flex items-start gap-3">
                           <div className="flex flex-col gap-1">
                             <div className="flex flex-wrap items-center gap-2">
-                              <p
-                                className={cn(
-                                  isTechnical
-                                    ? 'text-[15px] font-mono text-[#1B29FF]'
-                                    : 'text-[15px] font-medium text-[#101010]',
-                                )}
-                              >
-                                {vault.displayName || vault.name}
-                              </p>
+                              {isTechnical ? (
+                                <a
+                                  href={`https://basescan.org/address/${vault.address}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-[15px] font-mono text-[#1B29FF] hover:underline inline-flex items-center gap-1"
+                                >
+                                  {vault.name}
+                                  <ExternalLink className="h-3 w-3 flex-shrink-0" />
+                                </a>
+                              ) : (
+                                <p className="text-[15px] font-medium text-[#101010]">
+                                  {vault.displayName || vault.name}
+                                </p>
+                              )}
                               {/* Asset Badge */}
                               <span
                                 className={cn(
