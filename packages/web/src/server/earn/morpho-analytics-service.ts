@@ -6,19 +6,21 @@
  * - Vault metadata (curator, deployment info)
  */
 
-const MORPHO_GRAPHQL_URL = 'https://blue-api.morpho.org/graphql';
+const MORPHO_GRAPHQL_URL = 'https://api.morpho.org/graphql';
 
 // Chain ID mappings
 export const MORPHO_CHAIN_IDS: Record<string, number> = {
   ethereum: 1,
   base: 8453,
   arbitrum: 42161,
+  optimism: 10,
 };
 
 export const CHAIN_NAMES: Record<number, string> = {
   1: 'Ethereum',
   8453: 'Base',
   42161: 'Arbitrum',
+  10: 'Optimism',
 };
 
 export interface MorphoVaultMetrics {

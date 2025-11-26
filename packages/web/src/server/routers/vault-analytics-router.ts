@@ -12,8 +12,11 @@ import {
   CHAIN_NAMES,
   MORPHO_CHAIN_IDS,
 } from '../earn/morpho-analytics-service';
-import { BASE_USDC_VAULTS, ORIGIN_SUPER_OETH_VAULT } from '../earn/base-vaults';
-import { ARBITRUM_USDC_VAULTS } from '../earn/arbitrum-vaults';
+import {
+  TRACKED_VAULTS,
+  getTrackedVault,
+  type TrackedVault,
+} from '../earn/tracked-vaults-config';
 
 // Check admin status
 async function checkIsUserAdmin(privyDid: string): Promise<boolean> {
@@ -44,21 +47,9 @@ async function requireAdmin(privyDid: string | null | undefined) {
   }
 }
 
-// Get all tracked vaults from codebase
-function getTrackedVaults() {
-  const vaults = [
-    ...BASE_USDC_VAULTS.map((v) => ({
-      ...v,
-      source: 'base-vaults' as const,
-    })),
-    { ...ORIGIN_SUPER_OETH_VAULT, source: 'base-vaults' as const },
-    ...ARBITRUM_USDC_VAULTS.map((v) => ({
-      ...v,
-      source: 'arbitrum-vaults' as const,
-    })),
-  ];
-
-  return vaults;
+// Get all tracked vaults from centralized config
+function getTrackedVaultsConfig(): TrackedVault[] {
+  return TRACKED_VAULTS;
 }
 
 export const vaultAnalyticsRouter = router({
@@ -68,7 +59,7 @@ export const vaultAnalyticsRouter = router({
   getTrackedVaults: protectedProcedure.query(async ({ ctx }) => {
     await requireAdmin(ctx.userId);
 
-    const trackedVaults = getTrackedVaults();
+    const trackedVaults = getTrackedVaultsConfig();
 
     // Fetch live metrics for all vaults in parallel
     const vaultsWithMetrics = await Promise.all(
@@ -76,7 +67,7 @@ export const vaultAnalyticsRouter = router({
         const metrics = await fetchVaultMetrics(vault.address, vault.chainId);
 
         return {
-          // Config from codebase
+          // Config from centralized tracked vaults
           id: vault.id,
           name: vault.name,
           displayName: vault.displayName,
@@ -86,7 +77,12 @@ export const vaultAnalyticsRouter = router({
           risk: vault.risk,
           curator: vault.curator,
           appUrl: vault.appUrl,
-          source: vault.source,
+          // Insurance status
+          isInsured: vault.isInsured,
+          insuranceCoverage: vault.insuranceCoverage,
+          isPrimary: vault.isPrimary,
+          isActive: vault.isActive,
+          notes: vault.notes,
           // Live metrics from Morpho API
           metrics: metrics
             ? {
@@ -144,6 +140,9 @@ export const vaultAnalyticsRouter = router({
         });
       }
 
+      // Get tracked vault info for insurance status
+      const trackedVault = getTrackedVault(input.address, input.chainId);
+
       // Calculate APY stats from historical data
       let apyStats = null;
       if (historical?.apy && historical.apy.length > 0) {
@@ -156,6 +155,21 @@ export const vaultAnalyticsRouter = router({
         };
       }
 
+      // Calculate vault age if we have deployment info
+      let vaultAge = null;
+      if (deployment?.createdAt) {
+        const deployDate = new Date(deployment.createdAt);
+        const now = new Date();
+        const diffMs = now.getTime() - deployDate.getTime();
+        const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+        const months = Math.floor(days / 30);
+        vaultAge = {
+          days,
+          months,
+          formatted: months > 0 ? `${months} months` : `${days} days`,
+        };
+      }
+
       return {
         metrics: {
           ...metrics,
@@ -164,6 +178,12 @@ export const vaultAnalyticsRouter = router({
         historical,
         deployment,
         apyStats,
+        vaultAge,
+        // Insurance info from tracked vault config
+        isInsured: trackedVault?.isInsured || false,
+        insuranceCoverage: trackedVault?.insuranceCoverage,
+        isPrimary: trackedVault?.isPrimary,
+        notes: trackedVault?.notes,
       };
     }),
 
@@ -234,12 +254,11 @@ export const vaultAnalyticsRouter = router({
       }
 
       // Check if this vault is already tracked
-      const trackedVaults = getTrackedVaults();
-      const isTracked = trackedVaults.some(
-        (v) =>
-          v.address.toLowerCase() === parsed.vaultAddress.toLowerCase() &&
-          v.chainId === parsed.chainId,
+      const existingVault = getTrackedVault(
+        parsed.vaultAddress,
+        parsed.chainId,
       );
+      const isTracked = !!existingVault;
 
       // Calculate APY stats
       let apyStats = null;

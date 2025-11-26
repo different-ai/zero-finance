@@ -37,6 +37,10 @@ import {
   Plus,
   Copy,
   Check,
+  Shield,
+  ShieldCheck,
+  Star,
+  Clock,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -162,6 +166,39 @@ function RiskBadge({ risk }: { risk: string }) {
   );
 }
 
+// Insurance badge component
+function InsuranceBadge({
+  isInsured,
+  coverage,
+}: {
+  isInsured: boolean;
+  coverage?: { provider: string; amount: string; currency: string };
+}) {
+  if (!isInsured) return null;
+
+  return (
+    <Badge className="bg-emerald-100 text-emerald-700 border-emerald-300 gap-1">
+      <ShieldCheck className="h-3 w-3" />
+      INSURED
+    </Badge>
+  );
+}
+
+// Primary vault indicator
+function PrimaryBadge({ isPrimary }: { isPrimary?: boolean }) {
+  if (!isPrimary) return null;
+
+  return (
+    <Badge
+      variant="outline"
+      className="bg-yellow-50 text-yellow-700 border-yellow-300 gap-1"
+    >
+      <Star className="h-3 w-3 fill-current" />
+      Primary
+    </Badge>
+  );
+}
+
 // Vault detail dialog
 function VaultDetailDialog({
   vault,
@@ -190,9 +227,24 @@ function VaultDetailDialog({
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
+          <DialogTitle className="flex items-center gap-2 flex-wrap">
             {vault?.name || 'Vault Details'}
             <Badge variant="outline">{vault?.chainName}</Badge>
+            {(vault?.isInsured || details?.isInsured) && (
+              <Badge className="bg-emerald-100 text-emerald-700 border-emerald-300 gap-1">
+                <ShieldCheck className="h-3 w-3" />
+                INSURED
+              </Badge>
+            )}
+            {vault?.isPrimary && (
+              <Badge
+                variant="outline"
+                className="bg-yellow-50 text-yellow-700 border-yellow-300 gap-1"
+              >
+                <Star className="h-3 w-3 fill-current" />
+                Primary
+              </Badge>
+            )}
           </DialogTitle>
           <DialogDescription>
             Detailed metrics and historical data
@@ -206,6 +258,28 @@ function VaultDetailDialog({
           </div>
         ) : details ? (
           <div className="space-y-6">
+            {/* Insurance Info Banner */}
+            {details.isInsured && details.insuranceCoverage && (
+              <Card className="p-4 bg-emerald-50 border-emerald-200">
+                <div className="flex items-center gap-3">
+                  <ShieldCheck className="h-8 w-8 text-emerald-600" />
+                  <div>
+                    <p className="font-semibold text-emerald-800">
+                      Insured Vault
+                    </p>
+                    <p className="text-[13px] text-emerald-700">
+                      Coverage: $
+                      {Number(
+                        details.insuranceCoverage.amount,
+                      ).toLocaleString()}{' '}
+                      {details.insuranceCoverage.currency} via{' '}
+                      {details.insuranceCoverage.provider}
+                    </p>
+                  </div>
+                </div>
+              </Card>
+            )}
+
             {/* Key Metrics Grid */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <Card className="p-4">
@@ -295,15 +369,39 @@ function VaultDetailDialog({
                   </div>
                   <div>
                     <p className="text-[#101010]/60">Deployed</p>
-                    <p>
-                      {details.deployment?.createdAt
-                        ? new Date(
-                            details.deployment.createdAt,
-                          ).toLocaleDateString()
-                        : 'Unknown'}
-                    </p>
+                    <div className="flex items-center gap-1">
+                      <Clock className="h-3 w-3 text-[#101010]/40" />
+                      <p>
+                        {details.deployment?.createdAt
+                          ? new Date(
+                              details.deployment.createdAt,
+                            ).toLocaleDateString()
+                          : 'Unknown'}
+                        {details.vaultAge && (
+                          <span className="text-[#101010]/50 ml-1">
+                            ({details.vaultAge.formatted})
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-[#101010]/60">Weekly APY</p>
+                    <p>{formatApy(details.metrics?.weeklyApy)}</p>
+                  </div>
+                  <div>
+                    <p className="text-[#101010]/60">Monthly APY</p>
+                    <p>{formatApy(details.metrics?.monthlyApy)}</p>
                   </div>
                 </div>
+
+                {/* Notes */}
+                {details.notes && (
+                  <div className="mt-3 p-2 bg-[#F7F7F2] rounded text-[12px]">
+                    <span className="text-[#101010]/60">Note:</span>{' '}
+                    {details.notes}
+                  </div>
+                )}
 
                 {/* Warnings */}
                 {details.metrics?.warnings &&
@@ -587,12 +685,12 @@ export default function VaultAnalyticsPanel() {
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-[#F7F7F2]">
-                      <TableHead className="w-[200px]">Vault</TableHead>
+                      <TableHead className="w-[240px]">Vault</TableHead>
                       <TableHead className="text-right">APY</TableHead>
                       <TableHead className="text-right">TVL</TableHead>
                       <TableHead className="text-right">30d Avg</TableHead>
                       <TableHead className="w-[140px]">Trend</TableHead>
-                      <TableHead className="w-[100px]">Risk</TableHead>
+                      <TableHead className="w-[120px]">Status</TableHead>
                       <TableHead className="w-[80px]"></TableHead>
                     </TableRow>
                   </TableHeader>
@@ -605,17 +703,26 @@ export default function VaultAnalyticsPanel() {
                       return (
                         <TableRow
                           key={`${vault.chainId}-${vault.address}`}
-                          className="cursor-pointer hover:bg-[#F7F7F2]/50"
+                          className={`cursor-pointer hover:bg-[#F7F7F2]/50 ${
+                            vault.isInsured ? 'bg-emerald-50/30' : ''
+                          }`}
                           onClick={() => setSelectedVault(vault)}
                         >
                           <TableCell>
-                            <div>
-                              <p className="font-medium text-[13px]">
-                                {vault.displayName || vault.name}
-                              </p>
-                              <p className="text-[11px] text-[#101010]/50">
-                                {vault.curator}
-                              </p>
+                            <div className="flex items-start gap-2">
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <p className="font-medium text-[13px] truncate">
+                                    {vault.displayName || vault.name}
+                                  </p>
+                                  {vault.isPrimary && (
+                                    <Star className="h-3 w-3 text-yellow-500 fill-yellow-500 flex-shrink-0" />
+                                  )}
+                                </div>
+                                <p className="text-[11px] text-[#101010]/50">
+                                  {vault.curator}
+                                </p>
+                              </div>
                             </div>
                           </TableCell>
                           <TableCell className="text-right">
@@ -648,7 +755,16 @@ export default function VaultAnalyticsPanel() {
                             </div>
                           </TableCell>
                           <TableCell>
-                            <RiskBadge risk={vault.risk} />
+                            <div className="flex flex-wrap gap-1">
+                              {vault.isInsured ? (
+                                <InsuranceBadge
+                                  isInsured={vault.isInsured}
+                                  coverage={vault.insuranceCoverage}
+                                />
+                              ) : (
+                                <RiskBadge risk={vault.risk} />
+                              )}
+                            </div>
                           </TableCell>
                           <TableCell>
                             <Button
