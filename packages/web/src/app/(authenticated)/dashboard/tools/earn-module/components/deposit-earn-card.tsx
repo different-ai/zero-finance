@@ -191,12 +191,25 @@ export function DepositEarnCard({
         setIsLoadingBalance(true);
       }
 
+      console.log('[DepositEarnCard] Fetching balance:', {
+        safeAddress,
+        isNativeAsset,
+        assetAddress,
+        assetSymbol,
+        vaultAddress,
+        resolvedZapper,
+      });
+
       let balance: bigint;
       if (isNativeAsset) {
         // Fetch native ETH balance
         balance = await publicClient.getBalance({
           address: safeAddress,
         });
+        console.log(
+          '[DepositEarnCard] Native ETH balance:',
+          balance.toString(),
+        );
       } else {
         // Fetch ERC20 token balance (e.g., USDC)
         balance = await publicClient.readContract({
@@ -205,11 +218,12 @@ export function DepositEarnCard({
           functionName: 'balanceOf',
           args: [safeAddress],
         });
+        console.log('[DepositEarnCard] ERC20 balance:', balance.toString());
       }
       setAssetBalance(balance);
       setHasInitialLoad(true);
     } catch (error) {
-      console.error('Error fetching balance:', error);
+      console.error('[DepositEarnCard] Error fetching balance:', error);
       setAssetBalance(0n);
       setHasInitialLoad(true);
     } finally {
