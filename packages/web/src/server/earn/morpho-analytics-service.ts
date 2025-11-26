@@ -66,7 +66,7 @@ export interface MorphoVaultMetrics {
 export interface MorphoVaultHistoricalData {
   apy: Array<{ timestamp: number; value: number }>;
   netApy: Array<{ timestamp: number; value: number }>;
-  totalAssets?: Array<{ timestamp: number; value: number }>;
+  totalAssetsUsd?: Array<{ timestamp: number; value: number }>;
 }
 
 export interface ParsedMorphoUrl {
@@ -214,7 +214,7 @@ export async function fetchVaultMetrics(
 }
 
 /**
- * Fetch historical APY data for a vault
+ * Fetch historical APY and TVL data for a vault
  */
 export async function fetchVaultHistoricalData(
   vaultAddress: string,
@@ -238,6 +238,10 @@ export async function fetchVaultHistoricalData(
                   y
                 }
                 netApy(options: $options) {
+                  x
+                  y
+                }
+                totalAssetsUsd(options: $options) {
                   x
                   y
                 }
@@ -281,6 +285,7 @@ export async function fetchVaultHistoricalData(
     return {
       apy: transformTimeseries(historicalState.apy),
       netApy: transformTimeseries(historicalState.netApy),
+      totalAssetsUsd: transformTimeseries(historicalState.totalAssetsUsd),
     };
   } catch (error) {
     console.error('Failed to fetch historical data:', error);

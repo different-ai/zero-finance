@@ -317,30 +317,61 @@ function VaultDetailDialog({
               </Card>
             </div>
 
-            {/* APY History Chart */}
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-[14px]">
-                  APY History (30 days)
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {historicalApyData.length > 0 ? (
-                  <div className="h-[150px] flex items-center justify-center">
-                    <Sparkline
-                      data={historicalApyData}
-                      width={600}
-                      height={140}
-                      color="#1B29FF"
-                    />
-                  </div>
-                ) : (
-                  <div className="h-[150px] flex items-center justify-center text-[#101010]/40">
-                    No historical data available
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+            {/* Charts Grid */}
+            <div className="grid md:grid-cols-2 gap-4">
+              {/* APY History Chart */}
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-[14px]">
+                    APY History (30 days)
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {historicalApyData.length > 0 ? (
+                    <div className="h-[120px] flex items-center justify-center">
+                      <Sparkline
+                        data={historicalApyData}
+                        width={280}
+                        height={110}
+                        color="#1B29FF"
+                      />
+                    </div>
+                  ) : (
+                    <div className="h-[120px] flex items-center justify-center text-[#101010]/40">
+                      No historical data available
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* TVL History Chart (shows deposit/withdrawal trends) */}
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-[14px]">
+                    TVL / Deposits History (30 days)
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {details?.historical?.totalAssetsUsd &&
+                  details.historical.totalAssetsUsd.length > 0 ? (
+                    <div className="h-[120px] flex items-center justify-center">
+                      <Sparkline
+                        data={details.historical.totalAssetsUsd.map(
+                          (p) => p.value,
+                        )}
+                        width={280}
+                        height={110}
+                        color="#10B981"
+                      />
+                    </div>
+                  ) : (
+                    <div className="h-[120px] flex items-center justify-center text-[#101010]/40">
+                      No TVL history available
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
 
             {/* Vault Info */}
             <Card>
