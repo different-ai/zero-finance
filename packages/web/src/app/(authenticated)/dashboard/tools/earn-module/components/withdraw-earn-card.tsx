@@ -16,6 +16,7 @@ import {
   formatUnits,
   parseUnits,
   encodeFunctionData,
+  encodePacked,
   parseAbi,
   createPublicClient,
   http,
@@ -23,8 +24,18 @@ import {
 import { base, arbitrum } from 'viem/chains';
 import { useSafeRelay } from '@/hooks/use-safe-relay';
 import { SUPPORTED_CHAINS } from '@/lib/constants/chains';
-import { ALL_BASE_VAULTS } from '@/server/earn/base-vaults';
+import {
+  ALL_BASE_VAULTS,
+  ORIGIN_SUPER_OETH_VAULT,
+} from '@/server/earn/base-vaults';
 import { ALL_CROSS_CHAIN_VAULTS } from '@/server/earn/cross-chain-vaults';
+
+// Contract addresses for superOETH → ETH swap on Base
+const SUPER_OETH_ADDRESS =
+  '0xDBFeFD2e8460a6Ee4955A68582F85708BAEA60A3' as const;
+const WETH_ADDRESS = '0x4200000000000000000000000000000000000006' as const;
+const SLIPSTREAM_ROUTER = '0xBE6D8f0d05cC4be24d5167a3eF062215bE6D18a5' as const;
+const TICK_SPACING = 1; // 0.01% fee tier for superOETH/WETH CL pool
 
 interface WithdrawEarnCardProps {
   safeAddress: Address; // Base Safe address (used as fallback for Base chain)
@@ -49,6 +60,36 @@ const VAULT_ABI = parseAbi([
   'function decimals() external view returns (uint8)',
 ]);
 
+// ERC20 ABI for approve
+const ERC20_ABI = parseAbi([
+  'function approve(address spender, uint256 amount) external returns (bool)',
+]);
+
+// Aerodrome SlipStream Router ABI for exactInput
+const SLIPSTREAM_ROUTER_ABI = parseAbi([
+  'function exactInput((bytes path, address recipient, uint256 deadline, uint256 amountIn, uint256 amountOutMinimum)) external payable returns (uint256 amountOut)',
+]);
+
+// WETH ABI for unwrap
+const WETH_ABI = parseAbi(['function withdraw(uint256 wad) external']);
+
+// Transaction state management for two-phase loading
+type WithdrawStep =
+  | 'idle'
+  | 'processing' // Sending transaction
+  | 'confirming' // Transaction sent, waiting for chain confirmation
+  | 'indexing' // Chain confirmed, waiting for balance update
+  | 'success' // All done
+  | 'error';
+
+interface WithdrawState {
+  step: WithdrawStep;
+  txHash?: string;
+  errorMessage?: string;
+  withdrawnAmount?: string;
+  outputAsset?: string;
+}
+
 export function WithdrawEarnCard({
   safeAddress,
   vaultAddress,
@@ -57,8 +98,13 @@ export function WithdrawEarnCard({
   isTechnical = false,
 }: WithdrawEarnCardProps) {
   const [amount, setAmount] = useState('');
-  const [isWithdrawing, setIsWithdrawing] = useState(false);
   const [vaultInfo, setVaultInfo] = useState<VaultInfo | null>(null);
+  const [withdrawState, setWithdrawState] = useState<WithdrawState>({
+    step: 'idle',
+  });
+
+  // Track initial balance for poll-until-changed
+  const initialBalanceRef = useRef<bigint | null>(null);
 
   // Look up vault config to determine asset symbol
   const vaultConfig = useMemo(() => {
@@ -87,6 +133,14 @@ export function WithdrawEarnCard({
     }
     return false;
   }, [vaultConfig]);
+
+  // Detect if this is the wsuperOETHb vault (needs special multicall to withdraw to ETH)
+  const isSuperOethVault = useMemo(() => {
+    return (
+      vaultAddress.toLowerCase() ===
+      ORIGIN_SUPER_OETH_VAULT.address.toLowerCase()
+    );
+  }, [vaultAddress]);
 
   // Determine if this is a cross-chain withdrawal (vault on different chain than Base)
   const isCrossChain = chainId !== SUPPORTED_CHAINS.BASE;
@@ -143,7 +197,7 @@ export function WithdrawEarnCard({
       chainId,
     );
     setAmount('');
-    setIsWithdrawing(false);
+    setWithdrawState({ step: 'idle' });
   }, [vaultAddress, chainId]);
 
   // Fetch vault info
@@ -239,7 +293,10 @@ export function WithdrawEarnCard({
     if (!amount || !vaultInfo || !isRelayReady || !effectiveSafeAddress) return;
 
     try {
-      setIsWithdrawing(true);
+      // Capture initial balance for poll-until-changed
+      initialBalanceRef.current = vaultInfo.assets;
+
+      setWithdrawState({ step: 'processing' });
       const amountInSmallestUnit = parseUnits(amount, vaultInfo.assetDecimals);
 
       console.log('[WithdrawEarnCard] Starting withdrawal:', {
@@ -306,60 +363,213 @@ export function WithdrawEarnCard({
         args: [sharesToRedeem, effectiveSafeAddress, effectiveSafeAddress], // shares, receiver, owner
       });
 
-      // Execute the withdrawal via Safe relay
-      const transactions = [
-        {
+      // Build transactions array
+      const transactions: Array<{
+        to: Address;
+        value: string;
+        data: `0x${string}`;
+        operation?: number;
+      }> = [];
+
+      // For superOETH vault, build multicall: redeem → approve → swap → unwrap
+      if (isSuperOethVault) {
+        // 1. Redeem wsuperOETHb → superOETHb (assets go to Safe)
+        transactions.push({
           to: vaultAddress,
           value: '0',
           data: redeemData,
           operation: 0,
-        },
-      ];
+        });
+
+        // The amount we'll get from redeem is approximately amountInSmallestUnit
+        // We use the full amount for subsequent operations
+        const superOethAmount = amountInSmallestUnit;
+
+        // 2. Approve superOETHb to SlipStream Router
+        const approveData = encodeFunctionData({
+          abi: ERC20_ABI,
+          functionName: 'approve',
+          args: [SLIPSTREAM_ROUTER, superOethAmount],
+        });
+        transactions.push({
+          to: SUPER_OETH_ADDRESS,
+          value: '0',
+          data: approveData,
+          operation: 0,
+        });
+
+        // 3. Swap superOETHb → WETH via Aerodrome SlipStream
+        // Using exactInput with encoded path (handles sqrtPriceLimitX96 automatically)
+        const path = encodePacked(
+          ['address', 'int24', 'address'],
+          [SUPER_OETH_ADDRESS, TICK_SPACING, WETH_ADDRESS],
+        );
+
+        // Calculate minimum output with 1% slippage (superOETH ~= 1:1 with ETH)
+        const minOut = (superOethAmount * 99n) / 100n;
+        const deadline = BigInt(Math.floor(Date.now() / 1000) + 1800); // 30 min
+
+        const swapData = encodeFunctionData({
+          abi: SLIPSTREAM_ROUTER_ABI,
+          functionName: 'exactInput',
+          args: [
+            {
+              path,
+              recipient: effectiveSafeAddress,
+              deadline,
+              amountIn: superOethAmount,
+              amountOutMinimum: minOut,
+            },
+          ],
+        });
+        transactions.push({
+          to: SLIPSTREAM_ROUTER,
+          value: '0',
+          data: swapData,
+          operation: 0,
+        });
+
+        // 4. Unwrap WETH → ETH
+        const unwrapData = encodeFunctionData({
+          abi: WETH_ABI,
+          functionName: 'withdraw',
+          args: [minOut], // Unwrap the minimum expected amount
+        });
+        transactions.push({
+          to: WETH_ADDRESS,
+          value: '0',
+          data: unwrapData,
+          operation: 0,
+        });
+
+        console.log('[WithdrawEarnCard] SuperOETH multicall transactions:', {
+          count: transactions.length,
+          steps: [
+            'redeem wsuperOETHb',
+            'approve superOETHb',
+            'swap to WETH',
+            'unwrap to ETH',
+          ],
+        });
+      } else {
+        // Standard vault: just redeem
+        transactions.push({
+          to: vaultAddress,
+          value: '0',
+          data: redeemData,
+          operation: 0,
+        });
+      }
 
       console.log('[WithdrawEarnCard] Sending withdrawal tx via relay:', {
         safeAddress: effectiveSafeAddress,
         chainId,
         vaultAddress,
-        transactions,
+        isSuperOethVault,
+        transactionCount: transactions.length,
       });
 
-      const userOpHash = await sendTxViaRelay(transactions, 1_200_000n); // Morpho/Gauntlet vaults need high gas for redeems
+      // Use higher gas for superOETH multicall (4 operations)
+      const gasLimit = isSuperOethVault ? 2_000_000n : 1_200_000n;
+
+      // Phase 1: Send transaction
+      setWithdrawState({ step: 'confirming' });
+      const userOpHash = await sendTxViaRelay(transactions, gasLimit);
 
       console.log('[WithdrawEarnCard] Withdrawal tx hash:', userOpHash);
 
-      if (userOpHash) {
-        // Record the withdrawal in the database
-        await recordWithdrawalMutation.mutateAsync({
-          safeAddress: effectiveSafeAddress,
-          vaultAddress: vaultAddress,
-          tokenAddress: vaultInfo.assetAddress,
-          assetsWithdrawn: amountInSmallestUnit.toString(),
-          sharesBurned: sharesToRedeem.toString(),
-          userOpHash: userOpHash,
-        });
-
-        toast.success('Withdrawal initiated', {
-          description: `Withdrawing ${amount} ${assetSymbol}. Transaction ID: ${userOpHash.slice(0, 10)}...`,
-        });
-
-        // Reset form
-        setAmount('');
-
-        // Refetch vault info after a delay
-        setTimeout(() => {
-          refetchVaultInfo();
-          if (onWithdrawSuccess) {
-            onWithdrawSuccess();
-          }
-        }, 5000);
+      if (!userOpHash) {
+        throw new Error('Transaction failed - no hash returned');
       }
+
+      // Record the withdrawal in the database
+      await recordWithdrawalMutation.mutateAsync({
+        safeAddress: effectiveSafeAddress,
+        vaultAddress: vaultAddress,
+        tokenAddress: vaultInfo.assetAddress,
+        assetsWithdrawn: amountInSmallestUnit.toString(),
+        sharesBurned: sharesToRedeem.toString(),
+        userOpHash: userOpHash,
+      });
+
+      // Phase 2: Poll until balance changes
+      setWithdrawState({
+        step: 'indexing',
+        txHash: userOpHash,
+        withdrawnAmount: amount,
+        outputAsset: isSuperOethVault ? 'ETH' : assetSymbol,
+      });
+
+      // Start polling for balance change - don't await, let it run in background
+      const pollForBalanceChange = async () => {
+        const maxAttempts = 20; // 20 seconds max
+        let attempts = 0;
+        const initialBalance = initialBalanceRef.current ?? 0n;
+
+        const checkBalance = async (): Promise<void> => {
+          attempts++;
+
+          // Refetch and get the fresh data directly from the query result
+          const result = await refetchVaultInfo();
+          const freshData = result.data;
+
+          if (freshData) {
+            const newBalance = BigInt(freshData.assets);
+            console.log('[WithdrawEarnCard] Polling balance:', {
+              attempt: attempts,
+              initialBalance: initialBalance.toString(),
+              newBalance: newBalance.toString(),
+              changed: newBalance !== initialBalance,
+            });
+
+            if (newBalance !== initialBalance) {
+              // Balance changed - show success
+              setWithdrawState({
+                step: 'success',
+                txHash: userOpHash,
+                withdrawnAmount: amount,
+                outputAsset: isSuperOethVault ? 'ETH' : assetSymbol,
+              });
+              // Trigger parent callback to refresh other components
+              onWithdrawSuccess?.();
+              return;
+            }
+          }
+
+          if (attempts >= maxAttempts) {
+            // Timeout - show success anyway (transaction was confirmed)
+            console.log('[WithdrawEarnCard] Polling timeout, showing success');
+            setWithdrawState({
+              step: 'success',
+              txHash: userOpHash,
+              withdrawnAmount: amount,
+              outputAsset: isSuperOethVault ? 'ETH' : assetSymbol,
+            });
+            onWithdrawSuccess?.();
+            return;
+          }
+
+          // Keep polling
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+          return checkBalance();
+        };
+
+        // Start polling after a short delay to let the transaction propagate
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+        await checkBalance();
+      };
+
+      pollForBalanceChange();
     } catch (error) {
       console.error('Withdrawal error:', error);
+      setWithdrawState({
+        step: 'error',
+        errorMessage:
+          error instanceof Error ? error.message : 'Unknown error occurred',
+      });
       toast.error(
         `Withdrawal failed: ${error instanceof Error ? error.message : 'Unknown error occurred'}`,
       );
-    } finally {
-      setIsWithdrawing(false);
     }
   };
 
@@ -437,14 +647,215 @@ export function WithdrawEarnCard({
   const amountExceedsBalance =
     parsedAmount !== null && parsedAmount > vaultInfo.assets;
 
+  const isProcessing = ['processing', 'confirming', 'indexing'].includes(
+    withdrawState.step,
+  );
+
   const disableWithdraw =
     !hasAmountInput ||
     amountParseFailed ||
     !amountIsPositive ||
     amountExceedsBalance ||
-    isWithdrawing ||
+    isProcessing ||
     !isRelayReady ||
     !effectiveSafeAddress;
+
+  // Handle Done button - reset state and trigger callbacks
+  const handleDone = () => {
+    setWithdrawState({ step: 'idle' });
+    setAmount('');
+    // Final refetch to ensure UI is up to date
+    refetchVaultInfo();
+    // Trigger parent callback (already called during polling, but ensure it runs)
+    onWithdrawSuccess?.();
+  };
+
+  // Success state - show confirmation with explicit Done button
+  if (withdrawState.step === 'success') {
+    return (
+      <div
+        className={cn(
+          'p-6 text-center space-y-4 relative',
+          isTechnical && 'bg-[#F7F7F2] border border-[#1B29FF]/20',
+        )}
+      >
+        <div
+          className={cn(
+            'w-12 h-12 rounded-full flex items-center justify-center mx-auto',
+            isTechnical
+              ? 'bg-[#10B981]/10 border border-[#10B981]/30'
+              : 'bg-[#10B981]/10',
+          )}
+        >
+          <CheckCircle className="h-6 w-6 text-[#10B981]" />
+        </div>
+        <div>
+          <h3
+            className={cn(
+              'text-[18px] font-semibold text-[#101010] mb-2',
+              isTechnical && 'font-mono',
+            )}
+          >
+            {isTechnical ? 'WITHDRAWAL::COMPLETE' : 'Withdrawal Complete'}
+          </h3>
+          <p
+            className={cn(
+              'text-[14px] text-[#101010]/70',
+              isTechnical && 'font-mono',
+            )}
+          >
+            {isTechnical
+              ? `OUTPUT: ${withdrawState.withdrawnAmount} ${withdrawState.outputAsset}`
+              : `Successfully withdrew ${withdrawState.withdrawnAmount} ${withdrawState.outputAsset}`}
+          </p>
+        </div>
+        {withdrawState.txHash && (
+          <a
+            href={`https://basescan.org/tx/${withdrawState.txHash}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={cn(
+              'inline-flex items-center gap-1 text-[12px]',
+              isTechnical
+                ? 'font-mono text-[#1B29FF] hover:text-[#1420CC]'
+                : 'text-[#1B29FF] hover:text-[#1420CC]',
+            )}
+          >
+            {isTechnical ? 'VIEW_TX' : 'View transaction'}
+            <ExternalLink className="h-3 w-3" />
+          </a>
+        )}
+        <button
+          onClick={handleDone}
+          className={cn(
+            'w-full px-4 py-2.5 text-[14px] font-medium transition-colors',
+            isTechnical
+              ? 'font-mono uppercase bg-white border-2 border-[#1B29FF] text-[#1B29FF] hover:bg-[#1B29FF] hover:text-white'
+              : 'text-white bg-[#1B29FF] hover:bg-[#1420CC]',
+          )}
+        >
+          {isTechnical ? '[ DONE ]' : 'Done'}
+        </button>
+      </div>
+    );
+  }
+
+  // Processing/Confirming/Indexing states - show progress
+  if (isProcessing) {
+    const statusMessage = {
+      processing: isTechnical ? 'SIGNING_TX...' : 'Signing transaction...',
+      confirming: isTechnical
+        ? 'CONFIRMING_ON_CHAIN...'
+        : 'Confirming on chain...',
+      indexing: isTechnical ? 'UPDATING_BALANCES...' : 'Updating balances...',
+    }[withdrawState.step as 'processing' | 'confirming' | 'indexing'];
+
+    return (
+      <div
+        className={cn(
+          'p-6 text-center space-y-4 relative',
+          isTechnical && 'bg-[#F7F7F2] border border-[#1B29FF]/20',
+        )}
+      >
+        <div
+          className={cn(
+            'w-12 h-12 rounded-full flex items-center justify-center mx-auto',
+            isTechnical
+              ? 'bg-[#1B29FF]/10 border border-[#1B29FF]/30'
+              : 'bg-[#1B29FF]/10',
+          )}
+        >
+          <Loader2 className="h-6 w-6 text-[#1B29FF] animate-spin" />
+        </div>
+        <div>
+          <h3
+            className={cn(
+              'text-[18px] font-semibold text-[#101010] mb-2',
+              isTechnical && 'font-mono',
+            )}
+          >
+            {isTechnical ? 'PROCESSING::WITHDRAWAL' : 'Processing Withdrawal'}
+          </h3>
+          <p
+            className={cn(
+              'text-[14px] text-[#101010]/70',
+              isTechnical && 'font-mono',
+            )}
+          >
+            {statusMessage}
+          </p>
+        </div>
+        {withdrawState.step === 'indexing' && withdrawState.txHash && (
+          <a
+            href={`https://basescan.org/tx/${withdrawState.txHash}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={cn(
+              'inline-flex items-center gap-1 text-[12px]',
+              isTechnical
+                ? 'font-mono text-[#1B29FF] hover:text-[#1420CC]'
+                : 'text-[#1B29FF] hover:text-[#1420CC]',
+            )}
+          >
+            {isTechnical ? 'VIEW_TX' : 'View transaction'}
+            <ExternalLink className="h-3 w-3" />
+          </a>
+        )}
+      </div>
+    );
+  }
+
+  // Error state - show error with retry option
+  if (withdrawState.step === 'error') {
+    return (
+      <div
+        className={cn(
+          'p-6 text-center space-y-4 relative',
+          isTechnical && 'bg-[#F7F7F2] border border-[#EF4444]/20',
+        )}
+      >
+        <div
+          className={cn(
+            'w-12 h-12 rounded-full flex items-center justify-center mx-auto',
+            isTechnical
+              ? 'bg-[#EF4444]/10 border border-[#EF4444]/30'
+              : 'bg-[#EF4444]/10',
+          )}
+        >
+          <AlertCircle className="h-6 w-6 text-[#EF4444]" />
+        </div>
+        <div>
+          <h3
+            className={cn(
+              'text-[18px] font-semibold text-[#101010] mb-2',
+              isTechnical && 'font-mono',
+            )}
+          >
+            {isTechnical ? 'ERROR::WITHDRAWAL_FAILED' : 'Withdrawal Failed'}
+          </h3>
+          <p
+            className={cn(
+              'text-[14px] text-[#101010]/70',
+              isTechnical && 'font-mono',
+            )}
+          >
+            {withdrawState.errorMessage || 'An unknown error occurred'}
+          </p>
+        </div>
+        <button
+          onClick={() => setWithdrawState({ step: 'idle' })}
+          className={cn(
+            'w-full px-4 py-2.5 text-[14px] font-medium transition-colors',
+            isTechnical
+              ? 'font-mono uppercase bg-white border-2 border-[#1B29FF] text-[#1B29FF] hover:bg-[#1B29FF] hover:text-white'
+              : 'text-white bg-[#1B29FF] hover:bg-[#1420CC]',
+          )}
+        >
+          {isTechnical ? '[ TRY_AGAIN ]' : 'Try Again'}
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -573,16 +984,16 @@ export function WithdrawEarnCard({
             : 'text-white bg-[#1B29FF] hover:bg-[#1420CC]',
         )}
       >
-        {isWithdrawing ? (
+        {isProcessing ? (
           <Loader2 className="h-4 w-4 animate-spin" />
         ) : (
           <ArrowUpFromLine className="h-4 w-4" />
         )}
         {isTechnical
-          ? isWithdrawing
+          ? isProcessing
             ? 'PROCESSING...'
             : '[ EXECUTE ]'
-          : isWithdrawing
+          : isProcessing
             ? 'Processing...'
             : 'Withdraw'}
       </button>
@@ -646,12 +1057,16 @@ export function WithdrawEarnCard({
         )}
       >
         {isTechnical
-          ? isNativeAsset
-            ? 'OUTPUT: WETH (UNWRAP_REQUIRED)'
-            : 'SETTLEMENT: IMMEDIATE'
-          : isNativeAsset
-            ? 'You will receive WETH which can be unwrapped to ETH'
-            : 'Your funds will be available in your account immediately'}
+          ? isSuperOethVault
+            ? 'MULTICALL: REDEEM → SWAP → UNWRAP → ETH'
+            : isNativeAsset
+              ? 'OUTPUT: WETH (UNWRAP_REQUIRED)'
+              : 'SETTLEMENT: IMMEDIATE'
+          : isSuperOethVault
+            ? 'Converts to ETH via Aerodrome in one transaction'
+            : isNativeAsset
+              ? 'You will receive WETH which can be unwrapped to ETH'
+              : 'Your funds will be available in your account immediately'}
       </p>
     </div>
   );

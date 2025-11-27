@@ -191,12 +191,9 @@ export const userRouter = router({
     }),
 
   // New procedure to get the primary safe address
+  // Workspace-centric: Returns the primary safe for the current workspace,
+  // regardless of which user created it. All workspace members share access.
   getPrimarySafeAddress: protectedProcedure.query(async ({ ctx }) => {
-    const privyDid = ctx.userId;
-    if (!privyDid) {
-      throw new TRPCError({ code: 'UNAUTHORIZED' });
-    }
-
     const workspaceId = ctx.workspaceId;
     if (!workspaceId) {
       throw new TRPCError({
@@ -205,9 +202,9 @@ export const userRouter = router({
       });
     }
 
+    // Query by workspace only - all workspace members share access to the workspace's primary Safe
     const primarySafe = await db.query.userSafes.findFirst({
       where: and(
-        eq(userSafes.userDid, privyDid),
         eq(userSafes.safeType, 'primary'),
         eq(userSafes.workspaceId, workspaceId),
         eq(userSafes.chainId, 8453), // Base chain

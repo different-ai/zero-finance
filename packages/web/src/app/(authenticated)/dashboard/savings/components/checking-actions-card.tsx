@@ -14,6 +14,7 @@ import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { SimplifiedOffRamp } from '@/components/transfers/simplified-off-ramp';
 import { AccountInfoDialog } from '@/components/virtual-accounts/account-info-dialog';
 import { BridgeFundsModal } from './bridge-funds-modal';
+import { RedeemSuperOethModal } from './redeem-super-oeth-modal';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { usePrivy } from '@privy-io/react-auth';
 import { useSafeOwnerCheck } from '@/hooks/use-safe-owner-check';
@@ -88,6 +89,22 @@ const EthIcon = () => (
   </svg>
 );
 
+// Super OETH icon - Origin Protocol yield-bearing ETH
+const SuperOethIcon = () => (
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 32 32"
+    fill="none"
+    className="flex-shrink-0"
+  >
+    <circle cx="16" cy="16" r="16" fill="#0074F0" />
+    <circle cx="16" cy="16" r="10" fill="white" fillOpacity="0.2" />
+    <path d="M16 8L10 16l6 8 6-8-6-8z" fill="white" />
+    <path d="M16 8v16M10 16h12" stroke="#0074F0" strokeWidth="1.5" />
+  </svg>
+);
+
 type CheckingActionsCardProps = {
   balanceUsd: number;
   safeAddress: string | null;
@@ -104,6 +121,7 @@ export function CheckingActionsCard({
   const [isMoveModalOpen, setIsMoveModalOpen] = useState(false);
   const [isBridgeModalOpen, setIsBridgeModalOpen] = useState(false);
   const [isAccountInfoOpen, setIsAccountInfoOpen] = useState(false);
+  const [isRedeemModalOpen, setIsRedeemModalOpen] = useState(false);
   const [expandedAccount, setExpandedAccount] = useState<string | null>(null);
   const isMobile = useIsMobile();
   const { ready, authenticated, user } = usePrivy();
@@ -183,6 +201,20 @@ export function CheckingActionsCard({
     },
   );
 
+  // Fetch Super OETH balance (yield-bearing ETH)
+  // Prefetch eagerly when baseSafe is available to avoid UI delay
+  const { data: superOethBalanceData, refetch: refetchSuperOeth } =
+    api.earn.getSuperOethBalance.useQuery(
+      {
+        safeAddress: baseSafe?.address || '',
+      },
+      {
+        enabled: !!baseSafe?.address,
+        staleTime: 10000, // Lower staleTime for faster updates
+        refetchInterval: 30000, // Refetch more frequently
+      },
+    );
+
   // Calculate total balance across all chains
   const baseUsdcBalance = baseBalanceData
     ? parseFloat(formatUnits(BigInt(baseBalanceData.balance), USDC_DECIMALS))
@@ -206,8 +238,14 @@ export function CheckingActionsCard({
   const baseEthUsd = baseEthBalanceNum * ethPrice;
   const arbitrumEthUsd = arbitrumEthBalanceNum * ethPrice;
 
-  // Total per chain (USDC + ETH in USD)
-  const baseTotalUsd = baseUsdcBalance + baseEthUsd;
+  // Super OETH balance (yield-bearing ETH, ~1:1 with ETH)
+  const superOethBalance = superOethBalanceData
+    ? parseFloat(superOethBalanceData.formatted)
+    : 0;
+  const superOethUsd = superOethBalance * ethPrice;
+
+  // Total per chain (USDC + ETH + superOETH in USD)
+  const baseTotalUsd = baseUsdcBalance + baseEthUsd + superOethUsd;
   const arbitrumTotalUsd = arbitrumUsdcBalance + arbitrumEthUsd;
 
   // Total available balance (not in vaults)
@@ -234,15 +272,16 @@ export function CheckingActionsCard({
   };
 
   const hasOnlyStarterAccounts = !hasCompletedKyc && fundingSources.length > 0;
-  // In technical mode, bypass starter account restrictions - power users can always withdraw
+  // In technical mode, bypass starter account AND ownership restrictions - power users can always withdraw
+  // Ownership check is skipped in technical mode because workspace members share Safe access
   const canInitiateMove =
     (isDemoMode || totalAvailableBalance > 0) &&
     !!safeAddress &&
     (isTechnical || !hasOnlyStarterAccounts) &&
-    isOwner !== false;
+    (isTechnical || isOwner !== false);
   const disableReason = !safeAddress
     ? 'Add a treasury safe to move funds'
-    : isOwner === false
+    : !isTechnical && isOwner === false
       ? 'You are not an owner of this Safe'
       : totalAvailableBalance <= 0
         ? 'No withdrawable balance available'
@@ -407,6 +446,40 @@ export function CheckingActionsCard({
                         <span className="text-[11px] text-[#101010]/50 ml-1">
                           ({formatUsd(baseEthUsd)})
                         </span>
+                      </div>
+                    </div>
+                    {/* Super OETH - Yield-bearing ETH - Always show in technical mode */}
+                    <div className="flex items-center justify-between py-1.5 bg-[#0074F0]/5 -mx-3 px-3 rounded">
+                      <div className="flex items-center gap-2">
+                        <SuperOethIcon />
+                        <span className="text-[12px] text-[#101010]/70">
+                          superOETH
+                        </span>
+                        <span className="text-[9px] bg-[#0074F0]/10 text-[#0074F0] px-1.5 py-0.5 rounded font-medium">
+                          YIELD
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="text-right">
+                          <span className="text-[12px] font-medium tabular-nums text-[#101010]">
+                            {superOethBalance.toFixed(6)}
+                          </span>
+                          <span className="text-[11px] text-[#101010]/50 ml-1">
+                            ({formatUsd(superOethUsd)})
+                          </span>
+                        </div>
+                        {superOethBalance > 0 && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setIsRedeemModalOpen(true);
+                            }}
+                            className="text-[10px] font-mono text-[#0074F0] hover:text-[#0074F0]/80 underline"
+                          >
+                            REDEEM
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -607,6 +680,23 @@ export function CheckingActionsCard({
               : 'Transfers settle directly into your Zero treasury safe.'
             : 'Once your virtual account is approved, you can pull cash into savings here.'}
       </p>
+
+      {/* Super OETH Redeem Modal - Technical Mode Only */}
+      {isTechnical && baseSafe && (
+        <Dialog open={isRedeemModalOpen} onOpenChange={setIsRedeemModalOpen}>
+          <DialogContent className="bg-white border-[#101010]/10 max-w-md p-0">
+            <RedeemSuperOethModal
+              safeAddress={baseSafe.address as Address}
+              superOethBalance={superOethBalance}
+              onSuccess={() => {
+                setIsRedeemModalOpen(false);
+                refetchSuperOeth();
+              }}
+              onClose={() => setIsRedeemModalOpen(false)}
+            />
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }

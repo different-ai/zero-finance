@@ -1845,7 +1845,7 @@ function SimplifiedOffRampReal({
 
                   <div className="p-4">
                     <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 font-mono text-[12px] text-[#1B29FF]">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 font-mono text-[12px] text-[#1B29FF] pointer-events-none z-10 bg-white pr-1">
                         {selectedAssetConfig.symbol}
                       </span>
                       <Input
@@ -1866,7 +1866,7 @@ function SimplifiedOffRampReal({
                           },
                         })}
                         placeholder="0.00"
-                        className="pl-16 text-[20px] font-mono font-semibold tabular-nums h-12 border-[#1B29FF]/20 bg-white rounded-sm"
+                        className="pl-14 pr-24 text-[20px] font-mono font-semibold tabular-nums h-12 border-[#1B29FF]/20 bg-white rounded-sm"
                       />
                       {getSelectedAssetBalance() !== null && (
                         <button
@@ -1879,11 +1879,11 @@ function SimplifiedOffRampReal({
                               });
                             }
                           }}
-                          className="absolute inset-y-0 right-0 pr-3 flex items-center font-mono text-[11px] text-[#1B29FF] hover:text-[#1420CC]"
+                          className="absolute inset-y-0 right-0 pr-3 flex items-center font-mono text-[10px] text-[#1B29FF] hover:text-[#1420CC] bg-white pl-1"
                         >
                           MAX::
                           {parseFloat(getSelectedAssetBalance() || '0').toFixed(
-                            4,
+                            2,
                           )}
                         </button>
                       )}

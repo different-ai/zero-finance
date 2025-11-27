@@ -12,6 +12,7 @@ import {
   parseUnits,
   formatUnits,
   encodeFunctionData,
+  encodePacked,
   createPublicClient,
   http,
 } from 'viem';
@@ -29,6 +30,9 @@ const SLIPSTREAM_ROUTER: Address = '0xBE6D8f0d05cC4be24d5167a3eF062215bE6D18a5';
 const SUPER_OETH_WETH_POOL: Address =
   '0x6446021F4E396dA3df4235C62537431372195D38';
 const TICK_SPACING: number = 1; // 0.01% fee tier for the CL pool
+const MIN_SQRT_RATIO = BigInt('4295128739') + BigInt(1);
+const MAX_SQRT_RATIO =
+  BigInt('1461446703485210103287273052203988822378723970342') - BigInt(1);
 
 // ABIs
 const ERC20_ABI = [
@@ -71,24 +75,21 @@ const WETH_ABI = [
   },
 ] as const;
 
-// Aerodrome SlipStream Router ABI (Uniswap V3 style with tickSpacing instead of fee)
+// Aerodrome SlipStream Router ABI (exactInput for auto-limit handling)
 const SLIPSTREAM_ROUTER_ABI = [
   {
-    name: 'exactInputSingle',
+    name: 'exactInput',
     type: 'function',
     inputs: [
       {
         name: 'params',
         type: 'tuple',
         components: [
-          { name: 'tokenIn', type: 'address' },
-          { name: 'tokenOut', type: 'address' },
-          { name: 'tickSpacing', type: 'int24' },
+          { name: 'path', type: 'bytes' },
           { name: 'recipient', type: 'address' },
           { name: 'deadline', type: 'uint256' },
           { name: 'amountIn', type: 'uint256' },
           { name: 'amountOutMinimum', type: 'uint256' },
-          { name: 'sqrtPriceLimitX96', type: 'uint160' },
         ],
       },
     ],
@@ -162,6 +163,16 @@ export function RedeemSuperOethModal({
     safeAddress,
     SUPPORTED_CHAINS.BASE,
   );
+
+  // Debug logging for relay readiness
+  useEffect(() => {
+    console.log('[RedeemSuperOeth] Component mounted/updated:', {
+      isRelayReady,
+      safeAddress,
+      superOethBalance,
+      canRedeem: parseFloat(amount || '0') > 0 && isRelayReady && !!quote,
+    });
+  }, [isRelayReady, safeAddress, superOethBalance, amount, quote]);
 
   // Fetch quote when amount changes - uses pool's sqrtPriceX96 to estimate output
   useEffect(() => {
@@ -248,7 +259,21 @@ export function RedeemSuperOethModal({
   }, [amount]);
 
   const handleRedeem = async () => {
-    if (!amount || !isRelayReady || !quote) return;
+    console.log('[RedeemSuperOeth] Starting redeem:', {
+      amount,
+      isRelayReady,
+      quote,
+      safeAddress,
+    });
+
+    if (!amount || !isRelayReady || !quote) {
+      console.warn('[RedeemSuperOeth] Not ready:', {
+        hasAmount: !!amount,
+        isRelayReady,
+        hasQuote: !!quote,
+      });
+      return;
+    }
 
     try {
       setRedeemState({ step: 'processing' });
@@ -278,21 +303,24 @@ export function RedeemSuperOethModal({
       });
 
       // 2. Swap superOETH -> WETH via Aerodrome SlipStream (CL pool)
-      // Using exactInputSingle with tickSpacing instead of fee
+      // Using exactInput with encoded path (tokenIn + tickSpacing + tokenOut)
+      // This allows the router to handle sqrtPriceLimitX96 automatically
+      const path = encodePacked(
+        ['address', 'uint24', 'address'],
+        [SUPER_OETH_ADDRESS, TICK_SPACING, WETH_ADDRESS],
+      );
+
       const swapParams = {
-        tokenIn: SUPER_OETH_ADDRESS,
-        tokenOut: WETH_ADDRESS,
-        tickSpacing: TICK_SPACING,
+        path,
         recipient: safeAddress,
         deadline: deadline,
         amountIn: amountIn,
         amountOutMinimum: minOut,
-        sqrtPriceLimitX96: BigInt(0), // No price limit
       };
 
       const swapData = encodeFunctionData({
         abi: SLIPSTREAM_ROUTER_ABI,
-        functionName: 'exactInputSingle',
+        functionName: 'exactInput',
         args: [swapParams],
       });
       transactions.push({
@@ -316,7 +344,18 @@ export function RedeemSuperOethModal({
       }
 
       // Execute multicall via Safe relay
+      console.log('[RedeemSuperOeth] Sending transactions:', {
+        count: transactions.length,
+        transactions: transactions.map((t) => ({
+          to: t.to,
+          value: t.value,
+          dataLength: t.data.length,
+        })),
+      });
+
       const txHash = await sendTxViaRelay(transactions, 500_000n);
+
+      console.log('[RedeemSuperOeth] Transaction result:', txHash);
 
       if (!txHash) throw new Error('Transaction failed');
 
@@ -331,7 +370,7 @@ export function RedeemSuperOethModal({
       });
 
       setAmount('');
-      onSuccess?.();
+      // Don't call onSuccess automatically - let user see the success screen
     } catch (error) {
       console.error('Redeem error:', error);
       setRedeemState({
@@ -371,7 +410,7 @@ export function RedeemSuperOethModal({
             Successfully converted Super OETH to {unwrapToEth ? 'ETH' : 'WETH'}.
           </p>
         </div>
-        <Button onClick={onClose} className="w-full">
+        <Button onClick={() => onSuccess?.() ?? onClose?.()} className="w-full">
           Done
         </Button>
       </div>
@@ -535,6 +574,16 @@ export function RedeemSuperOethModal({
         This executes a multicall: approve → swap via Aerodrome SlipStream
         {unwrapToEth ? ' → unwrap WETH' : ''}. All in one Safe transaction.
       </p>
+
+      {/* Debug info */}
+      <div className="mt-4 p-2 bg-gray-100 rounded text-[10px] font-mono text-gray-600">
+        <div>
+          Safe: {safeAddress?.slice(0, 10)}...{safeAddress?.slice(-8)}
+        </div>
+        <div>Relay Ready: {isRelayReady ? '✓' : '✗'}</div>
+        <div>Quote: {quote ? '✓' : '✗'}</div>
+        <div>Can Redeem: {canRedeem ? '✓' : '✗'}</div>
+      </div>
     </div>
   );
 }
