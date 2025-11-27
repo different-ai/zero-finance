@@ -1,8 +1,8 @@
 import { z } from 'zod';
 import { router, protectedProcedure } from '../../create-router'; // Corrected import path
 import { db } from '@/db'; // Import db directly
-import { userSafes } from '@/db/schema';
-import { eq, and, or, isNull } from 'drizzle-orm';
+import { userSafes, workspaceMembers, workspaces } from '@/db/schema';
+import { eq, and, or, isNull, inArray } from 'drizzle-orm';
 import { TRPCError } from '@trpc/server';
 import {
   initializeAndDeploySafe,
@@ -526,6 +526,97 @@ export const userSafesRouter = router({
         });
       }
     }),
+
+  /**
+   * Fetches ALL safes the user has access to across ALL their workspaces.
+   * This is useful for admin/debug views to see all Safes a user can interact with.
+   */
+  listAllAccessible: protectedProcedure.query(async ({ ctx }) => {
+    const privyDid = ctx.user.id;
+    console.log(`Fetching all accessible safes for user: ${privyDid}`);
+
+    try {
+      // 1. Get all workspace memberships for this user
+      const memberships = await db.query.workspaceMembers.findMany({
+        where: eq(workspaceMembers.userId, privyDid),
+      });
+
+      if (memberships.length === 0) {
+        console.log(`User ${privyDid} has no workspace memberships`);
+        return { workspaces: [], safes: [] };
+      }
+
+      const workspaceIds = memberships.map((m) => m.workspaceId);
+      console.log(
+        `User ${privyDid} is a member of ${workspaceIds.length} workspaces`,
+      );
+
+      // 2. Get workspace details
+      const workspaceDetails = await db.query.workspaces.findMany({
+        where: inArray(workspaces.id, workspaceIds),
+      });
+
+      // 3. Get all safes in those workspaces
+      const allSafes = await db.query.userSafes.findMany({
+        where: inArray(userSafes.workspaceId, workspaceIds),
+        orderBy: (safes, { desc }) => [desc(safes.createdAt)],
+      });
+
+      console.log(
+        `Found ${allSafes.length} safes across ${workspaceIds.length} workspaces for user ${privyDid}`,
+      );
+
+      // 4. Group safes by workspace with enriched data
+      const workspacesWithSafes = workspaceDetails.map((ws) => {
+        const membership = memberships.find((m) => m.workspaceId === ws.id);
+        const wsSafes = allSafes.filter((s) => s.workspaceId === ws.id);
+
+        return {
+          workspace: {
+            id: ws.id,
+            name: ws.name || 'Unnamed Workspace',
+            companyName: ws.companyName,
+            createdAt: ws.createdAt,
+          },
+          membership: {
+            role: membership?.role || 'member',
+            isPrimary: membership?.isPrimary || false,
+            joinedAt: membership?.joinedAt,
+          },
+          safes: wsSafes.map((safe) => ({
+            ...safe,
+            isOwner: safe.userDid === privyDid,
+            createdBy: safe.userDid,
+          })),
+        };
+      });
+
+      return {
+        totalWorkspaces: workspaceDetails.length,
+        totalSafes: allSafes.length,
+        workspaces: workspacesWithSafes,
+        // Flat list for convenience
+        safes: allSafes.map((safe) => {
+          const ws = workspaceDetails.find((w) => w.id === safe.workspaceId);
+          return {
+            ...safe,
+            workspaceName: ws?.name || 'Unknown',
+            isOwner: safe.userDid === privyDid,
+          };
+        }),
+      };
+    } catch (error) {
+      console.error(
+        `Error fetching all accessible safes for user ${privyDid}:`,
+        error,
+      );
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Failed to fetch accessible safes.',
+        cause: error,
+      });
+    }
+  }),
 
   prepareCreate: protectedProcedure
     .input(
