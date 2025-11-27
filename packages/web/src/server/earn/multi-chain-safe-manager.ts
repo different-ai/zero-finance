@@ -48,10 +48,47 @@ export async function getUserSafes(
     conditions.push(eq(userSafes.safeType, safeType));
   }
 
-  const safes = await db.query.userSafes.findMany({
+  let safes = await db.query.userSafes.findMany({
     where: and(...conditions),
     orderBy: (safes, { asc }) => [asc(safes.createdAt)],
   });
+
+  // If no workspace-scoped safes found, check for orphaned safes (null workspaceId)
+  // and auto-associate them with the current workspace
+  if (safes.length === 0) {
+    const orphanConditions = [eq(userSafes.userDid, userDid)];
+    if (safeType) {
+      orphanConditions.push(eq(userSafes.safeType, safeType));
+    }
+
+    const orphanedSafes = await db.query.userSafes.findMany({
+      where: and(...orphanConditions),
+      orderBy: (safes, { asc }) => [asc(safes.createdAt)],
+    });
+
+    // Filter to only truly orphaned safes (null/undefined workspaceId)
+    const trulyOrphaned = orphanedSafes.filter((s) => !s.workspaceId);
+
+    if (trulyOrphaned.length > 0) {
+      console.log(
+        `[getUserSafes] Found ${trulyOrphaned.length} orphaned safes for user ${userDid}, auto-associating with workspace ${workspaceId}`,
+      );
+
+      // Auto-associate orphaned safes with current workspace
+      for (const safe of trulyOrphaned) {
+        await db
+          .update(userSafes)
+          .set({ workspaceId })
+          .where(eq(userSafes.id, safe.id));
+      }
+
+      // Re-fetch with updated workspace association
+      safes = await db.query.userSafes.findMany({
+        where: and(...conditions),
+        orderBy: (safes, { asc }) => [asc(safes.createdAt)],
+      });
+    }
+  }
 
   return safes;
 }
