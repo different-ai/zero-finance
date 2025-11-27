@@ -8,12 +8,16 @@ import {
   Wallet,
   ChevronDown,
   ChevronRight,
+  Repeat,
+  Coins,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { SimplifiedOffRamp } from '@/components/transfers/simplified-off-ramp';
 import { AccountInfoDialog } from '@/components/virtual-accounts/account-info-dialog';
 import { BridgeFundsModal } from './bridge-funds-modal';
+import { SwapModal } from './swap-modal';
+import { RedeemSuperOethModal } from './redeem-super-oeth-modal';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { usePrivy } from '@privy-io/react-auth';
 import { useSafeOwnerCheck } from '@/hooks/use-safe-owner-check';
@@ -88,6 +92,69 @@ const EthIcon = () => (
   </svg>
 );
 
+// WETH icon - similar to ETH but with a W indicator
+const WethIcon = () => (
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 32 32"
+    fill="none"
+    className="flex-shrink-0"
+  >
+    <circle cx="16" cy="16" r="16" fill="#EC4899" />
+    <path d="M16 6v6.65l5.63 2.51L16 6z" fill="white" fillOpacity="0.6" />
+    <path d="M16 6L10.37 15.16 16 12.65V6z" fill="white" />
+    <path
+      d="M16 19.48v4.52l5.63-7.79L16 19.48z"
+      fill="white"
+      fillOpacity="0.6"
+    />
+    <path d="M16 24V19.48l-5.63-3.27L16 24z" fill="white" />
+    <path
+      d="M16 18.43l5.63-3.27L16 12.65v5.78z"
+      fill="white"
+      fillOpacity="0.2"
+    />
+    <path
+      d="M10.37 15.16l5.63 3.27v-5.78l-5.63 2.51z"
+      fill="white"
+      fillOpacity="0.6"
+    />
+    <text
+      x="16"
+      y="29"
+      textAnchor="middle"
+      fill="white"
+      fontSize="6"
+      fontWeight="bold"
+    >
+      W
+    </text>
+  </svg>
+);
+
+// Super OETH icon - Origin Protocol colors
+const SuperOethIcon = () => (
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 32 32"
+    fill="none"
+    className="flex-shrink-0"
+  >
+    <circle cx="16" cy="16" r="16" fill="#0074F0" />
+    <path d="M16 6v6.65l5.63 2.51L16 6z" fill="white" fillOpacity="0.8" />
+    <path d="M16 6L10.37 15.16 16 12.65V6z" fill="white" />
+    <path
+      d="M16 19.48v4.52l5.63-7.79L16 19.48z"
+      fill="white"
+      fillOpacity="0.8"
+    />
+    <path d="M16 24V19.48l-5.63-3.27L16 24z" fill="white" />
+    <circle cx="16" cy="16" r="4" fill="white" fillOpacity="0.3" />
+  </svg>
+);
+
 type CheckingActionsCardProps = {
   balanceUsd: number;
   safeAddress: string | null;
@@ -104,6 +171,11 @@ export function CheckingActionsCard({
   const [isMoveModalOpen, setIsMoveModalOpen] = useState(false);
   const [isBridgeModalOpen, setIsBridgeModalOpen] = useState(false);
   const [isAccountInfoOpen, setIsAccountInfoOpen] = useState(false);
+  const [isSwapModalOpen, setIsSwapModalOpen] = useState(false);
+  const [isRedeemModalOpen, setIsRedeemModalOpen] = useState(false);
+  const [swapChainId, setSwapChainId] = useState<SupportedChainId>(
+    SUPPORTED_CHAINS.BASE,
+  );
   const [expandedAccount, setExpandedAccount] = useState<string | null>(null);
   const isMobile = useIsMobile();
   const { ready, authenticated, user } = usePrivy();
@@ -183,6 +255,43 @@ export function CheckingActionsCard({
     },
   );
 
+  // Fetch WETH balances with caching
+  const { data: baseWethBalance } = api.earn.getWethBalance.useQuery(
+    {
+      safeAddress: baseSafe?.address || '',
+      chainId: SUPPORTED_CHAINS.BASE,
+    },
+    {
+      enabled: !!baseSafe?.address,
+      staleTime: 30000,
+      refetchInterval: 60000,
+    },
+  );
+
+  const { data: arbitrumWethBalance } = api.earn.getWethBalance.useQuery(
+    {
+      safeAddress: arbitrumSafe?.address || '',
+      chainId: SUPPORTED_CHAINS.ARBITRUM,
+    },
+    {
+      enabled: !!arbitrumSafe?.address,
+      staleTime: 30000,
+      refetchInterval: 60000,
+    },
+  );
+
+  // Fetch Super OETH balance (Base only)
+  const { data: superOethBalance } = api.earn.getSuperOethBalance.useQuery(
+    {
+      safeAddress: baseSafe?.address || '',
+    },
+    {
+      enabled: !!baseSafe?.address,
+      staleTime: 30000,
+      refetchInterval: 60000,
+    },
+  );
+
   // Calculate total balance across all chains
   const baseUsdcBalance = baseBalanceData
     ? parseFloat(formatUnits(BigInt(baseBalanceData.balance), USDC_DECIMALS))
@@ -201,14 +310,34 @@ export function CheckingActionsCard({
     ? parseFloat(formatUnits(BigInt(arbitrumEthBalance.balance), 18))
     : 0;
 
+  // WETH balances
+  const baseWethBalanceNum = baseWethBalance
+    ? parseFloat(formatUnits(BigInt(baseWethBalance.balance), 18))
+    : 0;
+  const arbitrumWethBalanceNum = arbitrumWethBalance
+    ? parseFloat(formatUnits(BigInt(arbitrumWethBalance.balance), 18))
+    : 0;
+
   // ETH USD values (approximate)
   const ethPrice = 3000; // TODO: Fetch real-time price
   const baseEthUsd = baseEthBalanceNum * ethPrice;
   const arbitrumEthUsd = arbitrumEthBalanceNum * ethPrice;
 
-  // Total per chain (USDC + ETH in USD)
-  const baseTotalUsd = baseUsdcBalance + baseEthUsd;
-  const arbitrumTotalUsd = arbitrumUsdcBalance + arbitrumEthUsd;
+  // WETH USD values (same price as ETH)
+  const baseWethUsd = baseWethBalanceNum * ethPrice;
+  const arbitrumWethUsd = arbitrumWethBalanceNum * ethPrice;
+
+  // Super OETH balance (Base only, same price as ETH since it's 1:1 with ETH)
+  const superOethBalanceNum = superOethBalance
+    ? parseFloat(formatUnits(BigInt(superOethBalance.balance), 18))
+    : 0;
+  const superOethUsd = superOethBalanceNum * ethPrice;
+
+  // Total per chain (USDC + ETH + WETH + SuperOETH in USD)
+  const baseTotalUsd =
+    baseUsdcBalance + baseEthUsd + baseWethUsd + superOethUsd;
+  const arbitrumTotalUsd =
+    arbitrumUsdcBalance + arbitrumEthUsd + arbitrumWethUsd;
 
   // Total available balance (not in vaults)
   const totalAvailableBalance = baseTotalUsd + arbitrumTotalUsd;
@@ -408,6 +537,58 @@ export function CheckingActionsCard({
                         </span>
                       </div>
                     </div>
+                    {/* WETH - only show if balance > 0 */}
+                    {baseWethBalanceNum > 0 && (
+                      <div className="flex items-center justify-between py-1.5">
+                        <div className="flex items-center gap-2">
+                          <WethIcon />
+                          <span className="text-[12px] text-[#101010]/70">
+                            WETH
+                          </span>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-[12px] font-medium tabular-nums text-[#101010]">
+                            {baseWethBalanceNum.toFixed(6)}
+                          </span>
+                          <span className="text-[11px] text-[#101010]/50 ml-1">
+                            ({formatUsd(baseWethUsd)})
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                    {/* Super OETH - only show if balance > 0 */}
+                    {superOethBalanceNum > 0 && (
+                      <div className="flex items-center justify-between py-1.5 bg-blue-50/50 -mx-3 px-3 rounded">
+                        <div className="flex items-center gap-2">
+                          <SuperOethIcon />
+                          <span className="text-[12px] text-[#101010]/70">
+                            Super OETH
+                          </span>
+                        </div>
+                        <div className="text-right flex items-center gap-2">
+                          <div>
+                            <span className="text-[12px] font-medium tabular-nums text-[#101010]">
+                              {superOethBalanceNum.toFixed(6)}
+                            </span>
+                            <span className="text-[11px] text-[#101010]/50 ml-1">
+                              ({formatUsd(superOethUsd)})
+                            </span>
+                          </div>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setIsRedeemModalOpen(true);
+                            }}
+                            className="h-6 px-2 text-[10px] text-[#0074F0] hover:text-[#0074F0] hover:bg-[#0074F0]/10"
+                          >
+                            Redeem
+                          </Button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -491,6 +672,25 @@ export function CheckingActionsCard({
                         </span>
                       </div>
                     </div>
+                    {/* WETH - only show if balance > 0 */}
+                    {arbitrumWethBalanceNum > 0 && (
+                      <div className="flex items-center justify-between py-1.5">
+                        <div className="flex items-center gap-2">
+                          <WethIcon />
+                          <span className="text-[12px] text-[#101010]/70">
+                            WETH
+                          </span>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-[12px] font-medium tabular-nums text-[#101010]">
+                            {arbitrumWethBalanceNum.toFixed(6)}
+                          </span>
+                          <span className="text-[11px] text-[#101010]/50 ml-1">
+                            ({formatUsd(arbitrumWethUsd)})
+                          </span>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -558,6 +758,68 @@ export function CheckingActionsCard({
                 safeAddress={baseSafe.address as Address}
                 onSuccess={() => setIsBridgeModalOpen(false)}
                 onClose={() => setIsBridgeModalOpen(false)}
+              />
+            </DialogContent>
+          </Dialog>
+        )}
+
+        {/* Swap/Wrap ETH - Only in Technical Mode when WETH balance exists */}
+        {isTechnical &&
+          !isDemoMode &&
+          (baseWethBalanceNum > 0 || arbitrumWethBalanceNum > 0) && (
+            <Dialog open={isSwapModalOpen} onOpenChange={setIsSwapModalOpen}>
+              <DialogTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="flex-1 min-w-[120px] inline-flex items-center justify-center gap-2 transition-all duration-200 border border-[#1B29FF]/40 bg-white text-[#1B29FF] font-mono px-4 py-2.5 rounded-sm hover:border-[#1B29FF] hover:bg-[#1B29FF]/5 text-[13px]"
+                >
+                  <Repeat className="h-5 w-5" />
+                  SWAP
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="bg-white border-[#101010]/10 max-w-md">
+                <SwapModal
+                  safeAddress={
+                    (swapChainId === SUPPORTED_CHAINS.BASE
+                      ? baseSafe?.address
+                      : arbitrumSafe?.address) as Address
+                  }
+                  chainId={swapChainId}
+                  wethBalance={
+                    swapChainId === SUPPORTED_CHAINS.BASE
+                      ? baseWethBalanceNum
+                      : arbitrumWethBalanceNum
+                  }
+                  ethBalance={
+                    swapChainId === SUPPORTED_CHAINS.BASE
+                      ? baseEthBalanceNum
+                      : arbitrumEthBalanceNum
+                  }
+                  onSuccess={() => setIsSwapModalOpen(false)}
+                  onClose={() => setIsSwapModalOpen(false)}
+                />
+              </DialogContent>
+            </Dialog>
+          )}
+
+        {/* Redeem Super OETH - Only in Technical Mode when Super OETH balance exists */}
+        {isTechnical && !isDemoMode && superOethBalanceNum > 0 && (
+          <Dialog open={isRedeemModalOpen} onOpenChange={setIsRedeemModalOpen}>
+            <DialogTrigger asChild>
+              <Button
+                variant="outline"
+                className="flex-1 min-w-[120px] inline-flex items-center justify-center gap-2 transition-all duration-200 border border-[#0074F0]/40 bg-white text-[#0074F0] font-mono px-4 py-2.5 rounded-sm hover:border-[#0074F0] hover:bg-[#0074F0]/5 text-[13px]"
+              >
+                <Coins className="h-5 w-5" />
+                REDEEM
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="bg-white border-[#101010]/10 max-w-md">
+              <RedeemSuperOethModal
+                safeAddress={baseSafe?.address as Address}
+                superOethBalance={superOethBalanceNum}
+                onSuccess={() => setIsRedeemModalOpen(false)}
+                onClose={() => setIsRedeemModalOpen(false)}
               />
             </DialogContent>
           </Dialog>
