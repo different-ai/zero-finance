@@ -234,10 +234,11 @@ export function CheckingActionsCard({
   };
 
   const hasOnlyStarterAccounts = !hasCompletedKyc && fundingSources.length > 0;
+  // In technical mode, bypass starter account restrictions - power users can always withdraw
   const canInitiateMove =
     (isDemoMode || totalAvailableBalance > 0) &&
     !!safeAddress &&
-    !hasOnlyStarterAccounts &&
+    (isTechnical || !hasOnlyStarterAccounts) &&
     isOwner !== false;
   const disableReason = !safeAddress
     ? 'Add a treasury safe to move funds'
@@ -245,7 +246,7 @@ export function CheckingActionsCard({
       ? 'You are not an owner of this Safe'
       : totalAvailableBalance <= 0
         ? 'No withdrawable balance available'
-        : hasOnlyStarterAccounts
+        : !isTechnical && hasOnlyStarterAccounts
           ? 'Complete business verification to enable withdrawals'
           : undefined;
 
