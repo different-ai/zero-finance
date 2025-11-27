@@ -2136,23 +2136,17 @@ export const earnRouter = router({
     .query(async ({ ctx, input }) => {
       const { vaultAddresses } = input;
 
-      // Get workspace from context
-      const workspaceId = ctx.workspaceId;
-      if (!workspaceId) {
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Workspace context is unavailable.',
-        });
-      }
+      // Get user's Privy DID for user-scoped Safe lookup
+      // IMPORTANT: Use user-scoped query (by privyDid) NOT workspace-scoped
+      // This ensures we get the same Safe addresses as getMultiChainPositions
+      const privyDid = requirePrivyDid(ctx);
 
-      // Get all safes for this workspace (we'll need safes on different chains)
-      const workspaceSafes = await db.query.userSafes.findMany({
-        where: eq(userSafes.workspaceId, workspaceId),
-      });
+      // Get all safes for this user across all chains
+      const userSafesList = await getMultiChainUserSafes(privyDid);
 
       // Create a map of chainId -> safeAddress for quick lookup
       const safesByChain = new Map<number, string>();
-      for (const safe of workspaceSafes) {
+      for (const safe of userSafesList) {
         safesByChain.set(safe.chainId, safe.safeAddress);
       }
 
@@ -2726,6 +2720,69 @@ export const earnRouter = router({
       return {
         balance: balance.toString(),
         formatted: (Number(balance) / 1e18).toFixed(6),
+      };
+    }),
+
+  /**
+   * Get WETH balance for a Safe on a specific chain
+   */
+  getWethBalance: protectedProcedure
+    .input(
+      z.object({
+        safeAddress: z.string().length(42),
+        chainId: z.number(),
+      }),
+    )
+    .query(async ({ input }) => {
+      const rpcManager = getRPCManager();
+      // WETH addresses per chain
+      const wethAddresses: Record<number, Address> = {
+        8453: '0x4200000000000000000000000000000000000006', // Base
+        42161: '0x82aF49447D8a07e3bd95BD0d56f35241523fBab1', // Arbitrum
+        1: '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2', // Mainnet
+      };
+
+      const wethAddress = wethAddresses[input.chainId];
+      if (!wethAddress) {
+        return { balance: '0', formatted: '0' };
+      }
+
+      const balance = await rpcManager.getBalance(
+        input.chainId as SupportedChainId,
+        wethAddress,
+        input.safeAddress as Address,
+      );
+
+      return {
+        balance: balance?.raw.toString() || '0',
+        formatted: balance?.formatted || '0',
+      };
+    }),
+
+  /**
+   * Get Super OETH balance for a Safe on Base
+   */
+  getSuperOethBalance: protectedProcedure
+    .input(
+      z.object({
+        safeAddress: z.string().length(42),
+      }),
+    )
+    .query(async ({ input }) => {
+      const rpcManager = getRPCManager();
+      // Super OETH address on Base
+      const superOethAddress: Address =
+        '0xDBFeFD2e8460a6Ee4955A68582F85708BAEA60A3';
+
+      const balance = await rpcManager.getBalance(
+        SUPPORTED_CHAINS.BASE as SupportedChainId,
+        superOethAddress,
+        input.safeAddress as Address,
+      );
+
+      return {
+        balance: balance?.raw.toString() || '0',
+        formatted: balance?.formatted || '0',
       };
     }),
 
