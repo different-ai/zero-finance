@@ -161,8 +161,28 @@ export function DepositEarnCard({
   // Determine if this is a cross-chain deposit (vault on different chain than user's Safe on Base)
   const isCrossChain = chainId !== SUPPORTED_CHAINS.BASE;
 
+  // Fetch multi-chain positions to get correct safe addresses
+  // Always enabled because we need Base safe address for native balance fetching
+  const { data: multiChainPositions, isLoading: isLoadingPositions } =
+    trpc.earn.getMultiChainPositions.useQuery(undefined, {
+      enabled: true, // Always fetch - needed for native balance on Base and cross-chain deposits
+      staleTime: 30000,
+    });
+
+  // Get safe addresses from multiChainPositions (like checking-actions-card does)
+  // This is the authoritative source for the user's safe on each chain
+  const baseSafeAddress = multiChainPositions?.safes.find(
+    (s) => s.chainId === SUPPORTED_CHAINS.BASE,
+  )?.address as Address | undefined;
+
+  // For Base chain operations (native ETH deposits), prefer baseSafeAddress from multiChainPositions
+  // This ensures consistency between balance display and transaction execution
+  const effectiveSafeAddress = (
+    !isCrossChain && baseSafeAddress ? baseSafeAddress : safeAddress
+  ) as Address;
+
   const { ready: isRelayReady, send: sendTxViaRelay } =
-    useSafeRelay(safeAddress);
+    useSafeRelay(effectiveSafeAddress);
   const { client: smartWalletClient, getClientForChain } = useSmartWallets();
   const publicClient = createPublicClient({
     chain: base,
@@ -191,14 +211,15 @@ export function DepositEarnCard({
   }, [vaultAddress]);
 
   // Fetch native ETH balance via tRPC (same as checking-actions-card)
+  // Uses effectiveSafeAddress which prefers baseSafeAddress from multiChainPositions
   const { data: nativeBalanceData, refetch: refetchNativeBalance } =
     trpc.earn.getNativeBalance.useQuery(
       {
-        safeAddress: safeAddress,
-        chainId: chainId,
+        safeAddress: effectiveSafeAddress,
+        chainId: SUPPORTED_CHAINS.BASE, // Native assets are always on Base
       },
       {
-        enabled: !!safeAddress && isNativeAsset,
+        enabled: !!effectiveSafeAddress && isNativeAsset,
         staleTime: 30000,
         refetchInterval: 30000,
       },
@@ -228,13 +249,15 @@ export function DepositEarnCard({
       : 0n;
 
   const isLoadingBalance = isNativeAsset
-    ? !nativeBalanceData && !!safeAddress
+    ? !nativeBalanceData && !!effectiveSafeAddress
     : !erc20BalanceData && !!safeAddress && !isCrossChain;
 
   // Debug logging
   useEffect(() => {
     console.log('[DepositEarnCard] Balance state:', {
       safeAddress,
+      baseSafeAddress, // From multiChainPositions
+      effectiveSafeAddress, // Used for balance queries and transactions
       isNativeAsset,
       chainId,
       nativeBalanceData,
@@ -244,6 +267,8 @@ export function DepositEarnCard({
     });
   }, [
     safeAddress,
+    baseSafeAddress,
+    effectiveSafeAddress,
     isNativeAsset,
     chainId,
     nativeBalanceData,
@@ -300,12 +325,7 @@ export function DepositEarnCard({
       },
     );
 
-  // We need to get the target safe address to check its balance
-  const { data: multiChainPositions, isLoading: isLoadingPositions } =
-    trpc.earn.getMultiChainPositions.useQuery(undefined, {
-      enabled: isCrossChain,
-    });
-
+  // targetSafeAddress is derived from multiChainPositions (fetched earlier)
   const targetSafeAddress = multiChainPositions?.safes.find(
     (s) => s.chainId === chainId,
   )?.address as Address | undefined;
@@ -536,7 +556,7 @@ export function DepositEarnCard({
           {
             zapper: resolvedZapper,
             value: amountInSmallestUnit.toString(),
-            safeAddress,
+            effectiveSafeAddress,
           },
         );
 
