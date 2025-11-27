@@ -1926,7 +1926,7 @@ export function DepositEarnCard({
     const chainCode = chainId === 42161 ? 'ARB' : `CHAIN_${chainId}`;
 
     return (
-      <div className="space-y-4 p-4 bg-[#fafafa] border border-[#1B29FF]/20 relative">
+      <div className="space-y-6 p-4 bg-[#fafafa] border border-[#1B29FF]/20 relative">
         {/* Blueprint grid overlay */}
         <div
           className="absolute inset-0 pointer-events-none opacity-[0.03]"
@@ -1959,8 +1959,8 @@ export function DepositEarnCard({
           </div>
 
           {/* Target Deposit Input & Button */}
-          <div className="space-y-3">
-            <label className="font-mono text-[12px] text-[#1B29FF] uppercase">
+          <div className="space-y-2">
+            <label className="font-mono text-[10px] text-[#1B29FF]/70 uppercase">
               INPUT::DEPOSIT_AMOUNT
             </label>
             <div className="relative">
@@ -1969,20 +1969,20 @@ export function DepositEarnCard({
                 placeholder="0.0"
                 value={depositAmount}
                 onChange={(e) => setDepositAmount(e.target.value)}
-                className="w-full h-12 px-4 font-mono bg-white border border-[#1B29FF]/30 focus:border-[#1B29FF] focus:outline-none text-[15px] transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                className="w-full h-10 px-3 font-mono bg-white border border-[#1B29FF]/30 focus:border-[#1B29FF] focus:outline-none text-[14px] transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                 step="0.000001"
                 min="0"
                 max={availableTargetBalance}
                 disabled={targetBalance === 0n}
               />
-              <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
-                <span className="font-mono text-[11px] text-[#1B29FF]">
+              <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                <span className="font-mono text-[10px] text-[#1B29FF]/70">
                   USDC
                 </span>
                 <button
                   type="button"
                   onClick={handleMaxDeposit}
-                  className="font-mono px-1.5 py-0.5 text-[10px] text-[#1B29FF] border border-[#1B29FF]/30 hover:border-[#1B29FF] transition-colors"
+                  className="font-mono px-2 py-1 text-[10px] text-[#1B29FF] border border-[#1B29FF]/30 hover:border-[#1B29FF] transition-colors bg-white hover:bg-[#1B29FF]/5"
                   disabled={targetBalance === 0n}
                 >
                   MAX
@@ -1997,14 +1997,14 @@ export function DepositEarnCard({
                 targetBalance === 0n ||
                 transactionState.step === 'checking'
               }
-              className="w-full h-11 font-mono uppercase bg-white border-2 border-[#1B29FF] text-[#1B29FF] hover:bg-[#1B29FF] hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              className="w-full h-10 font-mono uppercase bg-white border-2 border-[#1B29FF] text-[#1B29FF] hover:bg-[#1B29FF] hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {transactionState.step === 'checking' ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
-                <ArrowDownToLine className="h-4 w-4" />
+                <ArrowDownToLine className="h-4 w-4 mb-0.5" />
               )}
-              [ EXECUTE DEPOSIT ]
+              <span className="leading-none">[ EXECUTE DEPOSIT ]</span>
             </button>
           </div>
         </div>
@@ -2024,8 +2024,8 @@ export function DepositEarnCard({
           </div>
 
           {/* Bridge Input & Button */}
-          <div className="space-y-3">
-            <label className="font-mono text-[12px] text-[#1B29FF] uppercase">
+          <div className="space-y-2">
+            <label className="font-mono text-[10px] text-[#1B29FF]/70 uppercase">
               INPUT::BRIDGE_AMOUNT
             </label>
             <div className="flex gap-3">
@@ -2043,7 +2043,7 @@ export function DepositEarnCard({
                 <button
                   type="button"
                   onClick={handleMax}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 font-mono text-[10px] text-[#1B29FF] border border-[#1B29FF]/30 px-1 hover:border-[#1B29FF]"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 font-mono text-[10px] text-[#1B29FF] border border-[#1B29FF]/30 px-2 py-1 hover:border-[#1B29FF] bg-white hover:bg-[#1B29FF]/5"
                 >
                   MAX
                 </button>
@@ -2086,7 +2086,7 @@ export function DepositEarnCard({
   // Technical/Blueprint mode styling for ETH deposits via Zapper
   if (isNativeAsset && resolvedZapper) {
     return (
-      <div className="space-y-4 p-4 bg-[#fafafa] border border-[#1B29FF]/20 relative">
+      <div className="space-y-6 p-4 bg-[#fafafa] border border-[#1B29FF]/20 relative">
         {/* Blueprint grid overlay */}
         <div
           className="absolute inset-0 pointer-events-none opacity-[0.03]"
@@ -2155,8 +2155,8 @@ export function DepositEarnCard({
           </div>
 
           {/* Deposit Input & Button */}
-          <div className="space-y-3 relative">
-            <label className="font-mono text-[12px] text-[#1B29FF] uppercase">
+          <div className="space-y-2 relative">
+            <label className="font-mono text-[10px] text-[#1B29FF]/70 uppercase">
               AMOUNT::DEPOSIT
             </label>
             <div className="relative">
@@ -2165,20 +2165,20 @@ export function DepositEarnCard({
                 placeholder="0.0"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
-                className="w-full h-12 px-4 font-mono bg-white border border-[#1B29FF]/30 focus:border-[#1B29FF] focus:outline-none text-[15px] transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                className="w-full h-10 px-3 font-mono bg-white border border-[#1B29FF]/30 focus:border-[#1B29FF] focus:outline-none text-[14px] transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                 step="0.000001"
                 min="0"
                 max={availableBalance}
                 disabled={assetBalance === 0n}
               />
-              <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
-                <span className="font-mono text-[11px] text-[#1B29FF]">
+              <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                <span className="font-mono text-[10px] text-[#1B29FF]/70">
                   ETH
                 </span>
                 <button
                   type="button"
                   onClick={handleMax}
-                  className="font-mono px-1.5 py-0.5 text-[10px] text-[#1B29FF] border border-[#1B29FF]/30 hover:border-[#1B29FF] transition-colors"
+                  className="font-mono px-2 py-1 text-[10px] text-[#1B29FF] border border-[#1B29FF]/30 hover:border-[#1B29FF] transition-colors bg-white hover:bg-[#1B29FF]/5"
                   disabled={assetBalance === 0n}
                 >
                   MAX
@@ -2195,16 +2195,18 @@ export function DepositEarnCard({
                 assetBalance === 0n ||
                 transactionState.step === 'checking'
               }
-              className="w-full h-11 font-mono uppercase bg-white border-2 border-[#1B29FF] text-[#1B29FF] hover:bg-[#1B29FF] hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              className="w-full h-10 font-mono uppercase bg-white border-2 border-[#1B29FF] text-[#1B29FF] hover:bg-[#1B29FF] hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {transactionState.step === 'checking' ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
-                <ArrowDownToLine className="h-4 w-4" />
+                <ArrowDownToLine className="h-4 w-4 mb-0.5" />
               )}
-              {transactionState.step === 'checking'
-                ? '[ CHECKING... ]'
-                : '[ EXECUTE DEPOSIT ]'}
+              <span className="leading-none">
+                {transactionState.step === 'checking'
+                  ? '[ CHECKING... ]'
+                  : '[ EXECUTE DEPOSIT ]'}
+              </span>
             </button>
           </div>
 
