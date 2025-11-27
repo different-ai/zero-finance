@@ -1723,16 +1723,18 @@ export function DepositEarnCard({
               <div className="space-y-2">
                 <div className="flex items-center gap-2 text-[12px] text-[#101010]">
                   <div className="h-2 w-2 rounded-full bg-[#FFA500] animate-pulse" />
-                  Step 1 of 2: Approving funds
+                  {isTechnical
+                    ? 'STEP_1/2: APPROVING_FUNDS'
+                    : 'Step 1 of 2: Approving funds'}
                 </div>
-                {transactionState.txHash && (
+                {isTechnical && transactionState.txHash && (
                   <a
                     href={`https://basescan.org/tx/${transactionState.txHash}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-1 text-[11px] text-[#1B29FF] hover:text-[#1420CC] transition-colors"
+                    className="flex items-center gap-1 text-[11px] font-mono text-[#1B29FF] hover:text-[#1420CC] transition-colors"
                   >
-                    View on Explorer
+                    VIEW_TX
                     <ExternalLink className="h-3 w-3" />
                   </a>
                 )}
@@ -1744,16 +1746,16 @@ export function DepositEarnCard({
               <div className="space-y-2">
                 <div className="flex items-center gap-2 text-[12px] text-[#101010]">
                   <div className="h-2 w-2 rounded-full bg-[#1B29FF] animate-pulse" />
-                  Depositing to Vault
+                  {isTechnical ? 'DEPOSITING_TO_VAULT' : 'Depositing to Vault'}
                 </div>
-                {transactionState.txHash && (
+                {isTechnical && transactionState.txHash && (
                   <a
                     href={`https://basescan.org/tx/${transactionState.txHash}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-1 text-[11px] text-[#1B29FF] hover:text-[#1420CC] transition-colors"
+                    className="flex items-center gap-1 text-[11px] font-mono text-[#1B29FF] hover:text-[#1420CC] transition-colors"
                   >
-                    View on Explorer
+                    VIEW_TX
                     <ExternalLink className="h-3 w-3" />
                   </a>
                 )}
@@ -1765,20 +1767,21 @@ export function DepositEarnCard({
               <div className="space-y-2">
                 <div className="flex items-center gap-2 text-[12px] text-[#101010]">
                   <div className="h-2 w-2 rounded-full bg-[#28A0F0] animate-pulse" />
-                  Transferring Funds
+                  {isTechnical ? 'BRIDGING_FUNDS' : 'Transferring Funds'}
                 </div>
                 <div className="text-[11px] text-[#101010]/60">
-                  Funds are being bridged via Across Protocol. This typically
-                  takes 1-2 minutes.
+                  {isTechnical
+                    ? 'BRIDGE::ACROSS_PROTOCOL — ETA: 1-2min'
+                    : 'Funds are being bridged via Across Protocol. This typically takes 1-2 minutes.'}
                 </div>
-                {transactionState.txHash && (
+                {isTechnical && transactionState.txHash && (
                   <a
                     href={`${chainId === 42161 ? 'https://arbiscan.io' : 'https://basescan.org'}/tx/${transactionState.txHash}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-1 text-[11px] text-[#1B29FF] hover:text-[#1420CC] transition-colors"
+                    className="flex items-center gap-1 text-[11px] font-mono text-[#1B29FF] hover:text-[#1420CC] transition-colors"
                   >
-                    View on Explorer
+                    VIEW_TX
                     <ExternalLink className="h-3 w-3" />
                   </a>
                 )}
@@ -1801,26 +1804,49 @@ export function DepositEarnCard({
   if (transactionState.step === 'waiting-arrival') {
     return (
       <div className="space-y-4">
-        <div className="bg-[#EBF5FF] border border-[#28A0F0]/20 p-4">
+        <div
+          className={cn(
+            'p-4',
+            isTechnical
+              ? 'bg-[#28A0F0]/5 border border-[#28A0F0]/30'
+              : 'bg-[#EBF5FF] border border-[#28A0F0]/20',
+          )}
+        >
           <div className="flex gap-3">
             <Clock className="h-4 w-4 text-[#28A0F0] flex-shrink-0 mt-0.5" />
             <div className="space-y-2">
-              <div className="text-[14px] font-medium text-[#101010]">
-                Transfer Initiated
+              <div
+                className={cn(
+                  'text-[14px] font-medium text-[#101010]',
+                  isTechnical && 'font-mono',
+                )}
+              >
+                {isTechnical ? 'BRIDGE::INITIATED' : 'Transfer Initiated'}
               </div>
-              <div className="text-[12px] text-[#101010]/70">
-                Your ${transactionState.depositedAmount} is being transferred to
-                Arbitrum. This typically takes <strong>1-2 minutes</strong> to
-                arrive.
+              <div
+                className={cn(
+                  'text-[12px] text-[#101010]/70',
+                  isTechnical && 'font-mono',
+                )}
+              >
+                {isTechnical ? (
+                  `AMOUNT: $${transactionState.depositedAmount} — DEST: ARBITRUM — ETA: 1-2min`
+                ) : (
+                  <>
+                    Your ${transactionState.depositedAmount} is being
+                    transferred to Arbitrum. This typically takes{' '}
+                    <strong>1-2 minutes</strong> to arrive.
+                  </>
+                )}
               </div>
-              {transactionState.txHash && (
+              {isTechnical && transactionState.txHash && (
                 <a
                   href={`https://basescan.org/tx/${transactionState.txHash}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-1 text-[11px] text-[#1B29FF] hover:text-[#1420CC] transition-colors"
+                  className="flex items-center gap-1 text-[11px] font-mono text-[#1B29FF] hover:text-[#1420CC] transition-colors"
                 >
-                  View transaction on BaseScan
+                  VIEW_TX
                   <ExternalLink className="h-3 w-3" />
                 </a>
               )}
@@ -1830,9 +1856,14 @@ export function DepositEarnCard({
 
         <button
           onClick={resetTransaction}
-          className="w-full px-3 py-2 text-[13px] text-[#101010] bg-white border border-[#101010]/10 hover:bg-[#F7F7F2] transition-colors"
+          className={cn(
+            'w-full px-3 py-2 text-[13px] transition-colors',
+            isTechnical
+              ? 'font-mono uppercase bg-white border-2 border-[#1B29FF] text-[#1B29FF] hover:bg-[#1B29FF] hover:text-white'
+              : 'text-[#101010] bg-white border border-[#101010]/10 hover:bg-[#F7F7F2]',
+          )}
         >
-          Transfer More Funds
+          {isTechnical ? '[ TRANSFER_MORE ]' : 'Transfer More Funds'}
         </button>
       </div>
     );
@@ -2202,7 +2233,7 @@ export function DepositEarnCard({
   return (
     <div
       className={cn(
-        'space-y-4 relative',
+        'space-y-4 relative p-4',
         isTechnical && 'p-4 bg-[#F7F7F2] border border-[#1B29FF]/20',
       )}
     >
