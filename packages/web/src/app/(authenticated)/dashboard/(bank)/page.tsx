@@ -131,7 +131,7 @@ export default async function DashboardPage(props: {
 
   return (
     <DashboardRedirect>
-      <div className="min-h-screen bg-[#F7F7F2]">
+      <div className="min-h-screen bg-[#fafafa]">
         {/* Main Content */}
         <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 ">
           {/* Insurance Warning and Activation Handler */}
