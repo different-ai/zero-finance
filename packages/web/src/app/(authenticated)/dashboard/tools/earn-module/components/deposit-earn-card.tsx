@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Loader2,
   AlertCircle,
@@ -198,15 +198,12 @@ export function DepositEarnCard({
   const [isLoadingBalance, setIsLoadingBalance] = useState(true);
   const [hasInitialLoad, setHasInitialLoad] = useState(false);
 
-  // Fetch balance function - can be called manually after transactions
-  const fetchBalance = async () => {
+  // Fetch balance function - wrapped in useCallback to avoid stale closures
+  const fetchBalance = useCallback(async () => {
     if (!safeAddress) return;
 
     try {
-      // Only show loading on first load, not on refetches
-      if (!hasInitialLoad) {
-        setIsLoadingBalance(true);
-      }
+      setIsLoadingBalance(true);
 
       console.log('[DepositEarnCard] Fetching balance:', {
         safeAddress,
@@ -246,7 +243,15 @@ export function DepositEarnCard({
     } finally {
       setIsLoadingBalance(false);
     }
-  };
+  }, [
+    safeAddress,
+    isNativeAsset,
+    assetAddress,
+    assetSymbol,
+    vaultAddress,
+    resolvedZapper,
+    publicClient,
+  ]);
 
   // Fetch balance on mount and after transactions
   // Also refetch when asset type changes (e.g., switching from USDC vault to ETH vault)
@@ -256,14 +261,7 @@ export function DepositEarnCard({
     return () => {
       clearInterval(interval);
     };
-  }, [
-    safeAddress,
-    isNativeAsset,
-    assetAddress,
-    vaultAddress,
-    resolvedZapper,
-    assetSymbol,
-  ]);
+  }, [fetchBalance]);
 
   // tRPC utils for refetching
   const trpcUtils = trpc.useUtils();
