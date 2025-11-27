@@ -672,6 +672,13 @@ export function WithdrawEarnCard({
   const SuccessBanner = () => {
     if (withdrawState.step !== 'success') return null;
 
+    // Format amount for banking mode (no token symbols, use $)
+    const displayAmount = isTechnical
+      ? `${withdrawState.withdrawnAmount} ${withdrawState.outputAsset}`
+      : withdrawState.outputAsset === 'ETH'
+        ? `${withdrawState.withdrawnAmount} ETH`
+        : `$${withdrawState.withdrawnAmount}`;
+
     return (
       <div
         className={cn(
@@ -690,7 +697,7 @@ export function WithdrawEarnCard({
         </button>
         <div className="flex gap-3">
           <CheckCircle className="h-5 w-5 text-[#10B981] flex-shrink-0 mt-0.5" />
-          <div className="space-y-2 flex-1 pr-4">
+          <div className="space-y-1.5 flex-1 pr-4">
             <div
               className={cn(
                 'text-[14px] font-medium text-[#101010]',
@@ -698,8 +705,8 @@ export function WithdrawEarnCard({
               )}
             >
               {isTechnical
-                ? `WITHDRAWAL::COMPLETE — ${withdrawState.withdrawnAmount} ${withdrawState.outputAsset}`
-                : `Withdrew ${withdrawState.withdrawnAmount} ${withdrawState.outputAsset}`}
+                ? `WITHDRAWAL::COMPLETE — ${displayAmount}`
+                : `Withdrew ${displayAmount}`}
             </div>
             <p
               className={cn(
@@ -711,19 +718,15 @@ export function WithdrawEarnCard({
                 ? 'NOTE: BALANCE_UPDATE may take up to 60s'
                 : 'Your balance may take up to 1 minute to update.'}
             </p>
-            {withdrawState.txHash && (
+            {/* Only show transaction link in technical mode */}
+            {isTechnical && withdrawState.txHash && (
               <a
                 href={`https://basescan.org/tx/${withdrawState.txHash}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className={cn(
-                  'inline-flex items-center gap-1 text-[11px]',
-                  isTechnical
-                    ? 'font-mono text-[#1B29FF] hover:text-[#1420CC]'
-                    : 'text-[#1B29FF] hover:text-[#1420CC]',
-                )}
+                className="inline-flex items-center gap-1 text-[11px] font-mono text-[#1B29FF] hover:text-[#1420CC]"
               >
-                {isTechnical ? 'VIEW_TX' : 'View transaction'}
+                VIEW_TX
                 <ExternalLink className="h-3 w-3" />
               </a>
             )}

@@ -414,37 +414,24 @@ export function WithdrawEarnCardAdvanced({
       <CardContent className="space-y-4">
         {/* Success Banner */}
         {successInfo?.show && (
-          <Alert className="bg-green-50 border-green-200 relative">
-            <CheckCircle className="h-4 w-4 text-green-600" />
+          <Alert className="bg-[#F0FDF4] border-[#10B981]/20 relative">
+            <CheckCircle className="h-4 w-4 text-[#10B981]" />
             <button
               onClick={() => setSuccessInfo(null)}
-              className="absolute top-2 right-2 text-green-600 hover:text-green-800 transition-colors"
+              className="absolute top-2 right-2 text-[#101010]/40 hover:text-[#101010]/60 transition-colors"
               aria-label="Dismiss"
             >
               <X className="h-4 w-4" />
             </button>
-            <AlertTitle className="text-green-900">
+            <AlertTitle className="text-[#101010]">
               Withdrawal Complete
             </AlertTitle>
-            <AlertDescription className="text-green-700">
+            <AlertDescription className="text-[#101010]/70">
               <div className="space-y-1">
-                <p>
-                  Successfully withdrew {successInfo.amount}{' '}
-                  {withdrawType === 'assets' ? 'USDC' : 'shares'}
+                <p>Withdrew ${successInfo.amount}</p>
+                <p className="text-[12px] text-[#101010]/60">
+                  Your balance may take up to 1 minute to update.
                 </p>
-                <p className="text-sm text-green-600">
-                  Your balance may take up to 60 seconds to update.
-                </p>
-                {successInfo.txHash && (
-                  <a
-                    href={`https://basescan.org/tx/${successInfo.txHash}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-xs text-blue-500 hover:underline inline-block mt-1"
-                  >
-                    View transaction on Basescan
-                  </a>
-                )}
               </div>
             </AlertDescription>
           </Alert>

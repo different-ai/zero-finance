@@ -1272,10 +1272,15 @@ export function DepositEarnCard({
   const SuccessBanner = () => {
     if (transactionState.step !== 'success') return null;
 
+    // Use friendly display for amounts - don't show token symbols in banking mode
+    const displayAmount = isNativeAsset
+      ? `${transactionState.depositedAmount} ETH`
+      : `$${transactionState.depositedAmount}`;
+
     return (
       <div
         className={cn(
-          'p-4 mb-4 relative',
+          'p-4 relative',
           isTechnical
             ? 'bg-[#10B981]/5 border border-[#10B981]/30'
             : 'bg-[#F0FDF4] border border-[#10B981]/20',
@@ -1290,7 +1295,7 @@ export function DepositEarnCard({
         </button>
         <div className="flex gap-3">
           <CheckCircle className="h-5 w-5 text-[#10B981] flex-shrink-0 mt-0.5" />
-          <div className="space-y-2 flex-1 pr-4">
+          <div className="space-y-1.5 flex-1 pr-4">
             <div
               className={cn(
                 'text-[14px] font-medium text-[#101010]',
@@ -1299,11 +1304,11 @@ export function DepositEarnCard({
             >
               {isTechnical
                 ? `DEPOSIT::COMPLETE — ${transactionState.depositedAmount} ${isNativeAsset ? 'ETH' : assetSymbol}`
-                : `Deposited ${transactionState.depositedAmount} ${isNativeAsset ? 'ETH' : assetSymbol}`}
+                : `Deposited ${displayAmount}`}
             </div>
             <p
               className={cn(
-                'text-[12px] text-[#101010]/70',
+                'text-[12px] text-[#101010]/60',
                 isTechnical && 'font-mono',
               )}
             >
@@ -1311,19 +1316,15 @@ export function DepositEarnCard({
                 ? 'NOTE: BALANCE_UPDATE may take up to 60s'
                 : 'Your balance may take up to 1 minute to update.'}
             </p>
-            {transactionState.txHash && (
+            {/* Only show transaction link in technical mode */}
+            {isTechnical && transactionState.txHash && (
               <a
                 href={`https://basescan.org/tx/${transactionState.txHash}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className={cn(
-                  'inline-flex items-center gap-1 text-[11px]',
-                  isTechnical
-                    ? 'font-mono text-[#1B29FF] hover:text-[#1420CC]'
-                    : 'text-[#1B29FF] hover:text-[#1420CC]',
-                )}
+                className="inline-flex items-center gap-1 text-[11px] font-mono text-[#1B29FF] hover:text-[#1420CC]"
               >
-                {isTechnical ? 'VIEW_TX' : 'View transaction'}
+                VIEW_TX
                 <ExternalLink className="h-3 w-3" />
               </a>
             )}
