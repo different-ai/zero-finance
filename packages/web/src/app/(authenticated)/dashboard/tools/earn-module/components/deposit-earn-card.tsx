@@ -1926,7 +1926,7 @@ export function DepositEarnCard({
     const chainCode = chainId === 42161 ? 'ARB' : `CHAIN_${chainId}`;
 
     return (
-      <div className="space-y-4 p-4 bg-[#F7F7F2] border border-[#1B29FF]/20 relative">
+      <div className="space-y-4 p-4 bg-[#fafafa] border border-[#1B29FF]/20 relative">
         {/* Blueprint grid overlay */}
         <div
           className="absolute inset-0 pointer-events-none opacity-[0.03]"
@@ -2086,7 +2086,7 @@ export function DepositEarnCard({
   // Technical/Blueprint mode styling for ETH deposits via Zapper
   if (isNativeAsset && resolvedZapper) {
     return (
-      <div className="space-y-4 p-4 bg-[#F7F7F2] border border-[#1B29FF]/20 relative">
+      <div className="space-y-4 p-4 bg-[#fafafa] border border-[#1B29FF]/20 relative">
         {/* Blueprint grid overlay */}
         <div
           className="absolute inset-0 pointer-events-none opacity-[0.03]"
@@ -2234,7 +2234,7 @@ export function DepositEarnCard({
     <div
       className={cn(
         'space-y-4 relative p-4',
-        isTechnical && 'p-4 bg-[#F7F7F2] border border-[#1B29FF]/20',
+        isTechnical && 'p-4 bg-[#fafafa] border border-[#1B29FF]/20',
       )}
     >
       {/* Blueprint grid overlay for technical mode */}

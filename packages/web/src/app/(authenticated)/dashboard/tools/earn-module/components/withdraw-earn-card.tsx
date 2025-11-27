@@ -802,7 +802,7 @@ export function WithdrawEarnCard({
       <div
         className={cn(
           'p-6 text-center space-y-4 relative',
-          isTechnical && 'bg-[#F7F7F2] border border-[#EF4444]/20',
+          isTechnical && 'bg-[#fafafa] border border-[#EF4444]/20',
         )}
       >
         <div
@@ -852,7 +852,7 @@ export function WithdrawEarnCard({
     <div
       className={cn(
         'space-y-4 relative p-4',
-        isTechnical && 'p-4 bg-[#F7F7F2] border border-[#1B29FF]/20',
+        isTechnical && 'p-4 bg-[#fafafa] border border-[#1B29FF]/20',
       )}
     >
       {/* Blueprint grid overlay for technical mode */}
