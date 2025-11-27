@@ -25,5 +25,3 @@ export { InsuranceContactPanel } from './insurance-contact-panel';
 export { CheckingActionsCard } from './checking-actions-card';
 export { PortfolioOverview } from './portfolio-overview';
 export { AutoSavingsStatus } from './auto-savings-status';
-export { SwapModal } from './swap-modal';
-export { RedeemSuperOethModal } from './redeem-super-oeth-modal';

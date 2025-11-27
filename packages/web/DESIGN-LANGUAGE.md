@@ -73,14 +73,12 @@ const content = CONTENT[isTechnical ? 'technical' : 'company'];
 **Content Guidelines:**
 
 **Company Mode:**
-
 - Banking-first language ("Business Savings Account", "High-Yield")
 - Serif headlines for warmth and approachability
 - Feature bullets emphasize safety, insurance, ease of use
 - Example: "Insurance included — 100% coverage on all deposits"
 
 **Technical Mode:**
-
 - Protocol-first language ("PROTOCOL::TREASURY_AUTOMATION")
 - Monospace typography for precision and technical feel
 - Feature bullets emphasize architecture, audits, on-chain details
@@ -91,8 +89,8 @@ const content = CONTENT[isTechnical ? 'technical' : 'company'];
 ```jsx
 // Badge
 <p className={`uppercase tracking-[0.14em] text-[12px] mb-3 ${
-  isTechnical
-    ? 'font-mono text-[#1B29FF]'
+  isTechnical 
+    ? 'font-mono text-[#1B29FF]' 
     : 'text-[#101010]/60'
 }`}>
   {content.badge}
@@ -100,8 +98,8 @@ const content = CONTENT[isTechnical ? 'technical' : 'company'];
 
 // Headline
 <h1 className={`leading-[0.96] tracking-[-0.015em] text-[#101010] mb-6 ${
-  isTechnical
-    ? 'font-mono text-[48px] sm:text-[56px] lg:text-[64px]'
+  isTechnical 
+    ? 'font-mono text-[48px] sm:text-[56px] lg:text-[64px]' 
     : 'font-serif text-[56px] sm:text-[64px] lg:text-[72px]'
 }`}>
   <span className="text-[#1B29FF]">{content.headline.highlight}</span>
@@ -125,42 +123,15 @@ const content = CONTENT[isTechnical ? 'technical' : 'company'];
 - ❌ Dashboard/app (always functional, no toggle)
 - ❌ Transactional flows (consistency required)
 
-**Toggle Labels:**
-
-The `BimodalToggle` component uses descriptive labels that clearly communicate the content mode:
-
-- **Left label (isTechnical=false)**: "I bank in dollars"
-- **Right label (isTechnical=true)**: "I bank in crypto"
-
-```jsx
-// Toggle labels from bimodal.tsx
-<span
-  className={cn(
-    'text-[12px] transition-colors duration-200',
-    isTechnical ? 'text-[#101010]/50' : 'text-[#101010] font-medium',
-  )}
->
-  I bank in dollars
-</span>;
-{
-  /* Toggle switch */
-}
-<span
-  className={cn(
-    'text-[12px] transition-colors duration-200',
-    isTechnical ? 'text-[#1B29FF] font-medium' : 'text-[#101010]/50',
-  )}
->
-  I bank in crypto
-</span>;
-```
-
 **Toggle Placement:**
 
-Place the `BimodalToggle` in the header:
+Place the `BimodalToggle` in the header with the label "Experience":
 
 ```jsx
 <div className="hidden md:flex items-center gap-3">
+  <span className="text-[11px] text-[#101010]/60 uppercase tracking-wider">
+    Experience
+  </span>
   <BimodalToggle
     isTechnical={isTechnical}
     onToggle={toggle}
@@ -1426,42 +1397,36 @@ By switching typography instantly, we signal to the user's brain that they have 
 ### Mode Toggle Component
 
 ```jsx
-// Bimodal Toggle Switch with Labels
+// Bimodal Toggle Switch
+<button
+  onClick={() => setIsTechnical(!isTechnical)}
+  className={cn(
+    "relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-300",
+    isTechnical ? "bg-[#1B29FF]" : "bg-[#101010]/10"
+  )}
+>
+  <span
+    className={cn(
+      "inline-block h-4 w-4 rounded-full bg-white transition-transform duration-300 shadow-sm",
+      isTechnical ? "translate-x-6" : "translate-x-1"
+    )}
+  />
+</button>
+
+// Toggle Label
 <div className="flex items-center gap-2">
-  <span
-    className={cn(
-      'text-[12px] transition-colors duration-200',
-      isTechnical ? 'text-[#101010]/50' : 'text-[#101010] font-medium',
-    )}
-  >
-    I bank in dollars
+  <span className={cn(
+    "text-[12px] transition-colors",
+    isTechnical ? "text-[#101010]/50" : "text-[#101010]"
+  )}>
+    Banking
   </span>
-
-  <button
-    onClick={() => setIsTechnical(!isTechnical)}
-    className={cn(
-      'relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-300',
-      isTechnical ? 'bg-[#1B29FF]' : 'bg-[#101010]/10',
-    )}
-    aria-label={
-      isTechnical ? 'Switch to Personal mode' : 'Switch to Business mode'
-    }
-  >
-    <span
-      className={cn(
-        'inline-block h-4 w-4 rounded-full bg-white transition-transform duration-300 shadow-sm',
-        isTechnical ? 'translate-x-6' : 'translate-x-1',
-      )}
-    />
-  </button>
-
-  <span
-    className={cn(
-      'text-[12px] transition-colors duration-200',
-      isTechnical ? 'text-[#1B29FF] font-medium' : 'text-[#101010]/50',
-    )}
-  >
-    I bank in crypto
+  {/* Toggle here */}
+  <span className={cn(
+    "text-[12px] transition-colors font-mono",
+    isTechnical ? "text-[#1B29FF]" : "text-[#101010]/50"
+  )}>
+    Technical
   </span>
 </div>
 ```

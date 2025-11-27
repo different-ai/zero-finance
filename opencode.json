@@ -3,22 +3,13 @@
   "mcp": {
     "exa": {
       "type": "remote",
-      "url": "https://mcp.exa.ai/mcp?tools=web_search_exa,get_code_context_exa,crawling_exa,company_research_exa,linkedin_search_exa,deep_researcher_start,deep_researcher_check",
+      "url": "https://mcp.exa.ai/mcp",
       "headers": {}
     },
     "notion": {
       "type": "local",
       "command": ["npx", "-y", "mcp-remote", "https://mcp.notion.com/mcp"]
     }
-  },
-  "tools": {
-    "exa_web_search_exa": true,
-    "exa_get_code_context_exa": true,
-    "exa_crawling_exa": true,
-    "exa_company_research_exa": true,
-    "exa_linkedin_search_exa": true,
-    "exa_deep_researcher_start": true,
-    "exa_deep_researcher_check": true
   },
   "agent": {
     "notion-intel": {
