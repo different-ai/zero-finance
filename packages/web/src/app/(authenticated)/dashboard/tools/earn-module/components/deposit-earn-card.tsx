@@ -1785,42 +1785,66 @@ export function DepositEarnCard({
   // --- CROSS-CHAIN SPLIT VIEW ---
   if (isCrossChain && targetSafeAddress) {
     const chainName = chainId === 42161 ? 'Arbitrum' : `Chain ${chainId}`;
+    const chainCode = chainId === 42161 ? 'ARB' : `CHAIN_${chainId}`;
 
     return (
-      <div className="space-y-6">
+      <div className="space-y-4 p-4 bg-[#F7F7F2] border border-[#1B29FF]/20 relative">
+        {/* Blueprint grid overlay */}
+        <div
+          className="absolute inset-0 pointer-events-none opacity-[0.03]"
+          style={{
+            backgroundImage: `
+              linear-gradient(to right, #1B29FF 1px, transparent 1px),
+              linear-gradient(to bottom, #1B29FF 1px, transparent 1px)
+            `,
+            backgroundSize: '20px 20px',
+          }}
+        />
+
         {/* TOP CARD: Target Chain Account (Investment) */}
-        <div className="bg-white border border-[#101010]/10 p-5 rounded-[12px] shadow-[0_2px_8px_rgba(16,16,16,0.04)]">
-          <div className="flex justify-between items-start mb-4">
+        <div className="bg-white border border-[#1B29FF]/30 p-4 relative">
+          <div className="flex justify-between items-start mb-3">
             <div>
-              <p className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60 mb-1">
-                {chainName} Account Balance
+              <p className="font-mono uppercase tracking-[0.14em] text-[11px] text-[#1B29FF] mb-1">
+                BALANCE::{chainCode}
               </p>
-              <p className="text-[24px] font-medium tabular-nums text-[#101010]">
-                ${displayTargetBalance}
+              <p className="font-mono text-[24px] tabular-nums text-[#101010]">
+                {displayTargetBalance}{' '}
+                <span className="text-[12px] text-[#1B29FF]">USDC</span>
               </p>
+            </div>
+            {/* Crosshair decoration */}
+            <div className="h-3 w-3 relative">
+              <div className="absolute top-1/2 w-full h-px bg-[#1B29FF]/40" />
+              <div className="absolute left-1/2 h-full w-px bg-[#1B29FF]/40" />
             </div>
           </div>
 
           {/* Target Deposit Input & Button */}
           <div className="space-y-3">
+            <label className="font-mono text-[12px] text-[#1B29FF] uppercase">
+              INPUT::DEPOSIT_AMOUNT
+            </label>
             <div className="relative">
               <input
                 type="number"
                 placeholder="0.0"
                 value={depositAmount}
                 onChange={(e) => setDepositAmount(e.target.value)}
-                className="w-full h-12 px-4 bg-[#F7F7F2] border border-[#101010]/10 rounded-md focus:border-[#1B29FF] focus:outline-none text-[15px] transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                className="w-full h-12 px-4 font-mono bg-white border border-[#1B29FF]/30 focus:border-[#1B29FF] focus:outline-none text-[15px] transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                 step="0.000001"
                 min="0"
                 max={availableTargetBalance}
                 disabled={targetBalance === 0n}
               />
               <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
-                <span className="text-[12px] text-[#101010]/50">USD</span>
+                <span className="font-mono text-[11px] text-[#1B29FF]">
+                  USDC
+                </span>
                 <button
                   type="button"
                   onClick={handleMaxDeposit}
-                  className="text-[11px] text-[#1B29FF] font-medium hover:text-[#1420CC] transition-colors"
+                  className="font-mono px-1.5 py-0.5 text-[10px] text-[#1B29FF] border border-[#1B29FF]/30 hover:border-[#1B29FF] transition-colors"
                   disabled={targetBalance === 0n}
                 >
                   MAX
@@ -1835,110 +1859,140 @@ export function DepositEarnCard({
                 targetBalance === 0n ||
                 transactionState.step === 'checking'
               }
-              className="w-full h-11 bg-[#1B29FF] hover:bg-[#1420CC] text-white font-medium rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              className="w-full h-11 font-mono uppercase bg-white border-2 border-[#1B29FF] text-[#1B29FF] hover:bg-[#1B29FF] hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {transactionState.step === 'checking' ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
                 <ArrowDownToLine className="h-4 w-4" />
               )}
-              Deposit to Earn
+              [ EXECUTE DEPOSIT ]
             </button>
           </div>
         </div>
 
         {/* BOTTOM CARD: Source Chain Account (Funding) */}
-        <div className="bg-[#F7F7F2] border border-[#101010]/10 p-5 rounded-[12px]">
-          <div className="flex justify-between items-center mb-4">
+        <div className="bg-white border border-[#1B29FF]/30 p-4 relative">
+          <div className="flex justify-between items-center mb-3">
             <div>
-              <h3 className="text-[14px] font-medium text-[#101010]">
-                Add funds from Base
-              </h3>
-              <p className="text-[12px] text-[#101010]/60 mt-0.5">
-                Available: ${displayBalance}
+              <p className="font-mono uppercase tracking-[0.14em] text-[11px] text-[#1B29FF] mb-1">
+                SOURCE::BASE_CHAIN
+              </p>
+              <p className="font-mono text-[14px] tabular-nums text-[#101010]">
+                {displayBalance}{' '}
+                <span className="text-[11px] text-[#1B29FF]">USDC</span>
               </p>
             </div>
           </div>
 
           {/* Bridge Input & Button */}
-          <div className="flex gap-3">
-            <div className="relative flex-1">
-              <input
-                type="number"
-                placeholder="0.0"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                className="w-full h-10 px-3 bg-white border border-[#101010]/10 rounded-md focus:border-[#1B29FF] focus:outline-none text-[14px] transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                step="0.000001"
-                min="0"
-                max={availableBalance}
-              />
+          <div className="space-y-3">
+            <label className="font-mono text-[12px] text-[#1B29FF] uppercase">
+              INPUT::BRIDGE_AMOUNT
+            </label>
+            <div className="flex gap-3">
+              <div className="relative flex-1">
+                <input
+                  type="number"
+                  placeholder="0.0"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  className="w-full h-10 px-3 font-mono bg-white border border-[#1B29FF]/30 focus:border-[#1B29FF] focus:outline-none text-[14px] transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  step="0.000001"
+                  min="0"
+                  max={availableBalance}
+                />
+                <button
+                  type="button"
+                  onClick={handleMax}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 font-mono text-[10px] text-[#1B29FF] border border-[#1B29FF]/30 px-1 hover:border-[#1B29FF]"
+                >
+                  MAX
+                </button>
+              </div>
               <button
-                type="button"
-                onClick={handleMax}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-[#1B29FF] hover:text-[#1420CC]"
+                onClick={handleBridgeOnly}
+                disabled={!amount || parseFloat(amount) <= 0 || isLoadingQuote}
+                className="px-4 h-10 font-mono uppercase bg-white border border-[#1B29FF]/30 hover:border-[#1B29FF] text-[#1B29FF] text-[11px] transition-colors flex items-center gap-2 whitespace-nowrap disabled:opacity-50"
               >
-                MAX
+                {isLoadingQuote ? (
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                ) : (
+                  <ArrowRight className="h-3 w-3" />
+                )}
+                BRIDGE
               </button>
             </div>
-            <button
-              onClick={handleBridgeOnly}
-              disabled={!amount || parseFloat(amount) <= 0 || isLoadingQuote}
-              className="px-4 h-10 bg-white border border-[#101010]/20 hover:border-[#101010]/40 text-[#101010] text-[13px] font-medium rounded-md transition-colors flex items-center gap-2 whitespace-nowrap"
-            >
-              {isLoadingQuote ? (
-                <Loader2 className="h-3 w-3 animate-spin" />
-              ) : (
-                <ArrowRight className="h-3 w-3" />
-              )}
-              Transfer
-            </button>
           </div>
 
           {/* Quote Info */}
           {bridgeQuote && amount && (
-            <div className="mt-3 p-2 bg-[#101010]/5 rounded text-[11px] text-[#101010]/70 flex justify-between">
+            <div className="mt-3 p-2 bg-[#1B29FF]/5 border border-[#1B29FF]/10 font-mono text-[10px] text-[#101010]/70 flex justify-between">
               <span>
-                Fee: ${formatUnits(BigInt(bridgeQuote.totalFee), USDC_DECIMALS)}
+                FEE: ${formatUnits(BigInt(bridgeQuote.totalFee), USDC_DECIMALS)}
               </span>
-              <span>Est. Time: {bridgeQuote.estimatedFillTime}s</span>
+              <span>EST_TIME: {bridgeQuote.estimatedFillTime}s</span>
             </div>
           )}
+
+          {/* Route info */}
+          <p className="font-mono text-[10px] text-center text-[#1B29FF]/60 mt-3">
+            ROUTE: BASE → ACROSS_BRIDGE → {chainCode}
+          </p>
         </div>
       </div>
     );
   }
 
   // --- NATIVE ASSET SPLIT VIEW (ETH → wsuperOETHb) ---
-  // Similar to cross-chain view but for ETH deposits via Zapper
+  // Technical/Blueprint mode styling for ETH deposits via Zapper
   if (isNativeAsset && resolvedZapper) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-4 p-4 bg-[#F7F7F2] border border-[#1B29FF]/20 relative">
+        {/* Blueprint grid overlay */}
+        <div
+          className="absolute inset-0 pointer-events-none opacity-[0.03]"
+          style={{
+            backgroundImage: `
+              linear-gradient(to right, #1B29FF 1px, transparent 1px),
+              linear-gradient(to bottom, #1B29FF 1px, transparent 1px)
+            `,
+            backgroundSize: '20px 20px',
+          }}
+        />
+
         {/* TOP CARD: Vault Information */}
-        <div className="bg-white border border-[#101010]/10 p-5 rounded-[12px] shadow-[0_2px_8px_rgba(16,16,16,0.04)]">
-          <div className="flex justify-between items-start mb-4">
+        <div className="bg-white border border-[#1B29FF]/30 p-4 relative">
+          <div className="flex justify-between items-start mb-3">
             <div>
-              <p className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60 mb-1">
-                Ethereum Growth Account
+              <p className="font-mono uppercase tracking-[0.14em] text-[11px] text-[#1B29FF] mb-1">
+                PROTOCOL::SUPER_OETH
               </p>
-              <p className="text-[13px] text-[#101010]/70">
-                Deposit ETH to earn yield on your Ethereum
+              <p className="font-mono text-[12px] text-[#101010]/60">
+                Origin Protocol • ETH Yield Strategy
               </p>
+            </div>
+            {/* Crosshair decoration */}
+            <div className="h-3 w-3 relative">
+              <div className="absolute top-1/2 w-full h-px bg-[#1B29FF]/40" />
+              <div className="absolute left-1/2 h-full w-px bg-[#1B29FF]/40" />
             </div>
           </div>
 
-          {/* Info about the vault */}
-          <div className="p-3 bg-[#F7F7F2] rounded-lg">
-            <div className="flex items-start gap-2">
-              <div className="w-6 h-6 rounded-full bg-gradient-to-br from-[#627EEA] to-[#8A9FF9] flex items-center justify-center flex-shrink-0">
-                <span className="text-white text-[10px] font-medium">Ξ</span>
+          {/* Protocol info */}
+          <div className="p-3 bg-[#1B29FF]/5 border border-[#1B29FF]/10">
+            <div className="flex items-start gap-3">
+              <div className="w-6 h-6 rounded-sm bg-gradient-to-br from-[#627EEA] to-[#8A9FF9] flex items-center justify-center flex-shrink-0">
+                <span className="text-white text-[10px] font-mono font-medium">
+                  Ξ
+                </span>
               </div>
               <div>
-                <p className="text-[13px] font-medium text-[#101010]">
-                  Super OETH by Origin Protocol
+                <p className="font-mono text-[12px] font-medium text-[#101010]">
+                  wsuperOETHb (ERC4626)
                 </p>
-                <p className="text-[11px] text-[#101010]/60 mt-0.5">
-                  ETH staking yield + DeFi strategies
+                <p className="font-mono text-[10px] text-[#101010]/50 mt-0.5">
+                  Wrapped Super OETH • Staking + LST Strategies
                 </p>
               </div>
             </div>
@@ -1946,38 +2000,44 @@ export function DepositEarnCard({
         </div>
 
         {/* BOTTOM CARD: ETH Deposit via Zapper */}
-        <div className="bg-[#F7F7F2] border border-[#101010]/10 p-5 rounded-[12px]">
-          <div className="flex justify-between items-center mb-4">
+        <div className="bg-white border border-[#1B29FF]/30 p-4 relative">
+          <div className="flex justify-between items-center mb-3">
             <div>
-              <h3 className="text-[14px] font-medium text-[#101010]">
-                Deposit ETH
-              </h3>
-              <p className="text-[12px] text-[#101010]/60 mt-0.5">
-                Available: {displayBalance} ETH
+              <p className="font-mono uppercase tracking-[0.14em] text-[11px] text-[#1B29FF] mb-1">
+                INPUT::ETH_DEPOSIT
+              </p>
+              <p className="font-mono text-[20px] tabular-nums text-[#101010]">
+                {displayBalance}{' '}
+                <span className="text-[12px] text-[#1B29FF]">ETH</span>
               </p>
             </div>
           </div>
 
           {/* Deposit Input & Button */}
-          <div className="space-y-3">
+          <div className="space-y-3 relative">
+            <label className="font-mono text-[12px] text-[#1B29FF] uppercase">
+              AMOUNT::DEPOSIT
+            </label>
             <div className="relative">
               <input
                 type="number"
                 placeholder="0.0"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
-                className="w-full h-12 px-4 bg-white border border-[#101010]/10 rounded-md focus:border-[#1B29FF] focus:outline-none text-[15px] transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                className="w-full h-12 px-4 font-mono bg-white border border-[#1B29FF]/30 focus:border-[#1B29FF] focus:outline-none text-[15px] transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                 step="0.000001"
                 min="0"
                 max={availableBalance}
                 disabled={assetBalance === 0n}
               />
               <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
-                <span className="text-[12px] text-[#101010]/50">ETH</span>
+                <span className="font-mono text-[11px] text-[#1B29FF]">
+                  ETH
+                </span>
                 <button
                   type="button"
                   onClick={handleMax}
-                  className="text-[11px] text-[#1B29FF] font-medium hover:text-[#1420CC] transition-colors"
+                  className="font-mono px-1.5 py-0.5 text-[10px] text-[#1B29FF] border border-[#1B29FF]/30 hover:border-[#1B29FF] transition-colors"
                   disabled={assetBalance === 0n}
                 >
                   MAX
@@ -1994,7 +2054,7 @@ export function DepositEarnCard({
                 assetBalance === 0n ||
                 transactionState.step === 'checking'
               }
-              className="w-full h-11 bg-[#1B29FF] hover:bg-[#1420CC] text-white font-medium rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              className="w-full h-11 font-mono uppercase bg-white border-2 border-[#1B29FF] text-[#1B29FF] hover:bg-[#1B29FF] hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {transactionState.step === 'checking' ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -2002,28 +2062,26 @@ export function DepositEarnCard({
                 <ArrowDownToLine className="h-4 w-4" />
               )}
               {transactionState.step === 'checking'
-                ? 'Checking...'
-                : 'Deposit ETH'}
+                ? '[ CHECKING... ]'
+                : '[ EXECUTE DEPOSIT ]'}
             </button>
           </div>
 
           {/* No balance warning */}
           {assetBalance === 0n && (
-            <div className="mt-3 p-3 bg-[#FFF7ED] border border-[#F59E0B]/20 rounded-lg">
+            <div className="mt-3 p-3 bg-[#F59E0B]/5 border border-[#F59E0B]/30">
               <div className="flex gap-2 items-start">
                 <AlertCircle className="h-4 w-4 text-[#F59E0B] flex-shrink-0 mt-0.5" />
-                <p className="text-[12px] text-[#101010]/70">
-                  No ETH balance available. Send ETH to your account to get
-                  started.
+                <p className="font-mono text-[11px] text-[#F59E0B]">
+                  WARN: BALANCE_ETH = 0
                 </p>
               </div>
             </div>
           )}
 
           {/* Help text */}
-          <p className="text-[11px] text-center text-[#101010]/50 mt-3">
-            Your ETH will be converted to wsuperOETHb and start earning yield
-            immediately
+          <p className="font-mono text-[10px] text-center text-[#1B29FF]/60 mt-3">
+            ROUTE: ETH → ZAPPER → wsuperOETHb • YIELD_ACCRUAL: IMMEDIATE
           </p>
         </div>
       </div>
