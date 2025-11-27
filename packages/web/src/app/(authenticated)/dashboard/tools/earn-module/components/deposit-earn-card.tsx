@@ -187,81 +187,79 @@ export function DepositEarnCard({
     setAmount('');
     setDepositAmount('');
     setTransactionState({ step: 'idle' });
-    // Reset balance state to force fresh fetch
-    setAssetBalance(0n);
-    setHasInitialLoad(false);
-    setIsLoadingBalance(true);
+    // tRPC queries will automatically refetch when safeAddress/chainId changes
   }, [vaultAddress]);
 
-  // Fetch asset balance (USDC or ETH)
-  const [assetBalance, setAssetBalance] = useState<bigint>(0n);
-  const [isLoadingBalance, setIsLoadingBalance] = useState(true);
-  const [hasInitialLoad, setHasInitialLoad] = useState(false);
+  // Fetch native ETH balance via tRPC (same as checking-actions-card)
+  const { data: nativeBalanceData, refetch: refetchNativeBalance } =
+    trpc.earn.getNativeBalance.useQuery(
+      {
+        safeAddress: safeAddress,
+        chainId: chainId,
+      },
+      {
+        enabled: !!safeAddress && isNativeAsset,
+        staleTime: 30000,
+        refetchInterval: 30000,
+      },
+    );
 
-  // Fetch balance function - wrapped in useCallback to avoid stale closures
-  const fetchBalance = useCallback(async () => {
-    if (!safeAddress) return;
+  // Fetch ERC20 balance via tRPC for non-native assets
+  const { data: erc20BalanceData, refetch: refetchErc20Balance } =
+    trpc.earn.getSafeBalanceOnChain.useQuery(
+      {
+        safeAddress: safeAddress,
+        chainId: chainId,
+      },
+      {
+        enabled: !!safeAddress && !isNativeAsset && !isCrossChain,
+        staleTime: 30000,
+        refetchInterval: 30000,
+      },
+    );
 
-    try {
-      setIsLoadingBalance(true);
+  // Compute assetBalance from tRPC data
+  const assetBalance = isNativeAsset
+    ? nativeBalanceData
+      ? BigInt(nativeBalanceData.balance)
+      : 0n
+    : erc20BalanceData
+      ? BigInt(erc20BalanceData.balance)
+      : 0n;
 
-      console.log('[DepositEarnCard] Fetching balance:', {
-        safeAddress,
-        isNativeAsset,
-        assetAddress,
-        assetSymbol,
-        vaultAddress,
-        resolvedZapper,
-      });
+  const isLoadingBalance = isNativeAsset
+    ? !nativeBalanceData && !!safeAddress
+    : !erc20BalanceData && !!safeAddress && !isCrossChain;
 
-      let balance: bigint;
-      if (isNativeAsset) {
-        // Fetch native ETH balance
-        balance = await publicClient.getBalance({
-          address: safeAddress,
-        });
-        console.log(
-          '[DepositEarnCard] Native ETH balance:',
-          balance.toString(),
-        );
-      } else {
-        // Fetch ERC20 token balance (e.g., USDC)
-        balance = await publicClient.readContract({
-          address: assetAddress as Address,
-          abi: erc20Abi,
-          functionName: 'balanceOf',
-          args: [safeAddress],
-        });
-        console.log('[DepositEarnCard] ERC20 balance:', balance.toString());
-      }
-      setAssetBalance(balance);
-      setHasInitialLoad(true);
-    } catch (error) {
-      console.error('[DepositEarnCard] Error fetching balance:', error);
-      setAssetBalance(0n);
-      setHasInitialLoad(true);
-    } finally {
-      setIsLoadingBalance(false);
-    }
+  // Debug logging
+  useEffect(() => {
+    console.log('[DepositEarnCard] Balance state:', {
+      safeAddress,
+      isNativeAsset,
+      chainId,
+      nativeBalanceData,
+      erc20BalanceData,
+      assetBalance: assetBalance.toString(),
+      isLoadingBalance,
+    });
   }, [
     safeAddress,
     isNativeAsset,
-    assetAddress,
-    assetSymbol,
-    vaultAddress,
-    resolvedZapper,
-    publicClient,
+    chainId,
+    nativeBalanceData,
+    erc20BalanceData,
+    assetBalance,
+    isLoadingBalance,
   ]);
 
-  // Fetch balance on mount and after transactions
-  // Also refetch when asset type changes (e.g., switching from USDC vault to ETH vault)
-  useEffect(() => {
-    fetchBalance();
-    const interval = setInterval(fetchBalance, 30000); // Poll every 30 seconds instead of 10
-    return () => {
-      clearInterval(interval);
-    };
-  }, [fetchBalance]);
+  // Refetch function for after transactions
+  const fetchBalance = useCallback(async () => {
+    if (isNativeAsset) {
+      await refetchNativeBalance();
+    } else {
+      await refetchErc20Balance();
+    }
+  }, [isNativeAsset, refetchNativeBalance, refetchErc20Balance]);
 
   // tRPC utils for refetching
   const trpcUtils = trpc.useUtils();
@@ -1202,8 +1200,8 @@ export function DepositEarnCard({
     setTransactionState({ step: 'idle' });
   };
 
-  // Only show loading skeleton on very first load, never on data refetches
-  const showSkeleton = isLoadingBalance && !hasInitialLoad;
+  // Only show loading skeleton when we don't have any data yet
+  const showSkeleton = isLoadingBalance;
 
   const currentAllowance = allowanceData ? BigInt(allowanceData.allowance) : 0n;
   const availableBalance = formatUnits(assetBalance, assetDecimals);
