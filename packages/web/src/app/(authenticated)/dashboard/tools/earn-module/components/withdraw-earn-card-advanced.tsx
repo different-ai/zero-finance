@@ -29,7 +29,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Loader2, ArrowDown } from 'lucide-react';
+import { Loader2, ArrowDown, CheckCircle, X } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -73,6 +73,11 @@ export function WithdrawEarnCardAdvanced({
   );
   const [vaultInfo, setVaultInfo] = useState<VaultInfo | null>(null);
   const [isLoadingVaultInfo, setIsLoadingVaultInfo] = useState(false);
+  const [successInfo, setSuccessInfo] = useState<{
+    show: boolean;
+    amount: string;
+    txHash: string;
+  } | null>(null);
 
   const { ready: isRelayReady, send: sendTxViaRelay } =
     useSafeRelay(safeAddress);
@@ -260,14 +265,23 @@ export function WithdrawEarnCardAdvanced({
       toast.info('Submitting redeem transaction...', { id: 'withdraw-tx' });
       const userOpHash = await sendTxViaRelay(transactions, 600_000n); // Increased gas limit
       setTxHash(userOpHash);
-      toast.success('Redeem transaction submitted. Waiting confirmation...', {
+      toast.success('Redeem transaction submitted.', {
         id: 'withdraw-tx',
-        description: `UserOp: ${userOpHash}`,
       });
 
+      // Show success banner with the withdrawn amount
+      setSuccessInfo({
+        show: true,
+        amount: withdrawAmount,
+        txHash: userOpHash,
+      });
+
+      // Clear the input
+      setWithdrawAmount('');
+
+      // Refetch after a delay
       await new Promise((resolve) => setTimeout(resolve, 15000));
       refetchVaultInfoTRPC();
-      toast.success('Vault balances potentially updated. Refetching data.');
     } catch (error: any) {
       console.error('Failed to send redeem transaction:', error);
       // Try to provide a more specific error if available from simulateContract or vault revert
@@ -398,6 +412,44 @@ export function WithdrawEarnCardAdvanced({
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
+        {/* Success Banner */}
+        {successInfo?.show && (
+          <Alert className="bg-green-50 border-green-200 relative">
+            <CheckCircle className="h-4 w-4 text-green-600" />
+            <button
+              onClick={() => setSuccessInfo(null)}
+              className="absolute top-2 right-2 text-green-600 hover:text-green-800 transition-colors"
+              aria-label="Dismiss"
+            >
+              <X className="h-4 w-4" />
+            </button>
+            <AlertTitle className="text-green-900">
+              Withdrawal Complete
+            </AlertTitle>
+            <AlertDescription className="text-green-700">
+              <div className="space-y-1">
+                <p>
+                  Successfully withdrew {successInfo.amount}{' '}
+                  {withdrawType === 'assets' ? 'USDC' : 'shares'}
+                </p>
+                <p className="text-sm text-green-600">
+                  Your balance may take up to 60 seconds to update.
+                </p>
+                {successInfo.txHash && (
+                  <a
+                    href={`https://basescan.org/tx/${successInfo.txHash}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-blue-500 hover:underline inline-block mt-1"
+                  >
+                    View transaction on Basescan
+                  </a>
+                )}
+              </div>
+            </AlertDescription>
+          </Alert>
+        )}
+
         {isOwner === false && (
           <Alert className="bg-red-50 border-red-200">
             <AlertTitle className="text-red-900">Access Restricted</AlertTitle>
@@ -494,19 +546,7 @@ export function WithdrawEarnCardAdvanced({
           </div>
         </div>
 
-        {txHash && (
-          <div className="mt-2">
-            <p className="text-sm">Transaction submitted:</p>
-            <a
-              href={`https://basescan.org/tx/${txHash}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-xs text-blue-500 hover:underline"
-            >
-              {txHash} (View on Basescan)
-            </a>
-          </div>
-        )}
+        {/* Transaction hash shown in success banner above */}
       </CardContent>
       <CardFooter className="flex flex-col space-y-2">
         <Button
