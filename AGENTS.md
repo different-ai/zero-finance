@@ -45,9 +45,54 @@ Use **Exa MCP tools** for technical implementation when:
 - **Recent best practices** - Latest patterns, security considerations, or performance optimizations
 - **Visual inspiration** - Design systems, UI patterns, and component examples
 
-Primary tools: `exa_get_code_context_exa` for programming context, `exa_web_search_exa` for general technical research.
+**Available Exa Tools** (use these instead of WebFetch for external research):
+
+| Tool                                                      | Use Case                                                                      |
+| --------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| `exa_web_search_exa`                                      | General web search - find documentation, articles, tutorials                  |
+| `exa_crawling_exa`                                        | Extract content from a specific URL (replaces WebFetch for scraping)          |
+| `exa_get_code_context_exa`                                | **Cutting-edge API implementations** - SDK docs, library usage, code examples |
+| `exa_company_research_exa`                                | Research companies, competitors, or partners                                  |
+| `exa_linkedin_search_exa`                                 | Find professional profiles or company pages                                   |
+| `exa_deep_researcher_start` + `exa_deep_researcher_check` | Complex multi-source research tasks                                           |
+
+**When to use each tool**:
+
+- **`exa_crawling_exa`** - When you have a specific URL to extract content from (e.g., Basescan contract page, GitHub README, documentation page). This replaces the built-in WebFetch tool.
+- **`exa_web_search_exa`** - When searching for topics, finding documentation, or discovering relevant resources without a specific URL.
+- **`exa_get_code_context_exa`** - **Critical for cutting-edge implementations**. Use for:
+  - New SDK versions (e.g., "Safe SDK 5.0 executeTransaction")
+  - Blockchain library patterns (e.g., "viem encodeFunctionData multicall")
+  - DeFi protocol integrations (e.g., "Aerodrome SlipStream exactInputSingle")
+  - Any API/library that was released recently or is rapidly evolving
 
 **Workflow**: Check DESIGN-LANGUAGE.md first for UI/visual decisions, Notion for product/messaging context, then Exa for technical implementation details not well-covered in existing codebase or documentation.
+
+### Basescan - On-chain Transaction Analysis
+
+Use **Basescan** (basescan.org) to investigate on-chain activity when:
+
+- **Transaction debugging** - Understanding what happened in a failed or unexpected transaction
+- **Token flow tracing** - Following token transfers, swaps, and contract interactions
+- **Contract verification** - Checking contract source code, ABIs, and deployment details
+- **Balance verification** - Confirming actual on-chain balances vs UI display
+
+**Key URLs**:
+
+- Transaction: `https://basescan.org/tx/{txHash}`
+- Address: `https://basescan.org/address/{address}`
+- Token: `https://basescan.org/token/{tokenAddress}`
+
+**Common Token Addresses on Base**:
+
+- USDC: `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913`
+- WETH: `0x4200000000000000000000000000000000000006`
+- Super OETH: `0xDBFeFD2e8460a6Ee4955A68582F85708BAEA60A3`
+- wsuperOETHb (wrapped): `0x7FcD174E80f264448ebeE8c88a7C4476AAF58Ea6`
+
+**User Safe Address** (for debugging): `0x954A329e1e59101DF529CC54A54666A0b36Cae22`
+
+When investigating transactions, use `exa_crawling_exa` to scrape Basescan pages and analyze transaction logs, internal transactions, and token transfers to understand the full picture.
 
 # Repository Guidelines
 
