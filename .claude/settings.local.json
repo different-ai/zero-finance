@@ -28,7 +28,9 @@
       "Bash(scripts/clean-arbitrum-safe.ts )",
       "Bash(visualizations/set-visualization.html)",
       "Bash(git commit:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(find:*)",
+      "Bash(grep:*)"
     ],
     "deny": [],
     "ask": []

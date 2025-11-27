@@ -210,6 +210,7 @@ export const userRouter = router({
         eq(userSafes.userDid, privyDid),
         eq(userSafes.safeType, 'primary'),
         eq(userSafes.workspaceId, workspaceId),
+        eq(userSafes.chainId, 8453), // Base chain
       ),
       columns: {
         safeAddress: true,
