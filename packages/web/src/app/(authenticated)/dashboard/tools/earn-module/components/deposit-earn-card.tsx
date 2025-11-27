@@ -472,13 +472,16 @@ export function DepositEarnCard({
   } = trpc.earn.checkAllowance.useQuery(
     {
       tokenAddress: assetAddress,
-      ownerAddress: safeAddress,
+      ownerAddress: effectiveSafeAddress, // Use effectiveSafeAddress for correct Safe
       spenderAddress: vaultAddress,
     },
     {
       // Only check allowance on Base for same-chain ERC20 tokens (not native ETH)
       enabled:
-        !!safeAddress && !!vaultAddress && !isCrossChain && !isNativeAsset,
+        !!effectiveSafeAddress &&
+        !!vaultAddress &&
+        !isCrossChain &&
+        !isNativeAsset,
       refetchInterval: 30000, // Reduced from 10s to 30s
       staleTime: 20000, // Consider data fresh for 20s
     },
@@ -645,7 +648,7 @@ export function DepositEarnCard({
           address: assetAddress as Address,
           abi: erc20Abi,
           functionName: 'allowance',
-          args: [safeAddress, vaultAddress],
+          args: [effectiveSafeAddress, vaultAddress],
         });
 
         console.log('New allowance after approval:', newAllowance.toString());

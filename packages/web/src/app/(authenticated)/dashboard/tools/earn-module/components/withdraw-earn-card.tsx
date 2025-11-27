@@ -91,20 +91,31 @@ export function WithdrawEarnCard({
   // Determine if this is a cross-chain withdrawal (vault on different chain than Base)
   const isCrossChain = chainId !== SUPPORTED_CHAINS.BASE;
 
-  // Fetch user's multi-chain positions to get the target Safe address
+  // Fetch user's multi-chain positions to get the correct Safe addresses
+  // IMPORTANT: Always fetch - needed for Base chain too, not just cross-chain
+  // The safeAddress prop may come from workspace-scoped query which can be wrong
   const { data: multiChainPositions, isLoading: isLoadingPositions } =
     trpc.earn.getMultiChainPositions.useQuery(undefined, {
-      enabled: isCrossChain,
+      enabled: true, // Always fetch to get authoritative Safe addresses
+      staleTime: 30000,
     });
 
-  // Find the Safe address for the target chain
-  const targetSafeAddress = isCrossChain
-    ? (multiChainPositions?.safes.find((s) => s.chainId === chainId)
-        ?.address as Address | undefined)
-    : safeAddress;
+  // Get the Safe address for the target chain from multiChainPositions
+  // This is the authoritative source (user-scoped, not workspace-scoped)
+  const baseSafeAddress = multiChainPositions?.safes.find(
+    (s) => s.chainId === SUPPORTED_CHAINS.BASE,
+  )?.address as Address | undefined;
 
-  // Use the target chain's Safe address for relay operations
-  const effectiveSafeAddress = targetSafeAddress || safeAddress;
+  const targetSafeAddress = multiChainPositions?.safes.find(
+    (s) => s.chainId === chainId,
+  )?.address as Address | undefined;
+
+  // Use the correct Safe address: prefer multiChainPositions, fallback to prop
+  const effectiveSafeAddress = (
+    isCrossChain
+      ? targetSafeAddress || safeAddress
+      : baseSafeAddress || safeAddress
+  ) as Address;
 
   const { ready: isRelayReady, send: sendTxViaRelay } = useSafeRelay(
     effectiveSafeAddress,
