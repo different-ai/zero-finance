@@ -21,6 +21,7 @@ import {
   Euro,
   Building2,
   AlertCircle,
+  Coins,
 } from 'lucide-react';
 import {
   formatUnits,
@@ -43,8 +44,53 @@ import { SAFE_ABI } from '@/lib/sponsor-tx/core';
 import { useSafeRelay } from '@/hooks/use-safe-relay';
 import { MetaTransactionData } from '@safe-global/safe-core-sdk-types';
 import { type UserFundingSourceDisplayData } from '@/actions/get-user-funding-sources';
-import { USDC_ADDRESS } from '@/lib/constants';
+import {
+  USDC_ADDRESS,
+  WETH_ADDRESS,
+  WETH_DECIMALS,
+  USDC_DECIMALS,
+} from '@/lib/constants';
 import { Combobox, type ComboboxOption } from '@/components/ui/combo-box';
+import { useBimodal, BlueprintGrid, Crosshairs } from '@/components/ui/bimodal';
+
+// Crypto asset configuration for technical mode transfers
+type CryptoAsset = 'usdc' | 'weth' | 'eth';
+
+interface CryptoAssetConfig {
+  symbol: string;
+  name: string;
+  address: Address | null; // null for native ETH
+  decimals: number;
+  icon: string;
+  isNative: boolean;
+}
+
+const CRYPTO_ASSETS: Record<CryptoAsset, CryptoAssetConfig> = {
+  usdc: {
+    symbol: 'USDC',
+    name: 'USD Coin',
+    address: USDC_ADDRESS as Address,
+    decimals: USDC_DECIMALS,
+    icon: '💵',
+    isNative: false,
+  },
+  weth: {
+    symbol: 'WETH',
+    name: 'Wrapped Ether',
+    address: WETH_ADDRESS as Address,
+    decimals: WETH_DECIMALS,
+    icon: '⟠',
+    isNative: false,
+  },
+  eth: {
+    symbol: 'ETH',
+    name: 'Ether',
+    address: null,
+    decimals: 18,
+    icon: '⟠',
+    isNative: true,
+  },
+};
 
 // Types remain the same...
 interface CreateOfframpTransferInput {
@@ -463,6 +509,7 @@ interface OffRampFormValues {
   iban?: string;
   bic?: string;
   cryptoAddress?: string;
+  cryptoAsset?: CryptoAsset;
 }
 
 const erc20AbiBalanceOf = [
@@ -553,6 +600,8 @@ function SimplifiedOffRampReal({
   const [loadingMessage, setLoadingMessage] = useState('Processing...');
   const [error, setError] = useState<string | null>(null);
   const [usdcBalance, setUsdcBalance] = useState<string | null>(null);
+  const [wethBalance, setWethBalance] = useState<string | null>(null);
+  const [ethBalance, setEthBalance] = useState<string | null>(null);
   const [isLoadingBalance, setIsLoadingBalance] = useState(false);
   const [transferDetails, setTransferDetails] =
     useState<AlignTransferCreatedResponse | null>(null);
@@ -563,6 +612,7 @@ function SimplifiedOffRampReal({
   const [cryptoTxHash, setCryptoTxHash] = useState<string | null>(null);
 
   const { client: smartClient } = useSmartWallets();
+  const { isTechnical } = useBimodal();
 
   const { data: fetchedPrimarySafeAddress, isLoading: isLoadingSafeAddress } =
     api.settings.userSafes.getPrimarySafeAddress.useQuery();
@@ -587,8 +637,11 @@ function SimplifiedOffRampReal({
     }
   }, [fetchedPrimarySafeAddress]);
 
+  // Only default to crypto if technical mode AND no bank accounts
+  const shouldDefaultToCrypto = isTechnical && (!ibanAccount || !achAccount);
+
   const mergedDefaultValues: Partial<OffRampFormValues> = {
-    destinationType: !ibanAccount || !achAccount ? 'crypto' : 'ach',
+    destinationType: shouldDefaultToCrypto ? 'crypto' : 'ach',
     accountHolderType: 'individual',
     country: 'US',
     city: '',
@@ -596,6 +649,7 @@ function SimplifiedOffRampReal({
     streetLine2: '',
     postalCode: '',
     cryptoAddress: '',
+    cryptoAsset: 'usdc',
     amount: prefillFromInvoice?.amount || '',
     ...defaultValues,
   };
@@ -614,9 +668,26 @@ function SimplifiedOffRampReal({
 
   const destinationType = watch('destinationType');
   const accountHolderType = watch('accountHolderType');
+  const cryptoAsset = watch('cryptoAsset') || 'usdc';
+
+  // Helper to get the balance for the selected crypto asset
+  const getSelectedAssetBalance = (): string | null => {
+    switch (cryptoAsset) {
+      case 'usdc':
+        return usdcBalance;
+      case 'weth':
+        return wethBalance;
+      case 'eth':
+        return ethBalance;
+      default:
+        return usdcBalance;
+    }
+  };
+
+  const selectedAssetConfig = CRYPTO_ASSETS[cryptoAsset];
 
   useEffect(() => {
-    const fetchBalance = async () => {
+    const fetchBalances = async () => {
       if (!primarySafeAddress) return;
       setIsLoadingBalance(true);
       try {
@@ -624,21 +695,40 @@ function SimplifiedOffRampReal({
           chain: base,
           transport: http(process.env.NEXT_PUBLIC_BASE_RPC_URL),
         });
-        const balance = await publicClient.readContract({
+
+        // Fetch USDC balance
+        const usdcBal = await publicClient.readContract({
           address: USDC_BASE_ADDRESS,
           abi: erc20AbiBalanceOf,
           functionName: 'balanceOf',
           args: [primarySafeAddress],
         });
-        setUsdcBalance(formatUnits(balance as bigint, 6));
+        setUsdcBalance(formatUnits(usdcBal as bigint, USDC_DECIMALS));
+
+        // Fetch WETH balance (only in technical mode)
+        if (isTechnical) {
+          const wethBal = await publicClient.readContract({
+            address: WETH_ADDRESS as Address,
+            abi: erc20AbiBalanceOf,
+            functionName: 'balanceOf',
+            args: [primarySafeAddress],
+          });
+          setWethBalance(formatUnits(wethBal as bigint, WETH_DECIMALS));
+
+          // Fetch native ETH balance
+          const ethBal = await publicClient.getBalance({
+            address: primarySafeAddress,
+          });
+          setEthBalance(formatUnits(ethBal, 18));
+        }
       } catch (err) {
-        toast.error('Could not fetch USDC balance.');
+        toast.error('Could not fetch balances.');
       } finally {
         setIsLoadingBalance(false);
       }
     };
-    fetchBalance();
-  }, [primarySafeAddress]);
+    fetchBalances();
+  }, [primarySafeAddress, isTechnical]);
 
   const createTransferMutation = api.align.createOfframpTransfer.useMutation({
     onSuccess: (data) => {
@@ -675,7 +765,7 @@ function SimplifiedOffRampReal({
       fieldsToValidate = ['amount'];
 
       if (destinationType === 'crypto') {
-        fieldsToValidate.push('cryptoAddress');
+        fieldsToValidate.push('cryptoAddress', 'cryptoAsset');
       } else {
         fieldsToValidate.push('accountHolderType', 'bankName');
 
@@ -719,41 +809,60 @@ function SimplifiedOffRampReal({
       return;
     }
 
+    const asset = values.cryptoAsset || 'usdc';
+    const assetConfig = CRYPTO_ASSETS[asset];
+
     setIsLoading(true);
     setError(null);
     setCryptoTxHash(null);
 
     try {
-      setLoadingMessage('Preparing crypto transfer...');
+      setLoadingMessage(`Preparing ${assetConfig.symbol} transfer...`);
 
-      const valueInUnits = parseUnits(values.amount, 6);
+      const valueInUnits = parseUnits(values.amount, assetConfig.decimals);
       if (valueInUnits <= 0n) {
         throw new Error('Amount must be greater than 0.');
       }
 
-      const transferData = encodeFunctionData({
-        abi: erc20Abi,
-        functionName: 'transfer',
-        args: [values.cryptoAddress as Address, valueInUnits],
-      });
+      let transactions: MetaTransactionData[];
 
-      const transactions: MetaTransactionData[] = [
-        {
-          to: USDC_BASE_ADDRESS,
-          value: '0',
-          data: transferData,
-        },
-      ];
+      if (assetConfig.isNative) {
+        // Native ETH transfer
+        transactions = [
+          {
+            to: values.cryptoAddress as Address,
+            value: valueInUnits.toString(),
+            data: '0x',
+          },
+        ];
+      } else {
+        // ERC20 token transfer (USDC, WETH)
+        const transferData = encodeFunctionData({
+          abi: erc20Abi,
+          functionName: 'transfer',
+          args: [values.cryptoAddress as Address, valueInUnits],
+        });
+
+        transactions = [
+          {
+            to: assetConfig.address!,
+            value: '0',
+            data: transferData,
+          },
+        ];
+      }
 
       setLoadingMessage('Sending transaction...');
       const txHash = await sendWithRelay(transactions);
       setCryptoTxHash(txHash);
       setCurrentStep(2);
-      toast.success('Crypto transfer completed successfully!');
+      toast.success(`${assetConfig.symbol} transfer completed successfully!`);
     } catch (err: any) {
       const errMsg = err.message || 'An unknown error occurred.';
-      setError(`Failed to send crypto transfer: ${errMsg}`);
-      toast.error('Crypto transfer failed', { description: errMsg });
+      setError(`Failed to send ${assetConfig.symbol} transfer: ${errMsg}`);
+      toast.error(`${assetConfig.symbol} transfer failed`, {
+        description: errMsg,
+      });
     } finally {
       setIsLoading(false);
     }
@@ -1152,40 +1261,56 @@ function SimplifiedOffRampReal({
                         )}
                       </label>
 
-                      <label
-                        htmlFor="crypto"
-                        className={cn(
-                          'relative flex flex-col items-center justify-center bg-white border-2 rounded-[12px] p-4 sm:p-6 cursor-pointer transition-all',
-                          destinationType === 'crypto'
-                            ? 'border-[#1B29FF] bg-[#1B29FF]/5'
-                            : 'border-[#101010]/10 hover:bg-[#F7F7F2]/50',
-                        )}
-                      >
-                        <RadioGroupItem
-                          value="crypto"
-                          id="crypto"
-                          className="sr-only"
-                        />
-                        <div className="flex-shrink-0 w-12 h-12 bg-purple-50 rounded-full flex items-center justify-center mb-3">
-                          <Wallet
-                            className={cn(
-                              'h-6 w-6',
-                              destinationType === 'crypto'
-                                ? 'text-purple-600'
-                                : 'text-purple-400',
-                            )}
+                      {/* Crypto option - only visible in technical mode */}
+                      {isTechnical && (
+                        <label
+                          htmlFor="crypto"
+                          className={cn(
+                            'relative flex flex-col items-center justify-center border-2 rounded-sm p-4 sm:p-6 cursor-pointer transition-all overflow-hidden',
+                            destinationType === 'crypto'
+                              ? 'border-[#1B29FF] bg-white'
+                              : 'border-[#1B29FF]/20 hover:border-[#1B29FF]/40 bg-white',
+                          )}
+                        >
+                          {/* Blueprint grid for technical mode */}
+                          <BlueprintGrid className="opacity-50" />
+
+                          {/* Crosshairs */}
+                          {destinationType === 'crypto' && (
+                            <>
+                              <Crosshairs position="top-left" />
+                              <Crosshairs position="top-right" />
+                            </>
+                          )}
+
+                          <RadioGroupItem
+                            value="crypto"
+                            id="crypto"
+                            className="sr-only"
                           />
-                        </div>
-                        <span className="font-medium text-[14px] text-[#101010]">
-                          Crypto
-                        </span>
-                        <span className="text-[11px] uppercase tracking-[0.14em] text-[#101010]/60 mt-1">
-                          USDC Transfer
-                        </span>
-                        {destinationType === 'crypto' && (
-                          <Check className="absolute top-3 right-3 h-5 w-5 text-[#1B29FF]" />
-                        )}
-                      </label>
+                          <div className="relative z-10 flex flex-col items-center">
+                            <div className="flex-shrink-0 w-12 h-12 bg-[#1B29FF]/10 rounded-sm flex items-center justify-center mb-3">
+                              <Coins
+                                className={cn(
+                                  'h-6 w-6',
+                                  destinationType === 'crypto'
+                                    ? 'text-[#1B29FF]'
+                                    : 'text-[#1B29FF]/60',
+                                )}
+                              />
+                            </div>
+                            <span className="font-mono font-medium text-[14px] text-[#101010]">
+                              Crypto
+                            </span>
+                            <span className="font-mono text-[10px] uppercase tracking-wider text-[#1B29FF] mt-1">
+                              MULTI_ASSET
+                            </span>
+                          </div>
+                          {destinationType === 'crypto' && (
+                            <Check className="absolute top-3 right-3 h-5 w-5 text-[#1B29FF] z-10" />
+                          )}
+                        </label>
+                      )}
                     </RadioGroup>
                   )}
                 />
@@ -1619,94 +1744,192 @@ function SimplifiedOffRampReal({
             </div>
           )}
 
-          {/* Step 2: Crypto Transfer */}
+          {/* Step 2: Crypto Transfer - Technical/Blueprint Mode */}
           {formStep === 2 && destinationType === 'crypto' && (
             <div className="space-y-5">
-              <div className="bg-[#F7F7F2] border border-[#101010]/10 rounded-[12px] p-4 sm:p-5">
-                <Label
-                  htmlFor="amount"
-                  className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60 mb-3 block"
-                >
-                  TRANSFER AMOUNT
-                </Label>
-                <div className="relative">
-                  <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#101010]/40" />
-                  <Input
-                    id="amount"
-                    {...register('amount', {
-                      required: 'Amount is required',
-                      validate: (value) => {
-                        const num = parseFloat(value);
-                        if (isNaN(num) || num <= 0)
-                          return 'Please enter a valid positive amount.';
-                        const availableBalance =
-                          maxBalance !== undefined
-                            ? maxBalance
-                            : usdcBalance
-                              ? parseFloat(usdcBalance)
-                              : null;
-                        if (availableBalance !== null && num > availableBalance)
-                          return 'Amount exceeds your available balance.';
-                        return true;
-                      },
-                    })}
-                    placeholder="0.00"
-                    className="pl-10 text-[20px] font-semibold tabular-nums h-12 border-[#101010]/10 bg-white"
-                  />
-                  {(maxBalance !== undefined ? maxBalance : usdcBalance) !==
-                    null && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const balance =
-                          maxBalance !== undefined
-                            ? maxBalance.toString()
-                            : usdcBalance;
-                        if (balance) {
-                          setValue('amount', balance, {
-                            shouldValidate: true,
-                          });
-                        }
-                      }}
-                      className="absolute inset-y-0 right-0 pr-3 flex items-center text-[12px] text-[#1B29FF] hover:text-[#1420CC]"
-                    >
-                      Max:{' '}
-                      {maxBalance !== undefined
-                        ? maxBalance.toFixed(2)
-                        : parseFloat(usdcBalance || '0').toFixed(4)}
-                    </button>
-                  )}
+              {/* Asset Selection - Blueprint Style */}
+              <div className="relative bg-white border border-[#1B29FF]/20 rounded-sm overflow-hidden">
+                <BlueprintGrid className="opacity-30" />
+                <Crosshairs position="top-left" />
+                <Crosshairs position="top-right" />
+
+                <div className="relative z-10">
+                  {/* Header */}
+                  <div className="flex justify-between items-center px-4 py-2 border-b border-[#1B29FF]/10 bg-[#F7F7F2]/50">
+                    <span className="font-mono text-[10px] text-[#1B29FF] tracking-wider uppercase">
+                      SELECT_ASSET
+                    </span>
+                    <span className="font-mono text-[10px] text-[#101010]/50">
+                      CHAIN::BASE
+                    </span>
+                  </div>
+
+                  {/* Asset Grid */}
+                  <div className="p-4">
+                    <Controller
+                      control={control}
+                      name="cryptoAsset"
+                      render={({ field }) => (
+                        <RadioGroup
+                          onValueChange={field.onChange}
+                          value={field.value || 'usdc'}
+                          className="grid grid-cols-3 gap-3"
+                        >
+                          {(
+                            Object.entries(CRYPTO_ASSETS) as [
+                              CryptoAsset,
+                              CryptoAssetConfig,
+                            ][]
+                          ).map(([key, asset]) => {
+                            const balance =
+                              key === 'usdc'
+                                ? usdcBalance
+                                : key === 'weth'
+                                  ? wethBalance
+                                  : ethBalance;
+                            const isSelected = field.value === key;
+
+                            return (
+                              <label
+                                key={key}
+                                htmlFor={`asset-${key}`}
+                                className={cn(
+                                  'relative flex flex-col items-center justify-center border rounded-sm p-3 cursor-pointer transition-all',
+                                  isSelected
+                                    ? 'border-[#1B29FF] bg-[#1B29FF]/5'
+                                    : 'border-[#1B29FF]/20 hover:border-[#1B29FF]/40 bg-white',
+                                )}
+                              >
+                                <RadioGroupItem
+                                  value={key}
+                                  id={`asset-${key}`}
+                                  className="sr-only"
+                                />
+                                <span className="text-xl mb-1">
+                                  {asset.icon}
+                                </span>
+                                <span className="font-mono text-[12px] font-medium text-[#101010]">
+                                  {asset.symbol}
+                                </span>
+                                <span className="font-mono text-[10px] text-[#101010]/50 tabular-nums">
+                                  {balance
+                                    ? parseFloat(balance).toFixed(4)
+                                    : '0.0000'}
+                                </span>
+                                {isSelected && (
+                                  <Check className="absolute top-1 right-1 h-3 w-3 text-[#1B29FF]" />
+                                )}
+                              </label>
+                            );
+                          })}
+                        </RadioGroup>
+                      )}
+                    />
+                  </div>
                 </div>
-                {errors.amount && (
-                  <p className="text-[12px] text-red-500 mt-2">
-                    {errors.amount.message}
-                  </p>
-                )}
               </div>
 
-              <div className="bg-white border border-[#101010]/10 rounded-[12px] p-4 sm:p-5">
-                <Label
-                  htmlFor="cryptoAddress"
-                  className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60 mb-3 block"
-                >
-                  RECIPIENT ADDRESS (BASE NETWORK)
-                </Label>
-                <Input
-                  id="cryptoAddress"
-                  {...register('cryptoAddress', {
-                    required: 'Recipient address is required.',
-                    validate: (value) =>
-                      (value && isAddress(value as string)) ||
-                      'Invalid wallet address format.',
-                  })}
-                  placeholder="0x..."
-                  className="h-12 border-[#101010]/10 font-mono text-[13px]"
-                />
-                {errors.cryptoAddress && (
-                  <p className="text-[12px] text-red-500 mt-2">
-                    {errors.cryptoAddress.message}
-                  </p>
-                )}
+              {/* Amount Input - Blueprint Style */}
+              <div className="relative bg-white border border-[#1B29FF]/20 rounded-sm overflow-hidden">
+                <BlueprintGrid className="opacity-30" />
+
+                <div className="relative z-10">
+                  <div className="flex justify-between items-center px-4 py-2 border-b border-[#1B29FF]/10 bg-[#F7F7F2]/50">
+                    <span className="font-mono text-[10px] text-[#1B29FF] tracking-wider uppercase">
+                      AMOUNT::{selectedAssetConfig.symbol}
+                    </span>
+                    <span className="font-mono text-[10px] text-[#101010]/50">
+                      DECIMALS::{selectedAssetConfig.decimals}
+                    </span>
+                  </div>
+
+                  <div className="p-4">
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 font-mono text-[12px] text-[#1B29FF]">
+                        {selectedAssetConfig.symbol}
+                      </span>
+                      <Input
+                        id="amount"
+                        {...register('amount', {
+                          required: 'Amount is required',
+                          validate: (value) => {
+                            const num = parseFloat(value);
+                            if (isNaN(num) || num <= 0)
+                              return 'Please enter a valid positive amount.';
+                            const availableBalance = getSelectedAssetBalance();
+                            if (
+                              availableBalance !== null &&
+                              num > parseFloat(availableBalance)
+                            )
+                              return 'Amount exceeds your available balance.';
+                            return true;
+                          },
+                        })}
+                        placeholder="0.00"
+                        className="pl-16 text-[20px] font-mono font-semibold tabular-nums h-12 border-[#1B29FF]/20 bg-white rounded-sm"
+                      />
+                      {getSelectedAssetBalance() !== null && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const balance = getSelectedAssetBalance();
+                            if (balance) {
+                              setValue('amount', balance, {
+                                shouldValidate: true,
+                              });
+                            }
+                          }}
+                          className="absolute inset-y-0 right-0 pr-3 flex items-center font-mono text-[11px] text-[#1B29FF] hover:text-[#1420CC]"
+                        >
+                          MAX::
+                          {parseFloat(getSelectedAssetBalance() || '0').toFixed(
+                            4,
+                          )}
+                        </button>
+                      )}
+                    </div>
+                    {errors.amount && (
+                      <p className="font-mono text-[11px] text-red-500 mt-2">
+                        {errors.amount.message}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Recipient Address - Blueprint Style */}
+              <div className="relative bg-white border border-[#1B29FF]/20 rounded-sm overflow-hidden">
+                <BlueprintGrid className="opacity-30" />
+
+                <div className="relative z-10">
+                  <div className="flex justify-between items-center px-4 py-2 border-b border-[#1B29FF]/10 bg-[#F7F7F2]/50">
+                    <span className="font-mono text-[10px] text-[#1B29FF] tracking-wider uppercase">
+                      DESTINATION_ADDRESS
+                    </span>
+                    <span className="font-mono text-[10px] text-[#101010]/50">
+                      FORMAT::EVM
+                    </span>
+                  </div>
+
+                  <div className="p-4">
+                    <Input
+                      id="cryptoAddress"
+                      {...register('cryptoAddress', {
+                        required: 'Recipient address is required.',
+                        validate: (value) =>
+                          (value && isAddress(value as string)) ||
+                          'Invalid wallet address format.',
+                      })}
+                      placeholder="0x..."
+                      className="h-12 border-[#1B29FF]/20 font-mono text-[13px] rounded-sm"
+                    />
+                    {errors.cryptoAddress && (
+                      <p className="font-mono text-[11px] text-red-500 mt-2">
+                        {errors.cryptoAddress.message}
+                      </p>
+                    )}
+                  </div>
+                </div>
               </div>
 
               <div className="flex gap-3">
@@ -1714,17 +1937,17 @@ function SimplifiedOffRampReal({
                   type="button"
                   onClick={handlePreviousStep}
                   variant="outline"
-                  className="flex-1 h-11 border-[#101010]/10 hover:bg-[#F7F7F2]/50"
+                  className="flex-1 h-11 border-[#1B29FF]/20 hover:bg-[#1B29FF]/5 font-mono rounded-sm"
                 >
                   <ArrowLeft className="mr-2 h-4 w-4" />
-                  Back
+                  BACK
                 </Button>
                 <Button
                   type="button"
                   onClick={handleNextStep}
-                  className="flex-1 bg-[#1B29FF] hover:bg-[#1420CC] text-white h-11 text-[14px] font-medium"
+                  className="flex-1 bg-[#1B29FF] hover:bg-[#1420CC] text-white h-11 text-[14px] font-mono font-medium rounded-sm"
                 >
-                  Continue
+                  CONTINUE
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </div>
@@ -1755,23 +1978,48 @@ function SimplifiedOffRampReal({
                   </p>
                   <div className="space-y-3">
                     <div className="flex justify-between items-center">
-                      <span className="text-[13px] text-[#101010]/60">
-                        Type
+                      <span
+                        className={cn(
+                          'text-[13px] text-[#101010]/60',
+                          destinationType === 'crypto' &&
+                            'font-mono text-[11px]',
+                        )}
+                      >
+                        {destinationType === 'crypto' ? 'TYPE' : 'Type'}
                       </span>
-                      <span className="text-[13px] font-medium text-[#101010]">
+                      <span
+                        className={cn(
+                          'text-[13px] font-medium text-[#101010]',
+                          destinationType === 'crypto' && 'font-mono',
+                        )}
+                      >
                         {destinationType === 'ach'
                           ? 'ACH transfer'
                           : destinationType === 'iban'
                             ? 'SEPA transfer'
-                            : 'Crypto transfer'}
+                            : `${selectedAssetConfig.symbol} Transfer`}
                       </span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-[13px] text-[#101010]/60">
-                        Amount
+                      <span
+                        className={cn(
+                          'text-[13px] text-[#101010]/60',
+                          destinationType === 'crypto' &&
+                            'font-mono text-[11px]',
+                        )}
+                      >
+                        {destinationType === 'crypto' ? 'AMOUNT' : 'Amount'}
                       </span>
-                      <span className="text-[18px] font-semibold tabular-nums text-[#101010]">
-                        {watch('amount')} USDC
+                      <span
+                        className={cn(
+                          'text-[18px] font-semibold tabular-nums text-[#101010]',
+                          destinationType === 'crypto' && 'font-mono',
+                        )}
+                      >
+                        {watch('amount')}{' '}
+                        {destinationType === 'crypto'
+                          ? selectedAssetConfig.symbol
+                          : 'USDC'}
                       </span>
                     </div>
 
