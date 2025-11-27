@@ -28,21 +28,21 @@ import {
 } from '@/lib/safe-multi-chain';
 
 /**
- * Get all Safes for a user across all chains within a workspace
- * @param userDid - The user's Privy DID
- * @param workspaceId - The workspace ID (REQUIRED for security)
+ * Get all Safes within a workspace across all chains.
+ * In a shared workspace, all members can see the workspace's Safes.
+ *
+ * @param userDid - The user's Privy DID (used for orphan migration, not primary filter)
+ * @param workspaceId - The workspace ID (REQUIRED - primary filter for security)
  * @param safeType - Optional filter by safe type
- * @returns Array of Safe records
+ * @returns Array of Safe records belonging to the workspace
  */
 export async function getUserSafes(
   userDid: string,
   workspaceId: string,
   safeType?: 'primary' | 'tax' | 'liquidity' | 'yield',
 ): Promise<UserSafe[]> {
-  const conditions = [
-    eq(userSafes.userDid, userDid),
-    eq(userSafes.workspaceId, workspaceId),
-  ];
+  // Query by workspace only - all workspace members should see workspace Safes
+  const conditions = [eq(userSafes.workspaceId, workspaceId)];
 
   if (safeType) {
     conditions.push(eq(userSafes.safeType, safeType));
@@ -54,7 +54,7 @@ export async function getUserSafes(
   });
 
   // If no workspace-scoped safes found, check for orphaned safes (null workspaceId)
-  // and auto-associate them with the current workspace
+  // belonging to this user and auto-associate them with the current workspace
   if (safes.length === 0) {
     const orphanConditions = [eq(userSafes.userDid, userDid)];
     if (safeType) {
@@ -82,7 +82,7 @@ export async function getUserSafes(
           .where(eq(userSafes.id, safe.id));
       }
 
-      // Re-fetch with updated workspace association
+      // Re-fetch workspace safes after migration
       safes = await db.query.userSafes.findMany({
         where: and(...conditions),
         orderBy: (safes, { asc }) => [asc(safes.createdAt)],
@@ -94,9 +94,11 @@ export async function getUserSafes(
 }
 
 /**
- * Get Safe for a user on a specific chain within a workspace
- * @param userDid - The user's Privy DID
- * @param workspaceId - The workspace ID (REQUIRED for security)
+ * Get Safe on a specific chain within a workspace.
+ * In a shared workspace, all members can access the workspace's Safes.
+ *
+ * @param userDid - The user's Privy DID (kept for API compatibility, not used in query)
+ * @param workspaceId - The workspace ID (REQUIRED - primary filter for security)
  * @param chainId - The chain ID
  * @param safeType - The safe type
  * @returns Safe record if found, null otherwise
@@ -107,9 +109,9 @@ export async function getSafeOnChain(
   chainId: SupportedChainId,
   safeType: 'primary' | 'tax' | 'liquidity' | 'yield',
 ): Promise<UserSafe | null> {
+  // Query by workspace only - all workspace members should access workspace Safes
   const safe = await db.query.userSafes.findFirst({
     where: and(
-      eq(userSafes.userDid, userDid),
       eq(userSafes.workspaceId, workspaceId),
       eq(userSafes.chainId, chainId),
       eq(userSafes.safeType, safeType),
