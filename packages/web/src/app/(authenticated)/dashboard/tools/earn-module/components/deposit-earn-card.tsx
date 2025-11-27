@@ -226,14 +226,15 @@ export function DepositEarnCard({
     );
 
   // Fetch ERC20 balance via tRPC for non-native assets
+  // IMPORTANT: Use effectiveSafeAddress (from getMultiChainPositions) not safeAddress prop
   const { data: erc20BalanceData, refetch: refetchErc20Balance } =
     trpc.earn.getSafeBalanceOnChain.useQuery(
       {
-        safeAddress: safeAddress,
+        safeAddress: effectiveSafeAddress,
         chainId: chainId,
       },
       {
-        enabled: !!safeAddress && !isNativeAsset && !isCrossChain,
+        enabled: !!effectiveSafeAddress && !isNativeAsset && !isCrossChain,
         staleTime: 30000,
         refetchInterval: 30000,
       },
@@ -250,7 +251,7 @@ export function DepositEarnCard({
 
   const isLoadingBalance = isNativeAsset
     ? !nativeBalanceData && !!effectiveSafeAddress
-    : !erc20BalanceData && !!safeAddress && !isCrossChain;
+    : !erc20BalanceData && !!effectiveSafeAddress && !isCrossChain;
 
   // Debug logging
   useEffect(() => {
