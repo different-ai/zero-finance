@@ -91,6 +91,7 @@ type TransactionStep =
   | 'waiting-approval'
   | 'depositing'
   | 'waiting-deposit'
+  | 'indexing' // New: waiting for balance to update after chain confirmation
   | 'bridging'
   | 'waiting-bridge'
   | 'waiting-arrival'
@@ -157,6 +158,9 @@ export function DepositEarnCard({
 
   // Track initial balance for bridge arrival detection
   const initialTargetBalanceRef = useRef<bigint>(0n);
+
+  // Track initial balance for poll-until-changed pattern
+  const initialAssetBalanceRef = useRef<bigint | null>(null);
 
   // Determine if this is a cross-chain deposit (vault on different chain than user's Safe on Base)
   const isCrossChain = chainId !== SUPPORTED_CHAINS.BASE;
@@ -542,6 +546,9 @@ export function DepositEarnCard({
       if (isNativeAsset && resolvedZapper) {
         console.log('[DepositEarnCard] Using Zapper for native ETH deposit');
 
+        // Capture initial balance for poll-until-changed
+        initialAssetBalanceRef.current = assetBalance;
+
         setTransactionState((prev) => ({ ...prev, step: 'depositing' }));
 
         // Encode Zapper deposit call - use depositETHForWrappedTokens to get wsuperOETH
@@ -582,23 +589,52 @@ export function DepositEarnCard({
           txHash: depositTxHash,
         });
 
-        // Wait for deposit to be mined
-        await new Promise((resolve) => setTimeout(resolve, 7000));
+        // Wait briefly for transaction to propagate
+        await new Promise((resolve) => setTimeout(resolve, 3000));
 
-        // Success!
+        // Phase 2: Poll until balance changes
         setTransactionState({
-          step: 'success',
+          step: 'indexing',
           txHash: depositTxHash,
           depositedAmount: amount,
         });
 
-        // Reset form and refetch data
-        setAmount('');
-        await fetchBalance();
+        // Poll for balance change
+        const depositedAmountCopy = amount;
+        const pollForBalanceChange = async () => {
+          const maxAttempts = 20;
+          let attempts = 0;
+          const initialBalance = initialAssetBalanceRef.current ?? 0n;
 
-        if (onDepositSuccess) {
-          onDepositSuccess();
-        }
+          const checkBalance = async (): Promise<void> => {
+            attempts++;
+            const result = await refetchNativeBalance();
+            const newBalance = result.data ? BigInt(result.data.balance) : 0n;
+
+            console.log('[DepositEarnCard] Polling balance:', {
+              attempt: attempts,
+              initialBalance: initialBalance.toString(),
+              newBalance: newBalance.toString(),
+            });
+
+            if (newBalance !== initialBalance || attempts >= maxAttempts) {
+              setTransactionState({
+                step: 'success',
+                txHash: depositTxHash,
+                depositedAmount: depositedAmountCopy,
+              });
+              setAmount('');
+              return;
+            }
+
+            await new Promise((resolve) => setTimeout(resolve, 1000));
+            return checkBalance();
+          };
+
+          await checkBalance();
+        };
+
+        pollForBalanceChange();
         return;
       }
 
@@ -1224,6 +1260,79 @@ export function DepositEarnCard({
     setTransactionState({ step: 'idle' });
   };
 
+  // Handle dismissing success banner
+  const handleDismissSuccess = () => {
+    setTransactionState({ step: 'idle' });
+    setAmount('');
+    // Refetch balances to ensure UI is up to date
+    fetchBalance();
+  };
+
+  // Success banner component - shown at top of form
+  const SuccessBanner = () => {
+    if (transactionState.step !== 'success') return null;
+
+    return (
+      <div
+        className={cn(
+          'p-4 mb-4 relative',
+          isTechnical
+            ? 'bg-[#10B981]/5 border border-[#10B981]/30'
+            : 'bg-[#F0FDF4] border border-[#10B981]/20',
+        )}
+      >
+        <button
+          onClick={handleDismissSuccess}
+          className="absolute top-2 right-2 text-[#101010]/40 hover:text-[#101010]/60 transition-colors"
+          aria-label="Dismiss"
+        >
+          <span className="text-[16px]">×</span>
+        </button>
+        <div className="flex gap-3">
+          <CheckCircle className="h-5 w-5 text-[#10B981] flex-shrink-0 mt-0.5" />
+          <div className="space-y-2 flex-1 pr-4">
+            <div
+              className={cn(
+                'text-[14px] font-medium text-[#101010]',
+                isTechnical && 'font-mono',
+              )}
+            >
+              {isTechnical
+                ? `DEPOSIT::COMPLETE — ${transactionState.depositedAmount} ${isNativeAsset ? 'ETH' : assetSymbol}`
+                : `Deposited ${transactionState.depositedAmount} ${isNativeAsset ? 'ETH' : assetSymbol}`}
+            </div>
+            <p
+              className={cn(
+                'text-[12px] text-[#101010]/70',
+                isTechnical && 'font-mono',
+              )}
+            >
+              {isTechnical
+                ? 'NOTE: BALANCE_UPDATE may take up to 60s'
+                : 'Your balance may take up to 1 minute to update.'}
+            </p>
+            {transactionState.txHash && (
+              <a
+                href={`https://basescan.org/tx/${transactionState.txHash}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={cn(
+                  'inline-flex items-center gap-1 text-[11px]',
+                  isTechnical
+                    ? 'font-mono text-[#1B29FF] hover:text-[#1420CC]'
+                    : 'text-[#1B29FF] hover:text-[#1420CC]',
+                )}
+              >
+                {isTechnical ? 'VIEW_TX' : 'View transaction'}
+                <ExternalLink className="h-3 w-3" />
+              </a>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   // Only show loading skeleton when we don't have any data yet
   const showSkeleton = isLoadingBalance;
 
@@ -1275,7 +1384,9 @@ export function DepositEarnCard({
       case 'depositing':
         return 60;
       case 'waiting-deposit':
-        return 80;
+        return 75;
+      case 'indexing':
+        return 90;
       case 'waiting-bridge':
         return 90;
       case 'success':
@@ -1283,6 +1394,29 @@ export function DepositEarnCard({
       default:
         return 0;
     }
+  };
+
+  // Get status message for current step
+  const getStatusMessage = () => {
+    const messages = {
+      checking: isTechnical
+        ? 'CHECKING_REQUIREMENTS...'
+        : 'Checking requirements...',
+      approving: isTechnical ? 'SIGNING_APPROVAL...' : 'Signing approval...',
+      'waiting-approval': isTechnical
+        ? 'CONFIRMING_APPROVAL...'
+        : 'Confirming approval...',
+      depositing: isTechnical ? 'SIGNING_DEPOSIT...' : 'Signing deposit...',
+      'waiting-deposit': isTechnical
+        ? 'CONFIRMING_ON_CHAIN...'
+        : 'Confirming on chain...',
+      indexing: isTechnical ? 'UPDATING_BALANCES...' : 'Updating balances...',
+      bridging: isTechnical ? 'INITIATING_BRIDGE...' : 'Initiating bridge...',
+      'waiting-bridge': isTechnical
+        ? 'BRIDGE_IN_PROGRESS...'
+        : 'Bridge in progress...',
+    };
+    return messages[transactionState.step as keyof typeof messages] || '';
   };
 
   // Needs deployment state - show UI to deploy Safe on destination chain
@@ -1659,57 +1793,7 @@ export function DepositEarnCard({
     );
   }
 
-  // Success state
-  if (transactionState.step === 'success') {
-    return (
-      <div className="space-y-4">
-        <div className="bg-[#F6F5EF] border border-[#10B981]/20 p-4">
-          <div className="flex gap-3">
-            <CheckCircle className="h-4 w-4 text-[#10B981] flex-shrink-0 mt-0.5" />
-            <div className="space-y-2">
-              <div className="text-[14px] font-medium text-[#101010]">
-                {isCrossChain && !depositAmount // If it was a bridge transaction
-                  ? `Successfully deposited ${transactionState.depositedAmount} USDC`
-                  : `Successfully deposited ${transactionState.depositedAmount} USDC`}
-              </div>
-              <div className="text-[12px] text-[#101010]/70">
-                Your funds are now earning yield in the vault.
-              </div>
-              {transactionState.txHash && (
-                <a
-                  href={`https://basescan.org/tx/${transactionState.txHash}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-1 text-[11px] text-[#1B29FF] hover:text-[#1420CC] transition-colors"
-                >
-                  View transaction
-                  <ExternalLink className="h-3 w-3" />
-                </a>
-              )}
-            </div>
-          </div>
-        </div>
-
-        <div className="flex gap-2">
-          <button
-            onClick={resetTransaction}
-            className="flex-1 px-3 py-2 text-[13px] text-[#101010] bg-white border border-[#101010]/10 hover:bg-[#F7F7F2] transition-colors"
-          >
-            Deposit More
-          </button>
-          <button
-            onClick={() => {
-              resetTransaction();
-              if (onDepositSuccess) onDepositSuccess();
-            }}
-            className="flex-1 px-3 py-2 text-[13px] text-white bg-[#1B29FF] hover:bg-[#1420CC] transition-colors"
-          >
-            Done
-          </button>
-        </div>
-      </div>
-    );
-  }
+  // Success state is now handled by SuccessBanner component in the main render
 
   // Bridge waiting for arrival state
   // @ts-expect-error - Type narrowing issue with complex state machine
@@ -1983,6 +2067,9 @@ export function DepositEarnCard({
           }}
         />
 
+        {/* Success Banner - shown after successful deposit */}
+        <SuccessBanner />
+
         {/* TOP CARD: Vault Information */}
         <div className="bg-white border border-[#1B29FF]/30 p-4 relative">
           <div className="flex justify-between items-start mb-3">
@@ -2131,6 +2218,9 @@ export function DepositEarnCard({
           }}
         />
       )}
+
+      {/* Success Banner - shown after successful deposit */}
+      <SuccessBanner />
 
       {/* Current Balance */}
       <div

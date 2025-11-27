@@ -660,85 +660,78 @@ export function WithdrawEarnCard({
     !isRelayReady ||
     !effectiveSafeAddress;
 
-  // Handle Done button - reset state and trigger callbacks
-  const handleDone = () => {
+  // Handle dismissing success banner
+  const handleDismissSuccess = () => {
     setWithdrawState({ step: 'idle' });
     setAmount('');
     // Final refetch to ensure UI is up to date
     refetchVaultInfo();
-    // Trigger parent callback (already called during polling, but ensure it runs)
-    onWithdrawSuccess?.();
   };
 
-  // Success state - show confirmation with explicit Done button
-  if (withdrawState.step === 'success') {
+  // Success banner component - shown at top of form
+  const SuccessBanner = () => {
+    if (withdrawState.step !== 'success') return null;
+
     return (
       <div
         className={cn(
-          'p-6 text-center space-y-4 relative',
-          isTechnical && 'bg-[#F7F7F2] border border-[#1B29FF]/20',
+          'p-4 mb-4 relative',
+          isTechnical
+            ? 'bg-[#10B981]/5 border border-[#10B981]/30'
+            : 'bg-[#F0FDF4] border border-[#10B981]/20',
         )}
       >
-        <div
-          className={cn(
-            'w-12 h-12 rounded-full flex items-center justify-center mx-auto',
-            isTechnical
-              ? 'bg-[#10B981]/10 border border-[#10B981]/30'
-              : 'bg-[#10B981]/10',
-          )}
-        >
-          <CheckCircle className="h-6 w-6 text-[#10B981]" />
-        </div>
-        <div>
-          <h3
-            className={cn(
-              'text-[18px] font-semibold text-[#101010] mb-2',
-              isTechnical && 'font-mono',
-            )}
-          >
-            {isTechnical ? 'WITHDRAWAL::COMPLETE' : 'Withdrawal Complete'}
-          </h3>
-          <p
-            className={cn(
-              'text-[14px] text-[#101010]/70',
-              isTechnical && 'font-mono',
-            )}
-          >
-            {isTechnical
-              ? `OUTPUT: ${withdrawState.withdrawnAmount} ${withdrawState.outputAsset}`
-              : `Successfully withdrew ${withdrawState.withdrawnAmount} ${withdrawState.outputAsset}`}
-          </p>
-        </div>
-        {withdrawState.txHash && (
-          <a
-            href={`https://basescan.org/tx/${withdrawState.txHash}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={cn(
-              'inline-flex items-center gap-1 text-[12px]',
-              isTechnical
-                ? 'font-mono text-[#1B29FF] hover:text-[#1420CC]'
-                : 'text-[#1B29FF] hover:text-[#1420CC]',
-            )}
-          >
-            {isTechnical ? 'VIEW_TX' : 'View transaction'}
-            <ExternalLink className="h-3 w-3" />
-          </a>
-        )}
         <button
-          onClick={handleDone}
-          className={cn(
-            'w-full px-4 py-2.5 text-[14px] font-medium transition-colors',
-            isTechnical
-              ? 'font-mono uppercase bg-white border-2 border-[#1B29FF] text-[#1B29FF] hover:bg-[#1B29FF] hover:text-white'
-              : 'text-white bg-[#1B29FF] hover:bg-[#1420CC]',
-          )}
+          onClick={handleDismissSuccess}
+          className="absolute top-2 right-2 text-[#101010]/40 hover:text-[#101010]/60 transition-colors"
+          aria-label="Dismiss"
         >
-          {isTechnical ? '[ DONE ]' : 'Done'}
+          <span className="text-[16px]">×</span>
         </button>
+        <div className="flex gap-3">
+          <CheckCircle className="h-5 w-5 text-[#10B981] flex-shrink-0 mt-0.5" />
+          <div className="space-y-2 flex-1 pr-4">
+            <div
+              className={cn(
+                'text-[14px] font-medium text-[#101010]',
+                isTechnical && 'font-mono',
+              )}
+            >
+              {isTechnical
+                ? `WITHDRAWAL::COMPLETE — ${withdrawState.withdrawnAmount} ${withdrawState.outputAsset}`
+                : `Withdrew ${withdrawState.withdrawnAmount} ${withdrawState.outputAsset}`}
+            </div>
+            <p
+              className={cn(
+                'text-[12px] text-[#101010]/70',
+                isTechnical && 'font-mono',
+              )}
+            >
+              {isTechnical
+                ? 'NOTE: BALANCE_UPDATE may take up to 60s'
+                : 'Your balance may take up to 1 minute to update.'}
+            </p>
+            {withdrawState.txHash && (
+              <a
+                href={`https://basescan.org/tx/${withdrawState.txHash}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={cn(
+                  'inline-flex items-center gap-1 text-[11px]',
+                  isTechnical
+                    ? 'font-mono text-[#1B29FF] hover:text-[#1420CC]'
+                    : 'text-[#1B29FF] hover:text-[#1420CC]',
+                )}
+              >
+                {isTechnical ? 'VIEW_TX' : 'View transaction'}
+                <ExternalLink className="h-3 w-3" />
+              </a>
+            )}
+          </div>
+        </div>
       </div>
     );
-  }
+  };
 
   // Processing/Confirming/Indexing states - show progress
   if (isProcessing) {
@@ -877,6 +870,9 @@ export function WithdrawEarnCard({
           }}
         />
       )}
+
+      {/* Success Banner - shown after successful withdrawal */}
+      <SuccessBanner />
 
       {/* Current Balance */}
       <div
