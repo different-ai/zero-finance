@@ -1394,7 +1394,22 @@ export const earnRouter = router({
     .query(async ({ ctx, input }) => {
       const { tokenAddress, ownerAddress, spenderAddress } = input;
 
-      await getSafeForWorkspace(ctx, ownerAddress);
+      // Verify the user owns this Safe (user-scoped, not workspace-scoped)
+      // This is a read-only operation so we just need to confirm ownership
+      const privyDid = requirePrivyDid(ctx);
+      const safeRecord = await db.query.userSafes.findFirst({
+        where: and(
+          eq(userSafes.userDid, privyDid),
+          eq(userSafes.safeAddress, ownerAddress),
+        ),
+      });
+
+      if (!safeRecord) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: `Safe ${ownerAddress} not found for user`,
+        });
+      }
 
       const publicClient = createPublicClient({
         chain: base,
