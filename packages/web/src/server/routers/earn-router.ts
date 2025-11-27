@@ -1286,30 +1286,26 @@ export const earnRouter = router({
           'https://arb1.arbitrum.io/rpc')
         : BASE_RPC_URL;
 
-      // Get the workspace's Safe on the target chain
-      const workspaceId = ctx.workspaceId;
-      if (!workspaceId) {
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Workspace context is unavailable.',
-        });
-      }
+      // Get the user's Safe on the target chain (user-scoped, not workspace-scoped)
+      // IMPORTANT: Use privyDid to get the correct Safe address
+      // Using workspaceId can return a different Safe if workspace membership changed
+      const privyDid = requirePrivyDid(ctx);
 
-      const workspaceSafe = await db.query.userSafes.findFirst({
+      const userSafe = await db.query.userSafes.findFirst({
         where: and(
-          eq(userSafes.workspaceId, workspaceId),
+          eq(userSafes.userDid, privyDid),
           eq(userSafes.chainId, chainId),
         ),
       });
 
-      if (!workspaceSafe) {
+      if (!userSafe) {
         throw new TRPCError({
           code: 'NOT_FOUND',
-          message: `No Safe found for workspace on chain ${chainId}`,
+          message: `No Safe found for user on chain ${chainId}`,
         });
       }
 
-      const targetSafeAddress = workspaceSafe.safeAddress as `0x${string}`;
+      const targetSafeAddress = userSafe.safeAddress as `0x${string}`;
 
       const publicClient = createPublicClient({
         chain,
