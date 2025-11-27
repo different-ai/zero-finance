@@ -40,9 +40,18 @@ export {
 } from './schema/workspaces';
 export { admins, type Admin, type NewAdmin } from './schema/admins';
 
+// User Safes - modular schema with architecture documentation
+export {
+  userSafes,
+  userSafesRelations,
+  type UserSafe,
+  type NewUserSafe,
+} from './schema/user-safes';
+
 // Import for internal use within this file
 import { users } from './schema/users';
 import { workspaces, workspaceMembers } from './schema/workspaces';
+import { userSafes } from './schema/user-safes';
 
 // Define specific types for role and status for better type safety
 export type InvoiceRole = 'seller' | 'buyer';
@@ -180,49 +189,7 @@ export type NewUserRequest = typeof userRequestsTable.$inferInsert;
 // --- IMPORTED FROM BANK ---
 
 // Users table - imported from schema/users.ts (see top of file)
-
-// UserSafes table - Linking users to their various Safe addresses across chains
-export const userSafes = pgTable(
-  'user_safes',
-  {
-    id: text('id')
-      .primaryKey()
-      .$defaultFn(() => crypto.randomUUID()), // Unique ID for the safe record
-    userDid: text('user_did')
-      .notNull()
-      .references(() => users.privyDid), // Foreign key to users table
-    workspaceId: uuid('workspace_id'),
-    safeAddress: varchar('safe_address', { length: 42 }).notNull(), // Ethereum address (42 chars)
-    chainId: integer('chain_id').notNull().default(8453), // Chain ID where this Safe is deployed (default: Base mainnet)
-    safeType: text('safe_type', {
-      enum: ['primary', 'tax', 'liquidity', 'yield'],
-    }).notNull(), // Type of Safe
-    isEarnModuleEnabled: boolean('is_earn_module_enabled')
-      .default(false)
-      .notNull(), // Tracks if the earn module is enabled
-    createdAt: timestamp('created_at', { withTimezone: true })
-      .defaultNow()
-      .notNull(),
-  },
-  (table) => {
-    return {
-      // Ensure a user can only have one Safe of each type per chain
-      userTypeChainUniqueIdx: uniqueIndex('user_safe_type_chain_unique_idx').on(
-        table.userDid,
-        table.safeType,
-        table.chainId,
-      ),
-      // Index for efficient queries by chain
-      chainIdIdx: index('user_safes_chain_id_idx').on(table.chainId),
-      workspaceIdx: index('user_safes_workspace_idx').on(table.workspaceId),
-      // Composite index for user + chain lookups
-      userChainIdx: index('user_safes_user_chain_idx').on(
-        table.userDid,
-        table.chainId,
-      ),
-    };
-  },
-);
+// UserSafes table - imported from schema/user-safes.ts (see top of file)
 
 // UserFundingSources table - Storing linked bank accounts and crypto destinations
 export const userFundingSources = pgTable(
@@ -504,17 +471,7 @@ export const onrampTransfers = pgTable(
 
 // --- RELATIONS ---
 
-export const userSafesRelations = relations(userSafes, ({ one, many }) => ({
-  user: one(users, {
-    fields: [userSafes.userDid],
-    references: [users.privyDid],
-  }),
-  // allocationState relation removed – deprecated table
-  // Add relation from UserSafes to UserFundingSources if needed
-  // Example: user funding sources associated with this safe (might need linking table or direct relation)
-}));
-
-// Removed allocationStatesRelations – deprecated table
+// userSafesRelations - imported from schema/user-safes.ts (see top of file)
 
 export const userFundingSourcesRelations = relations(
   userFundingSources,
@@ -579,11 +536,7 @@ export const onrampTransfersRelations = relations(
 
 // Type inference for bank tables
 // User and NewUser types imported from schema/users.ts (see top of file)
-
-export type UserSafe = typeof userSafes.$inferSelect;
-export type NewUserSafe = typeof userSafes.$inferInsert;
-
-// Removed AllocationState and NewAllocationState type exports – deprecated table
+// UserSafe and NewUserSafe types imported from schema/user-safes.ts (see top of file)
 
 export type UserFundingSource = typeof userFundingSources.$inferSelect;
 export type NewUserFundingSource = typeof userFundingSources.$inferInsert;

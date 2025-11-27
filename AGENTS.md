@@ -94,6 +94,77 @@ Use **Basescan** (basescan.org) to investigate on-chain activity when:
 
 When investigating transactions, use `exa_crawling_exa` to scrape Basescan pages and analyze transaction logs, internal transactions, and token transfers to understand the full picture.
 
+## Wallet & Safe Architecture
+
+**CRITICAL**: 0 Finance uses a 3-layer wallet hierarchy. Understanding this prevents common bugs.
+
+```
+Layer 1: Privy Embedded Wallet (EOA)
+    ↓ owns
+Layer 2: Privy Smart Wallet (Safe - used for gas sponsorship via ERC-4337)
+    ↓ owns
+Layer 3: Primary Safe (User's "Bank Account" - WHERE FUNDS RESIDE)
+```
+
+### Layer Details
+
+| Layer | What It Is            | Purpose                               | Address Source                                        |
+| ----- | --------------------- | ------------------------------------- | ----------------------------------------------------- |
+| 1     | Privy Embedded Wallet | Signs transactions                    | `usePrivy()` → `user.wallet.address`                  |
+| 2     | Privy Smart Wallet    | Gas sponsorship via bundler/paymaster | `useSmartWallets()` → `client.account.address`        |
+| 3     | Primary Safe          | User's bank account with funds        | `getMultiChainPositions` or `settings.userSafes.list` |
+
+### Common Pitfall: Safe Address Mismatch
+
+**There are TWO query methods for Layer 3 Safes that may return DIFFERENT addresses:**
+
+1. **User-scoped** (by Privy DID) - Use for balance/transaction operations:
+
+   ```typescript
+   const { data: positions } = trpc.earn.getMultiChainPositions.useQuery();
+   const baseSafe = positions?.safes.find(
+     (s) => s.chainId === SUPPORTED_CHAINS.BASE,
+   );
+   ```
+
+2. **Workspace-scoped** (by workspace ID) - Use for workspace-level operations:
+   ```typescript
+   const { data: safes } = trpc.settings.userSafes.list.useQuery();
+   ```
+
+**Rule**: Always use `getMultiChainPositions` for balance queries and transaction execution to ensure consistency.
+
+### Key Files for Safe Operations
+
+| File                                                       | Purpose                                    |
+| ---------------------------------------------------------- | ------------------------------------------ |
+| `packages/web/src/hooks/use-safe-relay.ts`                 | Transaction relay hook                     |
+| `packages/web/src/lib/sponsor-tx/core.ts`                  | Build & relay Safe transactions            |
+| `packages/web/src/server/earn/multi-chain-safe-manager.ts` | Server-side Safe CRUD                      |
+| `packages/web/src/db/schema/user-safes.ts`                 | Database schema with architecture docs     |
+| `.claude/agents/safe-infrastructure.md`                    | **Full documentation for Safe operations** |
+
+### Transaction Flow
+
+```typescript
+// 1. Build Safe transaction
+const safeTx = await buildSafeTx([{ to, value, data }], {
+  safeAddress,
+  chainId,
+  gas,
+});
+
+// 2. Relay via Privy Smart Wallet (Layer 2)
+const txHash = await relaySafeTx(
+  safeTx,
+  smartWalletAddress,
+  smartClient,
+  safeAddress,
+);
+```
+
+For detailed implementation patterns, see `.claude/agents/safe-infrastructure.md`.
+
 # Repository Guidelines
 
 ## Project Structure & Module Organization

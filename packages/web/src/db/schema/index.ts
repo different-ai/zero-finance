@@ -4,6 +4,7 @@ export * from './workspaces';
 export * from './workspace-features';
 export * from './admins';
 export * from './bridge-transactions';
+export * from './user-safes';
 
 // Re-export everything else from main schema, excluding what we've already exported above
 export {
@@ -30,11 +31,7 @@ export {
   type UserInvoicePreferences,
   type NewUserInvoicePreferences,
 
-  // Safe tables
-  userSafes,
-  userSafesRelations,
-  type UserSafe,
-  type NewUserSafe,
+  // NOTE: Safe tables are now exported from ./user-safes.ts
 
   // Banking tables
   userFundingSources,
