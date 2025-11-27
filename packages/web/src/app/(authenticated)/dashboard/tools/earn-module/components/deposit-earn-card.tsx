@@ -172,9 +172,25 @@ export function DepositEarnCard({
   // Reset state when vault changes
   useEffect(() => {
     console.log('[DepositEarnCard] Vault address changed to:', vaultAddress);
+    console.log('[DepositEarnCard] Vault config lookup:', {
+      vaultAddress,
+      foundConfig: vaultConfig
+        ? {
+            id: vaultConfig.id,
+            asset: vaultConfig.asset,
+            zapper: vaultConfig.zapper,
+          }
+        : null,
+      resolvedAsset,
+      isNativeAsset,
+    });
     setAmount('');
     setDepositAmount('');
     setTransactionState({ step: 'idle' });
+    // Reset balance state to force fresh fetch
+    setAssetBalance(0n);
+    setHasInitialLoad(false);
+    setIsLoadingBalance(true);
   }, [vaultAddress]);
 
   // Fetch asset balance (USDC or ETH)
@@ -182,6 +198,7 @@ export function DepositEarnCard({
   const [isLoadingBalance, setIsLoadingBalance] = useState(true);
   const [hasInitialLoad, setHasInitialLoad] = useState(false);
 
+  // Fetch balance function - can be called manually after transactions
   const fetchBalance = async () => {
     if (!safeAddress) return;
 
@@ -239,7 +256,14 @@ export function DepositEarnCard({
     return () => {
       clearInterval(interval);
     };
-  }, [safeAddress, isNativeAsset, assetAddress]);
+  }, [
+    safeAddress,
+    isNativeAsset,
+    assetAddress,
+    vaultAddress,
+    resolvedZapper,
+    assetSymbol,
+  ]);
 
   // tRPC utils for refetching
   const trpcUtils = trpc.useUtils();
@@ -1882,6 +1906,127 @@ export function DepositEarnCard({
               <span>Est. Time: {bridgeQuote.estimatedFillTime}s</span>
             </div>
           )}
+        </div>
+      </div>
+    );
+  }
+
+  // --- NATIVE ASSET SPLIT VIEW (ETH → wsuperOETHb) ---
+  // Similar to cross-chain view but for ETH deposits via Zapper
+  if (isNativeAsset && resolvedZapper) {
+    return (
+      <div className="space-y-6">
+        {/* TOP CARD: Vault Information */}
+        <div className="bg-white border border-[#101010]/10 p-5 rounded-[12px] shadow-[0_2px_8px_rgba(16,16,16,0.04)]">
+          <div className="flex justify-between items-start mb-4">
+            <div>
+              <p className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60 mb-1">
+                Ethereum Growth Account
+              </p>
+              <p className="text-[13px] text-[#101010]/70">
+                Deposit ETH to earn yield on your Ethereum
+              </p>
+            </div>
+          </div>
+
+          {/* Info about the vault */}
+          <div className="p-3 bg-[#F7F7F2] rounded-lg">
+            <div className="flex items-start gap-2">
+              <div className="w-6 h-6 rounded-full bg-gradient-to-br from-[#627EEA] to-[#8A9FF9] flex items-center justify-center flex-shrink-0">
+                <span className="text-white text-[10px] font-medium">Ξ</span>
+              </div>
+              <div>
+                <p className="text-[13px] font-medium text-[#101010]">
+                  Super OETH by Origin Protocol
+                </p>
+                <p className="text-[11px] text-[#101010]/60 mt-0.5">
+                  ETH staking yield + DeFi strategies
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* BOTTOM CARD: ETH Deposit via Zapper */}
+        <div className="bg-[#F7F7F2] border border-[#101010]/10 p-5 rounded-[12px]">
+          <div className="flex justify-between items-center mb-4">
+            <div>
+              <h3 className="text-[14px] font-medium text-[#101010]">
+                Deposit ETH
+              </h3>
+              <p className="text-[12px] text-[#101010]/60 mt-0.5">
+                Available: {displayBalance} ETH
+              </p>
+            </div>
+          </div>
+
+          {/* Deposit Input & Button */}
+          <div className="space-y-3">
+            <div className="relative">
+              <input
+                type="number"
+                placeholder="0.0"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                className="w-full h-12 px-4 bg-white border border-[#101010]/10 rounded-md focus:border-[#1B29FF] focus:outline-none text-[15px] transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                step="0.000001"
+                min="0"
+                max={availableBalance}
+                disabled={assetBalance === 0n}
+              />
+              <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                <span className="text-[12px] text-[#101010]/50">ETH</span>
+                <button
+                  type="button"
+                  onClick={handleMax}
+                  className="text-[11px] text-[#1B29FF] font-medium hover:text-[#1420CC] transition-colors"
+                  disabled={assetBalance === 0n}
+                >
+                  MAX
+                </button>
+              </div>
+            </div>
+            <button
+              onClick={handleSameChainDeposit}
+              disabled={
+                !amount ||
+                parseFloat(amount) <= 0 ||
+                parseFloat(amount) > parseFloat(availableBalance) ||
+                !isRelayReady ||
+                assetBalance === 0n ||
+                transactionState.step === 'checking'
+              }
+              className="w-full h-11 bg-[#1B29FF] hover:bg-[#1420CC] text-white font-medium rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            >
+              {transactionState.step === 'checking' ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <ArrowDownToLine className="h-4 w-4" />
+              )}
+              {transactionState.step === 'checking'
+                ? 'Checking...'
+                : 'Deposit ETH'}
+            </button>
+          </div>
+
+          {/* No balance warning */}
+          {assetBalance === 0n && (
+            <div className="mt-3 p-3 bg-[#FFF7ED] border border-[#F59E0B]/20 rounded-lg">
+              <div className="flex gap-2 items-start">
+                <AlertCircle className="h-4 w-4 text-[#F59E0B] flex-shrink-0 mt-0.5" />
+                <p className="text-[12px] text-[#101010]/70">
+                  No ETH balance available. Send ETH to your account to get
+                  started.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Help text */}
+          <p className="text-[11px] text-center text-[#101010]/50 mt-3">
+            Your ETH will be converted to wsuperOETHb and start earning yield
+            immediately
+          </p>
         </div>
       </div>
     );
