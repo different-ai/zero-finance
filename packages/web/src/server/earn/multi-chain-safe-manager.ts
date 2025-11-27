@@ -28,16 +28,21 @@ import {
 } from '@/lib/safe-multi-chain';
 
 /**
- * Get all Safes for a user across all chains
+ * Get all Safes for a user across all chains within a workspace
  * @param userDid - The user's Privy DID
+ * @param workspaceId - The workspace ID (REQUIRED for security)
  * @param safeType - Optional filter by safe type
  * @returns Array of Safe records
  */
 export async function getUserSafes(
   userDid: string,
+  workspaceId: string,
   safeType?: 'primary' | 'tax' | 'liquidity' | 'yield',
 ): Promise<UserSafe[]> {
-  const conditions = [eq(userSafes.userDid, userDid)];
+  const conditions = [
+    eq(userSafes.userDid, userDid),
+    eq(userSafes.workspaceId, workspaceId),
+  ];
 
   if (safeType) {
     conditions.push(eq(userSafes.safeType, safeType));
@@ -52,20 +57,23 @@ export async function getUserSafes(
 }
 
 /**
- * Get Safe for a user on a specific chain
+ * Get Safe for a user on a specific chain within a workspace
  * @param userDid - The user's Privy DID
+ * @param workspaceId - The workspace ID (REQUIRED for security)
  * @param chainId - The chain ID
  * @param safeType - The safe type
  * @returns Safe record if found, null otherwise
  */
 export async function getSafeOnChain(
   userDid: string,
+  workspaceId: string,
   chainId: SupportedChainId,
   safeType: 'primary' | 'tax' | 'liquidity' | 'yield',
 ): Promise<UserSafe | null> {
   const safe = await db.query.userSafes.findFirst({
     where: and(
       eq(userSafes.userDid, userDid),
+      eq(userSafes.workspaceId, workspaceId),
       eq(userSafes.chainId, chainId),
       eq(userSafes.safeType, safeType),
     ),
@@ -145,14 +153,16 @@ export async function updateSafeModuleStatus(
  * Get multi-chain deployment status for a user's Safe
  * Returns information about Safe deployment across all supported chains
  * @param userDid - The user's Privy DID
+ * @param workspaceId - The workspace ID (REQUIRED for security)
  * @param safeType - The safe type to check
  * @returns Multi-chain Safe status
  */
 export async function getMultiChainSafeStatus(
   userDid: string,
+  workspaceId: string,
   safeType: 'primary' | 'tax' | 'liquidity' | 'yield',
 ): Promise<MultiChainSafeStatus> {
-  const safes = await getUserSafes(userDid, safeType);
+  const safes = await getUserSafes(userDid, workspaceId, safeType);
 
   const status: MultiChainSafeStatus = {
     userDid,
@@ -292,6 +302,7 @@ export async function deleteUserSafe(
 }
 export async function getSafeDeploymentTransaction(
   userDid: string,
+  workspaceId: string,
   chainId: SupportedChainId,
   safeType: 'primary' | 'tax' | 'liquidity' | 'yield',
 ): Promise<{
@@ -303,6 +314,7 @@ export async function getSafeDeploymentTransaction(
   // Get source Safe from Base (primary chain) to use its address as salt
   const sourceSafe = await getSafeOnChain(
     userDid,
+    workspaceId,
     SUPPORTED_CHAINS.BASE,
     safeType,
   );
@@ -322,7 +334,12 @@ export async function getSafeDeploymentTransaction(
   );
 
   // Check if Safe already exists on this chain in DB
-  const existingSafe = await getSafeOnChain(userDid, chainId, safeType);
+  const existingSafe = await getSafeOnChain(
+    userDid,
+    workspaceId,
+    chainId,
+    safeType,
+  );
 
   if (existingSafe) {
     // If it exists, verify it matches our prediction
@@ -352,29 +369,33 @@ export async function getSafeDeploymentTransaction(
 /**
  * Get all chains where a user has a Safe of a specific type
  * @param userDid - The user's Privy DID
+ * @param workspaceId - The workspace ID (REQUIRED for security)
  * @param safeType - The safe type
  * @returns Array of chain IDs where Safe is deployed
  */
 export async function getChainsWithSafe(
   userDid: string,
+  workspaceId: string,
   safeType: 'primary' | 'tax' | 'liquidity' | 'yield',
 ): Promise<SupportedChainId[]> {
-  const safes = await getUserSafes(userDid, safeType);
+  const safes = await getUserSafes(userDid, workspaceId, safeType);
   return safes.map((safe) => safe.chainId as SupportedChainId);
 }
 
 /**
  * Check if user has a Safe on a specific chain
  * @param userDid - The user's Privy DID
+ * @param workspaceId - The workspace ID (REQUIRED for security)
  * @param chainId - The chain ID to check
  * @param safeType - The safe type
  * @returns true if Safe exists on chain, false otherwise
  */
 export async function hasSafeOnChain(
   userDid: string,
+  workspaceId: string,
   chainId: SupportedChainId,
   safeType: 'primary' | 'tax' | 'liquidity' | 'yield',
 ): Promise<boolean> {
-  const safe = await getSafeOnChain(userDid, chainId, safeType);
+  const safe = await getSafeOnChain(userDid, workspaceId, chainId, safeType);
   return !!safe;
 }

@@ -234,6 +234,7 @@ export const onboardingRouter = router({
       where: and(
         eq(userSafes.userDid, privyDid),
         eq(userSafes.safeType, 'primary'),
+        eq(userSafes.workspaceId, workspaceId),
       ),
       columns: { safeAddress: true },
     });
@@ -354,6 +355,7 @@ export const onboardingRouter = router({
       where: and(
         eq(userSafes.userDid, privyDid),
         eq(userSafes.safeType, 'primary'),
+        eq(userSafes.workspaceId, workspaceId),
       ),
       columns: { safeAddress: true },
     });

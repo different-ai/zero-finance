@@ -889,13 +889,14 @@ export const alignRouter = router({
         where: and(
           eq(userSafes.userDid, userFromPrivy.id),
           eq(userSafes.safeType, 'primary'),
+          eq(userSafes.workspaceId, workspaceId),
         ),
       });
 
       if (!primarySafe?.safeAddress) {
         throw new TRPCError({
           code: 'PRECONDITION_FAILED',
-          message: 'No primary Safe found',
+          message: 'No primary Safe found for current workspace',
         });
       }
 

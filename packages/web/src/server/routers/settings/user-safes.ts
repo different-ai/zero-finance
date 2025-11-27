@@ -98,9 +98,8 @@ export const userSafesRouter = router({
    * Workspace-centric: Looks for a primary safe owned by the authenticated user
    * within the current workspace context.
    *
-   * Fallback behavior: If no workspace-scoped primary safe exists,
-   * falls back to ANY primary safe owned by the user from other workspaces.
-   * This handles multi-workspace scenarios where users can share safes across workspaces.
+   * SECURITY: Only returns Safe scoped to the current workspace.
+   * No fallback to other workspaces - this prevents cross-workspace Safe leakage.
    */
   getPrimarySafeAddress: protectedProcedure.query(async ({ ctx }) => {
     const privyDid = ctx.user.id;
@@ -112,7 +111,7 @@ export const userSafesRouter = router({
       });
     }
     try {
-      let primarySafe = await db.query.userSafes.findFirst({
+      const primarySafe = await db.query.userSafes.findFirst({
         where: and(
           eq(userSafes.userDid, privyDid),
           eq(userSafes.safeType, 'primary'),
@@ -120,16 +119,6 @@ export const userSafesRouter = router({
         ),
         columns: { safeAddress: true },
       });
-
-      if (!primarySafe) {
-        primarySafe = await db.query.userSafes.findFirst({
-          where: and(
-            eq(userSafes.userDid, privyDid),
-            eq(userSafes.safeType, 'primary'),
-          ),
-          columns: { safeAddress: true },
-        });
-      }
 
       return primarySafe?.safeAddress ?? null;
     } catch (error) {
@@ -299,21 +288,32 @@ export const userSafesRouter = router({
         });
       }
 
+      const workspaceId = ctx.workspaceId;
+      if (!workspaceId) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Workspace context is unavailable.',
+        });
+      }
+
       try {
-        // 1. Check if a primary safe already exists for this user
+        // 1. Check if a primary safe already exists for this user in this workspace
         const existingPrimary = await db.query.userSafes.findFirst({
           where: and(
             eq(userSafes.userDid, privyDid),
             eq(userSafes.safeType, 'primary'),
+            eq(userSafes.workspaceId, workspaceId),
           ),
           columns: { id: true },
         });
 
         if (existingPrimary) {
-          console.warn(`User ${privyDid} already has a primary safe.`);
+          console.warn(
+            `User ${privyDid} already has a primary safe in workspace ${workspaceId}.`,
+          );
           throw new TRPCError({
             code: 'CONFLICT',
-            message: 'A primary safe is already registered for this user.',
+            message: 'A primary safe is already registered for this workspace.',
           });
         }
 
@@ -367,6 +367,7 @@ export const userSafesRouter = router({
             userDid: privyDid,
             safeAddress: safeAddress,
             safeType: 'primary',
+            workspaceId: workspaceId,
           })
           .returning();
 
@@ -413,8 +414,15 @@ export const userSafesRouter = router({
     .mutation(async ({ ctx, input }) => {
       const privyDid = ctx.user.id;
       const { safeType, predictedAddress, transactionHash } = input;
+      const workspaceId = ctx.workspaceId;
+      if (!workspaceId) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Workspace context is unavailable.',
+        });
+      }
       console.log(
-        `Confirming creation of ${safeType} safe at ${predictedAddress} for user ${privyDid} with tx ${transactionHash}`,
+        `Confirming creation of ${safeType} safe at ${predictedAddress} for user ${privyDid} in workspace ${workspaceId} with tx ${transactionHash}`,
       );
 
       try {
@@ -461,12 +469,13 @@ export const userSafesRouter = router({
           where: and(
             eq(userSafes.userDid, privyDid),
             eq(userSafes.safeType, safeType),
+            eq(userSafes.workspaceId, workspaceId),
           ),
           columns: { id: true },
         });
         if (existingSafe) {
           console.warn(
-            `Safe of type '${safeType}' was already created for user DID: ${privyDid} before confirmation.`,
+            `Safe of type '${safeType}' was already created for user DID: ${privyDid} in workspace ${workspaceId} before confirmation.`,
           );
           // Return existing safe data
           const safeData = await db.query.userSafes.findFirst({
@@ -485,6 +494,7 @@ export const userSafesRouter = router({
             userDid: privyDid,
             safeAddress: predictedAddress, // Use the *predicted* address
             safeType: safeType,
+            workspaceId: workspaceId,
           })
           .returning();
 
@@ -526,49 +536,59 @@ export const userSafesRouter = router({
     .mutation(async ({ ctx, input }) => {
       const privyDid = ctx.user.id;
       const { safeType } = input;
+      const workspaceId = ctx.workspaceId;
+      if (!workspaceId) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Workspace context is unavailable.',
+        });
+      }
       console.log(
-        `Preparing transaction to create ${safeType} safe for user DID: ${privyDid}`,
+        `Preparing transaction to create ${safeType} safe for user DID: ${privyDid} in workspace ${workspaceId}`,
       );
 
       try {
-        // 1. Check for existing primary safe
-        // Use the imported 'db' directly
+        // 1. Check for existing primary safe in this workspace
         const primarySafe = await db.query.userSafes.findFirst({
           where: and(
             eq(userSafes.userDid, privyDid),
             eq(userSafes.safeType, 'primary'),
+            eq(userSafes.workspaceId, workspaceId),
           ),
           columns: { safeAddress: true },
         });
 
         if (!primarySafe) {
-          console.error(`Primary safe not found for user DID: ${privyDid}`);
+          console.error(
+            `Primary safe not found for user DID: ${privyDid} in workspace ${workspaceId}`,
+          );
           throw new TRPCError({
             code: 'BAD_REQUEST',
-            message: 'Primary safe not found. Cannot create secondary safe.',
+            message:
+              'Primary safe not found in this workspace. Cannot create secondary safe.',
           });
         }
         console.log(
           `Found primary safe address: ${primarySafe.safeAddress} for user DID: ${privyDid}`,
         );
 
-        // 2. Check if a safe of the requested type already exists
-        // Use the imported 'db' directly
+        // 2. Check if a safe of the requested type already exists in this workspace
         const existingSafe = await db.query.userSafes.findFirst({
           where: and(
             eq(userSafes.userDid, privyDid),
             eq(userSafes.safeType, safeType),
+            eq(userSafes.workspaceId, workspaceId),
           ),
           columns: { id: true },
         });
 
         if (existingSafe) {
           console.warn(
-            `Safe of type '${safeType}' already exists for user DID: ${privyDid}`,
+            `Safe of type '${safeType}' already exists for user DID: ${privyDid} in workspace ${workspaceId}`,
           );
           throw new TRPCError({
             code: 'CONFLICT',
-            message: `Safe of type '${safeType}' already exists for this user.`,
+            message: `Safe of type '${safeType}' already exists for this workspace.`,
           });
         }
         console.log(

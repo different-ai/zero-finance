@@ -2147,13 +2147,12 @@ export const earnRouter = router({
     .query(async ({ ctx, input }) => {
       const { vaultAddresses } = input;
 
-      // Get user's Privy DID for user-scoped Safe lookup
-      // IMPORTANT: Use user-scoped query (by privyDid) NOT workspace-scoped
-      // This ensures we get the same Safe addresses as getMultiChainPositions
+      // Get user's Privy DID and workspace ID for workspace-scoped Safe lookup
       const privyDid = requirePrivyDid(ctx);
+      const workspaceId = requireWorkspaceId(ctx.workspaceId);
 
-      // Get all safes for this user across all chains
-      const userSafesList = await getMultiChainUserSafes(privyDid);
+      // Get all safes for this user within the workspace
+      const userSafesList = await getMultiChainUserSafes(privyDid, workspaceId);
 
       // Create a map of chainId -> safeAddress for quick lookup
       const safesByChain = new Map<number, string>();
@@ -2377,9 +2376,10 @@ export const earnRouter = router({
    */
   getMultiChainPositions: protectedProcedure.query(async ({ ctx }) => {
     const privyDid = requirePrivyDid(ctx);
+    const workspaceId = requireWorkspaceId(ctx.workspaceId);
 
-    // Get user's Safes across all chains
-    const safes = await getMultiChainUserSafes(privyDid);
+    // Get user's Safes across all chains within this workspace
+    const safes = await getMultiChainUserSafes(privyDid, workspaceId);
 
     // Get RPC manager for balance queries
     const rpcManager = getRPCManager();
@@ -2475,10 +2475,12 @@ export const earnRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       const privyDid = requirePrivyDid(ctx);
+      const workspaceId = requireWorkspaceId(ctx.workspaceId);
 
       // Get source Safe
       const sourceSafe = await getSafeOnChain(
         privyDid,
+        workspaceId,
         input.sourceChainId as SupportedChainId,
         'primary',
       );
@@ -2493,6 +2495,7 @@ export const earnRouter = router({
       // Check if destination Safe exists in database
       const destSafe = await getSafeOnChain(
         privyDid,
+        workspaceId,
         input.destChainId as SupportedChainId,
         'primary',
       );
@@ -2502,6 +2505,7 @@ export const earnRouter = router({
         // Get deployment transaction data for the destination chain
         const deploymentTx = await getSafeDeploymentTransaction(
           privyDid,
+          workspaceId,
           input.destChainId as SupportedChainId,
           'primary',
         );
@@ -2586,10 +2590,12 @@ export const earnRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       const privyDid = requirePrivyDid(ctx);
+      const workspaceId = requireWorkspaceId(ctx.workspaceId);
 
       // Get source Safe
       const sourceSafe = await getSafeOnChain(
         privyDid,
+        workspaceId,
         input.sourceChainId as SupportedChainId,
         'primary',
       );
@@ -2604,6 +2610,7 @@ export const earnRouter = router({
       // Check if destination Safe exists in database
       const destSafe = await getSafeOnChain(
         privyDid,
+        workspaceId,
         input.destChainId as SupportedChainId,
         'primary',
       );
@@ -2613,6 +2620,7 @@ export const earnRouter = router({
         // Get deployment transaction data for the destination chain
         const deploymentTx = await getSafeDeploymentTransaction(
           privyDid,
+          workspaceId,
           input.destChainId as SupportedChainId,
           'primary',
         );
@@ -2913,9 +2921,11 @@ export const earnRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       const privyDid = requirePrivyDid(ctx);
+      const workspaceId = requireWorkspaceId(ctx.workspaceId);
 
       const deploymentTx = await getSafeDeploymentTransaction(
         privyDid,
+        workspaceId,
         input.targetChainId as SupportedChainId,
         input.safeType,
       );
@@ -2947,6 +2957,7 @@ export const earnRouter = router({
       // Check if Safe already exists
       const existingSafe = await getSafeOnChain(
         privyDid,
+        workspaceId,
         input.chainId as SupportedChainId,
         input.safeType,
       );
