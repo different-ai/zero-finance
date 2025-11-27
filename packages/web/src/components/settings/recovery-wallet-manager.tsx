@@ -98,15 +98,17 @@ export function RecoveryWalletManager({
       // After connecting, check for connected wallets
       if (privyUser?.wallet?.address) {
         setRecoveryAddress(privyUser.wallet.address);
-        toast.success('Wallet connected', {
+        toast.success('External wallet linked', {
           description: `Address: ${privyUser.wallet.address.slice(0, 6)}...${privyUser.wallet.address.slice(-4)}`,
         });
       } else {
-        toast.info('Wallet connected. Please paste the address manually.');
+        toast.info(
+          'External wallet linked. Please paste the address manually.',
+        );
       }
     } catch (error) {
       console.error('Error connecting wallet:', error);
-      toast.error('Failed to connect wallet');
+      toast.error('Failed to link external wallet');
     }
   }, [connectWallet, privyUser]);
 
@@ -246,7 +248,7 @@ export function RecoveryWalletManager({
             </TabsTrigger>
             <TabsTrigger value="connect" className="text-[13px] gap-2">
               <Wallet className="h-3.5 w-3.5" />
-              Connect Wallet
+              Link External Wallet
             </TabsTrigger>
           </TabsList>
 
@@ -275,8 +277,7 @@ export function RecoveryWalletManager({
           <TabsContent value="connect" className="space-y-4 mt-4">
             <div className="space-y-3">
               <p className="text-[13px] text-[#101010]/70 leading-[1.5]">
-                Connect your recovery wallet to automatically fill in the
-                address
+                Link an external wallet to use as your recovery address
               </p>
               <Button
                 onClick={handleConnectWallet}
@@ -285,7 +286,7 @@ export function RecoveryWalletManager({
                 disabled={isLoading}
               >
                 <Wallet className="h-4 w-4" />
-                Connect Wallet
+                Link External Wallet
               </Button>
               {recoveryAddress && (
                 <div className="p-3 bg-[#10b981]/5 border border-[#10b981]/20 rounded-md">
@@ -318,8 +319,8 @@ export function RecoveryWalletManager({
           <Alert className="border-[#ef4444]/20 bg-[#ef4444]/5">
             <AlertCircle className="h-4 w-4 text-[#ef4444]" />
             <AlertDescription className="text-[12px] text-[#101010]/70">
-              Relay service not available. Ensure Privy wallet is connected and
-              the selected wallet owns the Safe.
+              Relay service not available. Ensure your account is properly
+              initialized and you have ownership of the Safe.
             </AlertDescription>
           </Alert>
         )}

@@ -11,7 +11,7 @@ interface StartupCalculatorSectionProps {
 export function StartupCalculatorSection({
   companyName,
   fundingAmount,
-  isMobile = false
+  isMobile = false,
 }: StartupCalculatorSectionProps) {
   const formatCurrency = (value: number) => {
     if (value >= 1000000) {
@@ -28,8 +28,8 @@ export function StartupCalculatorSection({
   };
 
   // Calculate potential savings
-  const yearlyAtBank = (fundingAmount * 0.02);  // 2% bank rate
-  const yearlyAtZero = (fundingAmount * 0.08);  // 8% Zero rate
+  const yearlyAtBank = fundingAmount * 0.02; // 2% bank rate
+  const yearlyAtZero = fundingAmount * 0.08; // 8% Zero rate
   const yearlyDifference = yearlyAtZero - yearlyAtBank;
   const monthlyDifference = yearlyDifference / 12;
 
@@ -44,7 +44,9 @@ export function StartupCalculatorSection({
               [ ZERO_FINANCE: 8% APY SAVINGS ]
             </div>
             <div className="text-xs sm:text-sm text-white/90 font-mono leading-relaxed mb-3">
-              Banks pay ~2% on cash. Zero Finance pays 8% APY. That's 4x more interest on your idle capital — fully insured, always withdrawable.
+              Banks pay ~2% on cash. Zero Finance pays 8% APY. That's 4x more
+              interest on your idle capital — fully insured, always
+              withdrawable.
             </div>
             <div className="border-t-2 border-[#00FF00]/30 pt-3">
               <div className="text-[8px] sm:text-[9px] text-[#00FFFF] font-mono uppercase tracking-wider mb-1">
@@ -115,7 +117,11 @@ export function StartupCalculatorSection({
               [ ZERO_FINANCE: THE 8% APY SAVINGS ACCOUNT ]
             </div>
             <div className="text-xl lg:text-2xl text-white/90 font-mono leading-relaxed mb-6">
-              Traditional banks pay ~2% on idle cash. Zero Finance pays <span className="text-[#00FF00] font-bold">8% APY</span> — that's <span className="text-[#00FF00] font-bold">4x more interest</span> on your startup's runway. Self-custodial, insured against DeFi hacks, always withdrawable, zero lock-ups.
+              Traditional banks pay ~2% on idle cash. Zero Finance pays{' '}
+              <span className="text-[#00FF00] font-bold">8% APY</span> — that's{' '}
+              <span className="text-[#00FF00] font-bold">4x more interest</span>{' '}
+              on your startup's runway. Self-custodial, insured up to $1M by a
+              licensed insurer, always withdrawable, zero lock-ups.
             </div>
 
             <div className="grid grid-cols-2 gap-6 mb-6">
@@ -177,15 +183,21 @@ export function StartupCalculatorSection({
               </div>
               <div className="space-y-3 text-base font-mono text-white/80">
                 <div className="flex items-start gap-3">
-                  <span className="text-[#00FF00] text-xl flex-shrink-0">✓</span>
+                  <span className="text-[#00FF00] text-xl flex-shrink-0">
+                    ✓
+                  </span>
                   <span>FDIC insured up to $5M</span>
                 </div>
                 <div className="flex items-start gap-3">
-                  <span className="text-[#00FF00] text-xl flex-shrink-0">✓</span>
+                  <span className="text-[#00FF00] text-xl flex-shrink-0">
+                    ✓
+                  </span>
                   <span>SEC-regulated custodian</span>
                 </div>
                 <div className="flex items-start gap-3">
-                  <span className="text-[#00FF00] text-xl flex-shrink-0">✓</span>
+                  <span className="text-[#00FF00] text-xl flex-shrink-0">
+                    ✓
+                  </span>
                   <span>Bank-grade security</span>
                 </div>
               </div>
@@ -197,15 +209,21 @@ export function StartupCalculatorSection({
               </div>
               <div className="space-y-3 text-base font-mono text-white/80">
                 <div className="flex items-start gap-3">
-                  <span className="text-[#00FF00] text-xl flex-shrink-0">✓</span>
+                  <span className="text-[#00FF00] text-xl flex-shrink-0">
+                    ✓
+                  </span>
                   <span>Withdraw anytime</span>
                 </div>
                 <div className="flex items-start gap-3">
-                  <span className="text-[#00FF00] text-xl flex-shrink-0">✓</span>
+                  <span className="text-[#00FF00] text-xl flex-shrink-0">
+                    ✓
+                  </span>
                   <span>No minimum balance</span>
                 </div>
                 <div className="flex items-start gap-3">
-                  <span className="text-[#00FF00] text-xl flex-shrink-0">✓</span>
+                  <span className="text-[#00FF00] text-xl flex-shrink-0">
+                    ✓
+                  </span>
                   <span>Corporate card soon</span>
                 </div>
               </div>
@@ -215,10 +233,16 @@ export function StartupCalculatorSection({
       )}
 
       {/* Interactive Calculator Section */}
-      <div className={isMobile ? "mt-4" : "mt-8"}>
-        <div className={`border-2 border-white/30 bg-[#0000AA]/10 p-2 sm:p-3 mb-3 sm:mb-4`}>
-          <div className={`font-mono ${isMobile ? 'text-[9px] sm:text-[10px]' : 'text-sm'} text-white uppercase tracking-wider`}>
-            {isMobile ? '▼ TRY_THE_CALCULATOR' : '▼▼▼ INTERACTIVE_CALCULATOR: SEE_YOUR_POTENTIAL_SAVINGS ▼▼▼'}
+      <div className={isMobile ? 'mt-4' : 'mt-8'}>
+        <div
+          className={`border-2 border-white/30 bg-[#0000AA]/10 p-2 sm:p-3 mb-3 sm:mb-4`}
+        >
+          <div
+            className={`font-mono ${isMobile ? 'text-[9px] sm:text-[10px]' : 'text-sm'} text-white uppercase tracking-wider`}
+          >
+            {isMobile
+              ? '▼ TRY_THE_CALCULATOR'
+              : '▼▼▼ INTERACTIVE_CALCULATOR: SEE_YOUR_POTENTIAL_SAVINGS ▼▼▼'}
           </div>
         </div>
         <SavingsCalculator defaultAmount={fundingAmount} />

@@ -136,12 +136,18 @@ export default function LegalPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 lg:gap-8 mb-8 sm:mb-12">
             <div className="bg-white rounded-xl border border-[#101010]/10 p-4 sm:p-6 lg:p-8">
               <h3 className="text-[16px] sm:text-[18px] lg:text-xl font-bold text-[#101010] mb-3 sm:mb-4">
-                Insurance Provider: Chainproof
+                Insurance Provider: Chainproof (Licensed Insurer)
               </h3>
               <p className="text-[13px] sm:text-[14px] lg:text-[15px] text-[#101010]/70 mb-3 sm:mb-4">
-                Chainproof provides comprehensive smart contract insurance
-                coverage, ensuring that your funds are protected against
-                technical risks and vulnerabilities.
+                Chainproof, a licensed insurer, provides smart contract
+                insurance coverage up to $1M, ensuring that your funds are
+                protected against technical risks and vulnerabilities.{' '}
+                <a
+                  href="/legal/insurance-terms"
+                  className="text-[#1B29FF] underline"
+                >
+                  View full terms
+                </a>
               </p>
               <ul className="space-y-2">
                 <li className="flex items-start gap-2">
@@ -367,23 +373,23 @@ export default function LegalPage() {
 
               <div className="border border-gray-200 rounded-lg p-6">
                 <h4 className="font-semibold text-gray-900 mb-3">
-                  Multiple Wallet Options
+                  Embedded Wallet Architecture
                 </h4>
                 <p className="text-sm text-gray-700 mb-3">
-                  Connect your existing wallet or create an embedded wallet.
-                  Support for all major wallets and chains.
+                  Each user gets an embedded wallet via Privy that controls a
+                  Safe smart account. No external wallet connection required.
                 </p>
                 <ul className="space-y-1">
                   <li className="flex items-center gap-2">
                     <CheckCircle2 className="w-4 h-4 text-green-600" />
                     <span className="text-xs text-gray-600">
-                      MetaMask, WalletConnect, Coinbase
+                      Sign up with email, phone, or social login
                     </span>
                   </li>
                   <li className="flex items-center gap-2">
                     <CheckCircle2 className="w-4 h-4 text-green-600" />
                     <span className="text-xs text-gray-600">
-                      Hardware wallet compatible
+                      Optional hardware wallet for recovery
                     </span>
                   </li>
                 </ul>
@@ -585,10 +591,10 @@ export default function LegalPage() {
               <p className="text-gray-700">
                 The yield comes from established DeFi protocols that have been
                 operating for years. These include lending markets (like Aave),
-                liquidity provision, and other yield strategies. The 8%
-                includes the base protocol yield plus additional optimization
-                strategies. This is sustainable because it's based on real
-                economic activity, not speculation.
+                liquidity provision, and other yield strategies. The 8% includes
+                the base protocol yield plus additional optimization strategies.
+                This is sustainable because it's based on real economic
+                activity, not speculation.
               </p>
             </div>
 
@@ -611,12 +617,19 @@ export default function LegalPage() {
                 How does the insurance actually work?
               </h3>
               <p className="text-gray-700">
-                The insurance is underwritten by Chainproof (backed by Munich
-                Re) and covers smart contract failures. If a covered protocol is
-                hacked or fails, claims are processed and paid out in USDC. The
+                The insurance is underwritten by Chainproof, a licensed insurer
+                (backed by Munich Re), with coverage up to $1M per account. It
+                covers smart contract failures. If a covered protocol is hacked
+                or fails, claims are processed and paid out in USDC. The
                 coverage is automatic - you don't need to file claims yourself.
                 Insurance premiums are already factored into the yield you
-                receive.
+                receive.{' '}
+                <a
+                  href="/legal/insurance-terms"
+                  className="text-[#1B29FF] underline"
+                >
+                  View full insurance terms
+                </a>
               </p>
             </div>
 

@@ -49,9 +49,12 @@ export default function TermsOfServicePage() {
         ("Blockchain").
       </p>
       <p>
-        <strong>Insurance and Security:</strong> Insurance coverage is provided
-        by Chainproof. Smart contract security audits are performed by
-        Quantstamp.
+        <strong>Insurance and Security:</strong> Insurance coverage (up to $1M)
+        is provided by Chainproof, a licensed insurer. Smart contract security
+        audits are performed by Quantstamp.{' '}
+        <a href="/legal/insurance-terms" className="text-[#1B29FF] underline">
+          View full insurance terms
+        </a>
       </p>
 
       <h3>Reimbursement Amount</h3>

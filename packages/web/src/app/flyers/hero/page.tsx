@@ -48,8 +48,8 @@ export default function HeroFlyerPage() {
             {/* Subheadline */}
             <p className="text-[18px] leading-[1.5] text-[#101010]/80 max-w-[550px]">
               Open US or EU account numbers, wire USD or USDC. We automatically
-              place your funds into vetted yield strategies with defined
-              insurance coverage. Withdraw any time.
+              place your funds into vetted yield strategies with insurance
+              coverage up to $1M from a licensed insurer. Withdraw any time.
             </p>
 
             {/* Key Stat */}

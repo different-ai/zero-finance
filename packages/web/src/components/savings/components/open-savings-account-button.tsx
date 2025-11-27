@@ -84,7 +84,7 @@ export function OpenSavingsAccountButton({
   const handleOpenAccount = async () => {
     if (!safeAddress || !isRelayReady || !smartClient?.account) {
       toast.error(
-        'Prerequisites not met. Please ensure your wallet is connected.',
+        'Prerequisites not met. Please ensure your account is properly set up.',
       );
       return;
     }

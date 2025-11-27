@@ -179,8 +179,8 @@ export function AdvancedWalletClientContent() {
                           1.
                         </span>
                         <span>
-                          Connect a wallet that supports the Base network
-                          (MetaMask, Coinbase Wallet, or Rainbow)
+                          Use an external wallet on the Base network (MetaMask,
+                          Coinbase Wallet, or Rainbow) for recovery
                         </span>
                       </li>
                       <li className="flex items-start gap-3">

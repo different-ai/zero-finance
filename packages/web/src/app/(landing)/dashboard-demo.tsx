@@ -103,11 +103,14 @@ export function DashboardDemo({
                 <div className="flex items-center gap-2">
                   <Shield className="w-4 h-4 text-blue-600" />
                   <p className="text-xs text-blue-800">
-                    <strong>Insured by Chainproof</strong>
+                    <strong>Insured by Chainproof (licensed insurer)</strong>
                   </p>
                 </div>
                 <p className="text-xs text-blue-700 mt-1">
-                  Smart contract insurance protects your yield
+                  Coverage up to $1M.{' '}
+                  <a href="/legal/insurance-terms" className="underline">
+                    Learn more
+                  </a>
                 </p>
               </div>
 

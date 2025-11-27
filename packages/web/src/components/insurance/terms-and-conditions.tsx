@@ -48,11 +48,12 @@ export function InsuranceTermsDialog({
                 Coverage Overview
               </h3>
               <p>
-                In the event of a security exploit due to smart contract
-                vulnerabilities in approved DeFi protocols, Zero Finance will
-                reimburse you up to your chosen Maximum Coverage amount for the
-                loss or theft of your deposits, subject to the terms and
-                conditions below.
+                Insurance coverage (up to $1M) is provided by Chainproof, a
+                licensed insurer. In the event of a security exploit due to
+                smart contract vulnerabilities in approved DeFi protocols, Zero
+                Finance will reimburse you up to your chosen Maximum Coverage
+                amount for the loss or theft of your deposits, subject to the
+                terms and conditions below.
               </p>
             </section>
 

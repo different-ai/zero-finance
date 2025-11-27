@@ -205,7 +205,7 @@ export function FinalCTASection() {
                 </span>
                 <span className="text-[12px] text-[#101010]/40">
                   High-yield strategies through vetted DeFi protocols with smart
-                  contract insurance
+                  contract insurance (up to $1M via licensed insurer)
                 </span>
               </div>
               <div className="flex items-center gap-2">
@@ -217,7 +217,10 @@ export function FinalCTASection() {
             </div>
             <div className="mt-4 text-[11px] text-[#101010]/40 leading-relaxed">
               High-yield strategies target 2-3x traditional bank rates through
-              vetted DeFi protocols with insurance coverage.
+              vetted DeFi protocols with insurance coverage up to $1M.{' '}
+              <a href="/legal/insurance-terms" className="underline">
+                Learn more
+              </a>
             </div>
           </div>
         </div>

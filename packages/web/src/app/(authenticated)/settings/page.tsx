@@ -25,7 +25,6 @@ export default function SettingsPage() {
       {/* Main Content */}
       <main className="px-4 sm:px-6 py-6 sm:py-8 max-w-[1400px] mx-auto">
         <div className="grid gap-5 sm:gap-6 md:grid-cols-2 lg:grid-cols-3">
-          
           {/* Funding Sources Card */}
           <div className="bg-white border border-[#101010]/10 rounded-lg p-5 sm:p-6">
             <div className="flex items-start gap-3">
@@ -64,7 +63,7 @@ export default function SettingsPage() {
                   Manage your account security and access
                 </p>
                 <p className="mt-3 text-[12px] text-[#101010]/50">
-                  Update your wallet connections, recovery options, and access
+                  Update your recovery options, security settings, and access
                   controls.
                 </p>
                 <Link

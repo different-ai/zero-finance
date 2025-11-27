@@ -105,8 +105,8 @@ function InsuranceActiveStatus({ isTechnical }: { isTechnical: boolean }) {
               )}
             >
               {isTechnical
-                ? 'PROTOCOL::NEXUS_MUTUAL // CAPACITY::200M // COVERAGE::100%'
-                : 'Your deposits are covered by Chainproof up to $1M'}
+                ? 'PROTOCOL::CHAINPROOF // LICENSED_INSURER // COVERAGE::UP_TO_$1M'
+                : 'Your deposits are covered by Chainproof (licensed insurer) up to $1M'}
             </p>
           </div>
         </div>
@@ -186,8 +186,8 @@ function InsuranceCTA({
                 )}
               >
                 {isTechnical
-                  ? 'PROTOCOL::NEXUS_MUTUAL // COVERAGE_RATIO::100%'
-                  : 'Protect your deposits with institutional-grade coverage'}
+                  ? 'PROTOCOL::CHAINPROOF // LICENSED_INSURER // COVERAGE::UP_TO_$1M'
+                  : 'Protect your deposits with coverage up to $1M from a licensed insurer'}
               </p>
             </div>
           </div>

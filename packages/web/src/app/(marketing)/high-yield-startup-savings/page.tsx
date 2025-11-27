@@ -225,9 +225,16 @@ export default function HighYieldStartupSavingsPage() {
                 Is this actually insured like FDIC?
               </h3>
               <p className="mt-2 text-[14px] leading-[1.5] text-[#101010]/70">
-                We provide smart contract insurance through Chainproof, covering
-                technical risks and exploits. While not FDIC insurance, it
-                protects against the primary risks in DeFi infrastructure.
+                We provide smart contract insurance through Chainproof (a
+                licensed insurer), with coverage up to $1M for technical risks
+                and exploits. While not FDIC insurance, it protects against the
+                primary risks in DeFi infrastructure.{' '}
+                <a
+                  href="/legal/insurance-terms"
+                  className="text-[#1B29FF] underline"
+                >
+                  Learn more
+                </a>
               </p>
             </div>
 

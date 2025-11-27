@@ -30,7 +30,7 @@ const faqs = [
   {
     question: 'Is earning 8% on treasury safe for startups?',
     answer:
-      '0 Finance provides smart contract insurance on the 8% yield, protecting against technical risks. While not FDIC insured, it offers protection against the primary risks in DeFi infrastructure.',
+      '0 Finance provides smart contract insurance (up to $1M coverage via Chainproof, a licensed insurer) on the 8% yield, protecting against technical risks. While not FDIC insured, it offers protection against the primary risks in DeFi infrastructure.',
   },
 ];
 
@@ -124,8 +124,9 @@ export default function ExtendRunwayBlogPost() {
               <Link href="/" className="text-[#1B29FF] hover:underline">
                 0 Finance
               </Link>{' '}
-              offer 8% yields with smart contract insurance, effectively
-              doubling what you'd get from Mercury Treasury or Brex.
+              offer 8% yields with smart contract insurance (up to $1M coverage
+              via a licensed insurer), effectively doubling what you'd get from
+              Mercury Treasury or Brex.
             </p>
 
             <h2 className="font-serif text-[28px] mt-12 mb-4 text-[#101010]">

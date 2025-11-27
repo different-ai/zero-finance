@@ -473,8 +473,14 @@ export default function CompareExtendedPage() {
                     ** Smart Contract Risk
                   </p>
                   <p className="text-[11px] text-[#101010]/60 mt-1">
-                    Covered by insurance but not FDIC. Theoretical protocol risk
-                    exists.
+                    Covered by insurance (up to $1M via licensed insurer) but
+                    not FDIC. Theoretical protocol risk exists.{' '}
+                    <a
+                      href="/legal/insurance-terms"
+                      className="text-[#1B29FF] underline"
+                    >
+                      Learn more
+                    </a>
                   </p>
                 </div>
               </div>

@@ -50,8 +50,9 @@ export default function InsuranceTermsPage() {
             <div className="bg-[#1B29FF]/5 border border-[#1B29FF]/20 rounded-md p-4">
               <p className="text-[14px] text-[#101010]/70">
                 <strong className="text-[#101010]">Important:</strong> Insurance
-                coverage is included at no additional cost for all deposits.
-                Coverage applies automatically to approved vaults.
+                coverage up to $1M is provided by Chainproof, a licensed
+                insurer, at no additional cost for all deposits. Coverage
+                applies automatically to approved vaults.
               </p>
             </div>
           </section>
@@ -193,6 +194,7 @@ export default function InsuranceTermsPage() {
 
           <section className="pt-8 border-t border-[#101010]/10">
             <p className="text-[13px] text-[#101010]/60">
+              Insurance coverage is provided by Chainproof, a licensed insurer.
               These terms are provided in partnership with Quantstamp for DeFi
               Protection. For questions about coverage, contact{' '}
               <a

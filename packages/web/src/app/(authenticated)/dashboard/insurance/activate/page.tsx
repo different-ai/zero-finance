@@ -130,8 +130,9 @@ export default function InsuranceActivatePage() {
                     </Link>{' '}
                     for the DeFi Protection Security Guarantee. I understand
                     that only Morpho vaults are covered through this interface,
-                    insurance is provided by Chainproof, and smart contract
-                    audits are performed by Quantstamp.
+                    insurance (up to $1M) is provided by Chainproof (a licensed
+                    insurer), and smart contract audits are performed by
+                    Quantstamp.
                   </span>
                 </label>
               </div>

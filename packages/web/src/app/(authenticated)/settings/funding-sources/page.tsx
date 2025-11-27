@@ -13,7 +13,7 @@ export default function FundingSourcesPage() {
       {/* Dashboard Header - Following Design Language */}
       <header className="sticky top-0 z-40 bg-[#F7F7F2] border-b border-[#101010]/10">
         <div className="h-[60px] flex items-center px-4 sm:px-6 max-w-[1400px] mx-auto">
-          <Link 
+          <Link
             href="/settings"
             className="flex items-center text-[#101010]/60 hover:text-[#101010] transition-colors mr-4"
           >
@@ -31,7 +31,6 @@ export default function FundingSourcesPage() {
       {/* Main Content */}
       <main className="px-4 sm:px-6 py-6 sm:py-8 max-w-[1400px] mx-auto">
         <div className="grid gap-5 sm:gap-6 md:grid-cols-2">
-          
           {/* Virtual Bank Account Card */}
           <div className="bg-white border border-[#101010]/10 rounded-lg p-5 sm:p-6">
             <div className="flex items-start gap-3">
@@ -41,11 +40,13 @@ export default function FundingSourcesPage() {
                   Virtual Bank Account
                 </h2>
                 <p className="mt-2 text-[13px] sm:text-[14px] text-[#101010]/70 leading-[1.5]">
-                  Receive fiat payments via bank transfer, automatically convert to crypto
+                  Receive fiat payments via bank transfer, automatically convert
+                  to crypto
                 </p>
                 <div className="mt-4 space-y-2">
                   <p className="text-[13px] text-[#101010]/60">
-                    Set up a virtual bank account through Align to receive USD or EUR payments.
+                    Set up a virtual bank account through Align to receive USD
+                    or EUR payments.
                   </p>
                   <ul className="text-[12px] space-y-1.5 text-[#101010]/50">
                     <li className="flex items-start">
@@ -68,7 +69,8 @@ export default function FundingSourcesPage() {
                 </div>
                 <div className="mt-6 p-3 bg-[#F7F7F2] rounded-md">
                   <p className="text-[12px] text-[#101010]/60 text-center">
-                    Virtual bank account setup is available in your dashboard onboarding flow
+                    Virtual bank account setup is available in your dashboard
+                    onboarding flow
                   </p>
                 </div>
               </div>
@@ -88,7 +90,8 @@ export default function FundingSourcesPage() {
                 </p>
                 <div className="mt-4 space-y-2">
                   <p className="text-[13px] text-[#101010]/60">
-                    Add your existing bank account details to be included on invoices.
+                    Add your existing bank account details to be included on
+                    invoices.
                   </p>
                   <ul className="text-[12px] space-y-1.5 text-[#101010]/50">
                     <li className="flex items-start">
@@ -125,11 +128,12 @@ export default function FundingSourcesPage() {
                   Crypto Wallets
                 </h2>
                 <p className="mt-2 text-[13px] sm:text-[14px] text-[#101010]/70 leading-[1.5]">
-                  Manage your connected crypto wallets and addresses
+                  Manage your crypto addresses for payments
                 </p>
                 <div className="mt-4">
                   <p className="text-[13px] text-[#101010]/60">
-                    Add and manage wallet addresses for receiving crypto payments directly through invoices or other channels.
+                    Add and manage wallet addresses for receiving crypto
+                    payments directly through invoices or other channels.
                   </p>
                 </div>
                 <button className="mt-6 w-full px-4 py-2 text-[13px] font-medium text-[#101010] bg-white border border-[#101010]/20 rounded-md hover:bg-[#F7F7F2] transition-colors">

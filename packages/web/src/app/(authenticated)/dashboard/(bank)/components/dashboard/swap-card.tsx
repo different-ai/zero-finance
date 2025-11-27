@@ -22,7 +22,7 @@ import Safe from '@safe-global/protocol-kit';
 import { toast } from 'sonner';
 import { getLifiQuoteAndTxData } from '../../lib/swap-service';
 
-type CustomEIP1193Provider = string | EIP1193Provider 
+type CustomEIP1193Provider = string | EIP1193Provider;
 
 // Define constants (ensure env vars are available client-side)
 const BASE_RPC_URL = process.env.NEXT_PUBLIC_BASE_RPC_URL as string;
@@ -103,7 +103,7 @@ export function SwapCard({ primarySafeAddress }: SwapCardProps) {
     const fromAddress = embeddedWallet.address as Address;
 
     try {
-      toast.loading('Connecting wallet & clients...', { id: toastId });
+      toast.loading('Initializing transaction...', { id: toastId });
       await embeddedWallet.switchChain(base.id);
       const ethereumProvider = await embeddedWallet.getEthereumProvider();
 
@@ -321,7 +321,7 @@ export function SwapCard({ primarySafeAddress }: SwapCardProps) {
           )}
 
           <p className="text-xs text-gray-500 text-center pt-2">
-            Connected Wallet:{' '}
+            Your Wallet:{' '}
             <span className="font-mono break-all">
               {embeddedWallet.address}
             </span>

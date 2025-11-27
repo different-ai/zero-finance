@@ -915,7 +915,7 @@ export function DepositEarnCard({
           (w) => w.address.toLowerCase() === eoaAddress!.toLowerCase(),
         );
         if (!wallet) {
-          throw new Error('Connected wallet not found');
+          throw new Error('Wallet not found in account');
         }
 
         // Switch wallet to target chain and get EIP-1193 provider

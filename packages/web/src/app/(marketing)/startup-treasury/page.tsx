@@ -224,9 +224,16 @@ export default function StartupTreasuryPage() {
                 Smart Contract Insurance
               </h3>
               <p className="mt-3 text-[14px] leading-[1.5] text-[#101010]/80">
-                Partnership with Chainproof provides coverage against technical
-                risks, exploits, and smart contract failures. While not FDIC, it
-                protects against the primary risks in DeFi infrastructure.
+                Partnership with Chainproof (licensed insurer) provides coverage
+                up to $1M against technical risks, exploits, and smart contract
+                failures. While not FDIC, it protects against the primary risks
+                in DeFi infrastructure.{' '}
+                <a
+                  href="/legal/insurance-terms"
+                  className="text-[#1B29FF] underline"
+                >
+                  Learn more
+                </a>
               </p>
             </div>
 

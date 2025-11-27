@@ -58,7 +58,7 @@ export function Header() {
               }`}
               href="/signin"
             >
-              {isTechnical ? 'CONNECT::WALLET' : 'Sign in'}
+              {isTechnical ? 'AUTH::LOGIN' : 'Sign in'}
             </Link>
           </nav>
         </div>

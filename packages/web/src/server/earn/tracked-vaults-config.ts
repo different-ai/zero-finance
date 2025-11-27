@@ -4,7 +4,7 @@
  * Central configuration for all vaults we track in the admin dashboard.
  * Includes insurance status, monitoring flags, and vault metadata.
  *
- * INSURED VAULTS (Lockton/Chainproof $100K coverage):
+ * INSURED VAULTS (Chainproof licensed insurer, coverage up to $1M):
  * - Hyperithm USDC (Arbitrum): 0x4B6F1C9E5d470b97181786b26da0d0945A7cf027
  * - Gauntlet USDC Prime (Base): 0xeE8F4eC5672F09119b96Ab6fB59C27E1b7e44b61
  * - Gauntlet USDC Prime (Optimism): 0xC30ce6A5758786e0F640cC5f881Dd96e9a1C5C59
