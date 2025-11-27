@@ -92,7 +92,7 @@ const SIGNIN_CONTENT: BimodalSigninContent = {
       },
       {
         label: 'AUDIT',
-        value: 'Ackee Blockchain verified',
+        value: 'Smart contract audited',
         status: 'verified',
       },
       {
@@ -693,7 +693,7 @@ export default function SignInContent() {
 
                 <div className="text-center">
                   <Link
-                    href={source ? `/${source}` : '/'}
+                    href="/"
                     className="text-[13px] text-[#101010]/70 hover:text-[#1B29FF] underline underline-offset-4 transition-colors"
                   >
                     ← Back to Landing
