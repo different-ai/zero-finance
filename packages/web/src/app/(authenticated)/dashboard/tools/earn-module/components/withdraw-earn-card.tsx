@@ -736,10 +736,12 @@ export function WithdrawEarnCard({
     );
   };
 
-  // Processing/Confirming/Indexing states - show progress
-  if (isProcessing) {
+  // Processing banner component - shown during withdrawal processing
+  const ProcessingBanner = () => {
+    if (!isProcessing) return null;
+
     const statusMessage = {
-      processing: isTechnical ? 'SIGNING_TX...' : 'Signing transaction...',
+      processing: isTechnical ? 'SIGNING_TX...' : 'Processing withdrawal...',
       confirming: isTechnical
         ? 'CONFIRMING_ON_CHAIN...'
         : 'Confirming on chain...',
@@ -749,57 +751,50 @@ export function WithdrawEarnCard({
     return (
       <div
         className={cn(
-          'p-6 text-center space-y-4 relative',
-          isTechnical && 'bg-[#F7F7F2] border border-[#1B29FF]/20',
+          'p-4 mb-4 relative',
+          isTechnical
+            ? 'bg-[#1B29FF]/5 border border-[#1B29FF]/30'
+            : 'bg-[#EFF6FF] border border-[#1B29FF]/20',
         )}
       >
-        <div
-          className={cn(
-            'w-12 h-12 rounded-full flex items-center justify-center mx-auto',
-            isTechnical
-              ? 'bg-[#1B29FF]/10 border border-[#1B29FF]/30'
-              : 'bg-[#1B29FF]/10',
-          )}
-        >
-          <Loader2 className="h-6 w-6 text-[#1B29FF] animate-spin" />
+        <div className="flex gap-3">
+          <Loader2 className="h-5 w-5 text-[#1B29FF] flex-shrink-0 mt-0.5 animate-spin" />
+          <div className="space-y-1.5 flex-1">
+            <div
+              className={cn(
+                'text-[14px] font-medium text-[#101010]',
+                isTechnical && 'font-mono',
+              )}
+            >
+              {isTechnical ? 'PROCESSING::WITHDRAWAL' : 'Processing withdrawal'}
+            </div>
+            <p
+              className={cn(
+                'text-[12px] text-[#101010]/70',
+                isTechnical && 'font-mono',
+              )}
+            >
+              {statusMessage}
+            </p>
+            {/* Only show transaction link in technical mode during indexing */}
+            {isTechnical &&
+              withdrawState.step === 'indexing' &&
+              withdrawState.txHash && (
+                <a
+                  href={`https://basescan.org/tx/${withdrawState.txHash}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 text-[11px] font-mono text-[#1B29FF] hover:text-[#1420CC]"
+                >
+                  VIEW_TX
+                  <ExternalLink className="h-3 w-3" />
+                </a>
+              )}
+          </div>
         </div>
-        <div>
-          <h3
-            className={cn(
-              'text-[18px] font-semibold text-[#101010] mb-2',
-              isTechnical && 'font-mono',
-            )}
-          >
-            {isTechnical ? 'PROCESSING::WITHDRAWAL' : 'Processing Withdrawal'}
-          </h3>
-          <p
-            className={cn(
-              'text-[14px] text-[#101010]/70',
-              isTechnical && 'font-mono',
-            )}
-          >
-            {statusMessage}
-          </p>
-        </div>
-        {withdrawState.step === 'indexing' && withdrawState.txHash && (
-          <a
-            href={`https://basescan.org/tx/${withdrawState.txHash}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={cn(
-              'inline-flex items-center gap-1 text-[12px]',
-              isTechnical
-                ? 'font-mono text-[#1B29FF] hover:text-[#1420CC]'
-                : 'text-[#1B29FF] hover:text-[#1420CC]',
-            )}
-          >
-            {isTechnical ? 'VIEW_TX' : 'View transaction'}
-            <ExternalLink className="h-3 w-3" />
-          </a>
-        )}
       </div>
     );
-  }
+  };
 
   // Error state - show error with retry option
   if (withdrawState.step === 'error') {
@@ -856,7 +851,7 @@ export function WithdrawEarnCard({
   return (
     <div
       className={cn(
-        'space-y-4 relative',
+        'space-y-4 relative p-4',
         isTechnical && 'p-4 bg-[#F7F7F2] border border-[#1B29FF]/20',
       )}
     >
@@ -876,6 +871,9 @@ export function WithdrawEarnCard({
 
       {/* Success Banner - shown after successful withdrawal */}
       <SuccessBanner />
+
+      {/* Processing Banner - shown during withdrawal */}
+      <ProcessingBanner />
 
       {/* Current Balance */}
       <div
