@@ -2,7 +2,19 @@
 
 import { useState } from 'react';
 import { trpc } from '@/utils/trpc';
-import { Copy, Check, ExternalLink, Wallet, Shield, Link2 } from 'lucide-react';
+import {
+  Copy,
+  Check,
+  ExternalLink,
+  Wallet,
+  Shield,
+  Link2,
+  RefreshCw,
+  Building2,
+  ChevronDown,
+  ChevronRight,
+  Users,
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
   BimodalCard,
@@ -39,6 +51,7 @@ function CopyButton({ value }: { value: string }) {
         'p-1 rounded transition-colors',
         isTechnical ? 'hover:bg-[#1B29FF]/10' : 'hover:bg-[#101010]/5',
       )}
+      title="Copy to clipboard"
     >
       {copied ? (
         <Check
@@ -62,19 +75,28 @@ function CopyButton({ value }: { value: string }) {
 function SafeCard({
   safe,
   position,
+  workspaceName,
   workspaceId,
+  isOwner,
+  onRefreshBalance,
+  isRefreshing,
 }: {
   safe: {
     id: string;
     address: string;
     chainId: number;
     safeType?: string;
+    createdAt?: Date | string;
   };
   position?: {
     usdcBalance: string;
     usdcBalanceRaw: string;
   };
+  workspaceName?: string;
   workspaceId?: string;
+  isOwner?: boolean;
+  onRefreshBalance?: () => void;
+  isRefreshing?: boolean;
 }) {
   const { isTechnical } = useBimodal();
   const chainName = CHAIN_NAMES[safe.chainId] || `Chain ${safe.chainId}`;
@@ -123,18 +145,67 @@ function SafeCard({
               >
                 {chainName}
               </span>
-            </div>
-            <p
-              className={cn(
-                'text-[12px] text-[#101010]/60 mt-0.5',
-                isTechnical && 'font-mono text-[10px]',
+              {isOwner !== undefined && (
+                <span
+                  className={cn(
+                    'inline-flex items-center px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.12em]',
+                    isOwner
+                      ? 'bg-blue-500/10 text-blue-700 rounded-full'
+                      : 'bg-orange-500/10 text-orange-700 rounded-full',
+                  )}
+                >
+                  {isOwner ? 'Owner' : 'Member'}
+                </span>
               )}
-            >
-              {isTechnical
-                ? `CHAIN_ID::${safe.chainId}`
-                : `Chain ID: ${safe.chainId}`}
-            </p>
+            </div>
+            {workspaceName && (
+              <p
+                className={cn(
+                  'text-[12px] text-[#101010]/60 mt-0.5 flex items-center gap-1',
+                  isTechnical && 'font-mono text-[10px]',
+                )}
+              >
+                <Building2 className="h-3 w-3" />
+                {workspaceName}
+              </p>
+            )}
           </div>
+        </div>
+
+        {/* Actions */}
+        <div className="flex items-center gap-1">
+          {onRefreshBalance && (
+            <button
+              onClick={onRefreshBalance}
+              disabled={isRefreshing}
+              className={cn(
+                'p-2 rounded transition-colors',
+                isTechnical
+                  ? 'hover:bg-[#1B29FF]/10 text-[#1B29FF]/60'
+                  : 'hover:bg-[#101010]/5 text-[#101010]/40',
+                isRefreshing && 'animate-spin',
+              )}
+              title="Refresh balance"
+            >
+              <RefreshCw className="h-4 w-4" />
+            </button>
+          )}
+          {explorerUrl && (
+            <a
+              href={`${explorerUrl}${safe.address}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={cn(
+                'p-2 rounded transition-colors',
+                isTechnical
+                  ? 'hover:bg-[#1B29FF]/10 text-[#1B29FF]/60'
+                  : 'hover:bg-[#101010]/5 text-[#101010]/40',
+              )}
+              title="View on explorer"
+            >
+              <ExternalLink className="h-4 w-4" />
+            </a>
+          )}
         </div>
       </div>
 
@@ -156,21 +227,6 @@ function SafeCard({
           >
             <span className="flex-1">{safe.address}</span>
             <CopyButton value={safe.address} />
-            {explorerUrl && (
-              <a
-                href={`${explorerUrl}${safe.address}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={cn(
-                  'p-1 rounded transition-colors',
-                  isTechnical
-                    ? 'hover:bg-[#1B29FF]/10 text-[#1B29FF]/60'
-                    : 'hover:bg-[#101010]/5 text-[#101010]/40',
-                )}
-              >
-                <ExternalLink className="h-3 w-3" />
-              </a>
-            )}
           </dd>
         </div>
 
@@ -206,26 +262,7 @@ function SafeCard({
           </div>
         )}
 
-        <div>
-          <dt
-            className={cn(
-              'uppercase tracking-[0.16em] text-[10px] mb-1',
-              isTechnical ? 'font-mono text-[#1B29FF]/70' : 'text-[#101010]/45',
-            )}
-          >
-            {isTechnical ? 'RECORD_ID' : 'Database ID'}
-          </dt>
-          <dd
-            className={cn(
-              'text-[12px] font-mono',
-              isTechnical ? 'text-[#1B29FF]/80' : 'text-[#101010]/60',
-            )}
-          >
-            {safe.id}
-          </dd>
-        </div>
-
-        {workspaceId && (
+        <div className="grid grid-cols-2 gap-3">
           <div>
             <dt
               className={cn(
@@ -235,34 +272,199 @@ function SafeCard({
                   : 'text-[#101010]/45',
               )}
             >
-              {isTechnical ? 'WORKSPACE_ID' : 'Workspace ID'}
+              {isTechnical ? 'RECORD_ID' : 'Database ID'}
             </dt>
             <dd
               className={cn(
-                'text-[12px] font-mono flex items-center gap-2',
+                'text-[11px] font-mono truncate',
                 isTechnical ? 'text-[#1B29FF]/80' : 'text-[#101010]/60',
               )}
+              title={safe.id}
             >
-              <Link2 className="h-3 w-3" />
-              {workspaceId}
+              {safe.id.slice(0, 8)}...
             </dd>
           </div>
-        )}
+
+          {workspaceId && (
+            <div>
+              <dt
+                className={cn(
+                  'uppercase tracking-[0.16em] text-[10px] mb-1',
+                  isTechnical
+                    ? 'font-mono text-[#1B29FF]/70'
+                    : 'text-[#101010]/45',
+                )}
+              >
+                {isTechnical ? 'WORKSPACE_ID' : 'Workspace'}
+              </dt>
+              <dd
+                className={cn(
+                  'text-[11px] font-mono truncate flex items-center gap-1',
+                  isTechnical ? 'text-[#1B29FF]/80' : 'text-[#101010]/60',
+                )}
+                title={workspaceId}
+              >
+                <Link2 className="h-3 w-3 flex-shrink-0" />
+                {workspaceId.slice(0, 8)}...
+              </dd>
+            </div>
+          )}
+        </div>
       </dl>
     </BimodalCard>
   );
 }
 
-function SafeAdminContent() {
+function WorkspaceSection({
+  workspace,
+  membership,
+  safes,
+  positionMap,
+  isExpanded,
+  onToggle,
+}: {
+  workspace: {
+    id: string;
+    name: string;
+    companyName?: string | null;
+  };
+  membership: {
+    role: string;
+    isPrimary: boolean;
+  };
+  safes: Array<{
+    id: string;
+    safeAddress: string;
+    chainId: number;
+    safeType: string;
+    isOwner: boolean;
+    workspaceId: string | null;
+  }>;
+  positionMap: Map<string, { usdcBalance: string; usdcBalanceRaw: string }>;
+  isExpanded: boolean;
+  onToggle: () => void;
+}) {
   const { isTechnical } = useBimodal();
 
-  // Get multi-chain positions (workspace-scoped)
-  const { data: positions, isLoading: isLoadingPositions } =
-    trpc.earn.getMultiChainPositions.useQuery();
+  return (
+    <div className="border rounded-lg overflow-hidden">
+      <button
+        onClick={onToggle}
+        className={cn(
+          'w-full p-4 flex items-center justify-between transition-colors',
+          isTechnical
+            ? 'bg-[#1B29FF]/5 hover:bg-[#1B29FF]/10 border-b border-[#1B29FF]/20'
+            : 'bg-[#101010]/5 hover:bg-[#101010]/10 border-b border-[#101010]/10',
+        )}
+      >
+        <div className="flex items-center gap-3">
+          <Building2
+            className={cn(
+              'h-5 w-5',
+              isTechnical ? 'text-[#1B29FF]' : 'text-[#101010]/60',
+            )}
+          />
+          <div className="text-left">
+            <p
+              className={cn(
+                'text-[14px] font-semibold',
+                isTechnical && 'font-mono text-[#1B29FF]',
+              )}
+            >
+              {workspace.name}
+            </p>
+            <p
+              className={cn(
+                'text-[11px] flex items-center gap-2',
+                isTechnical
+                  ? 'font-mono text-[#1B29FF]/60'
+                  : 'text-[#101010]/50',
+              )}
+            >
+              <span
+                className={cn(
+                  'px-1.5 py-0.5 rounded text-[9px] uppercase',
+                  membership.role === 'owner'
+                    ? 'bg-blue-500/10 text-blue-700'
+                    : 'bg-gray-500/10 text-gray-600',
+                )}
+              >
+                {membership.role}
+              </span>
+              <span>
+                {safes.length} Safe{safes.length !== 1 ? 's' : ''}
+              </span>
+            </p>
+          </div>
+        </div>
+        {isExpanded ? (
+          <ChevronDown className="h-5 w-5 text-[#101010]/40" />
+        ) : (
+          <ChevronRight className="h-5 w-5 text-[#101010]/40" />
+        )}
+      </button>
 
-  // Get all safes from settings (workspace-scoped)
-  const { data: settingsSafes, isLoading: isLoadingSafes } =
-    trpc.settings.userSafes.list.useQuery();
+      {isExpanded && (
+        <div className="p-4 space-y-4">
+          {safes.length === 0 ? (
+            <p
+              className={cn(
+                'text-center py-4 text-[13px]',
+                isTechnical
+                  ? 'font-mono text-[#1B29FF]/50'
+                  : 'text-[#101010]/50',
+              )}
+            >
+              No Safes in this workspace
+            </p>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2">
+              {safes.map((safe) => {
+                const position = positionMap.get(
+                  safe.safeAddress.toLowerCase(),
+                );
+                return (
+                  <SafeCard
+                    key={safe.id}
+                    safe={{
+                      id: safe.id,
+                      address: safe.safeAddress,
+                      chainId: safe.chainId,
+                      safeType: safe.safeType,
+                    }}
+                    position={position}
+                    workspaceId={safe.workspaceId || undefined}
+                    isOwner={safe.isOwner}
+                  />
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function SafeAdminContent() {
+  const { isTechnical } = useBimodal();
+  const [expandedWorkspaces, setExpandedWorkspaces] = useState<Set<string>>(
+    new Set(),
+  );
+
+  // Get all accessible safes across all workspaces
+  const {
+    data: allAccessibleData,
+    isLoading: isLoadingAllAccessible,
+    refetch: refetchAllAccessible,
+  } = trpc.settings.userSafes.listAllAccessible.useQuery();
+
+  // Get multi-chain positions for current workspace (for balance data)
+  const {
+    data: positions,
+    isLoading: isLoadingPositions,
+    refetch: refetchPositions,
+  } = trpc.earn.getMultiChainPositions.useQuery();
 
   // Get current workspace info
   const { data: currentWorkspace } =
@@ -272,73 +474,220 @@ function SafeAdminContent() {
     { enabled: !!currentWorkspace?.workspaceId },
   );
 
-  const isLoading = isLoadingPositions || isLoadingSafes;
+  const isLoading = isLoadingAllAccessible || isLoadingPositions;
 
   // Create a map of safe address to position data
   const positionMap = new Map(
     positions?.positions?.map((p) => [p.safeAddress.toLowerCase(), p]) || [],
   );
 
+  const toggleWorkspace = (workspaceId: string) => {
+    setExpandedWorkspaces((prev) => {
+      const next = new Set(prev);
+      if (next.has(workspaceId)) {
+        next.delete(workspaceId);
+      } else {
+        next.add(workspaceId);
+      }
+      return next;
+    });
+  };
+
+  const handleRefreshAll = () => {
+    refetchAllAccessible();
+    refetchPositions();
+  };
+
   return (
     <div className="space-y-6 p-4 md:p-8">
-      <header>
-        <h1
+      <header className="flex items-start justify-between">
+        <div>
+          <h1
+            className={cn(
+              'text-2xl font-bold tracking-[-0.02em]',
+              isTechnical && 'font-mono text-[#1B29FF] uppercase',
+            )}
+          >
+            {isTechnical ? 'SAFE::ADMIN_TOOLS' : 'Safe Admin Tools'}
+          </h1>
+          <p
+            className={cn(
+              'text-[14px] mt-1',
+              isTechnical ? 'font-mono text-[#1B29FF]/60' : 'text-[#101010]/60',
+            )}
+          >
+            {isTechnical
+              ? 'DEBUG::ALL_ACCESSIBLE_SAFES // CROSS_WORKSPACE'
+              : 'View and manage all Safes you have access to across workspaces'}
+          </p>
+        </div>
+        <button
+          onClick={handleRefreshAll}
           className={cn(
-            'text-2xl font-bold tracking-[-0.02em]',
-            isTechnical && 'font-mono text-[#1B29FF] uppercase',
+            'flex items-center gap-2 px-4 py-2 rounded-lg text-[13px] font-medium transition-colors',
+            isTechnical
+              ? 'bg-[#1B29FF]/10 text-[#1B29FF] hover:bg-[#1B29FF]/20 border border-[#1B29FF]/20'
+              : 'bg-[#101010]/5 text-[#101010] hover:bg-[#101010]/10',
           )}
         >
-          {isTechnical ? 'SAFE::ADMIN_TOOLS' : 'Safe Admin Tools'}
-        </h1>
-        <p
-          className={cn(
-            'text-[14px] mt-1',
-            isTechnical ? 'font-mono text-[#1B29FF]/60' : 'text-[#101010]/60',
-          )}
-        >
-          {isTechnical
-            ? 'DEBUG::WORKSPACE_SCOPED_SAFES // CHAIN_DATA::LIVE'
-            : 'View all Safes linked to your current workspace across all chains'}
-        </p>
+          <RefreshCw className="h-4 w-4" />
+          Refresh
+        </button>
       </header>
 
+      {/* Current Workspace Banner */}
       {workspace && (
         <BimodalCard isTechnical={isTechnical} className="p-4">
-          <div className="flex items-center gap-2">
-            <Link2
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div
+                className={cn(
+                  'h-10 w-10 rounded-full flex items-center justify-center',
+                  isTechnical
+                    ? 'bg-[#1B29FF]/10 border border-[#1B29FF]/20'
+                    : 'bg-[#1B29FF]/10',
+                )}
+              >
+                <Building2
+                  className={cn(
+                    'h-5 w-5',
+                    isTechnical ? 'text-[#1B29FF]' : 'text-[#1B29FF]',
+                  )}
+                />
+              </div>
+              <div>
+                <p
+                  className={cn(
+                    'text-[12px] uppercase tracking-[0.12em]',
+                    isTechnical
+                      ? 'font-mono text-[#1B29FF]/70'
+                      : 'text-[#101010]/45',
+                  )}
+                >
+                  {isTechnical ? 'CURRENT_WORKSPACE' : 'Current Workspace'}
+                </p>
+                <p
+                  className={cn(
+                    'text-[14px] font-medium',
+                    isTechnical ? 'font-mono text-[#1B29FF]' : 'text-[#101010]',
+                  )}
+                >
+                  {workspace.name || 'Unnamed Workspace'}
+                </p>
+              </div>
+            </div>
+            <div className="text-right">
+              <p
+                className={cn(
+                  'text-[11px] font-mono',
+                  isTechnical ? 'text-[#1B29FF]/60' : 'text-[#101010]/40',
+                )}
+              >
+                {workspace.id}
+              </p>
+            </div>
+          </div>
+        </BimodalCard>
+      )}
+
+      {/* Summary Stats */}
+      {allAccessibleData && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <BimodalCard isTechnical={isTechnical} className="p-4">
+            <dt
               className={cn(
-                'h-4 w-4',
-                isTechnical ? 'text-[#1B29FF]' : 'text-[#101010]/60',
-              )}
-            />
-            <span
-              className={cn(
-                'text-[12px] uppercase tracking-[0.12em]',
+                'uppercase tracking-[0.16em] text-[10px]',
                 isTechnical
                   ? 'font-mono text-[#1B29FF]/70'
                   : 'text-[#101010]/45',
               )}
             >
-              {isTechnical ? 'CURRENT_WORKSPACE' : 'Current Workspace'}
-            </span>
-          </div>
-          <p
-            className={cn(
-              'mt-2 text-[14px] font-medium',
-              isTechnical ? 'font-mono text-[#1B29FF]' : 'text-[#101010]',
-            )}
-          >
-            {workspace.name || 'Unnamed Workspace'}
-          </p>
-          <p
-            className={cn(
-              'text-[11px] font-mono mt-1',
-              isTechnical ? 'text-[#1B29FF]/60' : 'text-[#101010]/40',
-            )}
-          >
-            ID: {workspace.id}
-          </p>
-        </BimodalCard>
+              {isTechnical ? 'TOTAL_WORKSPACES' : 'Workspaces'}
+            </dt>
+            <dd
+              className={cn(
+                'text-[24px] font-bold mt-1 flex items-center gap-2',
+                isTechnical ? 'font-mono text-[#1B29FF]' : 'text-[#101010]',
+              )}
+            >
+              <Users className="h-5 w-5 opacity-50" />
+              {allAccessibleData.totalWorkspaces}
+            </dd>
+          </BimodalCard>
+
+          <BimodalCard isTechnical={isTechnical} className="p-4">
+            <dt
+              className={cn(
+                'uppercase tracking-[0.16em] text-[10px]',
+                isTechnical
+                  ? 'font-mono text-[#1B29FF]/70'
+                  : 'text-[#101010]/45',
+              )}
+            >
+              {isTechnical ? 'TOTAL_SAFES' : 'Total Safes'}
+            </dt>
+            <dd
+              className={cn(
+                'text-[24px] font-bold mt-1 flex items-center gap-2',
+                isTechnical ? 'font-mono text-[#1B29FF]' : 'text-[#101010]',
+              )}
+            >
+              <Shield className="h-5 w-5 opacity-50" />
+              {allAccessibleData.totalSafes}
+            </dd>
+          </BimodalCard>
+
+          <BimodalCard isTechnical={isTechnical} className="p-4">
+            <dt
+              className={cn(
+                'uppercase tracking-[0.16em] text-[10px]',
+                isTechnical
+                  ? 'font-mono text-[#1B29FF]/70'
+                  : 'text-[#101010]/45',
+              )}
+            >
+              {isTechnical ? 'CURRENT_WS_BALANCE' : 'Current Balance'}
+            </dt>
+            <dd
+              className={cn(
+                'text-[24px] font-bold mt-1',
+                isTechnical ? 'font-mono text-[#1B29FF]' : 'text-[#101010]',
+              )}
+            >
+              $
+              {positions?.totalBalance
+                ? parseFloat(positions.totalBalance).toLocaleString(undefined, {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })
+                : '0.00'}
+            </dd>
+          </BimodalCard>
+
+          <BimodalCard isTechnical={isTechnical} className="p-4">
+            <dt
+              className={cn(
+                'uppercase tracking-[0.16em] text-[10px]',
+                isTechnical
+                  ? 'font-mono text-[#1B29FF]/70'
+                  : 'text-[#101010]/45',
+              )}
+            >
+              {isTechnical ? 'CHAINS_ACTIVE' : 'Active Chains'}
+            </dt>
+            <dd
+              className={cn(
+                'text-[24px] font-bold mt-1',
+                isTechnical ? 'font-mono text-[#1B29FF]' : 'text-[#101010]',
+              )}
+            >
+              {
+                new Set(allAccessibleData.safes?.map((s) => s.chainId) || [])
+                  .size
+              }
+            </dd>
+          </BimodalCard>
+        </div>
       )}
 
       {isLoading ? (
@@ -355,7 +704,37 @@ function SafeAdminContent() {
         </div>
       ) : (
         <>
-          {/* Safes from getMultiChainPositions */}
+          {/* All Workspaces with Safes */}
+          {allAccessibleData?.workspaces &&
+            allAccessibleData.workspaces.length > 0 && (
+              <section>
+                <h2
+                  className={cn(
+                    'text-[15px] font-semibold mb-4',
+                    isTechnical && 'font-mono text-[#1B29FF] uppercase',
+                  )}
+                >
+                  {isTechnical
+                    ? 'ALL_WORKSPACES::SAFES'
+                    : 'All Workspaces & Safes'}
+                </h2>
+                <div className="space-y-3">
+                  {allAccessibleData.workspaces.map((ws) => (
+                    <WorkspaceSection
+                      key={ws.workspace.id}
+                      workspace={ws.workspace}
+                      membership={ws.membership}
+                      safes={ws.safes}
+                      positionMap={positionMap}
+                      isExpanded={expandedWorkspaces.has(ws.workspace.id)}
+                      onToggle={() => toggleWorkspace(ws.workspace.id)}
+                    />
+                  ))}
+                </div>
+              </section>
+            )}
+
+          {/* Current Workspace Positions */}
           {positions?.safes && positions.safes.length > 0 && (
             <section>
               <h2
@@ -365,8 +744,8 @@ function SafeAdminContent() {
                 )}
               >
                 {isTechnical
-                  ? 'SOURCE::GET_MULTI_CHAIN_POSITIONS'
-                  : 'Multi-Chain Positions'}
+                  ? 'CURRENT_WS::POSITIONS'
+                  : 'Current Workspace Positions'}
               </h2>
               <div className="grid gap-4 md:grid-cols-2">
                 {positions.safes.map((safe) => {
@@ -382,9 +761,10 @@ function SafeAdminContent() {
                         id: safe.id,
                         address: safe.address,
                         chainId: safe.chainId,
-                        safeType: 'primary',
+                        safeType: safe.type,
                       }}
                       position={position}
+                      workspaceName={workspace?.name || undefined}
                       workspaceId={workspace?.id}
                     />
                   );
@@ -393,164 +773,10 @@ function SafeAdminContent() {
             </section>
           )}
 
-          {/* Safes from settings.userSafes.list */}
-          {settingsSafes && settingsSafes.length > 0 && (
-            <section>
-              <h2
-                className={cn(
-                  'text-[15px] font-semibold mb-4',
-                  isTechnical && 'font-mono text-[#1B29FF] uppercase',
-                )}
-              >
-                {isTechnical
-                  ? 'SOURCE::SETTINGS_USER_SAFES_LIST'
-                  : 'Settings Safes List'}
-              </h2>
-              <div className="grid gap-4 md:grid-cols-2">
-                {settingsSafes.map((safe) => {
-                  const position = positionMap.get(
-                    safe.safeAddress.toLowerCase(),
-                  );
-                  return (
-                    <SafeCard
-                      key={`settings-${safe.id}`}
-                      safe={{
-                        id: safe.id,
-                        address: safe.safeAddress,
-                        chainId: safe.chainId,
-                        safeType: safe.safeType,
-                      }}
-                      position={
-                        position
-                          ? {
-                              usdcBalance: position.usdcBalance,
-                              usdcBalanceRaw: position.usdcBalanceRaw,
-                            }
-                          : undefined
-                      }
-                      workspaceId={safe.workspaceId || undefined}
-                    />
-                  );
-                })}
-              </div>
-            </section>
-          )}
-
-          {/* Summary Stats */}
-          {positions && (
-            <BimodalCard isTechnical={isTechnical} className="p-5">
-              <h3
-                className={cn(
-                  'text-[14px] font-semibold mb-3',
-                  isTechnical && 'font-mono text-[#1B29FF] uppercase',
-                )}
-              >
-                {isTechnical ? 'STATS::SUMMARY' : 'Summary'}
-              </h3>
-              <dl className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div>
-                  <dt
-                    className={cn(
-                      'uppercase tracking-[0.16em] text-[10px]',
-                      isTechnical
-                        ? 'font-mono text-[#1B29FF]/70'
-                        : 'text-[#101010]/45',
-                    )}
-                  >
-                    {isTechnical ? 'TOTAL_SAFES' : 'Total Safes'}
-                  </dt>
-                  <dd
-                    className={cn(
-                      'text-[20px] font-bold mt-1',
-                      isTechnical
-                        ? 'font-mono text-[#1B29FF]'
-                        : 'text-[#101010]',
-                    )}
-                  >
-                    {positions.safes?.length || 0}
-                  </dd>
-                </div>
-                <div>
-                  <dt
-                    className={cn(
-                      'uppercase tracking-[0.16em] text-[10px]',
-                      isTechnical
-                        ? 'font-mono text-[#1B29FF]/70'
-                        : 'text-[#101010]/45',
-                    )}
-                  >
-                    {isTechnical ? 'TOTAL_USDC' : 'Total USDC'}
-                  </dt>
-                  <dd
-                    className={cn(
-                      'text-[20px] font-bold mt-1',
-                      isTechnical
-                        ? 'font-mono text-[#1B29FF]'
-                        : 'text-[#101010]',
-                    )}
-                  >
-                    $
-                    {positions.totalBalance
-                      ? parseFloat(positions.totalBalance).toLocaleString(
-                          undefined,
-                          {
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 2,
-                          },
-                        )
-                      : '0.00'}
-                  </dd>
-                </div>
-                <div>
-                  <dt
-                    className={cn(
-                      'uppercase tracking-[0.16em] text-[10px]',
-                      isTechnical
-                        ? 'font-mono text-[#1B29FF]/70'
-                        : 'text-[#101010]/45',
-                    )}
-                  >
-                    {isTechnical ? 'CHAINS_ACTIVE' : 'Active Chains'}
-                  </dt>
-                  <dd
-                    className={cn(
-                      'text-[20px] font-bold mt-1',
-                      isTechnical
-                        ? 'font-mono text-[#1B29FF]'
-                        : 'text-[#101010]',
-                    )}
-                  >
-                    {new Set(positions.safes?.map((s) => s.chainId) || []).size}
-                  </dd>
-                </div>
-                <div>
-                  <dt
-                    className={cn(
-                      'uppercase tracking-[0.16em] text-[10px]',
-                      isTechnical
-                        ? 'font-mono text-[#1B29FF]/70'
-                        : 'text-[#101010]/45',
-                    )}
-                  >
-                    {isTechnical ? 'WORKSPACE_BOUND' : 'Workspace Bound'}
-                  </dt>
-                  <dd
-                    className={cn(
-                      'text-[20px] font-bold mt-1',
-                      isTechnical
-                        ? 'font-mono text-[#1B29FF]'
-                        : 'text-green-600',
-                    )}
-                  >
-                    {isTechnical ? 'TRUE' : 'Yes'}
-                  </dd>
-                </div>
-              </dl>
-            </BimodalCard>
-          )}
-
-          {(!positions?.safes || positions.safes.length === 0) &&
-            (!settingsSafes || settingsSafes.length === 0) && (
+          {/* Empty State */}
+          {(!allAccessibleData?.safes ||
+            allAccessibleData.safes.length === 0) &&
+            (!positions?.safes || positions.safes.length === 0) && (
               <BimodalCard
                 isTechnical={isTechnical}
                 className="p-8 text-center"
@@ -570,8 +796,8 @@ function SafeAdminContent() {
                   )}
                 >
                   {isTechnical
-                    ? 'NO_SAFES_FOUND::WORKSPACE_SCOPE'
-                    : 'No Safes found for this workspace'}
+                    ? 'NO_SAFES_FOUND::ALL_WORKSPACES'
+                    : 'No Safes found across any of your workspaces'}
                 </p>
               </BimodalCard>
             )}
