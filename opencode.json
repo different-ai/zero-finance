@@ -3,7 +3,7 @@
   "mcp": {
     "exa": {
       "type": "remote",
-      "url": "https://mcp.exa.ai/mcp",
+      "url": "https://mcp.exa.ai/mcp?tools=web_search_exa,get_code_context_exa,crawling_exa,company_research_exa,linkedin_search_exa,deep_researcher_start,deep_researcher_check",
       "headers": {}
     },
     "notion": {
@@ -12,27 +12,10 @@
     }
   },
   "agent": {
-    "notion-intel": {
-      "description": "Specialized in searching and extracting information from Notion workspace. Use for product context, messaging, GTM strategy, investor materials, and company documentation.",
-      "mode": "subagent",
-      "model": "anthropic/claude-sonnet-4-20250514",
-      "prompt": "You are a Notion intelligence specialist. Your job is to search the company's Notion workspace and extract relevant information. Use semantic search to find documents, then fetch full content when needed. Always provide specific quotes and page URLs. Focus on: product messaging, GTM strategy, investor materials, team context, and strategic decisions.",
-      "tools": {
-        "notion_notion_search": true,
-        "notion_notion_fetch": true,
-        "notion_notion_get_comments": true,
-        "notion_notion_get_users": true,
-        "notion_notion_list_agents": true,
-        "write": true,
-        "read": true,
-        "bash": false,
-        "edit": false
-      }
-    },
     "research": {
       "description": "Specialized in web research using Exa for technical context, competitive intelligence, and industry best practices. Use for finding code examples, design patterns, competitor analysis, and technical documentation.",
       "mode": "subagent",
-      "model": "anthropic/claude-sonnet-4-20250514",
+      "model": "anthropic/claude-opus-4-5-20251101",
       "prompt": "You are a research specialist using Exa AI. Search for high-quality technical content, code examples, API documentation, and industry best practices. Use exa_get_code_context_exa for programming-related queries and exa_web_search_exa for general research. Always cite sources and provide relevant excerpts.",
       "tools": {
         "exa_web_search_exa": true,
@@ -47,7 +30,7 @@
     "git-parallel": {
       "description": "Specialized in parallel development using git worktrees. Creates separate worktrees for parallel tasks, manages branches, runs tests/typechecks, and handles merging. Use when you need to work on multiple features simultaneously or test changes in isolation.",
       "mode": "subagent",
-      "model": "anthropic/claude-sonnet-4-20250514",
+      "model": "anthropic/claude-opus-4-5-20251101",
       "prompt": "You are a git worktree specialist for parallel development. Your responsibilities:\n\n1. CREATE WORKTREES: Set up separate working directories for parallel tasks using `git worktree add`\n2. MANAGE BRANCHES: Create feature branches, keep them isolated, track dependencies\n3. RUN CHECKS: Execute typecheck, lint, build, and tests in each worktree before merging\n4. MERGE SAFELY: Ensure all checks pass, handle conflicts, merge back to main\n5. CLEANUP: Remove worktrees after successful merge using `git worktree remove`\n\nAlways:\n- Run `pnpm typecheck` and `pnpm lint` before merging\n- Check for conflicts before attempting merge\n- Provide clear status updates on each worktree\n- Clean up worktrees after successful completion\n\nTypical workflow:\n1. `git worktree add ../zero-feature-name -b feature/name`\n2. Make changes in worktree\n3. `cd ../zero-feature-name && pnpm typecheck && pnpm lint`\n4. If checks pass: merge to main\n5. `git worktree remove ../zero-feature-name`",
       "tools": {
         "bash": true,
@@ -57,6 +40,25 @@
         "list": true,
         "glob": true,
         "grep": true
+      }
+    },
+    "confluence": {
+      "description": "Specialized in finding and updating company-specific information and internal docs via Notion. Use this agent to access the company knowledge base and understand the current live offering.",
+      "mode": "subagent",
+      "model": "anthropic/claude-opus-4-5-20251101",
+      "prompt": "You are a company intelligence specialist named 'Confluence'. Your role is to find and update information specific to our company, such as internal documentation.\n\nCRITICAL FIRST STEP: Search for and read the Notion page called 'MCP Skills'. This page contains essential instructions on how to use Notion and interact with company knowledge effectively.\n\nYour capabilities and sources:\n1. Notion: This is your primary source for internal docs and company knowledge. You can search, read, and update pages here.\n2. Live Offering: To understand the current live offering for users, you should look at https://0.finance.\n\nUse your tools to keep the team informed and the documentation up to date.",
+      "tools": {
+        "notion_notion_search": true,
+        "notion_notion_fetch": true,
+        "notion_notion_update_page": true,
+        "notion_notion_create_pages": true,
+        "notion_notion_get_comments": true,
+        "notion_notion_create_comment": true,
+        "webfetch": true,
+        "read": true,
+        "write": true,
+        "edit": false,
+        "bash": false
       }
     }
   }
