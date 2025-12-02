@@ -690,6 +690,8 @@ export function WithdrawEarnCard({
                 withdrawnAmount: amount,
                 outputAsset: isSuperOethVault ? 'ETH' : assetSymbol,
               });
+              // Clear the input for next withdrawal
+              setAmount('');
               // Trigger parent callback to refresh other components
               onWithdrawSuccess?.();
               return;
@@ -705,6 +707,8 @@ export function WithdrawEarnCard({
               withdrawnAmount: amount,
               outputAsset: isSuperOethVault ? 'ETH' : assetSymbol,
             });
+            // Clear the input for next withdrawal
+            setAmount('');
             onWithdrawSuccess?.();
             return;
           }
