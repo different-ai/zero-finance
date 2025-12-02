@@ -771,8 +771,25 @@ export function WithdrawEarnCard({
       <div className="bg-[#F7F7F2] border border-[#101010]/10 p-4">
         <div className="flex gap-3">
           <AlertCircle className="h-4 w-4 text-[#101010]/40 flex-shrink-0 mt-0.5" />
-          <div className="text-[12px] text-[#101010]/60">
-            No funds available to withdraw from this vault.
+          <div className="text-[12px] text-[#101010]/60 space-y-1">
+            <div>No funds available to withdraw from this vault.</div>
+            {isTechnical && (
+              <div className="font-mono text-[10px] text-[#101010]/40 space-y-0.5">
+                <div>Safe: {effectiveSafeAddress}</div>
+                <div>Vault: {vaultAddress}</div>
+                <div>Chain: {chainId}</div>
+                <div>
+                  Shares: {vaultInfo?.shares?.toString() ?? 'null'} | Assets:{' '}
+                  {vaultInfo?.assets?.toString() ?? 'null'}
+                </div>
+                {baseSafeAddress &&
+                  baseSafeAddress !== effectiveSafeAddress && (
+                    <div className="text-orange-500">
+                      Base Safe differs: {baseSafeAddress}
+                    </div>
+                  )}
+              </div>
+            )}
           </div>
         </div>
       </div>
