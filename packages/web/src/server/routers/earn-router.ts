@@ -36,7 +36,7 @@ import {
   type Address,
 } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
-import { base, mainnet, arbitrum } from 'viem/chains';
+import { base, mainnet, arbitrum, gnosis } from 'viem/chains';
 import crypto from 'crypto';
 
 // Multi-chain imports
@@ -189,6 +189,9 @@ async function getEthPriceUsd(): Promise<number> {
 // Arbitrum public client singleton
 let arbitrumPublicClient: ReturnType<typeof createPublicClient> | null = null;
 
+// Gnosis public client singleton
+let gnosisPublicClient: ReturnType<typeof createPublicClient> | null = null;
+
 function getPublicClientForChain(chainId: number) {
   if (chainId === BASE_CHAIN_ID) {
     return publicClient;
@@ -229,6 +232,22 @@ function getPublicClientForChain(chainId: number) {
     }
 
     return arbitrumPublicClient;
+  }
+
+  if (chainId === SUPPORTED_CHAINS.GNOSIS) {
+    if (!gnosisPublicClient) {
+      const rpcUrl =
+        process.env.GNOSIS_RPC_URL ??
+        process.env.NEXT_PUBLIC_GNOSIS_RPC_URL ??
+        'https://rpc.gnosischain.com';
+
+      gnosisPublicClient = createPublicClient({
+        chain: gnosis,
+        transport: http(rpcUrl),
+      });
+    }
+
+    return gnosisPublicClient;
   }
 
   throw new Error(`Unsupported chain id ${chainId} for public client`);
