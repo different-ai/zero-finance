@@ -109,6 +109,21 @@ const SuperOethIcon = () => (
   </svg>
 );
 
+// xDAI icon - Gnosis native stablecoin
+const XdaiIcon = () => (
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 32 32"
+    fill="none"
+    className="flex-shrink-0"
+  >
+    <circle cx="16" cy="16" r="16" fill="#04795B" />
+    <path d="M16 6L8 16l8 10 8-10-8-10z" fill="white" fillOpacity="0.9" />
+    <circle cx="16" cy="16" r="4" fill="#04795B" />
+  </svg>
+);
+
 type CheckingActionsCardProps = {
   balanceUsd: number;
   safeAddress: string | null;
@@ -153,6 +168,9 @@ export function CheckingActionsCard({
   );
   const arbitrumSafe = multiChainData?.safes.find(
     (s) => s.chainId === SUPPORTED_CHAINS.ARBITRUM,
+  );
+  const gnosisSafe = multiChainData?.safes.find(
+    (s) => s.chainId === SUPPORTED_CHAINS.GNOSIS,
   );
 
   // Fetch USDC balances with caching
@@ -205,6 +223,19 @@ export function CheckingActionsCard({
     },
   );
 
+  // Fetch Gnosis xDAI balance (native token on Gnosis)
+  const { data: gnosisXdaiBalance } = api.earn.getNativeBalance.useQuery(
+    {
+      safeAddress: gnosisSafe?.address || '',
+      chainId: SUPPORTED_CHAINS.GNOSIS,
+    },
+    {
+      enabled: !!gnosisSafe?.address,
+      staleTime: 30000,
+      refetchInterval: 60000,
+    },
+  );
+
   // Fetch Super OETH balance (yield-bearing ETH)
   // Prefetch eagerly when baseSafe is available to avoid UI delay
   const { data: superOethBalanceData, refetch: refetchSuperOeth } =
@@ -237,6 +268,11 @@ export function CheckingActionsCard({
     ? parseFloat(formatUnits(BigInt(arbitrumEthBalance.balance), 18))
     : 0;
 
+  // Gnosis xDAI balance (native token, 18 decimals, ~1:1 with USD)
+  const gnosisXdaiBalanceNum = gnosisXdaiBalance
+    ? parseFloat(formatUnits(BigInt(gnosisXdaiBalance.balance), 18))
+    : 0;
+
   // ETH USD values (approximate)
   const ethPrice = 3000; // TODO: Fetch real-time price
   const baseEthUsd = baseEthBalanceNum * ethPrice;
@@ -251,9 +287,11 @@ export function CheckingActionsCard({
   // Total per chain (USDC + ETH + superOETH in USD)
   const baseTotalUsd = baseUsdcBalance + baseEthUsd + superOethUsd;
   const arbitrumTotalUsd = arbitrumUsdcBalance + arbitrumEthUsd;
+  const gnosisTotalUsd = gnosisXdaiBalanceNum; // xDAI is ~1:1 with USD
 
   // Total available balance (not in vaults)
-  const totalAvailableBalance = baseTotalUsd + arbitrumTotalUsd;
+  const totalAvailableBalance =
+    baseTotalUsd + arbitrumTotalUsd + gnosisTotalUsd;
   const hasAnyBalance = totalAvailableBalance > 0 || balanceUsd > 0;
 
   const fundingSources = isDemoMode
@@ -364,218 +402,279 @@ export function CheckingActionsCard({
       </div>
 
       {/* Account Balances Section - Only in Technical Mode */}
-      {isTechnical && !isDemoMode && (baseSafe || arbitrumSafe) && (
-        <div
-          className={cn(
-            'relative z-10 pt-4',
-            isTechnical
-              ? 'border-t border-[#1B29FF]/10'
-              : 'border-t border-[#101010]/10',
-          )}
-        >
-          <div className="flex items-center justify-between mb-3">
-            <p
-              className={cn(
-                'flex items-center gap-1.5',
-                isTechnical
-                  ? 'font-mono text-[10px] text-[#1B29FF] tracking-wider uppercase'
-                  : 'uppercase tracking-[0.12em] text-[10px] text-[#101010]/50',
-              )}
-            >
-              <Wallet className="h-3 w-3" />
-              {isTechnical ? 'ACCOUNTS::MULTI_CHAIN' : 'Accounts'}
-            </p>
-          </div>
-          <div className="space-y-2">
-            {/* Base Account */}
-            {baseSafe && (
-              <div className="rounded-lg border border-[#101010]/10 overflow-hidden">
-                <button
-                  type="button"
-                  onClick={() => toggleAccountExpansion('base')}
-                  className="w-full flex items-center justify-between py-3 px-4 bg-[#F7F7F2] hover:bg-[#F7F7F2]/80 transition-colors"
-                >
-                  <div className="flex items-center gap-3">
-                    <Image
-                      src={CHAIN_LOGOS[SUPPORTED_CHAINS.BASE].src}
-                      alt="Base"
-                      width={60}
-                      height={15}
-                      className="h-[15px] w-auto object-contain"
-                    />
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-[14px] font-semibold tabular-nums text-[#101010]">
-                      {formatUsd(baseTotalUsd)}
-                    </span>
-                    {expandedAccount === 'base' ? (
-                      <ChevronDown className="h-4 w-4 text-[#101010]/40" />
-                    ) : (
-                      <ChevronRight className="h-4 w-4 text-[#101010]/40" />
-                    )}
-                  </div>
-                </button>
-                {/* Expanded asset breakdown */}
-                {expandedAccount === 'base' && (
-                  <div className="border-t border-[#101010]/10 bg-white p-3 space-y-2">
-                    {/* USDC */}
-                    <div className="flex items-center justify-between py-1.5">
-                      <div className="flex items-center gap-2">
-                        <UsdcIcon />
-                        <span className="text-[12px] text-[#101010]/70">
-                          USDC
-                        </span>
-                      </div>
-                      <div className="text-right">
-                        <span className="text-[12px] font-medium tabular-nums text-[#101010]">
-                          {baseUsdcBalance.toLocaleString(undefined, {
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 2,
-                          })}
-                        </span>
-                      </div>
-                    </div>
-                    {/* ETH */}
-                    <div className="flex items-center justify-between py-1.5">
-                      <div className="flex items-center gap-2">
-                        <EthIcon />
-                        <span className="text-[12px] text-[#101010]/70">
-                          ETH
-                        </span>
-                      </div>
-                      <div className="text-right">
-                        <span className="text-[12px] font-medium tabular-nums text-[#101010]">
-                          {baseEthBalanceNum.toFixed(6)}
-                        </span>
-                        <span className="text-[11px] text-[#101010]/50 ml-1">
-                          ({formatUsd(baseEthUsd)})
-                        </span>
-                      </div>
-                    </div>
-                    {/* Super OETH - Yield-bearing ETH - Always show in technical mode */}
-                    <div className="flex items-center justify-between py-1.5 bg-[#0074F0]/5 -mx-3 px-3 rounded">
-                      <div className="flex items-center gap-2">
-                        <SuperOethIcon />
-                        <span className="text-[12px] text-[#101010]/70">
-                          superOETH
-                        </span>
-                        <span className="text-[9px] bg-[#0074F0]/10 text-[#0074F0] px-1.5 py-0.5 rounded font-medium">
-                          YIELD
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div className="text-right">
-                          <span className="text-[12px] font-medium tabular-nums text-[#101010]">
-                            {superOethBalance.toFixed(6)}
-                          </span>
-                          <span className="text-[11px] text-[#101010]/50 ml-1">
-                            ({formatUsd(superOethUsd)})
-                          </span>
-                        </div>
-                        {superOethBalance > 0 && (
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setIsRedeemModalOpen(true);
-                            }}
-                            className="text-[10px] font-mono text-[#0074F0] hover:text-[#0074F0]/80 underline"
-                          >
-                            REDEEM
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
+      {isTechnical &&
+        !isDemoMode &&
+        (baseSafe || arbitrumSafe || gnosisSafe) && (
+          <div
+            className={cn(
+              'relative z-10 pt-4',
+              isTechnical
+                ? 'border-t border-[#1B29FF]/10'
+                : 'border-t border-[#101010]/10',
             )}
-
-            {/* Arbitrum Account */}
-            {arbitrumSafe && (
-              <div className="rounded-lg border border-[#101010]/10 overflow-hidden">
-                <button
-                  type="button"
-                  onClick={() => toggleAccountExpansion('arbitrum')}
-                  className="w-full flex items-center justify-between py-3 px-4 bg-[#F7F7F2] hover:bg-[#F7F7F2]/80 transition-colors"
-                >
-                  <div className="flex items-center gap-3">
-                    {CHAIN_LOGOS[SUPPORTED_CHAINS.ARBITRUM].hasName ? (
+          >
+            <div className="flex items-center justify-between mb-3">
+              <p
+                className={cn(
+                  'flex items-center gap-1.5',
+                  isTechnical
+                    ? 'font-mono text-[10px] text-[#1B29FF] tracking-wider uppercase'
+                    : 'uppercase tracking-[0.12em] text-[10px] text-[#101010]/50',
+                )}
+              >
+                <Wallet className="h-3 w-3" />
+                {isTechnical ? 'ACCOUNTS::MULTI_CHAIN' : 'Accounts'}
+              </p>
+            </div>
+            <div className="space-y-2">
+              {/* Base Account */}
+              {baseSafe && (
+                <div className="rounded-lg border border-[#101010]/10 overflow-hidden">
+                  <button
+                    type="button"
+                    onClick={() => toggleAccountExpansion('base')}
+                    className="w-full flex items-center justify-between py-3 px-4 bg-[#F7F7F2] hover:bg-[#F7F7F2]/80 transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
                       <Image
-                        src={CHAIN_LOGOS[SUPPORTED_CHAINS.ARBITRUM].src}
-                        alt="Arbitrum"
+                        src={CHAIN_LOGOS[SUPPORTED_CHAINS.BASE].src}
+                        alt="Base"
                         width={60}
                         height={15}
                         className="h-[15px] w-auto object-contain"
                       />
-                    ) : (
-                      <>
-                        <div className="w-5 h-5 rounded-full bg-[#28A0F0] flex items-center justify-center">
-                          <span className="text-[10px] font-bold text-white">
-                            A
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[14px] font-semibold tabular-nums text-[#101010]">
+                        {formatUsd(baseTotalUsd)}
+                      </span>
+                      {expandedAccount === 'base' ? (
+                        <ChevronDown className="h-4 w-4 text-[#101010]/40" />
+                      ) : (
+                        <ChevronRight className="h-4 w-4 text-[#101010]/40" />
+                      )}
+                    </div>
+                  </button>
+                  {/* Expanded asset breakdown */}
+                  {expandedAccount === 'base' && (
+                    <div className="border-t border-[#101010]/10 bg-white p-3 space-y-2">
+                      {/* USDC */}
+                      <div className="flex items-center justify-between py-1.5">
+                        <div className="flex items-center gap-2">
+                          <UsdcIcon />
+                          <span className="text-[12px] text-[#101010]/70">
+                            USDC
                           </span>
                         </div>
-                        <span className="text-[13px] font-medium text-[#101010]">
-                          {getChainDisplayName(SUPPORTED_CHAINS.ARBITRUM)}
-                        </span>
-                      </>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-[14px] font-semibold tabular-nums text-[#101010]">
-                      {formatUsd(arbitrumTotalUsd)}
-                    </span>
-                    {expandedAccount === 'arbitrum' ? (
-                      <ChevronDown className="h-4 w-4 text-[#101010]/40" />
-                    ) : (
-                      <ChevronRight className="h-4 w-4 text-[#101010]/40" />
-                    )}
-                  </div>
-                </button>
-                {/* Expanded asset breakdown */}
-                {expandedAccount === 'arbitrum' && (
-                  <div className="border-t border-[#101010]/10 bg-white p-3 space-y-2">
-                    {/* USDC */}
-                    <div className="flex items-center justify-between py-1.5">
-                      <div className="flex items-center gap-2">
-                        <UsdcIcon />
-                        <span className="text-[12px] text-[#101010]/70">
-                          USDC
-                        </span>
+                        <div className="text-right">
+                          <span className="text-[12px] font-medium tabular-nums text-[#101010]">
+                            {baseUsdcBalance.toLocaleString(undefined, {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2,
+                            })}
+                          </span>
+                        </div>
                       </div>
-                      <div className="text-right">
-                        <span className="text-[12px] font-medium tabular-nums text-[#101010]">
-                          {arbitrumUsdcBalance.toLocaleString(undefined, {
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 2,
-                          })}
-                        </span>
+                      {/* ETH */}
+                      <div className="flex items-center justify-between py-1.5">
+                        <div className="flex items-center gap-2">
+                          <EthIcon />
+                          <span className="text-[12px] text-[#101010]/70">
+                            ETH
+                          </span>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-[12px] font-medium tabular-nums text-[#101010]">
+                            {baseEthBalanceNum.toFixed(6)}
+                          </span>
+                          <span className="text-[11px] text-[#101010]/50 ml-1">
+                            ({formatUsd(baseEthUsd)})
+                          </span>
+                        </div>
+                      </div>
+                      {/* Super OETH - Yield-bearing ETH - Always show in technical mode */}
+                      <div className="flex items-center justify-between py-1.5 bg-[#0074F0]/5 -mx-3 px-3 rounded">
+                        <div className="flex items-center gap-2">
+                          <SuperOethIcon />
+                          <span className="text-[12px] text-[#101010]/70">
+                            superOETH
+                          </span>
+                          <span className="text-[9px] bg-[#0074F0]/10 text-[#0074F0] px-1.5 py-0.5 rounded font-medium">
+                            YIELD
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className="text-right">
+                            <span className="text-[12px] font-medium tabular-nums text-[#101010]">
+                              {superOethBalance.toFixed(6)}
+                            </span>
+                            <span className="text-[11px] text-[#101010]/50 ml-1">
+                              ({formatUsd(superOethUsd)})
+                            </span>
+                          </div>
+                          {superOethBalance > 0 && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setIsRedeemModalOpen(true);
+                              }}
+                              className="text-[10px] font-mono text-[#0074F0] hover:text-[#0074F0]/80 underline"
+                            >
+                              REDEEM
+                            </button>
+                          )}
+                        </div>
                       </div>
                     </div>
-                    {/* ETH */}
-                    <div className="flex items-center justify-between py-1.5">
-                      <div className="flex items-center gap-2">
-                        <EthIcon />
-                        <span className="text-[12px] text-[#101010]/70">
-                          ETH
-                        </span>
+                  )}
+                </div>
+              )}
+
+              {/* Arbitrum Account */}
+              {arbitrumSafe && (
+                <div className="rounded-lg border border-[#101010]/10 overflow-hidden">
+                  <button
+                    type="button"
+                    onClick={() => toggleAccountExpansion('arbitrum')}
+                    className="w-full flex items-center justify-between py-3 px-4 bg-[#F7F7F2] hover:bg-[#F7F7F2]/80 transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      {CHAIN_LOGOS[SUPPORTED_CHAINS.ARBITRUM].hasName ? (
+                        <Image
+                          src={CHAIN_LOGOS[SUPPORTED_CHAINS.ARBITRUM].src}
+                          alt="Arbitrum"
+                          width={60}
+                          height={15}
+                          className="h-[15px] w-auto object-contain"
+                        />
+                      ) : (
+                        <>
+                          <div className="w-5 h-5 rounded-full bg-[#28A0F0] flex items-center justify-center">
+                            <span className="text-[10px] font-bold text-white">
+                              A
+                            </span>
+                          </div>
+                          <span className="text-[13px] font-medium text-[#101010]">
+                            {getChainDisplayName(SUPPORTED_CHAINS.ARBITRUM)}
+                          </span>
+                        </>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[14px] font-semibold tabular-nums text-[#101010]">
+                        {formatUsd(arbitrumTotalUsd)}
+                      </span>
+                      {expandedAccount === 'arbitrum' ? (
+                        <ChevronDown className="h-4 w-4 text-[#101010]/40" />
+                      ) : (
+                        <ChevronRight className="h-4 w-4 text-[#101010]/40" />
+                      )}
+                    </div>
+                  </button>
+                  {/* Expanded asset breakdown */}
+                  {expandedAccount === 'arbitrum' && (
+                    <div className="border-t border-[#101010]/10 bg-white p-3 space-y-2">
+                      {/* USDC */}
+                      <div className="flex items-center justify-between py-1.5">
+                        <div className="flex items-center gap-2">
+                          <UsdcIcon />
+                          <span className="text-[12px] text-[#101010]/70">
+                            USDC
+                          </span>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-[12px] font-medium tabular-nums text-[#101010]">
+                            {arbitrumUsdcBalance.toLocaleString(undefined, {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2,
+                            })}
+                          </span>
+                        </div>
                       </div>
-                      <div className="text-right">
-                        <span className="text-[12px] font-medium tabular-nums text-[#101010]">
-                          {arbitrumEthBalanceNum.toFixed(6)}
-                        </span>
-                        <span className="text-[11px] text-[#101010]/50 ml-1">
-                          ({formatUsd(arbitrumEthUsd)})
-                        </span>
+                      {/* ETH */}
+                      <div className="flex items-center justify-between py-1.5">
+                        <div className="flex items-center gap-2">
+                          <EthIcon />
+                          <span className="text-[12px] text-[#101010]/70">
+                            ETH
+                          </span>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-[12px] font-medium tabular-nums text-[#101010]">
+                            {arbitrumEthBalanceNum.toFixed(6)}
+                          </span>
+                          <span className="text-[11px] text-[#101010]/50 ml-1">
+                            ({formatUsd(arbitrumEthUsd)})
+                          </span>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                )}
-              </div>
-            )}
+                  )}
+                </div>
+              )}
+
+              {/* Gnosis Account */}
+              {gnosisSafe && (
+                <div className="rounded-lg border border-[#101010]/10 overflow-hidden">
+                  <button
+                    type="button"
+                    onClick={() => toggleAccountExpansion('gnosis')}
+                    className="w-full flex items-center justify-between py-3 px-4 bg-[#F7F7F2] hover:bg-[#F7F7F2]/80 transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <Image
+                        src={CHAIN_LOGOS[SUPPORTED_CHAINS.GNOSIS].src}
+                        alt="Gnosis"
+                        width={60}
+                        height={15}
+                        className="h-[15px] w-auto object-contain"
+                      />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[14px] font-semibold tabular-nums text-[#101010]">
+                        {formatUsd(gnosisTotalUsd)}
+                      </span>
+                      {expandedAccount === 'gnosis' ? (
+                        <ChevronDown className="h-4 w-4 text-[#101010]/40" />
+                      ) : (
+                        <ChevronRight className="h-4 w-4 text-[#101010]/40" />
+                      )}
+                    </div>
+                  </button>
+                  {/* Expanded asset breakdown */}
+                  {expandedAccount === 'gnosis' && (
+                    <div className="border-t border-[#101010]/10 bg-white p-3 space-y-2">
+                      {/* xDAI - native token on Gnosis (~1:1 with USD) */}
+                      <div className="flex items-center justify-between py-1.5">
+                        <div className="flex items-center gap-2">
+                          <XdaiIcon />
+                          <span className="text-[12px] text-[#101010]/70">
+                            xDAI
+                          </span>
+                          <span className="text-[9px] bg-[#04795B]/10 text-[#04795B] px-1.5 py-0.5 rounded font-medium">
+                            NATIVE
+                          </span>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-[12px] font-medium tabular-nums text-[#101010]">
+                            {gnosisXdaiBalanceNum.toLocaleString(undefined, {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 4,
+                            })}
+                          </span>
+                          <span className="text-[11px] text-[#101010]/50 ml-1">
+                            ({formatUsd(gnosisXdaiBalanceNum)})
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
       <div className="relative z-10 flex flex-col sm:flex-row flex-wrap gap-3">
         <Dialog open={isMoveModalOpen} onOpenChange={setIsMoveModalOpen}>
