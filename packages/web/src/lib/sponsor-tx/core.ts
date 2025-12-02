@@ -3,7 +3,7 @@
 import Safe, { EthSafeTransaction } from '@safe-global/protocol-kit';
 import type { MetaTransactionData } from '@safe-global/safe-core-sdk-types';
 import { Address, Hex, encodeFunctionData } from 'viem';
-import { base, arbitrum } from 'viem/chains';
+import { base, arbitrum, gnosis } from 'viem/chains';
 import type { Chain } from 'viem/chains';
 import { getBaseRpcUrl } from '@/lib/base-rpc-url';
 import { SUPPORTED_CHAINS } from '@/lib/constants/chains';
@@ -34,6 +34,11 @@ function getRpcUrlForChain(chainId: number): string {
       process.env.NEXT_PUBLIC_ETHEREUM_RPC_URL || 'https://eth.llamarpc.com'
     );
   }
+  if (chainId === SUPPORTED_CHAINS.GNOSIS) {
+    return (
+      process.env.NEXT_PUBLIC_GNOSIS_RPC_URL || 'https://rpc.gnosischain.com'
+    );
+  }
   return getBaseRpcUrl(); // Default to Base
 }
 
@@ -43,6 +48,9 @@ function getRpcUrlForChain(chainId: number): string {
 function getChainForId(chainId: number): Chain {
   if (chainId === SUPPORTED_CHAINS.ARBITRUM) {
     return arbitrum;
+  }
+  if (chainId === SUPPORTED_CHAINS.GNOSIS) {
+    return gnosis;
   }
   return base;
 }

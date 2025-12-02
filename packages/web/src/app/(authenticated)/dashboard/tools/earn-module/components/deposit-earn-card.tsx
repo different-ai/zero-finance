@@ -35,12 +35,14 @@ import {
 } from '@/lib/constants/chains';
 
 // Chains supported by Across Protocol for bridging
-// Note: Gnosis is NOT supported by Across - use LI.FI/deBridge in the future
 const ACROSS_SUPPORTED_CHAINS: SupportedChainId[] = [
   SUPPORTED_CHAINS.BASE,
   SUPPORTED_CHAINS.ARBITRUM,
   SUPPORTED_CHAINS.MAINNET,
 ];
+
+// Chains that use LI.FI for bridging (Gnosis uses LI.FI, not Across)
+const LIFI_SUPPORTED_CHAINS: SupportedChainId[] = [SUPPORTED_CHAINS.GNOSIS];
 import {
   ALL_BASE_VAULTS,
   USDC_ASSET,
@@ -55,7 +57,7 @@ import { cn } from '@/lib/utils';
 import { usePrivy, useWallets } from '@privy-io/react-auth';
 import { buildSafeTx, relaySafeTx, getSafeTxHash } from '@/lib/sponsor-tx/core';
 
-// Bridge quote type (matches tRPC response)
+// Bridge quote type (matches tRPC response for Across)
 interface BridgeQuote {
   inputAmount: string;
   outputAmount: string;
@@ -64,6 +66,25 @@ interface BridgeQuote {
   relayerGasFee: string;
   totalFee: string;
   estimatedFillTime: number;
+}
+
+// LI.FI Bridge quote type (for Gnosis)
+interface LiFiBridgeQuote {
+  inputAmount: string;
+  outputAmount: string;
+  outputAmountMin: string;
+  totalFeeUsd: string;
+  estimatedTime: number;
+  tool: string;
+  transaction: {
+    to: string;
+    data: string;
+    value: string;
+    chainId: number;
+  };
+  approvalAddress?: string;
+  destinationSafeAddress: string;
+  needsDeployment: boolean;
 }
 
 interface DepositEarnCardProps {
@@ -162,6 +183,8 @@ export function DepositEarnCard({
     step: 'idle',
   });
   const [bridgeQuote, setBridgeQuote] = useState<BridgeQuote | null>(null);
+  const [liFiBridgeQuote, setLiFiBridgeQuote] =
+    useState<LiFiBridgeQuote | null>(null);
   const [isLoadingQuote, setIsLoadingQuote] = useState(false);
 
   // Track initial balance for bridge arrival detection
@@ -175,6 +198,9 @@ export function DepositEarnCard({
 
   // Check if cross-chain bridging is supported for this destination chain
   const isBridgingSupported = ACROSS_SUPPORTED_CHAINS.includes(chainId);
+
+  // Check if LI.FI bridging is available (for Gnosis)
+  const isLiFiBridging = LIFI_SUPPORTED_CHAINS.includes(chainId);
 
   // Fetch multi-chain positions to get correct safe addresses
   // Always enabled because we need Base safe address for native balance fetching
@@ -240,7 +266,7 @@ export function DepositEarnCard({
       },
     );
 
-  // Fetch ERC20 balance via tRPC for non-native assets
+  // Fetch ERC20 balance via tRPC for non-native assets (same-chain deposits)
   // IMPORTANT: Use effectiveSafeAddress (from getMultiChainPositions) not safeAddress prop
   const { data: erc20BalanceData, refetch: refetchErc20Balance } =
     trpc.earn.getSafeBalanceOnChain.useQuery(
@@ -255,18 +281,40 @@ export function DepositEarnCard({
       },
     );
 
+  // Fetch Base USDC balance for cross-chain deposits (source chain balance)
+  // This is needed for LI.FI bridging from Base to Gnosis
+  const { data: baseUsdcBalanceData, refetch: refetchBaseUsdcBalance } =
+    trpc.earn.getSafeBalanceOnChain.useQuery(
+      {
+        safeAddress: baseSafeAddress ?? effectiveSafeAddress,
+        chainId: SUPPORTED_CHAINS.BASE,
+      },
+      {
+        enabled: !!baseSafeAddress && isCrossChain && !isNativeAsset,
+        staleTime: 30000,
+        refetchInterval: 30000,
+      },
+    );
+
   // Compute assetBalance from tRPC data
+  // For cross-chain deposits, use the Base USDC balance (source chain)
   const assetBalance = isNativeAsset
     ? nativeBalanceData
       ? BigInt(nativeBalanceData.balance)
       : 0n
-    : erc20BalanceData
-      ? BigInt(erc20BalanceData.balance)
-      : 0n;
+    : isCrossChain
+      ? baseUsdcBalanceData
+        ? BigInt(baseUsdcBalanceData.balance)
+        : 0n
+      : erc20BalanceData
+        ? BigInt(erc20BalanceData.balance)
+        : 0n;
 
   const isLoadingBalance = isNativeAsset
     ? !nativeBalanceData && !!effectiveSafeAddress
-    : !erc20BalanceData && !!effectiveSafeAddress && !isCrossChain;
+    : isCrossChain
+      ? !baseUsdcBalanceData && !!baseSafeAddress
+      : !erc20BalanceData && !!effectiveSafeAddress;
 
   // Debug logging
   useEffect(() => {
@@ -297,10 +345,18 @@ export function DepositEarnCard({
   const fetchBalance = useCallback(async () => {
     if (isNativeAsset) {
       await refetchNativeBalance();
+    } else if (isCrossChain) {
+      await refetchBaseUsdcBalance();
     } else {
       await refetchErc20Balance();
     }
-  }, [isNativeAsset, refetchNativeBalance, refetchErc20Balance]);
+  }, [
+    isNativeAsset,
+    isCrossChain,
+    refetchNativeBalance,
+    refetchErc20Balance,
+    refetchBaseUsdcBalance,
+  ]);
 
   // tRPC utils for refetching
   const trpcUtils = trpc.useUtils();
@@ -492,6 +548,41 @@ export function DepositEarnCard({
     vaultAddress,
     trpcUtils,
   ]);
+
+  // Fetch LI.FI bridge quote for Gnosis deposits
+  useEffect(() => {
+    if (
+      !isCrossChain ||
+      !isLiFiBridging ||
+      !amount ||
+      parseFloat(amount) <= 0
+    ) {
+      setLiFiBridgeQuote(null);
+      return;
+    }
+
+    const fetchLiFiQuote = async () => {
+      setIsLoadingQuote(true);
+      try {
+        const amountInSmallestUnit = parseUnits(amount, USDC_DECIMALS);
+        // Use the convenience endpoint for Base USDC -> Gnosis sDAI
+        const quote = await trpcUtils.earn.getBaseToGnosisSdaiQuote.fetch({
+          amount: amountInSmallestUnit.toString(),
+          slippage: 0.5,
+        });
+        setLiFiBridgeQuote(quote);
+      } catch (error) {
+        console.error('Failed to fetch LI.FI bridge quote:', error);
+        setLiFiBridgeQuote(null);
+      } finally {
+        setIsLoadingQuote(false);
+      }
+    };
+
+    // Debounce quote fetching
+    const timeoutId = setTimeout(fetchLiFiQuote, 500);
+    return () => clearTimeout(timeoutId);
+  }, [amount, isCrossChain, isLiFiBridging, trpcUtils]);
 
   // Check current allowance (only for ERC20 tokens, not native ETH)
   const {
@@ -1944,11 +2035,274 @@ export function DepositEarnCard({
     );
   }
 
-  // --- CROSS-CHAIN BRIDGING NOT SUPPORTED ---
-  // Show message for chains not supported by Across (e.g., Gnosis)
-  if (isCrossChain && !isBridgingSupported) {
+  // --- LI.FI BRIDGING FOR GNOSIS ---
+  // Use LI.FI for chains not supported by Across (e.g., Gnosis)
+  if (isCrossChain && isLiFiBridging) {
     const chainName =
       chainId === SUPPORTED_CHAINS.GNOSIS ? 'Gnosis' : `Chain ${chainId}`;
+    const chainCode =
+      chainId === SUPPORTED_CHAINS.GNOSIS ? 'GNO' : `CHAIN_${chainId}`;
+
+    // Handler for LI.FI bridge execution
+    const handleLiFiBridge = async () => {
+      if (!liFiBridgeQuote || !isRelayReady) return;
+
+      try {
+        setTransactionState({ step: 'bridging' });
+
+        // If destination safe needs deployment, show deployment UI
+        if (liFiBridgeQuote.needsDeployment) {
+          // Get deployment transaction
+          const deploymentResult = await safeDeploymentMutation.mutateAsync({
+            targetChainId: chainId,
+            safeType: 'primary',
+          });
+
+          setTransactionState({
+            step: 'needs-deployment',
+            deploymentInfo: {
+              chainId: chainId,
+              transaction: {
+                to: deploymentResult.to,
+                data: deploymentResult.data,
+                value: deploymentResult.value,
+                chainId: chainId,
+              },
+              predictedAddress: deploymentResult.predictedAddress,
+            },
+          });
+          return;
+        }
+
+        // Execute LI.FI bridge transaction
+        // First, we may need to approve the token spend
+        const amountInSmallestUnit = parseUnits(amount, USDC_DECIMALS);
+        const baseUsdcAddress = USDC_ADDRESS as Address;
+
+        // Check if approval is needed
+        if (liFiBridgeQuote.approvalAddress) {
+          const currentAllowance = await publicClient.readContract({
+            address: baseUsdcAddress,
+            abi: erc20Abi,
+            functionName: 'allowance',
+            args: [
+              effectiveSafeAddress,
+              liFiBridgeQuote.approvalAddress as Address,
+            ],
+          });
+
+          if (currentAllowance < amountInSmallestUnit) {
+            setTransactionState({ step: 'approving' });
+
+            const approveData = encodeFunctionData({
+              abi: erc20Abi,
+              functionName: 'approve',
+              args: [
+                liFiBridgeQuote.approvalAddress as Address,
+                amountInSmallestUnit,
+              ],
+            });
+
+            const approvalTxHash = await sendTxViaRelay(
+              [
+                {
+                  to: baseUsdcAddress,
+                  value: '0',
+                  data: approveData,
+                },
+              ],
+              300_000n,
+            );
+
+            if (!approvalTxHash) throw new Error('Approval transaction failed');
+
+            setTransactionState({
+              step: 'waiting-approval',
+              txHash: approvalTxHash,
+            });
+
+            // Wait for approval to be mined
+            await new Promise((resolve) => setTimeout(resolve, 7000));
+          }
+        }
+
+        // Execute the LI.FI bridge transaction
+        setTransactionState({ step: 'bridging' });
+
+        const bridgeTxHash = await sendTxViaRelay(
+          [
+            {
+              to: liFiBridgeQuote.transaction.to as Address,
+              value: liFiBridgeQuote.transaction.value,
+              data: liFiBridgeQuote.transaction.data as `0x${string}`,
+            },
+          ],
+          600_000n, // Higher gas limit for bridge tx
+        );
+
+        if (!bridgeTxHash) throw new Error('Bridge transaction failed');
+
+        setTransactionState({
+          step: 'waiting-bridge',
+          txHash: bridgeTxHash,
+        });
+
+        // Wait for bridge to initiate
+        await new Promise((resolve) => setTimeout(resolve, 7000));
+
+        // Show success state
+        setTransactionState({
+          step: 'waiting-arrival',
+          txHash: bridgeTxHash,
+          depositedAmount: amount,
+        });
+        setAmount('');
+      } catch (error) {
+        console.error('[DepositEarnCard] LI.FI bridge error:', error);
+        let errorMessage = 'Bridge transaction failed';
+        if (error instanceof Error) errorMessage = error.message;
+        setTransactionState({ step: 'error', errorMessage });
+      }
+    };
+
+    return (
+      <div className="space-y-4 p-4 bg-[#fafafa] border border-[#1B29FF]/20 relative">
+        {/* Blueprint grid overlay */}
+        <div
+          className="absolute inset-0 pointer-events-none opacity-[0.03]"
+          style={{
+            backgroundImage: `
+              linear-gradient(to right, #1B29FF 1px, transparent 1px),
+              linear-gradient(to bottom, #1B29FF 1px, transparent 1px)
+            `,
+            backgroundSize: '20px 20px',
+          }}
+        />
+
+        {/* Header with chain info */}
+        <div className="relative bg-white border border-[#1B29FF]/30 p-4">
+          <div className="flex justify-between items-start mb-3">
+            <div>
+              <p className="font-mono uppercase tracking-[0.14em] text-[11px] text-[#1B29FF] mb-1">
+                BRIDGE::LIFI → {chainCode}
+              </p>
+              <p className="font-mono text-[12px] text-[#101010]/60">
+                Base USDC → {chainName} sDAI (Sky Savings Rate)
+              </p>
+            </div>
+            <div className="h-3 w-3 relative">
+              <div className="absolute top-1/2 w-full h-px bg-[#1B29FF]/40" />
+              <div className="absolute left-1/2 h-full w-px bg-[#1B29FF]/40" />
+            </div>
+          </div>
+
+          {/* Balance display */}
+          <div className="mb-4">
+            <p className="font-mono text-[10px] text-[#1B29FF]/70 uppercase mb-1">
+              AVAILABLE::BASE_USDC
+            </p>
+            <p className="font-mono text-[18px] tabular-nums text-[#101010]">
+              {displayBalance}{' '}
+              <span className="text-[11px] text-[#1B29FF]">USDC</span>
+            </p>
+          </div>
+
+          {/* Input */}
+          <div className="space-y-2">
+            <label className="font-mono text-[10px] text-[#1B29FF]/70 uppercase">
+              INPUT::BRIDGE_AMOUNT
+            </label>
+            <div className="relative">
+              <input
+                type="number"
+                placeholder="0.0"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                className="w-full h-10 px-3 font-mono bg-white border border-[#1B29FF]/30 focus:border-[#1B29FF] focus:outline-none text-[14px] transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                step="0.000001"
+                min="0"
+                max={availableBalance}
+              />
+              <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                <span className="font-mono text-[10px] text-[#1B29FF]/70">
+                  USDC
+                </span>
+                <button
+                  type="button"
+                  onClick={handleMax}
+                  className="font-mono px-2 py-1 text-[10px] text-[#1B29FF] border border-[#1B29FF]/30 hover:border-[#1B29FF] transition-colors bg-white hover:bg-[#1B29FF]/5"
+                >
+                  MAX
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Quote Info */}
+          {liFiBridgeQuote && amount && parseFloat(amount) > 0 && (
+            <div className="mt-3 p-3 bg-[#1B29FF]/5 border border-[#1B29FF]/10 font-mono text-[10px] space-y-1">
+              <div className="flex justify-between text-[#101010]/70">
+                <span>OUTPUT:</span>
+                <span>
+                  ~{formatUnits(BigInt(liFiBridgeQuote.outputAmount), 18)} sDAI
+                </span>
+              </div>
+              <div className="flex justify-between text-[#101010]/70">
+                <span>FEE:</span>
+                <span>${liFiBridgeQuote.totalFeeUsd}</span>
+              </div>
+              <div className="flex justify-between text-[#101010]/70">
+                <span>EST_TIME:</span>
+                <span>{liFiBridgeQuote.estimatedTime}s</span>
+              </div>
+              <div className="flex justify-between text-[#101010]/70">
+                <span>ROUTE:</span>
+                <span>{liFiBridgeQuote.tool.toUpperCase()}</span>
+              </div>
+            </div>
+          )}
+
+          {/* Bridge Button */}
+          <button
+            onClick={handleLiFiBridge}
+            disabled={
+              !amount ||
+              parseFloat(amount) <= 0 ||
+              !liFiBridgeQuote ||
+              isLoadingQuote ||
+              transactionState.step !== 'idle'
+            }
+            className="w-full mt-4 h-10 font-mono uppercase bg-white border-2 border-[#1B29FF] text-[#1B29FF] hover:bg-[#1B29FF] hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          >
+            {isLoadingQuote ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : transactionState.step !== 'idle' ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <ArrowRight className="h-4 w-4" />
+            )}
+            <span className="leading-none">
+              {isLoadingQuote
+                ? '[ FETCHING_QUOTE ]'
+                : transactionState.step !== 'idle'
+                  ? `[ ${transactionState.step.toUpperCase().replace('-', '_')} ]`
+                  : '[ BRIDGE_TO_GNOSIS ]'}
+            </span>
+          </button>
+
+          {/* Route info */}
+          <p className="font-mono text-[10px] text-center text-[#1B29FF]/60 mt-3">
+            ROUTE: BASE_USDC → LI.FI → {chainCode}_sDAI
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // --- CROSS-CHAIN BRIDGING NOT SUPPORTED ---
+  // Show message for chains not supported by any bridge provider
+  if (isCrossChain && !isBridgingSupported && !isLiFiBridging) {
+    const chainName = `Chain ${chainId}`;
 
     return (
       <div className="space-y-4 p-4 bg-[#fafafa] border border-[#1B29FF]/20 relative">
@@ -1969,12 +2323,10 @@ export function DepositEarnCard({
             <AlertCircle className="h-5 w-5 text-[#1B29FF] mt-0.5 flex-shrink-0" />
             <div className="space-y-2">
               <p className="font-mono text-[13px] text-[#101010]">
-                Cross-chain deposits to {chainName} coming soon
+                Cross-chain deposits to {chainName} not supported
               </p>
               <p className="font-mono text-[11px] text-[#101010]/60">
-                Direct bridging from Base to {chainName} is not yet available.
-                We&apos;re working on integrating LI.FI for seamless cross-chain
-                deposits.
+                Direct bridging from Base to {chainName} is not available.
               </p>
               <p className="font-mono text-[10px] text-[#1B29FF]/70 mt-3">
                 TIP: You can manually bridge funds to {chainName} and deposit

@@ -62,6 +62,15 @@ export const GNOSIS_SDAI_VAULTS: CrossChainVault[] = [
     risk: 'Conservative', // sDAI is backed by MakerDAO/Sky Protocol
     curator: 'Sky (MakerDAO)',
     appUrl: 'https://gnosis.spark.fi',
+    // Asset info - sDAI underlying is WXDAI (18 decimals)
+    // The vault token (sDAI) is also 18 decimals, and converts to WXDAI value
+    asset: {
+      symbol: 'sDAI',
+      decimals: 18,
+      isNative: false,
+      address: GNOSIS_ASSETS.sDAI.address,
+    },
+    category: 'stable',
     // APY is dynamically fetched from the sDAI contract
     // Current SSR is typically 5-8% depending on protocol governance
   },

@@ -7,6 +7,7 @@ import {
   ArrowUpFromLine,
   CheckCircle,
   ExternalLink,
+  Rocket,
 } from 'lucide-react';
 import { trpc } from '@/utils/trpc';
 import { toast } from 'sonner';
@@ -21,7 +22,7 @@ import {
   createPublicClient,
   http,
 } from 'viem';
-import { base, arbitrum } from 'viem/chains';
+import { base, arbitrum, gnosis } from 'viem/chains';
 import { useSafeRelay } from '@/hooks/use-safe-relay';
 import { SUPPORTED_CHAINS } from '@/lib/constants/chains';
 import {
@@ -29,6 +30,11 @@ import {
   ORIGIN_SUPER_OETH_VAULT,
 } from '@/server/earn/base-vaults';
 import { ALL_CROSS_CHAIN_VAULTS } from '@/server/earn/cross-chain-vaults';
+import { useSmartWallets } from '@privy-io/react-auth/smart-wallets';
+import Safe, {
+  SafeAccountConfig,
+  SafeDeploymentConfig,
+} from '@safe-global/protocol-kit';
 
 // Contract addresses for superOETH → ETH swap on Base
 const SUPER_OETH_ADDRESS =
@@ -76,11 +82,19 @@ const WETH_ABI = parseAbi(['function withdraw(uint256 wad) external']);
 // Transaction state management for two-phase loading
 type WithdrawStep =
   | 'idle'
+  | 'checking' // Checking Safe deployment status
+  | 'needs-safe-deployment' // Safe not deployed on target chain
+  | 'deploying-safe' // Deploying Safe on target chain
   | 'processing' // Sending transaction
   | 'confirming' // Transaction sent, waiting for chain confirmation
   | 'indexing' // Chain confirmed, waiting for balance update
   | 'success' // All done
   | 'error';
+
+interface DeploymentInfo {
+  chainId: number;
+  predictedAddress: string;
+}
 
 interface WithdrawState {
   step: WithdrawStep;
@@ -88,6 +102,7 @@ interface WithdrawState {
   errorMessage?: string;
   withdrawnAmount?: string;
   outputAsset?: string;
+  deploymentInfo?: DeploymentInfo;
 }
 
 export function WithdrawEarnCard({
@@ -178,15 +193,160 @@ export function WithdrawEarnCard({
 
   // Select chain based on chainId
   const isArbitrum = chainId === 42161;
-  const chain = isArbitrum ? arbitrum : base;
-  const rpcUrl = isArbitrum
-    ? process.env.NEXT_PUBLIC_ARBITRUM_RPC_URL || 'https://arb1.arbitrum.io/rpc'
-    : process.env.NEXT_PUBLIC_BASE_RPC_URL;
+  const isGnosis = chainId === 100;
+  const chain = isGnosis ? gnosis : isArbitrum ? arbitrum : base;
+  const rpcUrl = isGnosis
+    ? process.env.NEXT_PUBLIC_GNOSIS_RPC_URL || 'https://rpc.gnosischain.com'
+    : isArbitrum
+      ? process.env.NEXT_PUBLIC_ARBITRUM_RPC_URL ||
+        'https://arb1.arbitrum.io/rpc'
+      : process.env.NEXT_PUBLIC_BASE_RPC_URL;
 
   const publicClient = createPublicClient({
     chain,
     transport: http(rpcUrl),
   });
+
+  // Smart wallet client for Safe deployment
+  const { client: defaultSmartClient, getClientForChain } = useSmartWallets();
+
+  // tRPC utilities for refetching
+  const trpcUtils = trpc.useUtils();
+
+  // Safe deployment mutation - for deploying Safe on target chain
+  const safeDeploymentMutation = trpc.earn.getSafeDeploymentTx.useMutation();
+
+  // Register Safe mutation - for registering deployed Safe in DB
+  const registerSafeMutation = trpc.earn.registerDeployedSafe.useMutation();
+
+  // Track whether Safe is actually deployed on-chain (not just in DB)
+  const [isSafeDeployedOnChain, setIsSafeDeployedOnChain] = useState<
+    boolean | null
+  >(null);
+  const [isCheckingDeployment, setIsCheckingDeployment] = useState(false);
+
+  // Check if Safe is actually deployed on-chain (bytecode check)
+  useEffect(() => {
+    if (!isCrossChain || !targetSafeAddress || isCheckingDeployment) return;
+
+    const checkSafeDeployment = async () => {
+      setIsCheckingDeployment(true);
+      try {
+        console.log(
+          '[WithdrawEarnCard] Checking if Safe is deployed on-chain:',
+          targetSafeAddress,
+          'chainId:',
+          chainId,
+        );
+
+        const code = await publicClient.getBytecode({
+          address: targetSafeAddress,
+        });
+
+        const isDeployed = !!(code && code !== '0x');
+        console.log(
+          '[WithdrawEarnCard] Safe deployment check result:',
+          isDeployed,
+        );
+        setIsSafeDeployedOnChain(isDeployed);
+
+        if (!isDeployed && withdrawState.step === 'idle') {
+          // Safe exists in DB but not on-chain - need deployment
+          console.log(
+            '[WithdrawEarnCard] Safe registered but not deployed, prompting deployment',
+          );
+          setWithdrawState({
+            step: 'needs-safe-deployment',
+            deploymentInfo: {
+              chainId: chainId,
+              predictedAddress: targetSafeAddress,
+            },
+          });
+        }
+      } catch (err) {
+        console.error(
+          '[WithdrawEarnCard] Failed to check Safe deployment:',
+          err,
+        );
+        setIsSafeDeployedOnChain(false);
+      } finally {
+        setIsCheckingDeployment(false);
+      }
+    };
+
+    checkSafeDeployment();
+  }, [isCrossChain, targetSafeAddress, chainId, publicClient]);
+
+  // Check if Safe needs to be deployed on target chain (for cross-chain withdrawals)
+  const needsSafeDeployment = useMemo(() => {
+    if (!isCrossChain) return false;
+    if (isLoadingPositions) return false;
+    // If no target Safe address exists in DB, we need to deploy
+    if (!targetSafeAddress) return true;
+    // If Safe exists in DB but not deployed on-chain, we need to deploy
+    if (isSafeDeployedOnChain === false) return true;
+    return false;
+  }, [
+    isCrossChain,
+    isLoadingPositions,
+    targetSafeAddress,
+    isSafeDeployedOnChain,
+  ]);
+
+  // Auto-trigger deployment flow if no Safe address at all in DB
+  useEffect(() => {
+    if (
+      isCrossChain &&
+      !isLoadingPositions &&
+      !targetSafeAddress &&
+      withdrawState.step === 'idle'
+    ) {
+      console.log(
+        '[WithdrawEarnCard] No target Safe found in DB for chainId:',
+        chainId,
+        '- fetching deployment info',
+      );
+
+      // Fetch predicted address for the Safe
+      safeDeploymentMutation
+        .mutateAsync({
+          targetChainId: chainId,
+          safeType: 'primary',
+        })
+        .then(
+          (res: {
+            to: string;
+            data: string;
+            value: string;
+            predictedAddress: string;
+          }) => {
+            setWithdrawState({
+              step: 'needs-safe-deployment',
+              deploymentInfo: {
+                chainId: chainId,
+                predictedAddress: res.predictedAddress,
+              },
+            });
+          },
+        )
+        .catch((err: Error) => {
+          console.error(
+            '[WithdrawEarnCard] Failed to fetch deployment info:',
+            err,
+          );
+          setWithdrawState({
+            step: 'error',
+            errorMessage: 'Failed to load account setup info. Please refresh.',
+          });
+        });
+    }
+  }, [
+    isCrossChain,
+    isLoadingPositions,
+    targetSafeAddress,
+    chainId,
+    withdrawState.step,
+  ]);
 
   // Reset state when vault changes
   useEffect(() => {
@@ -647,9 +807,12 @@ export function WithdrawEarnCard({
   const amountExceedsBalance =
     parsedAmount !== null && parsedAmount > vaultInfo.assets;
 
-  const isProcessing = ['processing', 'confirming', 'indexing'].includes(
-    withdrawState.step,
-  );
+  const isProcessing = [
+    'processing',
+    'confirming',
+    'indexing',
+    'deploying-safe',
+  ].includes(withdrawState.step);
 
   const disableWithdraw =
     !hasAmountInput ||
@@ -658,7 +821,8 @@ export function WithdrawEarnCard({
     amountExceedsBalance ||
     isProcessing ||
     !isRelayReady ||
-    !effectiveSafeAddress;
+    !effectiveSafeAddress ||
+    needsSafeDeployment;
 
   // Handle dismissing success banner
   const handleDismissSuccess = () => {
@@ -795,6 +959,274 @@ export function WithdrawEarnCard({
       </div>
     );
   };
+
+  // Get chain name for display
+  const getChainName = (id: number) => {
+    switch (id) {
+      case SUPPORTED_CHAINS.GNOSIS:
+        return 'Gnosis';
+      case SUPPORTED_CHAINS.ARBITRUM:
+        return 'Arbitrum';
+      case SUPPORTED_CHAINS.BASE:
+        return 'Base';
+      default:
+        return `Chain ${id}`;
+    }
+  };
+
+  // Handle Safe deployment
+  const handleDeploySafe = async () => {
+    if (!withdrawState.deploymentInfo) return;
+
+    try {
+      setWithdrawState({ step: 'deploying-safe' });
+
+      const targetChainId = withdrawState.deploymentInfo.chainId;
+      const chainName = getChainName(targetChainId);
+
+      console.log(`[WithdrawEarnCard] Deploying Safe on ${chainName}...`);
+
+      // Get the smart wallet client for the target chain
+      const targetClient = await getClientForChain({ id: targetChainId });
+      if (!targetClient) {
+        throw new Error(
+          `Failed to get ${chainName} client for Safe deployment`,
+        );
+      }
+
+      const ownerAddress = targetClient.account?.address;
+      if (!ownerAddress) {
+        throw new Error('No valid owner address found (Smart Wallet)');
+      }
+
+      console.log('[WithdrawEarnCard] Owner address:', ownerAddress);
+
+      // Create Safe configuration
+      const safeAccountConfig: SafeAccountConfig = {
+        owners: [ownerAddress as Address],
+        threshold: 1,
+      };
+
+      // Use the Base Safe address as salt nonce for deterministic address matching
+      const saltNonce = safeAddress.toLowerCase();
+      const safeDeploymentConfig: SafeDeploymentConfig = {
+        saltNonce,
+        safeVersion: '1.4.1',
+      };
+
+      // Get RPC URL for target chain
+      const targetRpcUrl =
+        targetChainId === SUPPORTED_CHAINS.GNOSIS
+          ? process.env.NEXT_PUBLIC_GNOSIS_RPC_URL ||
+            'https://rpc.gnosischain.com'
+          : targetChainId === SUPPORTED_CHAINS.ARBITRUM
+            ? process.env.NEXT_PUBLIC_ARBITRUM_RPC_URL ||
+              'https://arb1.arbitrum.io/rpc'
+            : process.env.NEXT_PUBLIC_BASE_RPC_URL ||
+              'https://mainnet.base.org';
+
+      // Initialize the Protocol Kit
+      const protocolKit = await Safe.init({
+        predictedSafe: {
+          safeAccountConfig,
+          safeDeploymentConfig,
+        },
+        provider: targetRpcUrl,
+      });
+
+      // Get the predicted Safe address
+      const predictedSafeAddress = (await protocolKit.getAddress()) as Address;
+      console.log(
+        `[WithdrawEarnCard] Predicted Safe address on ${chainName}: ${predictedSafeAddress}`,
+      );
+
+      // Check if Safe is already deployed
+      const targetPublicClient = createPublicClient({
+        chain:
+          targetChainId === SUPPORTED_CHAINS.GNOSIS
+            ? gnosis
+            : targetChainId === SUPPORTED_CHAINS.ARBITRUM
+              ? arbitrum
+              : base,
+        transport: http(targetRpcUrl),
+      });
+
+      const code = await targetPublicClient.getBytecode({
+        address: predictedSafeAddress,
+      });
+
+      if (code && code !== '0x') {
+        console.log(
+          '[WithdrawEarnCard] Safe is already deployed on-chain. Registering...',
+        );
+        // Safe exists, just register it
+        await registerSafeMutation.mutateAsync({
+          safeAddress: predictedSafeAddress,
+          chainId: targetChainId,
+          safeType: 'primary',
+        });
+      } else {
+        // Deploy the Safe
+        console.log('[WithdrawEarnCard] Deploying new Safe...');
+
+        const deploymentTransaction =
+          await protocolKit.createSafeDeploymentTransaction();
+
+        // Send deployment transaction via smart wallet
+        const txHash = await targetClient.sendTransaction({
+          to: deploymentTransaction.to as Address,
+          data: deploymentTransaction.data as `0x${string}`,
+          value: BigInt(deploymentTransaction.value || '0'),
+        });
+
+        console.log('[WithdrawEarnCard] Deployment tx hash:', txHash);
+
+        // Wait for confirmation
+        const receipt = await targetPublicClient.waitForTransactionReceipt({
+          hash: txHash,
+        });
+
+        if (receipt.status !== 'success') {
+          throw new Error('Safe deployment transaction failed');
+        }
+
+        console.log('[WithdrawEarnCard] Safe deployed successfully!');
+
+        // Register the Safe in the database
+        await registerSafeMutation.mutateAsync({
+          safeAddress: predictedSafeAddress,
+          chainId: targetChainId,
+          safeType: 'primary',
+        });
+      }
+
+      // Refetch positions to update the UI
+      await trpcUtils.earn.getMultiChainPositions.invalidate();
+
+      toast.success(`Account ready on ${chainName}!`);
+
+      // Reset to idle so user can now withdraw
+      setWithdrawState({ step: 'idle' });
+    } catch (err) {
+      console.error('[WithdrawEarnCard] Safe deployment failed:', err);
+      setWithdrawState({
+        step: 'error',
+        errorMessage:
+          err instanceof Error ? err.message : 'Failed to set up account',
+      });
+    }
+  };
+
+  // Needs Safe deployment state - show UI to deploy Safe on destination chain
+  if (
+    withdrawState.step === 'needs-safe-deployment' &&
+    withdrawState.deploymentInfo
+  ) {
+    const chainName = getChainName(withdrawState.deploymentInfo.chainId);
+
+    return (
+      <div
+        className={cn(
+          'p-6 text-center space-y-4 relative',
+          isTechnical && 'bg-[#fafafa] border border-[#1B29FF]/20',
+        )}
+      >
+        <div
+          className={cn(
+            'w-12 h-12 rounded-full flex items-center justify-center mx-auto',
+            isTechnical
+              ? 'bg-[#1B29FF]/10 border border-[#1B29FF]/30'
+              : 'bg-[#1B29FF]/10',
+          )}
+        >
+          <Rocket className="h-6 w-6 text-[#1B29FF]" />
+        </div>
+        <div>
+          <h3
+            className={cn(
+              'text-[18px] font-semibold text-[#101010] mb-2',
+              isTechnical && 'font-mono',
+            )}
+          >
+            {isTechnical
+              ? `SETUP::${chainName.toUpperCase()}_ACCOUNT`
+              : `Set Up ${chainName} Account`}
+          </h3>
+          <p
+            className={cn(
+              'text-[14px] text-[#101010]/70',
+              isTechnical && 'font-mono',
+            )}
+          >
+            {isTechnical
+              ? `DEPLOY_SAFE_ON_${chainName.toUpperCase()}_TO_ENABLE_WITHDRAWAL`
+              : `To withdraw from this vault, you need to set up your account on ${chainName} first.`}
+          </p>
+        </div>
+        <button
+          onClick={handleDeploySafe}
+          className={cn(
+            'w-full px-4 py-2.5 text-[14px] font-medium transition-colors flex items-center justify-center gap-2',
+            isTechnical
+              ? 'font-mono uppercase bg-white border-2 border-[#1B29FF] text-[#1B29FF] hover:bg-[#1B29FF] hover:text-white'
+              : 'text-white bg-[#1B29FF] hover:bg-[#1420CC]',
+          )}
+        >
+          <Rocket className="h-4 w-4" />
+          {isTechnical ? '[ DEPLOY_SAFE ]' : `Set Up ${chainName} Account`}
+        </button>
+      </div>
+    );
+  }
+
+  // Deploying Safe state - show loading UI
+  if (withdrawState.step === 'deploying-safe') {
+    const chainName = withdrawState.deploymentInfo
+      ? getChainName(withdrawState.deploymentInfo.chainId)
+      : 'target chain';
+
+    return (
+      <div
+        className={cn(
+          'p-6 text-center space-y-4 relative',
+          isTechnical && 'bg-[#fafafa] border border-[#1B29FF]/20',
+        )}
+      >
+        <div
+          className={cn(
+            'w-12 h-12 rounded-full flex items-center justify-center mx-auto',
+            isTechnical
+              ? 'bg-[#1B29FF]/10 border border-[#1B29FF]/30'
+              : 'bg-[#1B29FF]/10',
+          )}
+        >
+          <Loader2 className="h-6 w-6 text-[#1B29FF] animate-spin" />
+        </div>
+        <div>
+          <h3
+            className={cn(
+              'text-[18px] font-semibold text-[#101010] mb-2',
+              isTechnical && 'font-mono',
+            )}
+          >
+            {isTechnical
+              ? `DEPLOYING::${chainName.toUpperCase()}_SAFE`
+              : `Setting Up ${chainName} Account`}
+          </h3>
+          <p
+            className={cn(
+              'text-[14px] text-[#101010]/70',
+              isTechnical && 'font-mono',
+            )}
+          >
+            {isTechnical
+              ? 'TX_IN_PROGRESS...'
+              : 'This may take a moment. Please wait...'}
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   // Error state - show error with retry option
   if (withdrawState.step === 'error') {

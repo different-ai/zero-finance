@@ -1,9 +1,7 @@
 import { db } from '@/db';
-import {
-  earnVaultApySnapshots,
-  type EarnVaultApySnapshot,
-} from '@/db/schema';
+import { earnVaultApySnapshots, type EarnVaultApySnapshot } from '@/db/schema';
 import { BASE_USDC_VAULTS, BASE_CHAIN_ID } from './base-vaults';
+import { ALL_CROSS_CHAIN_VAULTS } from './cross-chain-vaults';
 
 const MORPHO_GRAPHQL_URL = 'https://blue-api.morpho.org/graphql';
 const APY_CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
@@ -14,15 +12,36 @@ function normalizeAddress(address: string): string {
 }
 
 function resolveVaultChainId(vaultAddress: string): number {
+  // First check all cross-chain vaults (includes Gnosis, Arbitrum, etc.)
+  const crossChainVault = ALL_CROSS_CHAIN_VAULTS.find(
+    (entry) =>
+      normalizeAddress(entry.address) === normalizeAddress(vaultAddress),
+  );
+  if (crossChainVault) {
+    return crossChainVault.chainId;
+  }
+
+  // Fall back to Base USDC vaults for backwards compatibility
   const vault = BASE_USDC_VAULTS.find(
-    (entry) => normalizeAddress(entry.address) === normalizeAddress(vaultAddress),
+    (entry) =>
+      normalizeAddress(entry.address) === normalizeAddress(vaultAddress),
   );
   return vault?.chainId ?? BASE_CHAIN_ID;
 }
 
 export function resolveVaultDecimals(vaultAddress: string): number {
-  // All current vaults are USDC-based (6 decimals). Swap this to a lookup when multi-asset launches.
-  void vaultAddress;
+  // Look up decimals from cross-chain vault config
+  const vault = ALL_CROSS_CHAIN_VAULTS.find(
+    (entry) =>
+      normalizeAddress(entry.address) === normalizeAddress(vaultAddress),
+  );
+
+  // If vault has asset config with decimals, use it
+  if (vault && 'asset' in vault && vault.asset?.decimals !== undefined) {
+    return vault.asset.decimals;
+  }
+
+  // Default to 6 for USDC-based vaults
   return 6;
 }
 
@@ -75,10 +94,11 @@ function isFresh(snapshot: EarnVaultApySnapshot | undefined): boolean {
   return age < APY_CACHE_TTL_MS;
 }
 
-export async function getVaultApyBasisPoints(
-  vaultAddress: string,
-): Promise<{ apyBasisPoints: number; source: string; snapshot: EarnVaultApySnapshot }>
-{
+export async function getVaultApyBasisPoints(vaultAddress: string): Promise<{
+  apyBasisPoints: number;
+  source: string;
+  snapshot: EarnVaultApySnapshot;
+}> {
   const normalized = normalizeAddress(vaultAddress);
   const latest = await db.query.earnVaultApySnapshots.findFirst({
     where: (tbl, { eq: eqLocal }) => eqLocal(tbl.vaultAddress, normalized),
