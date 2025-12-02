@@ -41,11 +41,16 @@ const ERC20_APPROVE_ABI = parseAbi([
 
 /**
  * Across SpokePool addresses
+ *
+ * NOTE: Gnosis Chain is not currently supported by Across Protocol.
+ * For Gnosis sDAI deposits, we use LI.FI or deBridge intent protocols instead.
+ * The placeholder address below should trigger a helpful error if used.
  */
 const SPOKE_POOL_ADDRESSES: Record<SupportedChainId, Address> = {
   [SUPPORTED_CHAINS.BASE]: '0x09aea4b2242abC8bb4BB78D537A67a245A7bEC64',
   [SUPPORTED_CHAINS.ARBITRUM]: '0xe35e9842fceaCA96570B734083f4a58e8F7C5f2A',
   [SUPPORTED_CHAINS.MAINNET]: '0x5c7BCd6E7De5423a257D81B442095A1a6ced35C5', // Mainnet SpokePool
+  [SUPPORTED_CHAINS.GNOSIS]: '0x0000000000000000000000000000000000000000', // Gnosis not supported by Across - use LI.FI/deBridge
 };
 
 /**

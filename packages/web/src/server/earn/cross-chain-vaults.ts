@@ -15,6 +15,7 @@ import {
   PRIMARY_VAULT,
 } from './base-vaults';
 import { ARBITRUM_USDC_VAULTS } from './arbitrum-vaults';
+import { GNOSIS_SDAI_VAULTS } from './gnosis-vaults';
 
 /**
  * All available vaults across all chains
@@ -23,6 +24,7 @@ export const ALL_CROSS_CHAIN_VAULTS: CrossChainVault[] = [
   ...(BASE_USDC_VAULTS as CrossChainVault[]),
   ...(BASE_ETH_VAULTS as CrossChainVault[]),
   ...ARBITRUM_USDC_VAULTS,
+  ...GNOSIS_SDAI_VAULTS,
 ];
 
 /**
@@ -96,6 +98,7 @@ export function getVaultsGroupedByChain(): Record<
     [SUPPORTED_CHAINS.BASE]: getVaultsByChain(SUPPORTED_CHAINS.BASE),
     [SUPPORTED_CHAINS.ARBITRUM]: getVaultsByChain(SUPPORTED_CHAINS.ARBITRUM),
     [SUPPORTED_CHAINS.MAINNET]: getVaultsByChain(SUPPORTED_CHAINS.MAINNET),
+    [SUPPORTED_CHAINS.GNOSIS]: getVaultsByChain(SUPPORTED_CHAINS.GNOSIS),
   };
 }
 

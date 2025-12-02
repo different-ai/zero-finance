@@ -44,6 +44,10 @@ const CHAIN_LOGOS: Record<SupportedChainId, { src: string; hasName: boolean }> =
       src: '/logos/_ethereum-logo.svg',
       hasName: false,
     },
+    [SUPPORTED_CHAINS.GNOSIS]: {
+      src: '/logos/_gnosis-logo.svg',
+      hasName: true,
+    },
   };
 
 // Asset icons as inline SVG components for better performance
