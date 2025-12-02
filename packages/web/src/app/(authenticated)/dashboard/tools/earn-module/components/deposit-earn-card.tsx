@@ -33,6 +33,14 @@ import {
   SUPPORTED_CHAINS,
   type SupportedChainId,
 } from '@/lib/constants/chains';
+
+// Chains supported by Across Protocol for bridging
+// Note: Gnosis is NOT supported by Across - use LI.FI/deBridge in the future
+const ACROSS_SUPPORTED_CHAINS: SupportedChainId[] = [
+  SUPPORTED_CHAINS.BASE,
+  SUPPORTED_CHAINS.ARBITRUM,
+  SUPPORTED_CHAINS.MAINNET,
+];
 import {
   ALL_BASE_VAULTS,
   USDC_ASSET,
@@ -164,6 +172,9 @@ export function DepositEarnCard({
 
   // Determine if this is a cross-chain deposit (vault on different chain than user's Safe on Base)
   const isCrossChain = chainId !== SUPPORTED_CHAINS.BASE;
+
+  // Check if cross-chain bridging is supported for this destination chain
+  const isBridgingSupported = ACROSS_SUPPORTED_CHAINS.includes(chainId);
 
   // Fetch multi-chain positions to get correct safe addresses
   // Always enabled because we need Base safe address for native balance fetching
@@ -439,8 +450,14 @@ export function DepositEarnCard({
   ]);
 
   // Fetch bridge quote for cross-chain deposits (funding flow)
+  // Only fetch if the destination chain is supported by Across
   useEffect(() => {
-    if (!isCrossChain || !amount || parseFloat(amount) <= 0) {
+    if (
+      !isCrossChain ||
+      !isBridgingSupported ||
+      !amount ||
+      parseFloat(amount) <= 0
+    ) {
       setBridgeQuote(null);
       return;
     }
@@ -467,7 +484,14 @@ export function DepositEarnCard({
     // Debounce quote fetching
     const timeoutId = setTimeout(fetchQuote, 500);
     return () => clearTimeout(timeoutId);
-  }, [amount, isCrossChain, chainId, vaultAddress, trpcUtils]);
+  }, [
+    amount,
+    isCrossChain,
+    isBridgingSupported,
+    chainId,
+    vaultAddress,
+    trpcUtils,
+  ]);
 
   // Check current allowance (only for ERC20 tokens, not native ETH)
   const {
@@ -1916,6 +1940,49 @@ export function DepositEarnCard({
         <div className="h-20 w-full bg-[#101010]/5 animate-pulse" />
         <div className="h-12 w-full bg-[#101010]/5 animate-pulse" />
         <div className="h-12 w-full bg-[#101010]/5 animate-pulse" />
+      </div>
+    );
+  }
+
+  // --- CROSS-CHAIN BRIDGING NOT SUPPORTED ---
+  // Show message for chains not supported by Across (e.g., Gnosis)
+  if (isCrossChain && !isBridgingSupported) {
+    const chainName =
+      chainId === SUPPORTED_CHAINS.GNOSIS ? 'Gnosis' : `Chain ${chainId}`;
+
+    return (
+      <div className="space-y-4 p-4 bg-[#fafafa] border border-[#1B29FF]/20 relative">
+        {/* Blueprint grid overlay */}
+        <div
+          className="absolute inset-0 pointer-events-none opacity-[0.03]"
+          style={{
+            backgroundImage: `
+              linear-gradient(to right, #1B29FF 1px, transparent 1px),
+              linear-gradient(to bottom, #1B29FF 1px, transparent 1px)
+            `,
+            backgroundSize: '20px 20px',
+          }}
+        />
+
+        <div className="relative bg-white border border-[#1B29FF]/30 p-4">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="h-5 w-5 text-[#1B29FF] mt-0.5 flex-shrink-0" />
+            <div className="space-y-2">
+              <p className="font-mono text-[13px] text-[#101010]">
+                Cross-chain deposits to {chainName} coming soon
+              </p>
+              <p className="font-mono text-[11px] text-[#101010]/60">
+                Direct bridging from Base to {chainName} is not yet available.
+                We&apos;re working on integrating LI.FI for seamless cross-chain
+                deposits.
+              </p>
+              <p className="font-mono text-[10px] text-[#1B29FF]/70 mt-3">
+                TIP: You can manually bridge funds to {chainName} and deposit
+                directly.
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
