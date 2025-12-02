@@ -12,7 +12,11 @@
     },
     "chrome": {
       "type": "local",
-      "command": ["npx", "-y", "chrome-devtools-mcp@latest"]
+      "command": [
+        "bash",
+        "-c",
+        "source ~/.nvm/nvm.sh && npx -y chrome-devtools-mcp@latest"
+      ]
     }
   },
   "agent": {

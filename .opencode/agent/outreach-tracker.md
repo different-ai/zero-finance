@@ -1,7 +1,7 @@
 ---
 description: Update the Notion outreach/CRM database after sending messages. Tracks status, logs messages sent, adds comments, and maintains outreach history.
 mode: subagent
-model: anthropic/claude-sonnet-4-20250514
+model: anthropic/claude-opus-4-5-20251101
 temperature: 0.2
 tools:
   notion_notion_search: true
