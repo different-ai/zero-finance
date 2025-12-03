@@ -142,6 +142,7 @@ export const onboardingRouter = router({
           });
 
         // Upsert into `userSafes` table (with workspace)
+        // Note: unique constraint is on (userDid, safeType, chainId)
         await db
           .insert(userSafes)
           .values({
@@ -149,9 +150,10 @@ export const onboardingRouter = router({
             workspaceId: workspaceId,
             safeAddress: primarySafeAddress,
             safeType: 'primary',
+            chainId: 8453, // Base mainnet
           })
           .onConflictDoUpdate({
-            target: [userSafes.userDid, userSafes.safeType],
+            target: [userSafes.userDid, userSafes.safeType, userSafes.chainId],
             set: {
               safeAddress: primarySafeAddress,
               workspaceId: workspaceId,
