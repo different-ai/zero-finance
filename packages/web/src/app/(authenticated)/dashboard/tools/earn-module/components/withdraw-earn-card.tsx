@@ -118,6 +118,36 @@ export function WithdrawEarnCard({
     step: 'idle',
   });
 
+  // Gnosis bridge-back state (for bridging xDAI back to Base USDC)
+  const [bridgeAmount, setBridgeAmount] = useState('');
+  const [isBridging, setIsBridging] = useState(false);
+  const [bridgeQuote, setBridgeQuote] = useState<{
+    inputAmount: string;
+    outputAmount: string;
+    outputAmountMin: string;
+    totalFeeUsd: string;
+    estimatedTime: number;
+    tool: string;
+    transactionRequest: {
+      to: string;
+      data: string;
+      value: string;
+      chainId: number;
+    };
+    approvalAddress?: string;
+  } | null>(null);
+  const [isLoadingBridgeQuote, setIsLoadingBridgeQuote] = useState(false);
+
+  // Arbitrum bridge-back state (for bridging USDC back to Base)
+  const [arbBridgeAmount, setArbBridgeAmount] = useState('');
+  const [arbBridgeQuote, setArbBridgeQuote] = useState<{
+    inputAmount: string;
+    outputAmount: string;
+    totalFee: string;
+    estimatedFillTime: number;
+  } | null>(null);
+  const [isLoadingArbBridgeQuote, setIsLoadingArbBridgeQuote] = useState(false);
+
   // Track initial balance for poll-until-changed
   const initialBalanceRef = useRef<bigint | null>(null);
 
@@ -376,6 +406,99 @@ export function WithdrawEarnCard({
 
   // Add mutation for recording withdrawal
   const recordWithdrawalMutation = trpc.earn.recordWithdrawal.useMutation();
+
+  // Gnosis xDAI balance query (for bridge-back flow)
+  const isGnosisVault = chainId === SUPPORTED_CHAINS.GNOSIS;
+  const { data: gnosisBalanceData, refetch: refetchGnosisBalance } =
+    trpc.earn.getGnosisXdaiBalance.useQuery(
+      { safeAddress: targetSafeAddress ?? '' },
+      {
+        enabled: !!targetSafeAddress && isGnosisVault,
+        staleTime: 15000,
+        refetchInterval: 15000,
+      },
+    );
+
+  // Parse Gnosis balances
+  const gnosisXdaiBalance = useMemo(() => {
+    if (!gnosisBalanceData) {
+      return { nativeXdai: 0n, wxdai: 0n, sdai: 0n, totalAvailable: 0n };
+    }
+    return {
+      nativeXdai: BigInt(gnosisBalanceData.nativeXdai),
+      wxdai: BigInt(gnosisBalanceData.wxdai),
+      sdai: BigInt(gnosisBalanceData.sdai),
+      totalAvailable: BigInt(gnosisBalanceData.totalAvailableForDeposit),
+    };
+  }, [gnosisBalanceData]);
+
+  // Fetch bridge quote when bridge amount changes (for Gnosis -> Base)
+  useEffect(() => {
+    if (!isGnosisVault || !bridgeAmount || parseFloat(bridgeAmount) <= 0) {
+      setBridgeQuote(null);
+      return;
+    }
+
+    const fetchBridgeQuote = async () => {
+      setIsLoadingBridgeQuote(true);
+      try {
+        const amountIn18Decimals = parseUnits(bridgeAmount, 18);
+        const quote = await trpcUtils.earn.getGnosisXdaiToBaseUsdcQuote.fetch({
+          amount: amountIn18Decimals.toString(),
+          slippage: 0.5,
+        });
+        setBridgeQuote(quote);
+      } catch (error) {
+        console.error(
+          '[WithdrawEarnCard] Failed to fetch bridge quote:',
+          error,
+        );
+        setBridgeQuote(null);
+      } finally {
+        setIsLoadingBridgeQuote(false);
+      }
+    };
+
+    const debounceTimer = setTimeout(fetchBridgeQuote, 500);
+    return () => clearTimeout(debounceTimer);
+  }, [isGnosisVault, bridgeAmount, trpcUtils]);
+
+  // Arbitrum detection
+  const isArbitrumVault = chainId === SUPPORTED_CHAINS.ARBITRUM;
+
+  // Fetch Arbitrum -> Base bridge quote when bridge amount changes
+  useEffect(() => {
+    if (
+      !isArbitrumVault ||
+      !arbBridgeAmount ||
+      parseFloat(arbBridgeAmount) <= 0
+    ) {
+      setArbBridgeQuote(null);
+      return;
+    }
+
+    const fetchArbBridgeQuote = async () => {
+      setIsLoadingArbBridgeQuote(true);
+      try {
+        const amountIn6Decimals = parseUnits(arbBridgeAmount, 6); // USDC has 6 decimals
+        const quote = await trpcUtils.earn.getArbitrumUsdcToBaseQuote.fetch({
+          amount: amountIn6Decimals.toString(),
+        });
+        setArbBridgeQuote(quote);
+      } catch (error) {
+        console.error(
+          '[WithdrawEarnCard] Failed to fetch Arbitrum bridge quote:',
+          error,
+        );
+        setArbBridgeQuote(null);
+      } finally {
+        setIsLoadingArbBridgeQuote(false);
+      }
+    };
+
+    const debounceTimer = setTimeout(fetchArbBridgeQuote, 500);
+    return () => clearTimeout(debounceTimer);
+  }, [isArbitrumVault, arbBridgeAmount, trpcUtils]);
 
   // Cache share decimals to avoid repeated RPC calls - use ref to avoid re-renders
   const cachedShareDecimalsRef = useRef<Record<string, number>>({});
@@ -743,6 +866,243 @@ export function WithdrawEarnCard({
     setAmount(maxAmount);
   };
 
+  // Handler for bridging xDAI back to Base USDC (Gnosis -> Base)
+  const handleBridgeToBase = async () => {
+    if (!bridgeQuote || !targetSafeAddress || !baseSafeAddress) return;
+
+    try {
+      setIsBridging(true);
+      setWithdrawState({ step: 'processing' });
+
+      const bridgeAmountBigInt = parseUnits(bridgeAmount, 18);
+
+      // Get the smart wallet client for Gnosis
+      const gnosisClient = await getClientForChain({ id: chainId });
+      if (!gnosisClient) {
+        throw new Error('Failed to get Gnosis client');
+      }
+
+      const smartWalletAddress = gnosisClient.account?.address;
+      if (!smartWalletAddress) {
+        throw new Error('No smart wallet address found');
+      }
+
+      // WXDAI ABI for wrapping and approval
+      const WXDAI_ABI = parseAbi([
+        'function deposit() public payable',
+        'function approve(address spender, uint256 amount) public returns (bool)',
+        'function balanceOf(address account) public view returns (uint256)',
+      ]);
+
+      const WXDAI_ADDRESS =
+        '0xe91D153E0b41518A2Ce8Dd3D7944Fa863463a97d' as Address;
+
+      // Build transactions:
+      // 1. Wrap native xDAI to WXDAI (if needed)
+      // 2. Approve WXDAI to LI.FI router
+      // 3. Execute bridge transaction
+
+      const transactions: Array<{
+        to: Address;
+        value: string;
+        data: `0x${string}`;
+      }> = [];
+
+      // Check if we need to wrap xDAI
+      const useNativeXdai = gnosisXdaiBalance.nativeXdai >= bridgeAmountBigInt;
+
+      if (useNativeXdai) {
+        // Wrap native xDAI to WXDAI
+        const wrapData = encodeFunctionData({
+          abi: WXDAI_ABI,
+          functionName: 'deposit',
+        });
+        transactions.push({
+          to: WXDAI_ADDRESS,
+          value: bridgeAmountBigInt.toString(),
+          data: wrapData,
+        });
+      }
+
+      // Approve WXDAI to LI.FI router if needed
+      if (bridgeQuote.approvalAddress) {
+        const approveData = encodeFunctionData({
+          abi: WXDAI_ABI,
+          functionName: 'approve',
+          args: [bridgeQuote.approvalAddress as Address, bridgeAmountBigInt],
+        });
+        transactions.push({
+          to: WXDAI_ADDRESS,
+          value: '0',
+          data: approveData,
+        });
+      }
+
+      // Add the bridge transaction
+      transactions.push({
+        to: bridgeQuote.transactionRequest.to as Address,
+        value: bridgeQuote.transactionRequest.value,
+        data: bridgeQuote.transactionRequest.data as `0x${string}`,
+      });
+
+      // Import buildSafeTx and relaySafeTx
+      const { buildSafeTx, relaySafeTx } = await import(
+        '@/lib/sponsor-tx/core'
+      );
+
+      // Build and execute Safe transaction on Gnosis
+      const safeTx = await buildSafeTx(transactions, {
+        safeAddress: targetSafeAddress,
+        chainId,
+        gas: 600_000n,
+      });
+
+      const bridgeTxHash = await relaySafeTx(
+        safeTx,
+        smartWalletAddress,
+        gnosisClient,
+        targetSafeAddress,
+      );
+
+      console.log('[WithdrawEarnCard] Bridge tx hash:', bridgeTxHash);
+
+      setWithdrawState({
+        step: 'confirming',
+        txHash: bridgeTxHash,
+      });
+
+      // Wait for bridge confirmation and show success
+      await new Promise((resolve) => setTimeout(resolve, 10000));
+
+      // Refetch balances
+      await refetchGnosisBalance();
+
+      setWithdrawState({
+        step: 'success',
+        txHash: bridgeTxHash,
+        withdrawnAmount: bridgeAmount,
+        outputAsset: 'USDC (arriving on Base)',
+      });
+
+      setBridgeAmount('');
+      toast.success(
+        'Bridge initiated! Funds will arrive on Base in ~5-15 minutes.',
+      );
+    } catch (error) {
+      console.error('[WithdrawEarnCard] Bridge error:', error);
+      setWithdrawState({
+        step: 'error',
+        errorMessage: error instanceof Error ? error.message : 'Bridge failed',
+      });
+      toast.error(
+        `Bridge failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      );
+    } finally {
+      setIsBridging(false);
+    }
+  };
+
+  const handleMaxBridge = () => {
+    const maxAmount = formatUnits(gnosisXdaiBalance.totalAvailable, 18);
+    setBridgeAmount(maxAmount);
+  };
+
+  // Handler for bridging Arbitrum USDC back to Base
+  const arbBridgeMutation = trpc.earn.getArbitrumToBaseBridgeTx.useMutation();
+
+  const handleArbBridgeToBase = async () => {
+    if (!arbBridgeAmount || !targetSafeAddress || !baseSafeAddress) return;
+
+    try {
+      setIsBridging(true);
+      setWithdrawState({ step: 'processing' });
+
+      const arbBridgeAmountBigInt = parseUnits(arbBridgeAmount, 6); // USDC has 6 decimals
+
+      // Get the bridge transactions from backend
+      const bridgeResult = await arbBridgeMutation.mutateAsync({
+        amount: arbBridgeAmountBigInt.toString(),
+      });
+
+      // Get the smart wallet client for Arbitrum
+      const arbitrumClient = await getClientForChain({ id: chainId });
+      if (!arbitrumClient) {
+        throw new Error('Failed to get Arbitrum client');
+      }
+
+      const smartWalletAddress = arbitrumClient.account?.address;
+      if (!smartWalletAddress) {
+        throw new Error('No smart wallet address found');
+      }
+
+      // Import buildSafeTx and relaySafeTx
+      const { buildSafeTx, relaySafeTx } = await import(
+        '@/lib/sponsor-tx/core'
+      );
+
+      // Convert transactions to the format expected by buildSafeTx
+      const transactions = bridgeResult.transactions.map((tx) => ({
+        to: tx.to as Address,
+        value: tx.value,
+        data: tx.data as `0x${string}`,
+      }));
+
+      // Build and execute Safe transaction on Arbitrum
+      const safeTx = await buildSafeTx(transactions, {
+        safeAddress: targetSafeAddress,
+        chainId,
+        gas: 400_000n,
+      });
+
+      const bridgeTxHash = await relaySafeTx(
+        safeTx,
+        smartWalletAddress,
+        arbitrumClient,
+        targetSafeAddress,
+      );
+
+      console.log('[WithdrawEarnCard] Arbitrum bridge tx hash:', bridgeTxHash);
+
+      setWithdrawState({
+        step: 'confirming',
+        txHash: bridgeTxHash,
+      });
+
+      // Wait for confirmation
+      await new Promise((resolve) => setTimeout(resolve, 10000));
+
+      setWithdrawState({
+        step: 'success',
+        txHash: bridgeTxHash,
+        withdrawnAmount: arbBridgeAmount,
+        outputAsset: 'USDC (arriving on Base)',
+      });
+
+      setArbBridgeAmount('');
+      toast.success(
+        'Bridge initiated! Funds will arrive on Base in ~2-10 minutes.',
+      );
+    } catch (error) {
+      console.error('[WithdrawEarnCard] Arbitrum bridge error:', error);
+      setWithdrawState({
+        step: 'error',
+        errorMessage: error instanceof Error ? error.message : 'Bridge failed',
+      });
+      toast.error(
+        `Bridge failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      );
+    } finally {
+      setIsBridging(false);
+    }
+  };
+
+  const handleMaxArbBridge = () => {
+    if (vaultInfo) {
+      const maxAmount = formatUnits(vaultInfo.assets, vaultInfo.assetDecimals);
+      setArbBridgeAmount(maxAmount);
+    }
+  };
+
   // Loading state
   if (isLoadingVault || (isCrossChain && isLoadingPositions)) {
     return (
@@ -769,8 +1129,129 @@ export function WithdrawEarnCard({
     );
   }
 
-  // No balance state
+  // No balance state - but for Gnosis, also check xDAI balance for bridge-back
   if (!vaultInfo || vaultInfo.assets === 0n) {
+    // For Gnosis vaults, if there's no sDAI but there IS xDAI, show bridge-back UI
+    if (isGnosisVault && gnosisXdaiBalance.totalAvailable > 0n) {
+      // Show bridge-back only UI
+      const availableXdai = formatUnits(gnosisXdaiBalance.totalAvailable, 18);
+      const displayXdaiBalance = parseFloat(availableXdai).toLocaleString(
+        undefined,
+        { minimumFractionDigits: 2, maximumFractionDigits: 6 },
+      );
+
+      return (
+        <div className="space-y-6 p-4 bg-[#fafafa] border border-[#1B29FF]/20 relative">
+          {/* Blueprint grid overlay */}
+          <div
+            className="absolute inset-0 pointer-events-none opacity-[0.03]"
+            style={{
+              backgroundImage: `
+                linear-gradient(to right, #1B29FF 1px, transparent 1px),
+                linear-gradient(to bottom, #1B29FF 1px, transparent 1px)
+              `,
+              backgroundSize: '20px 20px',
+            }}
+          />
+
+          {/* xDAI Balance Card - Bridge Back to Base */}
+          <div className="bg-white border border-[#1B29FF]/30 p-4 relative">
+            <div className="flex justify-between items-start mb-3">
+              <div>
+                <p className="font-mono uppercase tracking-[0.14em] text-[11px] text-[#1B29FF] mb-1">
+                  BALANCE::GNO_xDAI
+                </p>
+                <p className="font-mono text-[24px] tabular-nums text-[#101010]">
+                  {displayXdaiBalance}{' '}
+                  <span className="text-[12px] text-[#1B29FF]">xDAI</span>
+                </p>
+              </div>
+            </div>
+
+            {/* Bridge to Base Input & Button */}
+            <div className="space-y-2">
+              <label className="font-mono text-[10px] text-[#1B29FF]/70 uppercase">
+                INPUT::BRIDGE_AMOUNT (xDAI → Base USDC)
+              </label>
+              <div className="relative">
+                <input
+                  type="number"
+                  placeholder="0.0"
+                  value={bridgeAmount}
+                  onChange={(e) => setBridgeAmount(e.target.value)}
+                  className="w-full h-10 px-3 font-mono bg-white border border-[#1B29FF]/30 focus:border-[#1B29FF] focus:outline-none text-[14px] transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  step="0.000001"
+                  min="0"
+                  max={availableXdai}
+                  disabled={isBridging}
+                />
+                <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                  <span className="font-mono text-[10px] text-[#1B29FF]/70">
+                    xDAI
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleMaxBridge}
+                    className="font-mono px-2 py-1 text-[10px] text-[#1B29FF] border border-[#1B29FF]/30 hover:border-[#1B29FF] transition-colors bg-white hover:bg-[#1B29FF]/5"
+                    disabled={isBridging}
+                  >
+                    MAX
+                  </button>
+                </div>
+              </div>
+
+              {/* Bridge Quote Info */}
+              {isLoadingBridgeQuote && (
+                <div className="flex items-center gap-2 text-[10px] font-mono text-[#1B29FF]/60">
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                  Fetching quote...
+                </div>
+              )}
+              {bridgeQuote && !isLoadingBridgeQuote && (
+                <div className="p-2 bg-[#1B29FF]/5 border border-[#1B29FF]/20 space-y-1">
+                  <p className="font-mono text-[10px] text-[#1B29FF]">
+                    OUTPUT ≈ {formatUnits(BigInt(bridgeQuote.outputAmount), 6)}{' '}
+                    USDC
+                  </p>
+                  <p className="font-mono text-[10px] text-[#101010]/50">
+                    Fee: ~${bridgeQuote.totalFeeUsd} • ETA: ~
+                    {Math.ceil(bridgeQuote.estimatedTime / 60)} min
+                  </p>
+                </div>
+              )}
+
+              <button
+                onClick={handleBridgeToBase}
+                disabled={
+                  !bridgeAmount ||
+                  parseFloat(bridgeAmount) <= 0 ||
+                  !bridgeQuote ||
+                  isLoadingBridgeQuote ||
+                  isBridging
+                }
+                className="w-full h-10 font-mono uppercase bg-white border-2 border-[#1B29FF] text-[#1B29FF] hover:bg-[#1B29FF] hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {isBridging ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <ArrowUpFromLine className="h-4 w-4" />
+                )}
+                <span className="leading-none">[ BRIDGE TO BASE ]</span>
+              </button>
+            </div>
+
+            <p className="font-mono text-[10px] text-center text-[#1B29FF]/60 mt-3">
+              Bridge via LI.FI • Funds arrive on Base in ~5-15 min
+            </p>
+          </div>
+
+          <p className="font-mono text-[10px] text-center text-[#101010]/40">
+            No sDAI in vault. Use this to bridge xDAI back to Base.
+          </p>
+        </div>
+      );
+    }
+
     return (
       <div className="bg-[#F7F7F2] border border-[#101010]/10 p-4">
         <div className="flex gap-3">
@@ -1029,7 +1510,14 @@ export function WithdrawEarnCard({
       };
 
       // Use the Base Safe address as salt nonce for deterministic address matching
-      const saltNonce = safeAddress.toLowerCase();
+      // CRITICAL: Use baseSafeAddress from getMultiChainPositions, NOT safeAddress prop
+      // The safeAddress prop may come from workspace-scoped query which can be different
+      if (!baseSafeAddress) {
+        throw new Error(
+          'Base Safe address not found. Cannot deploy cross-chain Safe without Base Safe.',
+        );
+      }
+      const saltNonce = baseSafeAddress.toLowerCase();
       const safeDeploymentConfig: SafeDeploymentConfig = {
         saltNonce,
         safeVersion: '1.4.1',
@@ -1297,6 +1785,407 @@ export function WithdrawEarnCard({
         >
           {isTechnical ? '[ TRY_AGAIN ]' : 'Try Again'}
         </button>
+      </div>
+    );
+  }
+
+  // --- GNOSIS 2-STEP WITHDRAWAL FLOW ---
+  // Step 1: Withdraw sDAI -> xDAI (redeem from vault)
+  // Step 2: Bridge xDAI -> Base USDC (via LI.FI)
+  if (isGnosisVault && targetSafeAddress) {
+    const availableXdai = formatUnits(gnosisXdaiBalance.totalAvailable, 18);
+    const displayXdaiBalance = parseFloat(availableXdai).toLocaleString(
+      undefined,
+      { minimumFractionDigits: 2, maximumFractionDigits: 6 },
+    );
+
+    return (
+      <div className="space-y-6 p-4 bg-[#fafafa] border border-[#1B29FF]/20 relative">
+        {/* Blueprint grid overlay */}
+        <div
+          className="absolute inset-0 pointer-events-none opacity-[0.03]"
+          style={{
+            backgroundImage: `
+              linear-gradient(to right, #1B29FF 1px, transparent 1px),
+              linear-gradient(to bottom, #1B29FF 1px, transparent 1px)
+            `,
+            backgroundSize: '20px 20px',
+          }}
+        />
+
+        {/* Success Banner */}
+        <SuccessBanner />
+
+        {/* Processing Banner */}
+        <ProcessingBanner />
+
+        {/* TOP CARD: sDAI Vault Balance - Withdraw to xDAI */}
+        <div className="bg-white border border-[#1B29FF]/30 p-4 relative">
+          <div className="flex justify-between items-start mb-3">
+            <div>
+              <p className="font-mono uppercase tracking-[0.14em] text-[11px] text-[#1B29FF] mb-1">
+                VAULT::sDAI_BALANCE
+              </p>
+              <p className="font-mono text-[24px] tabular-nums text-[#101010]">
+                {displayBalance}{' '}
+                <span className="text-[12px] text-[#1B29FF]">sDAI</span>
+              </p>
+              <p className="text-[12px] font-mono text-[#101010]/50">
+                ≈ ${displayBalance} USD
+              </p>
+              {/* Show Safe address in technical mode */}
+              <p className="font-mono text-[10px] text-[#1B29FF]/60 mt-1">
+                SAFE::
+                {effectiveSafeAddress
+                  ? `${effectiveSafeAddress.slice(0, 6)}...${effectiveSafeAddress.slice(-4)}`
+                  : 'NOT_SET'}
+              </p>
+              {targetSafeAddress &&
+                targetSafeAddress !== effectiveSafeAddress && (
+                  <p className="font-mono text-[10px] text-orange-500 mt-0.5">
+                    TARGET_SAFE::{targetSafeAddress.slice(0, 6)}...
+                    {targetSafeAddress.slice(-4)} (MISMATCH)
+                  </p>
+                )}
+            </div>
+          </div>
+
+          {/* Withdraw sDAI to xDAI */}
+          <div className="space-y-2">
+            <label className="font-mono text-[10px] text-[#1B29FF]/70 uppercase">
+              INPUT::WITHDRAW_AMOUNT (sDAI → xDAI)
+            </label>
+            <div className="relative">
+              <input
+                type="number"
+                placeholder="0.0"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                className="w-full h-10 px-3 font-mono bg-white border border-[#1B29FF]/30 focus:border-[#1B29FF] focus:outline-none text-[14px] transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                step="0.000001"
+                min="0"
+                max={availableBalance}
+                disabled={isProcessing}
+              />
+              <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                <span className="font-mono text-[10px] text-[#1B29FF]/70">
+                  sDAI
+                </span>
+                <button
+                  type="button"
+                  onClick={handleMax}
+                  className="font-mono px-2 py-1 text-[10px] text-[#1B29FF] border border-[#1B29FF]/30 hover:border-[#1B29FF] transition-colors bg-white hover:bg-[#1B29FF]/5"
+                  disabled={isProcessing}
+                >
+                  MAX
+                </button>
+              </div>
+            </div>
+            <button
+              onClick={handleWithdraw}
+              disabled={disableWithdraw}
+              className="w-full h-10 font-mono uppercase bg-white border-2 border-[#1B29FF] text-[#1B29FF] hover:bg-[#1B29FF] hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            >
+              {isProcessing ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <ArrowUpFromLine className="h-4 w-4" />
+              )}
+              <span className="leading-none">[ WITHDRAW TO xDAI ]</span>
+            </button>
+          </div>
+
+          <p className="font-mono text-[10px] text-center text-[#1B29FF]/60 mt-3">
+            Redeems sDAI shares for xDAI on Gnosis
+          </p>
+        </div>
+
+        {/* BOTTOM CARD: xDAI Balance - Bridge to Base */}
+        <div className="bg-white border border-[#1B29FF]/30 p-4 relative">
+          <div className="flex justify-between items-start mb-3">
+            <div>
+              <p className="font-mono uppercase tracking-[0.14em] text-[11px] text-[#1B29FF] mb-1">
+                BALANCE::GNO_xDAI
+              </p>
+              <p className="font-mono text-[24px] tabular-nums text-[#101010]">
+                {displayXdaiBalance}{' '}
+                <span className="text-[12px] text-[#1B29FF]">xDAI</span>
+              </p>
+            </div>
+          </div>
+
+          {/* Bridge to Base Input & Button */}
+          <div className="space-y-2">
+            <label className="font-mono text-[10px] text-[#1B29FF]/70 uppercase">
+              INPUT::BRIDGE_AMOUNT (xDAI → Base USDC)
+            </label>
+            <div className="relative">
+              <input
+                type="number"
+                placeholder="0.0"
+                value={bridgeAmount}
+                onChange={(e) => setBridgeAmount(e.target.value)}
+                className="w-full h-10 px-3 font-mono bg-white border border-[#1B29FF]/30 focus:border-[#1B29FF] focus:outline-none text-[14px] transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                step="0.000001"
+                min="0"
+                max={availableXdai}
+                disabled={gnosisXdaiBalance.totalAvailable === 0n || isBridging}
+              />
+              <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                <span className="font-mono text-[10px] text-[#1B29FF]/70">
+                  xDAI
+                </span>
+                <button
+                  type="button"
+                  onClick={handleMaxBridge}
+                  className="font-mono px-2 py-1 text-[10px] text-[#1B29FF] border border-[#1B29FF]/30 hover:border-[#1B29FF] transition-colors bg-white hover:bg-[#1B29FF]/5"
+                  disabled={
+                    gnosisXdaiBalance.totalAvailable === 0n || isBridging
+                  }
+                >
+                  MAX
+                </button>
+              </div>
+            </div>
+
+            {/* Bridge Quote Info */}
+            {isLoadingBridgeQuote && (
+              <div className="flex items-center gap-2 text-[10px] font-mono text-[#1B29FF]/60">
+                <Loader2 className="h-3 w-3 animate-spin" />
+                Fetching quote...
+              </div>
+            )}
+            {bridgeQuote && !isLoadingBridgeQuote && (
+              <div className="p-2 bg-[#1B29FF]/5 border border-[#1B29FF]/20 space-y-1">
+                <p className="font-mono text-[10px] text-[#1B29FF]">
+                  OUTPUT ≈ {formatUnits(BigInt(bridgeQuote.outputAmount), 6)}{' '}
+                  USDC
+                </p>
+                <p className="font-mono text-[10px] text-[#101010]/50">
+                  Fee: ~${bridgeQuote.totalFeeUsd} • ETA: ~
+                  {Math.ceil(bridgeQuote.estimatedTime / 60)} min
+                </p>
+              </div>
+            )}
+
+            <button
+              onClick={handleBridgeToBase}
+              disabled={
+                !bridgeAmount ||
+                parseFloat(bridgeAmount) <= 0 ||
+                gnosisXdaiBalance.totalAvailable === 0n ||
+                !bridgeQuote ||
+                isLoadingBridgeQuote ||
+                isBridging
+              }
+              className="w-full h-10 font-mono uppercase bg-white border-2 border-[#1B29FF] text-[#1B29FF] hover:bg-[#1B29FF] hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            >
+              {isBridging ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <ArrowUpFromLine className="h-4 w-4" />
+              )}
+              <span className="leading-none">[ BRIDGE TO BASE ]</span>
+            </button>
+          </div>
+
+          <p className="font-mono text-[10px] text-center text-[#1B29FF]/60 mt-3">
+            Bridge via LI.FI • Funds arrive on Base in ~5-15 min
+          </p>
+        </div>
+
+        {/* Help text */}
+        <p className="font-mono text-[10px] text-center text-[#101010]/40">
+          2-STEP WITHDRAWAL: sDAI → xDAI → Base USDC
+        </p>
+      </div>
+    );
+  }
+
+  // --- ARBITRUM 2-STEP WITHDRAWAL FLOW ---
+  // Step 1: Withdraw from vault (get USDC on Arbitrum)
+  // Step 2: Bridge USDC -> Base (via Across Protocol)
+  if (isArbitrumVault && targetSafeAddress) {
+    return (
+      <div className="space-y-6 p-4 bg-[#fafafa] border border-[#1B29FF]/20 relative">
+        {/* Blueprint grid overlay */}
+        <div
+          className="absolute inset-0 pointer-events-none opacity-[0.03]"
+          style={{
+            backgroundImage: `
+              linear-gradient(to right, #1B29FF 1px, transparent 1px),
+              linear-gradient(to bottom, #1B29FF 1px, transparent 1px)
+            `,
+            backgroundSize: '20px 20px',
+          }}
+        />
+
+        {/* Success Banner */}
+        <SuccessBanner />
+
+        {/* Processing Banner */}
+        <ProcessingBanner />
+
+        {/* TOP CARD: Vault Balance - Withdraw USDC */}
+        <div className="bg-white border border-[#1B29FF]/30 p-4 relative">
+          <div className="flex justify-between items-start mb-3">
+            <div>
+              <p className="font-mono uppercase tracking-[0.14em] text-[11px] text-[#1B29FF] mb-1">
+                VAULT::ARB_USDC_BALANCE
+              </p>
+              <p className="font-mono text-[24px] tabular-nums text-[#101010]">
+                {displayBalance}{' '}
+                <span className="text-[12px] text-[#1B29FF]">USDC</span>
+              </p>
+              <p className="text-[12px] font-mono text-[#101010]/50">
+                ≈ ${displayBalance} USD
+              </p>
+            </div>
+          </div>
+
+          {/* Withdraw from vault */}
+          <div className="space-y-2">
+            <label className="font-mono text-[10px] text-[#1B29FF]/70 uppercase">
+              INPUT::WITHDRAW_AMOUNT (Vault → Arbitrum USDC)
+            </label>
+            <div className="relative">
+              <input
+                type="number"
+                placeholder="0.0"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                className="w-full h-10 px-3 font-mono bg-white border border-[#1B29FF]/30 focus:border-[#1B29FF] focus:outline-none text-[14px] transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                step="0.000001"
+                min="0"
+                max={availableBalance}
+                disabled={isProcessing}
+              />
+              <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                <span className="font-mono text-[10px] text-[#1B29FF]/70">
+                  USDC
+                </span>
+                <button
+                  type="button"
+                  onClick={handleMax}
+                  className="font-mono px-2 py-1 text-[10px] text-[#1B29FF] border border-[#1B29FF]/30 hover:border-[#1B29FF] transition-colors bg-white hover:bg-[#1B29FF]/5"
+                  disabled={isProcessing}
+                >
+                  MAX
+                </button>
+              </div>
+            </div>
+            <button
+              onClick={handleWithdraw}
+              disabled={disableWithdraw}
+              className="w-full h-10 font-mono uppercase bg-white border-2 border-[#1B29FF] text-[#1B29FF] hover:bg-[#1B29FF] hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            >
+              {isProcessing ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <ArrowUpFromLine className="h-4 w-4" />
+              )}
+              <span className="leading-none">[ WITHDRAW FROM VAULT ]</span>
+            </button>
+          </div>
+
+          <p className="font-mono text-[10px] text-center text-[#1B29FF]/60 mt-3">
+            Redeems vault shares for USDC on Arbitrum
+          </p>
+        </div>
+
+        {/* BOTTOM CARD: Arbitrum USDC Balance - Bridge to Base */}
+        <div className="bg-white border border-[#1B29FF]/30 p-4 relative">
+          <div className="flex justify-between items-start mb-3">
+            <div>
+              <p className="font-mono uppercase tracking-[0.14em] text-[11px] text-[#1B29FF] mb-1">
+                BALANCE::ARB_USDC (Spendable)
+              </p>
+              <p className="font-mono text-[14px] tabular-nums text-[#101010]/70">
+                Enter amount to bridge back to Base
+              </p>
+            </div>
+          </div>
+
+          {/* Bridge to Base Input & Button */}
+          <div className="space-y-2">
+            <label className="font-mono text-[10px] text-[#1B29FF]/70 uppercase">
+              INPUT::BRIDGE_AMOUNT (Arb USDC → Base USDC)
+            </label>
+            <div className="relative">
+              <input
+                type="number"
+                placeholder="0.0"
+                value={arbBridgeAmount}
+                onChange={(e) => setArbBridgeAmount(e.target.value)}
+                className="w-full h-10 px-3 font-mono bg-white border border-[#1B29FF]/30 focus:border-[#1B29FF] focus:outline-none text-[14px] transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                step="0.000001"
+                min="0"
+                disabled={isBridging}
+              />
+              <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                <span className="font-mono text-[10px] text-[#1B29FF]/70">
+                  USDC
+                </span>
+                <button
+                  type="button"
+                  onClick={handleMaxArbBridge}
+                  className="font-mono px-2 py-1 text-[10px] text-[#1B29FF] border border-[#1B29FF]/30 hover:border-[#1B29FF] transition-colors bg-white hover:bg-[#1B29FF]/5"
+                  disabled={isBridging}
+                >
+                  MAX
+                </button>
+              </div>
+            </div>
+
+            {/* Bridge Quote Info */}
+            {isLoadingArbBridgeQuote && (
+              <div className="flex items-center gap-2 text-[10px] font-mono text-[#1B29FF]/60">
+                <Loader2 className="h-3 w-3 animate-spin" />
+                Fetching quote...
+              </div>
+            )}
+            {arbBridgeQuote && !isLoadingArbBridgeQuote && (
+              <div className="p-2 bg-[#1B29FF]/5 border border-[#1B29FF]/20 space-y-1">
+                <p className="font-mono text-[10px] text-[#1B29FF]">
+                  OUTPUT ≈ {formatUnits(BigInt(arbBridgeQuote.outputAmount), 6)}{' '}
+                  USDC
+                </p>
+                <p className="font-mono text-[10px] text-[#101010]/50">
+                  Fee: ~{formatUnits(BigInt(arbBridgeQuote.totalFee), 6)} USDC •
+                  ETA: ~{Math.ceil(arbBridgeQuote.estimatedFillTime / 60)} min
+                </p>
+              </div>
+            )}
+
+            <button
+              onClick={handleArbBridgeToBase}
+              disabled={
+                !arbBridgeAmount ||
+                parseFloat(arbBridgeAmount) <= 0 ||
+                !arbBridgeQuote ||
+                isLoadingArbBridgeQuote ||
+                isBridging
+              }
+              className="w-full h-10 font-mono uppercase bg-white border-2 border-[#1B29FF] text-[#1B29FF] hover:bg-[#1B29FF] hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            >
+              {isBridging ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <ArrowUpFromLine className="h-4 w-4" />
+              )}
+              <span className="leading-none">[ BRIDGE TO BASE ]</span>
+            </button>
+          </div>
+
+          <p className="font-mono text-[10px] text-center text-[#1B29FF]/60 mt-3">
+            Bridge via Across Protocol • Funds arrive on Base in ~2-10 min
+          </p>
+        </div>
+
+        {/* Help text */}
+        <p className="font-mono text-[10px] text-center text-[#101010]/40">
+          2-STEP WITHDRAWAL: Vault → Arb USDC → Base USDC
+        </p>
       </div>
     );
   }

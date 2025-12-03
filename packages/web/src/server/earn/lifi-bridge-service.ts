@@ -282,6 +282,56 @@ export function encodeLiFiApproval(params: {
 }
 
 /**
+ * Get a quote for bridging Gnosis xDAI to Base USDC
+ * Used for withdrawals: sDAI -> xDAI -> USDC on Base
+ */
+export async function getGnosisXdaiToBaseUsdcQuote(params: {
+  amount: bigint; // Amount in xDAI (18 decimals)
+  fromAddress: Address; // User's Safe on Gnosis
+  toAddress: Address; // User's Safe on Base
+  slippage?: number;
+}): Promise<LiFiBridgeQuote> {
+  const baseConfig = getChainConfig(SUPPORTED_CHAINS.BASE);
+
+  // Use WXDAI as fromToken since LI.FI works with ERC20 tokens
+  // The user will need to wrap xDAI -> WXDAI first if using native xDAI
+  return getLiFiBridgeQuote({
+    fromChainId: SUPPORTED_CHAINS.GNOSIS,
+    toChainId: SUPPORTED_CHAINS.BASE,
+    fromToken: GNOSIS_ASSETS.WXDAI.address, // WXDAI on Gnosis
+    toToken: baseConfig.usdcAddress, // USDC on Base
+    amount: params.amount,
+    fromAddress: params.fromAddress,
+    toAddress: params.toAddress,
+    slippage: params.slippage,
+  });
+}
+
+/**
+ * Get a quote for bridging Gnosis sDAI to Base USDC
+ * Used for withdrawals: sDAI -> USDC on Base (direct route if available)
+ */
+export async function getGnosisSdaiToBaseUsdcQuote(params: {
+  amount: bigint; // Amount in sDAI (18 decimals)
+  fromAddress: Address; // User's Safe on Gnosis
+  toAddress: Address; // User's Safe on Base
+  slippage?: number;
+}): Promise<LiFiBridgeQuote> {
+  const baseConfig = getChainConfig(SUPPORTED_CHAINS.BASE);
+
+  return getLiFiBridgeQuote({
+    fromChainId: SUPPORTED_CHAINS.GNOSIS,
+    toChainId: SUPPORTED_CHAINS.BASE,
+    fromToken: GNOSIS_ASSETS.sDAI.address, // sDAI on Gnosis
+    toToken: baseConfig.usdcAddress, // USDC on Base
+    amount: params.amount,
+    fromAddress: params.fromAddress,
+    toAddress: params.toAddress,
+    slippage: params.slippage,
+  });
+}
+
+/**
  * Check if a chain is supported by LI.FI for bridging
  */
 export function isLiFiSupportedChain(chainId: SupportedChainId): boolean {

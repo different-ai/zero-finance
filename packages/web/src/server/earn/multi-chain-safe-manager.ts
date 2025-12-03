@@ -12,7 +12,7 @@ import {
 } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { type Address, type Hex, createPublicClient, http } from 'viem';
-import { base, arbitrum } from 'viem/chains';
+import { base, arbitrum, gnosis } from 'viem/chains';
 import {
   SUPPORTED_CHAINS,
   type SupportedChainId,
@@ -387,15 +387,49 @@ export async function getSafeDeploymentTransaction(
       existingSafe.safeAddress.toLowerCase() !==
       tx.predictedAddress.toLowerCase()
     ) {
-      throw new Error(
-        `Safe already exists on chain ${chainId} but address mismatch. Existing: ${existingSafe.safeAddress}, Predicted: ${tx.predictedAddress}`,
+      // Check if the existing Safe is actually deployed on-chain
+      // If not, we can safely delete the stale record and proceed
+      const chainConfig = getChainConfig(chainId);
+      const targetRpcUrl =
+        chainConfig.rpcUrls.alchemy || chainConfig.rpcUrls.public[0];
+      const targetViemChain =
+        chainId === SUPPORTED_CHAINS.GNOSIS
+          ? gnosis
+          : chainId === SUPPORTED_CHAINS.ARBITRUM
+            ? arbitrum
+            : base;
+
+      const targetPublicClient = createPublicClient({
+        chain: targetViemChain,
+        transport: http(targetRpcUrl),
+      });
+
+      const existingCode = await targetPublicClient.getCode({
+        address: existingSafe.safeAddress as Address,
+      });
+
+      const isExistingDeployed = existingCode && existingCode !== '0x';
+
+      if (!isExistingDeployed) {
+        // Stale record - Safe was never deployed on-chain
+        // Delete it so we can create the correct one
+        console.log(
+          `Deleting stale Safe record for chain ${chainId}: ${existingSafe.safeAddress} (not deployed on-chain). Will create correct one: ${tx.predictedAddress}`,
+        );
+        await db.delete(userSafes).where(eq(userSafes.id, existingSafe.id));
+      } else {
+        // Safe IS deployed but at wrong address - this is a more serious issue
+        throw new Error(
+          `Safe already exists on chain ${chainId} but address mismatch. Existing: ${existingSafe.safeAddress}, Predicted: ${tx.predictedAddress}. The existing Safe IS deployed on-chain - manual intervention required.`,
+        );
+      }
+    } else {
+      // If it matches, we can just return the deployment tx (idempotent behavior)
+      // This helps if the FE is stale or if the user needs to re-broadcast deployment
+      console.log(
+        `Safe already registered on chain ${chainId}, returning deployment info idempotently.`,
       );
     }
-    // If it matches, we can just return the deployment tx (idempotent behavior)
-    // This helps if the FE is stale or if the user needs to re-broadcast deployment
-    console.log(
-      `Safe already registered on chain ${chainId}, returning deployment info idempotently.`,
-    );
   }
 
   return {
