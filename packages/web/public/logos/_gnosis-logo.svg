@@ -1,0 +1,13 @@
+<svg width="351" height="90" viewBox="0 0 351 90" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Gnosis owl icon -->
+  <g transform="translate(0, 5)">
+    <circle cx="40" cy="40" r="38" fill="#04795B"/>
+    <ellipse cx="28" cy="35" rx="10" ry="12" fill="white"/>
+    <ellipse cx="52" cy="35" rx="10" ry="12" fill="white"/>
+    <circle cx="28" cy="35" r="5" fill="#04795B"/>
+    <circle cx="52" cy="35" r="5" fill="#04795B"/>
+    <path d="M35 55 L40 62 L45 55" stroke="white" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  <!-- "Gnosis" text -->
+  <text x="95" y="60" font-family="Inter, -apple-system, BlinkMacSystemFont, sans-serif" font-size="48" font-weight="600" fill="#04795B">Gnosis</text>
+</svg>

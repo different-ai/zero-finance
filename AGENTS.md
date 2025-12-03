@@ -10,9 +10,24 @@
 
 This is a Next.js application with smart contract automation for savings management.
 
+## Dev server runs on port 3050
+
+```bash
+pnpm dev
+```
+
+## Production server runs on port 3050
+
+```bash
+cd packages/web
+pnpm dev
+```
+
 ## External Resources & Knowledge Bases
 
 ### Notion MCP - Product Context & Messaging
+
+When talking about notion go to the "MCP Skills" page first to see how to use the tools.
 
 Use **Notion MCP tools** to access company documentation for:
 

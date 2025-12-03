@@ -20,7 +20,7 @@ import {
   http,
   erc20Abi,
 } from 'viem';
-import { base, arbitrum } from 'viem/chains';
+import { base, arbitrum, gnosis } from 'viem/chains';
 import { useSafeRelay } from '@/hooks/use-safe-relay';
 import { useSmartWallets } from '@privy-io/react-auth/smart-wallets';
 import {
@@ -33,6 +33,16 @@ import {
   SUPPORTED_CHAINS,
   type SupportedChainId,
 } from '@/lib/constants/chains';
+
+// Chains supported by Across Protocol for bridging
+const ACROSS_SUPPORTED_CHAINS: SupportedChainId[] = [
+  SUPPORTED_CHAINS.BASE,
+  SUPPORTED_CHAINS.ARBITRUM,
+  SUPPORTED_CHAINS.MAINNET,
+];
+
+// Chains that use LI.FI for bridging (Gnosis uses LI.FI, not Across)
+const LIFI_SUPPORTED_CHAINS: SupportedChainId[] = [SUPPORTED_CHAINS.GNOSIS];
 import {
   ALL_BASE_VAULTS,
   USDC_ASSET,
@@ -47,7 +57,7 @@ import { cn } from '@/lib/utils';
 import { usePrivy, useWallets } from '@privy-io/react-auth';
 import { buildSafeTx, relaySafeTx, getSafeTxHash } from '@/lib/sponsor-tx/core';
 
-// Bridge quote type (matches tRPC response)
+// Bridge quote type (matches tRPC response for Across)
 interface BridgeQuote {
   inputAmount: string;
   outputAmount: string;
@@ -56,6 +66,25 @@ interface BridgeQuote {
   relayerGasFee: string;
   totalFee: string;
   estimatedFillTime: number;
+}
+
+// LI.FI Bridge quote type (for Gnosis)
+interface LiFiBridgeQuote {
+  inputAmount: string;
+  outputAmount: string;
+  outputAmountMin: string;
+  totalFeeUsd: string;
+  estimatedTime: number;
+  tool: string;
+  transaction: {
+    to: string;
+    data: string;
+    value: string;
+    chainId: number;
+  };
+  approvalAddress?: string;
+  destinationSafeAddress: string;
+  needsDeployment: boolean;
 }
 
 interface DepositEarnCardProps {
@@ -154,6 +183,8 @@ export function DepositEarnCard({
     step: 'idle',
   });
   const [bridgeQuote, setBridgeQuote] = useState<BridgeQuote | null>(null);
+  const [liFiBridgeQuote, setLiFiBridgeQuote] =
+    useState<LiFiBridgeQuote | null>(null);
   const [isLoadingQuote, setIsLoadingQuote] = useState(false);
 
   // Track initial balance for bridge arrival detection
@@ -164,6 +195,12 @@ export function DepositEarnCard({
 
   // Determine if this is a cross-chain deposit (vault on different chain than user's Safe on Base)
   const isCrossChain = chainId !== SUPPORTED_CHAINS.BASE;
+
+  // Check if cross-chain bridging is supported for this destination chain
+  const isBridgingSupported = ACROSS_SUPPORTED_CHAINS.includes(chainId);
+
+  // Check if LI.FI bridging is available (for Gnosis)
+  const isLiFiBridging = LIFI_SUPPORTED_CHAINS.includes(chainId);
 
   // Fetch multi-chain positions to get correct safe addresses
   // Always enabled because we need Base safe address for native balance fetching
@@ -229,7 +266,7 @@ export function DepositEarnCard({
       },
     );
 
-  // Fetch ERC20 balance via tRPC for non-native assets
+  // Fetch ERC20 balance via tRPC for non-native assets (same-chain deposits)
   // IMPORTANT: Use effectiveSafeAddress (from getMultiChainPositions) not safeAddress prop
   const { data: erc20BalanceData, refetch: refetchErc20Balance } =
     trpc.earn.getSafeBalanceOnChain.useQuery(
@@ -244,18 +281,40 @@ export function DepositEarnCard({
       },
     );
 
+  // Fetch Base USDC balance for cross-chain deposits (source chain balance)
+  // This is needed for LI.FI bridging from Base to Gnosis
+  const { data: baseUsdcBalanceData, refetch: refetchBaseUsdcBalance } =
+    trpc.earn.getSafeBalanceOnChain.useQuery(
+      {
+        safeAddress: baseSafeAddress ?? effectiveSafeAddress,
+        chainId: SUPPORTED_CHAINS.BASE,
+      },
+      {
+        enabled: !!baseSafeAddress && isCrossChain && !isNativeAsset,
+        staleTime: 30000,
+        refetchInterval: 30000,
+      },
+    );
+
   // Compute assetBalance from tRPC data
+  // For cross-chain deposits, use the Base USDC balance (source chain)
   const assetBalance = isNativeAsset
     ? nativeBalanceData
       ? BigInt(nativeBalanceData.balance)
       : 0n
-    : erc20BalanceData
-      ? BigInt(erc20BalanceData.balance)
-      : 0n;
+    : isCrossChain
+      ? baseUsdcBalanceData
+        ? BigInt(baseUsdcBalanceData.balance)
+        : 0n
+      : erc20BalanceData
+        ? BigInt(erc20BalanceData.balance)
+        : 0n;
 
   const isLoadingBalance = isNativeAsset
     ? !nativeBalanceData && !!effectiveSafeAddress
-    : !erc20BalanceData && !!effectiveSafeAddress && !isCrossChain;
+    : isCrossChain
+      ? !baseUsdcBalanceData && !!baseSafeAddress
+      : !erc20BalanceData && !!effectiveSafeAddress;
 
   // Debug logging
   useEffect(() => {
@@ -286,10 +345,18 @@ export function DepositEarnCard({
   const fetchBalance = useCallback(async () => {
     if (isNativeAsset) {
       await refetchNativeBalance();
+    } else if (isCrossChain) {
+      await refetchBaseUsdcBalance();
     } else {
       await refetchErc20Balance();
     }
-  }, [isNativeAsset, refetchNativeBalance, refetchErc20Balance]);
+  }, [
+    isNativeAsset,
+    isCrossChain,
+    refetchNativeBalance,
+    refetchErc20Balance,
+    refetchBaseUsdcBalance,
+  ]);
 
   // tRPC utils for refetching
   const trpcUtils = trpc.useUtils();
@@ -335,51 +402,124 @@ export function DepositEarnCard({
     (s) => s.chainId === chainId,
   )?.address as Address | undefined;
 
-  // Auto-trigger deployment check if cross-chain and no safe exists
+  // Track if target Safe is actually deployed on-chain (not just in DB)
+  const [isTargetSafeDeployed, setIsTargetSafeDeployed] = useState<
+    boolean | null
+  >(null);
+  const [isCheckingDeployment, setIsCheckingDeployment] = useState(false);
+
+  // Verify target Safe is deployed on-chain when we have an address from DB
   useEffect(() => {
-    if (
+    if (!isCrossChain || !targetSafeAddress || isCheckingDeployment) return;
+
+    const verifyOnChainDeployment = async () => {
+      setIsCheckingDeployment(true);
+      try {
+        const targetChain =
+          chainId === SUPPORTED_CHAINS.GNOSIS ? gnosis : arbitrum;
+        const targetRpcUrl =
+          chainId === SUPPORTED_CHAINS.GNOSIS
+            ? process.env.NEXT_PUBLIC_GNOSIS_RPC_URL ||
+              'https://rpc.gnosischain.com'
+            : chainId === SUPPORTED_CHAINS.ARBITRUM
+              ? process.env.NEXT_PUBLIC_ARBITRUM_RPC_URL ||
+                'https://arb1.arbitrum.io/rpc'
+              : process.env.NEXT_PUBLIC_BASE_RPC_URL ||
+                'https://mainnet.base.org';
+
+        const targetPublicClient = createPublicClient({
+          chain: targetChain,
+          transport: http(targetRpcUrl),
+        });
+
+        const code = await targetPublicClient.getBytecode({
+          address: targetSafeAddress,
+        });
+
+        const isDeployed = !!code && code !== '0x';
+        console.log(
+          `[DepositEarnCard] On-chain verification for ${targetSafeAddress} on chain ${chainId}: ${isDeployed ? 'DEPLOYED' : 'NOT DEPLOYED'}`,
+        );
+        setIsTargetSafeDeployed(isDeployed);
+      } catch (error) {
+        console.error(
+          '[DepositEarnCard] Failed to verify Safe deployment:',
+          error,
+        );
+        setIsTargetSafeDeployed(false);
+      } finally {
+        setIsCheckingDeployment(false);
+      }
+    };
+
+    verifyOnChainDeployment();
+  }, [isCrossChain, targetSafeAddress, chainId]);
+
+  // Auto-trigger deployment check if:
+  // 1. Cross-chain and no safe exists in DB, OR
+  // 2. Cross-chain and safe exists in DB but NOT deployed on-chain
+  useEffect(() => {
+    const needsDeployment =
       isCrossChain &&
       !isLoadingPositions &&
-      !targetSafeAddress &&
-      transactionState.step === 'idle'
-    ) {
-      console.log(
-        '[DepositEarnCard] No target Safe found, fetching deployment info...',
-      );
-      setTransactionState({ step: 'checking' }); // Show loading state briefly
+      !isCheckingDeployment &&
+      transactionState.step === 'idle' &&
+      (!targetSafeAddress || isTargetSafeDeployed === false);
 
-      safeDeploymentMutation
-        .mutateAsync({
-          targetChainId: chainId,
-          safeType: 'primary',
-        })
-        .then((res) => {
-          setTransactionState({
-            step: 'needs-deployment',
-            deploymentInfo: {
+    if (!needsDeployment) return;
+
+    console.log(
+      '[DepositEarnCard] Safe needs deployment. In DB:',
+      !!targetSafeAddress,
+      'On-chain:',
+      isTargetSafeDeployed,
+    );
+    setTransactionState({ step: 'checking' }); // Show loading state briefly
+
+    safeDeploymentMutation
+      .mutateAsync({
+        targetChainId: chainId,
+        safeType: 'primary',
+      })
+      .then((res) => {
+        setTransactionState({
+          step: 'needs-deployment',
+          deploymentInfo: {
+            chainId: chainId,
+            transaction: {
+              to: res.to,
+              data: res.data,
+              value: res.value,
               chainId: chainId,
-              transaction: {
-                to: res.to,
-                data: res.data,
-                value: res.value,
-                chainId: chainId,
-              },
-              predictedAddress: res.predictedAddress,
             },
-          });
-        })
-        .catch((err) => {
-          console.error('Failed to fetch deployment info:', err);
-          setTransactionState({
-            step: 'error',
-            errorMessage: 'Failed to load account setup info. Please refresh.',
-          });
+            predictedAddress: res.predictedAddress,
+          },
         });
-    }
+      })
+      .catch((err) => {
+        console.error('Failed to fetch deployment info:', err);
+        // Extract actual error message for better debugging
+        const actualError =
+          err instanceof Error
+            ? err.message
+            : typeof err === 'object' && err?.message
+              ? err.message
+              : 'Unknown error';
+        console.error(
+          '[DepositEarnCard] Deployment info error details:',
+          actualError,
+        );
+        setTransactionState({
+          step: 'error',
+          errorMessage: `Failed to load account setup: ${actualError}`,
+        });
+      });
   }, [
     isCrossChain,
     isLoadingPositions,
+    isCheckingDeployment,
     targetSafeAddress,
+    isTargetSafeDeployed,
     chainId,
     transactionState.step,
   ]);
@@ -439,8 +579,14 @@ export function DepositEarnCard({
   ]);
 
   // Fetch bridge quote for cross-chain deposits (funding flow)
+  // Only fetch if the destination chain is supported by Across
   useEffect(() => {
-    if (!isCrossChain || !amount || parseFloat(amount) <= 0) {
+    if (
+      !isCrossChain ||
+      !isBridgingSupported ||
+      !amount ||
+      parseFloat(amount) <= 0
+    ) {
       setBridgeQuote(null);
       return;
     }
@@ -467,7 +613,118 @@ export function DepositEarnCard({
     // Debounce quote fetching
     const timeoutId = setTimeout(fetchQuote, 500);
     return () => clearTimeout(timeoutId);
-  }, [amount, isCrossChain, chainId, vaultAddress, trpcUtils]);
+  }, [
+    amount,
+    isCrossChain,
+    isBridgingSupported,
+    chainId,
+    vaultAddress,
+    trpcUtils,
+  ]);
+
+  // Fetch LI.FI bridge quote for Gnosis xDAI deposits (Step 1: USDC -> xDAI)
+  const [xdaiBridgeQuote, setXdaiBridgeQuote] =
+    useState<LiFiBridgeQuote | null>(null);
+  const [isLoadingXdaiQuote, setIsLoadingXdaiQuote] = useState(false);
+
+  useEffect(() => {
+    if (
+      !isCrossChain ||
+      !isLiFiBridging ||
+      !amount ||
+      parseFloat(amount) <= 0
+    ) {
+      setXdaiBridgeQuote(null);
+      return;
+    }
+
+    const fetchXdaiQuote = async () => {
+      setIsLoadingXdaiQuote(true);
+      try {
+        const amountInSmallestUnit = parseUnits(amount, USDC_DECIMALS);
+        // Use the xDAI endpoint for Base USDC -> Gnosis xDAI
+        const quote = await trpcUtils.earn.getBaseToGnosisXdaiQuote.fetch({
+          amount: amountInSmallestUnit.toString(),
+          slippage: 0.5,
+        });
+        setXdaiBridgeQuote(quote);
+      } catch (error) {
+        console.error('Failed to fetch LI.FI xDAI bridge quote:', error);
+        setXdaiBridgeQuote(null);
+      } finally {
+        setIsLoadingXdaiQuote(false);
+      }
+    };
+
+    // Debounce quote fetching
+    const timeoutId = setTimeout(fetchXdaiQuote, 500);
+    return () => clearTimeout(timeoutId);
+  }, [amount, isCrossChain, isLiFiBridging, trpcUtils]);
+
+  // Fetch Gnosis xDAI balance for the target Safe (for step 2: xDAI -> sDAI)
+  const [gnosisXdaiBalance, setGnosisXdaiBalance] = useState<{
+    nativeXdai: bigint;
+    wxdai: bigint;
+    sdai: bigint;
+    totalAvailable: bigint;
+  }>({ nativeXdai: 0n, wxdai: 0n, sdai: 0n, totalAvailable: 0n });
+
+  const { data: gnosisBalanceData, refetch: refetchGnosisBalance } =
+    trpc.earn.getGnosisXdaiBalance.useQuery(
+      { safeAddress: targetSafeAddress ?? '' },
+      {
+        enabled: !!targetSafeAddress && isLiFiBridging,
+        staleTime: 15000,
+        refetchInterval: 15000,
+      },
+    );
+
+  // Update gnosisXdaiBalance when data changes
+  useEffect(() => {
+    if (gnosisBalanceData) {
+      setGnosisXdaiBalance({
+        nativeXdai: BigInt(gnosisBalanceData.nativeXdai),
+        wxdai: BigInt(gnosisBalanceData.wxdai),
+        sdai: BigInt(gnosisBalanceData.sdai),
+        totalAvailable: BigInt(gnosisBalanceData.totalAvailableForDeposit),
+      });
+    }
+  }, [gnosisBalanceData]);
+
+  // Legacy: Keep the sDAI direct quote for compatibility (not used in split view)
+  useEffect(() => {
+    if (
+      !isCrossChain ||
+      !isLiFiBridging ||
+      !amount ||
+      parseFloat(amount) <= 0
+    ) {
+      setLiFiBridgeQuote(null);
+      return;
+    }
+
+    const fetchLiFiQuote = async () => {
+      setIsLoadingQuote(true);
+      try {
+        const amountInSmallestUnit = parseUnits(amount, USDC_DECIMALS);
+        // Use the convenience endpoint for Base USDC -> Gnosis sDAI
+        const quote = await trpcUtils.earn.getBaseToGnosisSdaiQuote.fetch({
+          amount: amountInSmallestUnit.toString(),
+          slippage: 0.5,
+        });
+        setLiFiBridgeQuote(quote);
+      } catch (error) {
+        console.error('Failed to fetch LI.FI bridge quote:', error);
+        setLiFiBridgeQuote(null);
+      } finally {
+        setIsLoadingQuote(false);
+      }
+    };
+
+    // Debounce quote fetching
+    const timeoutId = setTimeout(fetchLiFiQuote, 500);
+    return () => clearTimeout(timeoutId);
+  }, [amount, isCrossChain, isLiFiBridging, trpcUtils]);
 
   // Check current allowance (only for ERC20 tokens, not native ETH)
   const {
@@ -889,25 +1146,35 @@ export function DepositEarnCard({
       }));
 
       const bridgeTxHash = await sendTxViaRelay(txsToRelay, 500_000n);
+      console.log('[DepositEarnCard] Bridge tx sent:', bridgeTxHash);
 
       if (!bridgeTxHash) throw new Error('Bridge transaction failed');
 
-      await updateBridgeStatusMutation.mutateAsync({
-        bridgeTransactionId,
-        depositTxHash: bridgeTxHash,
-      });
-
+      // Set waiting-bridge state immediately after tx is sent
       setTransactionState({
         step: 'waiting-bridge',
         txHash: bridgeTxHash,
       });
 
+      // Update bridge status in background (don't block UI)
+      updateBridgeStatusMutation
+        .mutateAsync({
+          bridgeTransactionId,
+          depositTxHash: bridgeTxHash,
+        })
+        .catch((err) => {
+          console.warn(
+            '[DepositEarnCard] Failed to update bridge status (non-blocking):',
+            err,
+          );
+        });
+
       // Wait for bridge to initiate (mined on Base)
       await new Promise((resolve) => setTimeout(resolve, 7000));
 
-      // Show bridge success state with timing info
+      // Show success state - bridge has been initiated successfully
       setTransactionState({
-        step: 'waiting-arrival',
+        step: 'success',
         txHash: bridgeTxHash,
         depositedAmount: amount,
       });
@@ -1426,32 +1693,50 @@ export function DepositEarnCard({
     transactionState.deploymentInfo
   ) {
     const { deploymentInfo } = transactionState;
+    const targetChainId = deploymentInfo.chainId as SupportedChainId;
     const chainName =
-      deploymentInfo.chainId === 42161
+      targetChainId === SUPPORTED_CHAINS.ARBITRUM
         ? 'Arbitrum'
-        : `Chain ${deploymentInfo.chainId}`;
+        : targetChainId === SUPPORTED_CHAINS.GNOSIS
+          ? 'Gnosis'
+          : `Chain ${targetChainId}`;
 
     const handleDeploySafe = async () => {
       try {
         setTransactionState({ step: 'deploying-safe' });
 
-        console.log('Deploying Safe on Arbitrum. Chain object:', arbitrum);
+        // Get chain-specific configuration
+        const targetChain =
+          targetChainId === SUPPORTED_CHAINS.GNOSIS ? gnosis : arbitrum;
+        const targetRpcUrl =
+          targetChainId === SUPPORTED_CHAINS.GNOSIS
+            ? process.env.NEXT_PUBLIC_GNOSIS_RPC_URL ||
+              'https://rpc.gnosischain.com'
+            : process.env.NEXT_PUBLIC_ARBITRUM_RPC_URL ||
+              'https://arb1.arbitrum.io/rpc';
 
-        // Get the smart wallet client for Arbitrum (for relaying if needed)
-        const arbClient = await getClientForChain({ id: 42161 });
-        if (!arbClient) {
-          throw new Error('Failed to get Arbitrum client for Safe deployment');
+        console.log(
+          `[DepositEarnCard] Deploying Safe on ${chainName}. Chain object:`,
+          targetChain,
+        );
+
+        // Get the smart wallet client for target chain
+        const targetClient = await getClientForChain({ id: targetChainId });
+        if (!targetClient) {
+          throw new Error(
+            `Failed to get ${chainName} client for Safe deployment`,
+          );
         }
 
         // Use Smart Wallet as owner for gas sponsorship through paymaster
         // This allows transactions to be relayed through the 4337 bundler
-        const ownerAddress = arbClient.account?.address;
+        const ownerAddress = targetClient.account?.address;
 
         if (!ownerAddress) {
           throw new Error('No valid owner address found (Smart Wallet)');
         }
 
-        console.log('[DepositEarnCard] Starting Arbitrum Safe deployment');
+        console.log(`[DepositEarnCard] Starting ${chainName} Safe deployment`);
         console.log('[DepositEarnCard] Owner address:', ownerAddress);
 
         // Create Safe configuration
@@ -1462,7 +1747,14 @@ export function DepositEarnCard({
 
         // Use the Base Safe address as salt nonce for deterministic address matching
         // This MUST match the backend logic in multi-chain-safe-manager.ts
-        const saltNonce = safeAddress.toLowerCase();
+        // CRITICAL: Use baseSafeAddress from getMultiChainPositions, NOT safeAddress prop
+        // The safeAddress prop may come from workspace-scoped query which can be different
+        if (!baseSafeAddress) {
+          throw new Error(
+            'Base Safe address not found. Cannot deploy cross-chain Safe without Base Safe.',
+          );
+        }
+        const saltNonce = baseSafeAddress.toLowerCase();
         const safeDeploymentConfig: SafeDeploymentConfig = {
           saltNonce,
           safeVersion: '1.4.1',
@@ -1473,36 +1765,29 @@ export function DepositEarnCard({
           safeDeploymentConfig,
         });
 
-        // Initialize the Protocol Kit with Arbitrum RPC
-        const arbitrumRpcUrl =
-          process.env.NEXT_PUBLIC_ARBITRUM_RPC_URL ||
-          'https://arb1.arbitrum.io/rpc';
-
-        // We need an adapter or signer for the Protocol Kit usually,
-        // but for address prediction and deployment transaction generation,
-        // we can initialize it with just the provider and config.
+        // Initialize the Protocol Kit with target chain RPC
         const protocolKit = await Safe.init({
           predictedSafe: {
             safeAccountConfig,
             safeDeploymentConfig,
           },
-          provider: arbitrumRpcUrl,
+          provider: targetRpcUrl,
         });
 
         // Get the predicted Safe address
         const predictedSafeAddress =
           (await protocolKit.getAddress()) as Address;
         console.log(
-          `[DepositEarnCard] Predicted Safe address on Arbitrum: ${predictedSafeAddress}`,
+          `[DepositEarnCard] Predicted Safe address on ${chainName}: ${predictedSafeAddress}`,
         );
 
         // Check if Safe is already deployed
-        const arbPublicClient = createPublicClient({
-          chain: arbitrum,
-          transport: http(arbitrumRpcUrl),
+        const targetPublicClient = createPublicClient({
+          chain: targetChain,
+          transport: http(targetRpcUrl),
         });
 
-        const code = await arbPublicClient.getBytecode({
+        const code = await targetPublicClient.getBytecode({
           address: predictedSafeAddress,
         });
 
@@ -1521,7 +1806,7 @@ export function DepositEarnCard({
           await trpcUtils.earn.getMultiChainPositions.invalidate();
 
           console.log(
-            `[DepositEarnCard] Arbitrum Safe linked: ${predictedSafeAddress}`,
+            `[DepositEarnCard] ${chainName} Safe linked: ${predictedSafeAddress}`,
           );
           setTransactionState({ step: 'idle' });
           return;
@@ -1535,24 +1820,24 @@ export function DepositEarnCard({
 
         setTransactionState({ step: 'waiting-deployment' });
 
-        // Send the deployment transaction on Arbitrum using Privy smart wallet
+        // Send the deployment transaction using Privy smart wallet
         console.log(
-          '[DepositEarnCard] Sending deployment transaction on Arbitrum...',
+          `[DepositEarnCard] Sending deployment transaction on ${chainName}...`,
         );
 
-        if (!arbitrum) {
+        if (!targetChain) {
           throw new Error(
-            'Arbitrum chain definition is missing. Cannot proceed with deployment.',
+            `${chainName} chain definition is missing. Cannot proceed with deployment.`,
           );
         }
 
-        const userOpHash = await arbClient.sendTransaction(
+        const userOpHash = await targetClient.sendTransaction(
           {
             to: deploymentTransaction.to as Address,
             value: BigInt(deploymentTransaction.value || '0'),
             data: deploymentTransaction.data as `0x${string}`,
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            chain: arbitrum as any,
+            chain: targetChain as any,
           },
           {
             uiOptions: {
@@ -1564,15 +1849,15 @@ export function DepositEarnCard({
         console.log(`[DepositEarnCard] UserOperation hash: ${userOpHash}`);
 
         // Wait for Safe deployment to be confirmed
-        // Poll for Safe bytecode on Arbitrum
+        // Poll for Safe bytecode on target chain
         let retries = 30; // 2 minutes timeout
         while (retries > 0) {
-          const code = await arbPublicClient.getBytecode({
+          const deployedCode = await targetPublicClient.getBytecode({
             address: predictedSafeAddress,
           });
-          if (code && code !== '0x') {
+          if (deployedCode && deployedCode !== '0x') {
             console.log(
-              '[DepositEarnCard] Safe deployed successfully on Arbitrum',
+              `[DepositEarnCard] Safe deployed successfully on ${chainName}`,
             );
             break;
           }
@@ -1587,7 +1872,9 @@ export function DepositEarnCard({
         }
 
         // Save the Safe to database via tRPC
-        console.log('[DepositEarnCard] Saving Arbitrum Safe to database...');
+        console.log(
+          `[DepositEarnCard] Saving ${chainName} Safe to database...`,
+        );
         await registerSafeMutation.mutateAsync({
           safeAddress: predictedSafeAddress,
           chainId: deploymentInfo.chainId,
@@ -1602,7 +1889,7 @@ export function DepositEarnCard({
 
         // Show success message briefly then reset
         console.log(
-          `[DepositEarnCard] Arbitrum Safe created at ${predictedSafeAddress}`,
+          `[DepositEarnCard] ${chainName} Safe created at ${predictedSafeAddress}`,
         );
       } catch (error) {
         console.error('Safe deployment error:', error);
@@ -1771,12 +2058,12 @@ export function DepositEarnCard({
                 </div>
                 <div className="text-[11px] text-[#101010]/60">
                   {isTechnical
-                    ? 'BRIDGE::ACROSS_PROTOCOL — ETA: 1-2min'
-                    : 'Funds are being bridged via Across Protocol. This typically takes 1-2 minutes.'}
+                    ? `BRIDGE::${chainId === SUPPORTED_CHAINS.GNOSIS ? 'LIFI_PROTOCOL' : 'ACROSS_PROTOCOL'} — ETA: 1-2min`
+                    : `Funds are being bridged via ${chainId === SUPPORTED_CHAINS.GNOSIS ? 'LI.FI' : 'Across Protocol'}. This typically takes 1-2 minutes.`}
                 </div>
                 {isTechnical && transactionState.txHash && (
                   <a
-                    href={`${chainId === 42161 ? 'https://arbiscan.io' : 'https://basescan.org'}/tx/${transactionState.txHash}`}
+                    href={`${chainId === SUPPORTED_CHAINS.ARBITRUM ? 'https://arbiscan.io' : chainId === SUPPORTED_CHAINS.GNOSIS ? 'https://gnosisscan.io' : 'https://basescan.org'}/tx/${transactionState.txHash}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center gap-1 text-[11px] font-mono text-[#1B29FF] hover:text-[#1420CC] transition-colors"
@@ -1830,12 +2117,18 @@ export function DepositEarnCard({
                 )}
               >
                 {isTechnical ? (
-                  `AMOUNT: $${transactionState.depositedAmount} — DEST: ARBITRUM — ETA: 1-2min`
+                  `AMOUNT: $${transactionState.depositedAmount} — DEST: ${chainId === SUPPORTED_CHAINS.GNOSIS ? 'GNOSIS' : chainId === SUPPORTED_CHAINS.ARBITRUM ? 'ARBITRUM' : 'TARGET'} — ETA: 1-2min`
                 ) : (
                   <>
                     Your ${transactionState.depositedAmount} is being
-                    transferred to Arbitrum. This typically takes{' '}
-                    <strong>1-2 minutes</strong> to arrive.
+                    transferred to{' '}
+                    {chainId === SUPPORTED_CHAINS.GNOSIS
+                      ? 'Gnosis'
+                      : chainId === SUPPORTED_CHAINS.ARBITRUM
+                        ? 'Arbitrum'
+                        : 'the destination chain'}
+                    . This typically takes <strong>1-2 minutes</strong> to
+                    arrive.
                   </>
                 )}
               </div>
@@ -1916,6 +2209,550 @@ export function DepositEarnCard({
         <div className="h-20 w-full bg-[#101010]/5 animate-pulse" />
         <div className="h-12 w-full bg-[#101010]/5 animate-pulse" />
         <div className="h-12 w-full bg-[#101010]/5 animate-pulse" />
+      </div>
+    );
+  }
+
+  // --- LI.FI BRIDGING FOR GNOSIS (2-STEP FLOW) ---
+  // Step 1: Base USDC -> Gnosis xDAI (via LI.FI)
+  // Step 2: Gnosis xDAI -> sDAI (direct vault deposit)
+  if (isCrossChain && isLiFiBridging && targetSafeAddress) {
+    const chainName =
+      chainId === SUPPORTED_CHAINS.GNOSIS ? 'Gnosis' : `Chain ${chainId}`;
+    const chainCode =
+      chainId === SUPPORTED_CHAINS.GNOSIS ? 'GNO' : `CHAIN_${chainId}`;
+
+    // Format xDAI balances (18 decimals)
+    const availableXdai = formatUnits(gnosisXdaiBalance.totalAvailable, 18);
+    const displayXdaiBalance = parseFloat(availableXdai).toLocaleString(
+      undefined,
+      { minimumFractionDigits: 2, maximumFractionDigits: 6 },
+    );
+
+    // Handler for Step 1: Bridge USDC to xDAI
+    const handleBridgeToXdai = async () => {
+      if (!xdaiBridgeQuote || !isRelayReady) return;
+
+      try {
+        setTransactionState({ step: 'bridging' });
+
+        // If destination safe needs deployment, show deployment UI
+        if (xdaiBridgeQuote.needsDeployment) {
+          const deploymentResult = await safeDeploymentMutation.mutateAsync({
+            targetChainId: chainId,
+            safeType: 'primary',
+          });
+
+          setTransactionState({
+            step: 'needs-deployment',
+            deploymentInfo: {
+              chainId: chainId,
+              transaction: {
+                to: deploymentResult.to,
+                data: deploymentResult.data,
+                value: deploymentResult.value,
+                chainId: chainId,
+              },
+              predictedAddress: deploymentResult.predictedAddress,
+            },
+          });
+          return;
+        }
+
+        // Execute LI.FI bridge transaction for xDAI
+        const amountInSmallestUnit = parseUnits(amount, USDC_DECIMALS);
+        const baseUsdcAddress = USDC_ADDRESS as Address;
+
+        // Check if approval is needed
+        if (xdaiBridgeQuote.approvalAddress) {
+          const currentAllowance = await publicClient.readContract({
+            address: baseUsdcAddress,
+            abi: erc20Abi,
+            functionName: 'allowance',
+            args: [
+              effectiveSafeAddress,
+              xdaiBridgeQuote.approvalAddress as Address,
+            ],
+          });
+
+          if (currentAllowance < amountInSmallestUnit) {
+            setTransactionState({ step: 'approving' });
+
+            const approveData = encodeFunctionData({
+              abi: erc20Abi,
+              functionName: 'approve',
+              args: [
+                xdaiBridgeQuote.approvalAddress as Address,
+                amountInSmallestUnit,
+              ],
+            });
+
+            const approvalTxHash = await sendTxViaRelay(
+              [{ to: baseUsdcAddress, value: '0', data: approveData }],
+              300_000n,
+            );
+
+            if (!approvalTxHash) throw new Error('Approval transaction failed');
+
+            setTransactionState({
+              step: 'waiting-approval',
+              txHash: approvalTxHash,
+            });
+
+            await new Promise((resolve) => setTimeout(resolve, 7000));
+          }
+        }
+
+        // Execute the LI.FI bridge transaction
+        setTransactionState({ step: 'bridging' });
+
+        const bridgeTxHash = await sendTxViaRelay(
+          [
+            {
+              to: xdaiBridgeQuote.transaction.to as Address,
+              value: xdaiBridgeQuote.transaction.value,
+              data: xdaiBridgeQuote.transaction.data as `0x${string}`,
+            },
+          ],
+          600_000n,
+        );
+
+        if (!bridgeTxHash) throw new Error('Bridge transaction failed');
+        console.log('[DepositEarnCard] LI.FI bridge tx sent:', bridgeTxHash);
+
+        setTransactionState({
+          step: 'waiting-bridge',
+          txHash: bridgeTxHash,
+        });
+
+        await new Promise((resolve) => setTimeout(resolve, 7000));
+
+        // Show success state - bridge has been initiated successfully
+        // The funds will arrive on Gnosis in ~2-5 minutes
+        setTransactionState({
+          step: 'success',
+          txHash: bridgeTxHash,
+          depositedAmount: amount,
+        });
+        setAmount('');
+
+        // Start polling for xDAI balance update in background
+        const pollForXdai = async () => {
+          let attempts = 0;
+          const maxAttempts = 30; // ~5 minutes
+          while (attempts < maxAttempts) {
+            await new Promise((resolve) => setTimeout(resolve, 10000));
+            await refetchGnosisBalance();
+            attempts++;
+          }
+        };
+        pollForXdai();
+      } catch (error) {
+        console.error('[DepositEarnCard] LI.FI xDAI bridge error:', error);
+        let errorMessage = 'Bridge transaction failed';
+        if (error instanceof Error) errorMessage = error.message;
+        setTransactionState({ step: 'error', errorMessage });
+      }
+    };
+
+    // Handler for Step 2: Deposit xDAI to sDAI vault
+    const handleDepositXdaiToSdai = async () => {
+      if (!depositAmount || !targetSafeAddress) return;
+
+      const depositAmountBigInt = parseUnits(depositAmount, 18); // xDAI has 18 decimals
+
+      try {
+        setTransactionState({ step: 'checking' });
+
+        // CRITICAL: Verify Safe is actually deployed on-chain before attempting deposit
+        // This prevents "SafeProxy contract is not deployed" errors
+        if (isTargetSafeDeployed === false) {
+          console.log(
+            '[DepositEarnCard] Safe not deployed on-chain, triggering deployment flow',
+          );
+          const deploymentResult = await safeDeploymentMutation.mutateAsync({
+            targetChainId: chainId,
+            safeType: 'primary',
+          });
+          setTransactionState({
+            step: 'needs-deployment',
+            deploymentInfo: {
+              chainId: chainId,
+              transaction: {
+                to: deploymentResult.to,
+                data: deploymentResult.data,
+                value: deploymentResult.value,
+                chainId: chainId,
+              },
+              predictedAddress: deploymentResult.predictedAddress,
+            },
+          });
+          return;
+        }
+
+        // Get the smart wallet client for Gnosis
+        const gnosisClient = await getClientForChain({ id: chainId });
+        if (!gnosisClient) {
+          throw new Error('Failed to get Gnosis client');
+        }
+
+        const smartWalletAddress = gnosisClient.account?.address;
+        if (!smartWalletAddress) {
+          throw new Error('No smart wallet address found');
+        }
+
+        // sDAI vault ABI for deposit (it accepts xDAI/WXDAI)
+        const SDAI_VAULT_ABI = parseAbi([
+          'function deposit(uint256 assets, address receiver) public returns (uint256 shares)',
+          'function previewDeposit(uint256 assets) public view returns (uint256 shares)',
+        ]);
+
+        // WXDAI ABI for wrapping native xDAI
+        const WXDAI_ABI = parseAbi([
+          'function deposit() public payable',
+          'function approve(address spender, uint256 amount) public returns (bool)',
+          'function balanceOf(address account) public view returns (uint256)',
+        ]);
+
+        // sDAI address on Gnosis
+        const SDAI_ADDRESS =
+          '0xaf204776c7245bf4147c2612bf6e5972ee483701' as Address;
+        const WXDAI_ADDRESS =
+          '0xe91D153E0b41518A2Ce8Dd3D7944Fa863463a97d' as Address;
+
+        // Build transactions:
+        // 1. Wrap xDAI to WXDAI (if using native xDAI)
+        // 2. Approve WXDAI spend to sDAI vault
+        // 3. Deposit WXDAI to sDAI vault
+
+        setTransactionState({ step: 'depositing' });
+
+        // Check if we have native xDAI or WXDAI
+        const useNativeXdai =
+          gnosisXdaiBalance.nativeXdai >= depositAmountBigInt;
+
+        const transactions: Array<{
+          to: Address;
+          value: string;
+          data: `0x${string}`;
+        }> = [];
+
+        if (useNativeXdai) {
+          // Wrap native xDAI to WXDAI
+          const wrapData = encodeFunctionData({
+            abi: WXDAI_ABI,
+            functionName: 'deposit',
+          });
+          transactions.push({
+            to: WXDAI_ADDRESS,
+            value: depositAmountBigInt.toString(),
+            data: wrapData,
+          });
+        }
+
+        // Approve WXDAI to sDAI vault
+        const approveData = encodeFunctionData({
+          abi: WXDAI_ABI,
+          functionName: 'approve',
+          args: [SDAI_ADDRESS, depositAmountBigInt],
+        });
+        transactions.push({
+          to: WXDAI_ADDRESS,
+          value: '0',
+          data: approveData,
+        });
+
+        // Deposit to sDAI vault
+        const depositData = encodeFunctionData({
+          abi: SDAI_VAULT_ABI,
+          functionName: 'deposit',
+          args: [depositAmountBigInt, targetSafeAddress],
+        });
+        transactions.push({
+          to: SDAI_ADDRESS,
+          value: '0',
+          data: depositData,
+        });
+
+        // Build and execute Safe transaction on Gnosis
+        const safeTx = await buildSafeTx(transactions, {
+          safeAddress: targetSafeAddress,
+          chainId,
+          gas: 500_000n,
+        });
+
+        const depositHash = await relaySafeTx(
+          safeTx,
+          smartWalletAddress,
+          gnosisClient,
+          targetSafeAddress,
+        );
+
+        console.log('[DepositEarnCard] sDAI deposit tx hash:', depositHash);
+
+        setTransactionState({
+          step: 'waiting-deposit',
+          txHash: depositHash,
+        });
+
+        // Wait for confirmation
+        await new Promise((resolve) => setTimeout(resolve, 10000));
+
+        // Refetch balances
+        await refetchGnosisBalance();
+
+        setTransactionState({
+          step: 'success',
+          txHash: depositHash,
+          depositedAmount: depositAmount,
+        });
+        setDepositAmount('');
+
+        if (onDepositSuccess) onDepositSuccess();
+      } catch (error) {
+        console.error('[DepositEarnCard] sDAI deposit error:', error);
+        let errorMessage = 'Deposit to sDAI failed';
+        if (error instanceof Error) errorMessage = error.message;
+        setTransactionState({ step: 'error', errorMessage });
+      }
+    };
+
+    const handleMaxXdai = () => {
+      const maxAmount = formatUnits(gnosisXdaiBalance.totalAvailable, 18);
+      setDepositAmount(maxAmount);
+    };
+
+    return (
+      <div className="space-y-6 p-4 bg-[#fafafa] border border-[#1B29FF]/20 relative">
+        {/* Blueprint grid overlay */}
+        <div
+          className="absolute inset-0 pointer-events-none opacity-[0.03]"
+          style={{
+            backgroundImage: `
+              linear-gradient(to right, #1B29FF 1px, transparent 1px),
+              linear-gradient(to bottom, #1B29FF 1px, transparent 1px)
+            `,
+            backgroundSize: '20px 20px',
+          }}
+        />
+
+        {/* TOP CARD: Gnosis Account - xDAI -> sDAI Deposit */}
+        <div className="bg-white border border-[#1B29FF]/30 p-4 relative">
+          <div className="flex justify-between items-start mb-3">
+            <div>
+              <p className="font-mono uppercase tracking-[0.14em] text-[11px] text-[#1B29FF] mb-1">
+                BALANCE::{chainCode}_xDAI
+              </p>
+              <p className="font-mono text-[24px] tabular-nums text-[#101010]">
+                {displayXdaiBalance}{' '}
+                <span className="text-[12px] text-[#1B29FF]">xDAI</span>
+              </p>
+              {/* Show Safe address in technical mode */}
+              <p className="font-mono text-[10px] text-[#1B29FF]/60 mt-1">
+                SAFE::
+                {targetSafeAddress
+                  ? `${targetSafeAddress.slice(0, 6)}...${targetSafeAddress.slice(-4)}`
+                  : 'NOT_SET'}
+                {isTargetSafeDeployed === false && ' (NOT_DEPLOYED)'}
+                {isTargetSafeDeployed === true && ' (DEPLOYED)'}
+              </p>
+            </div>
+            {/* Crosshair decoration */}
+            <div className="h-3 w-3 relative">
+              <div className="absolute top-1/2 w-full h-px bg-[#1B29FF]/40" />
+              <div className="absolute left-1/2 h-full w-px bg-[#1B29FF]/40" />
+            </div>
+          </div>
+
+          {/* sDAI already deposited info */}
+          {gnosisXdaiBalance.sdai > 0n && (
+            <div className="mb-3 p-2 bg-[#10B981]/5 border border-[#10B981]/20">
+              <p className="font-mono text-[10px] text-[#10B981]">
+                DEPOSITED::sDAI ={' '}
+                {formatUnits(gnosisXdaiBalance.sdai, 18).slice(0, 12)}
+              </p>
+            </div>
+          )}
+
+          {/* xDAI to sDAI Deposit Input & Button */}
+          <div className="space-y-2">
+            <label className="font-mono text-[10px] text-[#1B29FF]/70 uppercase">
+              INPUT::DEPOSIT_AMOUNT (xDAI → sDAI)
+            </label>
+            <div className="relative">
+              <input
+                type="number"
+                placeholder="0.0"
+                value={depositAmount}
+                onChange={(e) => setDepositAmount(e.target.value)}
+                className="w-full h-10 px-3 font-mono bg-white border border-[#1B29FF]/30 focus:border-[#1B29FF] focus:outline-none text-[14px] transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                step="0.000001"
+                min="0"
+                max={availableXdai}
+                disabled={gnosisXdaiBalance.totalAvailable === 0n}
+              />
+              <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                <span className="font-mono text-[10px] text-[#1B29FF]/70">
+                  xDAI
+                </span>
+                <button
+                  type="button"
+                  onClick={handleMaxXdai}
+                  className="font-mono px-2 py-1 text-[10px] text-[#1B29FF] border border-[#1B29FF]/30 hover:border-[#1B29FF] transition-colors bg-white hover:bg-[#1B29FF]/5"
+                  disabled={gnosisXdaiBalance.totalAvailable === 0n}
+                >
+                  MAX
+                </button>
+              </div>
+            </div>
+            <button
+              onClick={handleDepositXdaiToSdai}
+              disabled={
+                !depositAmount ||
+                parseFloat(depositAmount) <= 0 ||
+                gnosisXdaiBalance.totalAvailable === 0n ||
+                transactionState.step !== 'idle'
+              }
+              className="w-full h-10 font-mono uppercase bg-white border-2 border-[#1B29FF] text-[#1B29FF] hover:bg-[#1B29FF] hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            >
+              {transactionState.step !== 'idle' &&
+              transactionState.step !== 'success' ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <ArrowDownToLine className="h-4 w-4 mb-0.5" />
+              )}
+              <span className="leading-none">[ DEPOSIT TO sDAI ]</span>
+            </button>
+          </div>
+
+          {/* Info about sDAI yield */}
+          <p className="font-mono text-[10px] text-center text-[#1B29FF]/60 mt-3">
+            sDAI earns Sky Savings Rate (SSR) • ~5-8% APY
+          </p>
+        </div>
+
+        {/* BOTTOM CARD: Base USDC -> Gnosis xDAI Bridge */}
+        <div className="bg-white border border-[#1B29FF]/30 p-4 relative">
+          <div className="flex justify-between items-center mb-3">
+            <div>
+              <p className="font-mono uppercase tracking-[0.14em] text-[11px] text-[#1B29FF] mb-1">
+                SOURCE::BASE_USDC
+              </p>
+              <p className="font-mono text-[14px] tabular-nums text-[#101010]">
+                {displayBalance}{' '}
+                <span className="text-[11px] text-[#1B29FF]">USDC</span>
+              </p>
+            </div>
+          </div>
+
+          {/* Bridge Input & Button */}
+          <div className="space-y-2">
+            <label className="font-mono text-[10px] text-[#1B29FF]/70 uppercase">
+              INPUT::BRIDGE_AMOUNT (USDC → xDAI)
+            </label>
+            <div className="flex gap-3">
+              <div className="relative flex-1">
+                <input
+                  type="number"
+                  placeholder="0.0"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  className="w-full h-10 px-3 font-mono bg-white border border-[#1B29FF]/30 focus:border-[#1B29FF] focus:outline-none text-[14px] transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  step="0.000001"
+                  min="0"
+                  max={availableBalance}
+                />
+                <button
+                  type="button"
+                  onClick={handleMax}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 font-mono text-[10px] text-[#1B29FF] border border-[#1B29FF]/30 px-2 py-1 hover:border-[#1B29FF] bg-white hover:bg-[#1B29FF]/5"
+                >
+                  MAX
+                </button>
+              </div>
+              <button
+                onClick={handleBridgeToXdai}
+                disabled={
+                  !amount ||
+                  parseFloat(amount) <= 0 ||
+                  !xdaiBridgeQuote ||
+                  isLoadingXdaiQuote ||
+                  transactionState.step !== 'idle'
+                }
+                className="px-4 h-10 font-mono uppercase bg-white border border-[#1B29FF]/30 hover:border-[#1B29FF] text-[#1B29FF] text-[11px] transition-colors flex items-center gap-2 whitespace-nowrap disabled:opacity-50"
+              >
+                {isLoadingXdaiQuote ||
+                (transactionState.step !== 'idle' &&
+                  transactionState.step !== 'success') ? (
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                ) : (
+                  <ArrowRight className="h-3 w-3" />
+                )}
+                BRIDGE
+              </button>
+            </div>
+          </div>
+
+          {/* Quote Info */}
+          {xdaiBridgeQuote && amount && parseFloat(amount) > 0 && (
+            <div className="mt-3 p-2 bg-[#1B29FF]/5 border border-[#1B29FF]/10 font-mono text-[10px] text-[#101010]/70 flex justify-between">
+              <span>
+                OUTPUT: ~
+                {formatUnits(BigInt(xdaiBridgeQuote.outputAmount), 18).slice(
+                  0,
+                  10,
+                )}{' '}
+                xDAI
+              </span>
+              <span>FEE: ${xdaiBridgeQuote.totalFeeUsd}</span>
+            </div>
+          )}
+
+          {/* Route info */}
+          <p className="font-mono text-[10px] text-center text-[#1B29FF]/60 mt-3">
+            ROUTE: BASE_USDC → LI.FI → {chainCode}_xDAI
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // --- CROSS-CHAIN BRIDGING NOT SUPPORTED ---
+  // Show message for chains not supported by any bridge provider
+  if (isCrossChain && !isBridgingSupported && !isLiFiBridging) {
+    const chainName = `Chain ${chainId}`;
+
+    return (
+      <div className="space-y-4 p-4 bg-[#fafafa] border border-[#1B29FF]/20 relative">
+        {/* Blueprint grid overlay */}
+        <div
+          className="absolute inset-0 pointer-events-none opacity-[0.03]"
+          style={{
+            backgroundImage: `
+              linear-gradient(to right, #1B29FF 1px, transparent 1px),
+              linear-gradient(to bottom, #1B29FF 1px, transparent 1px)
+            `,
+            backgroundSize: '20px 20px',
+          }}
+        />
+
+        <div className="relative bg-white border border-[#1B29FF]/30 p-4">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="h-5 w-5 text-[#1B29FF] mt-0.5 flex-shrink-0" />
+            <div className="space-y-2">
+              <p className="font-mono text-[13px] text-[#101010]">
+                Cross-chain deposits to {chainName} not supported
+              </p>
+              <p className="font-mono text-[11px] text-[#101010]/60">
+                Direct bridging from Base to {chainName} is not available.
+              </p>
+              <p className="font-mono text-[10px] text-[#1B29FF]/70 mt-3">
+                TIP: You can manually bridge funds to {chainName} and deposit
+                directly.
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }

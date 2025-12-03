@@ -100,13 +100,13 @@ Search for:
 
 Every message you draft MUST include clear contact information:
 
-- **Calendly link** (for scheduling)
+- **cal.com link** (for scheduling)
 - **Email address** (as backup)
 - **WhatsApp/phone** (if appropriate)
 
 If you don't have these, either:
 
-1. Search Notion for "signature", "contact", "Calendly"
+1. Search Notion for "signature", "contact", "cal.com link"
 2. Ask the user directly
 
 ---
@@ -120,7 +120,7 @@ Hi [Name] - [Verified recent context]. Building [product] for [their problem].
 
 [Why relevant to them based on PULL].
 
-Happy to share how - here's my Calendly: [link]
+Happy to share how - here's my cal.com: [link]
 
 [Your name]
 ```
@@ -141,7 +141,7 @@ Hi [Name],
 [Qualifier]: If that's not your world right now, no worries at all.
 
 [CTA with contact details]:
-- Calendly: [link]
+- cal.com: [link]
 - Or reply here / email: [address]
 
 [Your name]
@@ -165,7 +165,7 @@ The usual approach is [options], but that often means [limitation].
 [Qualifier]: If this resonates, I'd love to understand how you're thinking about it. If not, no worries.
 
 [Multiple contact options]:
-- Schedule a call: [Calendly link]
+- Schedule a call: [cal.com link]
 - Email: [email]
 
 [Signature]

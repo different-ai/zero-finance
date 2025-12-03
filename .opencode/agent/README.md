@@ -68,7 +68,7 @@ This directory contains a 3-agent pipeline for LinkedIn Sales Navigator prospect
 - Verified facts with dates
 - PULL analysis
 - Message (LinkedIn/Email/Twitter)
-- Your Calendly/email for easy response
+- Your cal.com/email for easy response
 
 ### 3. `outreach-tracker` - Log Everything
 
@@ -143,7 +143,7 @@ Used for research. Already configured in `opencode.json`.
 
 1. **Log into LinkedIn first**: Before using `linkedin-navigator`, make sure you're logged into Sales Navigator in Chrome
 
-2. **Provide contact details**: `pull-message-drafter` will ask for your Calendly/email if not known
+2. **Provide contact details**: `pull-message-drafter` will ask for your cal.com/email if not known
 
 3. **Say "I sent it"**: After sending a message, tell the agent so it can update the CRM
 

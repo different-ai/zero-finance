@@ -36,7 +36,7 @@ import {
   type Address,
 } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
-import { base, mainnet, arbitrum } from 'viem/chains';
+import { base, mainnet, arbitrum, gnosis } from 'viem/chains';
 import crypto from 'crypto';
 
 // Multi-chain imports
@@ -58,13 +58,20 @@ import {
   trackBridgeDeposit,
 } from '../earn/across-bridge-service';
 import {
+  getLiFiBridgeQuote,
+  getBaseUsdcToGnosisSdaiQuote,
+  getBaseUsdcToGnosisXdaiQuote,
+  getBridgeServiceForChains,
+} from '../earn/lifi-bridge-service';
+import { GNOSIS_ASSETS } from '../earn/gnosis-vaults';
+import {
   createBridgeTransaction,
   updateBridgeStatus,
   updateBridgeDepositHash,
   getUserBridgeTransactions,
   getPendingBridgeTransactions,
 } from '../earn/bridge-transaction-crud';
-import { predictSafeAddress } from '@/lib/safe-multi-chain';
+// predictSafeAddress is available from @/lib/safe-multi-chain but we use getSafeDeploymentTransaction instead
 import { getRPCManager } from '@/lib/multi-chain-rpc';
 import { hasMultiChainFeature } from '@/lib/workspace-features';
 
@@ -189,6 +196,9 @@ async function getEthPriceUsd(): Promise<number> {
 // Arbitrum public client singleton
 let arbitrumPublicClient: ReturnType<typeof createPublicClient> | null = null;
 
+// Gnosis public client singleton
+let gnosisPublicClient: ReturnType<typeof createPublicClient> | null = null;
+
 function getPublicClientForChain(chainId: number) {
   if (chainId === BASE_CHAIN_ID) {
     return publicClient;
@@ -229,6 +239,22 @@ function getPublicClientForChain(chainId: number) {
     }
 
     return arbitrumPublicClient;
+  }
+
+  if (chainId === SUPPORTED_CHAINS.GNOSIS) {
+    if (!gnosisPublicClient) {
+      const rpcUrl =
+        process.env.GNOSIS_RPC_URL ??
+        process.env.NEXT_PUBLIC_GNOSIS_RPC_URL ??
+        'https://rpc.gnosischain.com';
+
+      gnosisPublicClient = createPublicClient({
+        chain: gnosis,
+        transport: http(rpcUrl),
+      });
+    }
+
+    return gnosisPublicClient;
   }
 
   throw new Error(`Unsupported chain id ${chainId} for public client`);
@@ -1279,21 +1305,30 @@ export const earnRouter = router({
 
       // Select chain and RPC based on chainId
       const isArbitrum = chainId === 42161;
-      const chain = isArbitrum ? arbitrum : base;
-      const rpcUrl = isArbitrum
-        ? (process.env.ARBITRUM_RPC_URL ??
-          process.env.NEXT_PUBLIC_ARBITRUM_RPC_URL ??
-          'https://arb1.arbitrum.io/rpc')
-        : BASE_RPC_URL;
+      const isGnosis = chainId === 100;
+      const chain = isGnosis ? gnosis : isArbitrum ? arbitrum : base;
+      const rpcUrl = isGnosis
+        ? (process.env.GNOSIS_RPC_URL ??
+          process.env.NEXT_PUBLIC_GNOSIS_RPC_URL ??
+          'https://rpc.gnosischain.com')
+        : isArbitrum
+          ? (process.env.ARBITRUM_RPC_URL ??
+            process.env.NEXT_PUBLIC_ARBITRUM_RPC_URL ??
+            'https://arb1.arbitrum.io/rpc')
+          : BASE_RPC_URL;
 
-      // Get the user's Safe on the target chain (user-scoped, not workspace-scoped)
-      // IMPORTANT: Use privyDid to get the correct Safe address
-      // Using workspaceId can return a different Safe if workspace membership changed
-      const privyDid = requirePrivyDid(ctx);
+      // Get the user's Safe on the target chain using workspace context
+      const workspaceId = ctx.workspaceId;
+      if (!workspaceId) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'No active workspace',
+        });
+      }
 
       const userSafe = await db.query.userSafes.findFirst({
         where: and(
-          eq(userSafes.userDid, privyDid),
+          eq(userSafes.workspaceId, workspaceId),
           eq(userSafes.chainId, chainId),
         ),
       });
@@ -1301,7 +1336,7 @@ export const earnRouter = router({
       if (!userSafe) {
         throw new TRPCError({
           code: 'NOT_FOUND',
-          message: `No Safe found for user on chain ${chainId}`,
+          message: `No Safe found for workspace on chain ${chainId}`,
         });
       }
 
@@ -1937,6 +1972,13 @@ export const earnRouter = router({
           // Check if this is an Origin Protocol vault
           const isOriginVault = vaultConfig?.id === 'originSuperOeth';
 
+          // Check if this is a Gnosis sDAI vault
+          const isGnosisSdaiVault =
+            vaultConfig?.id === 'sdaiGnosis' ||
+            (chainId === SUPPORTED_CHAINS.GNOSIS &&
+              vaultAddress.toLowerCase() ===
+                GNOSIS_ASSETS.sDAI.address.toLowerCase());
+
           if (isOriginVault) {
             // Fetch APY from Origin Protocol API
             try {
@@ -1959,6 +2001,34 @@ export const earnRouter = router({
                 `Failed to fetch APY for Origin vault ${vaultAddress}:`,
                 e,
               );
+            }
+          } else if (isGnosisSdaiVault) {
+            // Fetch APY for sDAI from Spark Protocol API
+            // sDAI uses the Sky Savings Rate (SSR), formerly known as DAI Savings Rate (DSR)
+            try {
+              // The Spark API provides current sDAI yield data
+              const response = await fetch(
+                'https://spark-api.blockanalitica.com/api/v1/savings-rate/',
+              );
+
+              if (response.ok) {
+                const result = await response.json();
+                // API returns apy as a decimal (e.g., 0.085 for 8.5%)
+                const apyValue = parseFloat(result?.sky_savings_rate || '0');
+                apy = apyValue;
+                netApy = apyValue;
+                monthlyApy = apyValue;
+                monthlyNetApy = apyValue;
+                weeklyNetApy = apyValue;
+              }
+            } catch (e) {
+              console.warn(
+                `Failed to fetch APY for Gnosis sDAI vault ${vaultAddress}:`,
+                e,
+              );
+              // Fallback: Use a reasonable estimate for sDAI (~5-8% typically)
+              apy = 0.065; // 6.5% as fallback
+              netApy = 0.065;
             }
           } else {
             // Fetch APY from Morpho GraphQL for other vaults
@@ -3001,4 +3071,687 @@ export const earnRouter = router({
       enabled: hasFeature,
     };
   }),
+
+  // ============================================
+  // LI.FI Bridge Endpoints (for Gnosis Chain)
+  // ============================================
+
+  /**
+   * Get LI.FI bridge quote for Gnosis Chain deposits
+   * Used for chains not supported by Across (e.g., Base USDC -> Gnosis sDAI)
+   */
+  getLiFiBridgeQuote: protectedProcedure
+    .input(
+      z.object({
+        fromChainId: z.number(),
+        toChainId: z.number(),
+        fromToken: z.string().length(42),
+        toToken: z.string().length(42),
+        amount: z.string(), // In smallest units (e.g., 6 decimals for USDC)
+        slippage: z.number().min(0.1).max(5).optional().default(0.5),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const privyDid = requirePrivyDid(ctx);
+      const workspaceId = requireWorkspaceId(ctx.workspaceId);
+
+      // Get source Safe (on Base)
+      const sourceSafe = await getSafeOnChain(
+        privyDid,
+        workspaceId,
+        input.fromChainId as SupportedChainId,
+        'primary',
+      );
+
+      if (!sourceSafe) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: `No Safe found on source chain ${input.fromChainId}`,
+        });
+      }
+
+      // Get or predict destination Safe address (on Gnosis)
+      let destSafeAddress: Address;
+      const destSafe = await getSafeOnChain(
+        privyDid,
+        workspaceId,
+        input.toChainId as SupportedChainId,
+        'primary',
+      );
+
+      let needsDeployment = false;
+      if (destSafe) {
+        destSafeAddress = destSafe.safeAddress as Address;
+      } else {
+        // Get deployment transaction to get predicted address
+        const deploymentTx = await getSafeDeploymentTransaction(
+          privyDid,
+          workspaceId,
+          input.toChainId as SupportedChainId,
+          'primary',
+        );
+        destSafeAddress = deploymentTx.predictedAddress as Address;
+        needsDeployment = true;
+      }
+
+      try {
+        const quote = await getLiFiBridgeQuote({
+          fromChainId: input.fromChainId as SupportedChainId,
+          toChainId: input.toChainId as SupportedChainId,
+          fromToken: input.fromToken as Address,
+          toToken: input.toToken as Address,
+          amount: BigInt(input.amount),
+          fromAddress: sourceSafe.safeAddress as Address,
+          toAddress: destSafeAddress,
+          slippage: input.slippage,
+        });
+
+        return {
+          inputAmount: quote.inputAmount.toString(),
+          outputAmount: quote.outputAmount.toString(),
+          outputAmountMin: quote.outputAmountMin.toString(),
+          totalFeeUsd: quote.totalFeeUsd,
+          estimatedTime: quote.estimatedTime,
+          tool: quote.tool,
+          transaction: {
+            to: quote.transactionRequest.to,
+            data: quote.transactionRequest.data,
+            value: quote.transactionRequest.value.toString(),
+            chainId: quote.transactionRequest.chainId,
+          },
+          approvalAddress: quote.approvalAddress,
+          destinationSafeAddress: destSafeAddress,
+          needsDeployment,
+        };
+      } catch (error) {
+        console.error('LI.FI quote error:', error);
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: `Failed to get LI.FI bridge quote: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        });
+      }
+    }),
+
+  /**
+   * Get a quote specifically for Base USDC -> Gnosis sDAI
+   * Convenience endpoint for the most common Gnosis bridge flow
+   */
+  getBaseToGnosisSdaiQuote: protectedProcedure
+    .input(
+      z.object({
+        amount: z.string(), // In USDC smallest units (6 decimals)
+        slippage: z.number().min(0.1).max(5).optional().default(0.5),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const privyDid = requirePrivyDid(ctx);
+      const workspaceId = requireWorkspaceId(ctx.workspaceId);
+
+      // Get source Safe (on Base)
+      const sourceSafe = await getSafeOnChain(
+        privyDid,
+        workspaceId,
+        SUPPORTED_CHAINS.BASE,
+        'primary',
+      );
+
+      if (!sourceSafe) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'No Safe found on Base',
+        });
+      }
+
+      // Get or predict destination Safe address (on Gnosis)
+      let destSafeAddress: Address;
+      let needsDeployment = false;
+      const destSafe = await getSafeOnChain(
+        privyDid,
+        workspaceId,
+        SUPPORTED_CHAINS.GNOSIS,
+        'primary',
+      );
+
+      if (destSafe) {
+        destSafeAddress = destSafe.safeAddress as Address;
+      } else {
+        // Get deployment transaction to get predicted address
+        const deploymentTx = await getSafeDeploymentTransaction(
+          privyDid,
+          workspaceId,
+          SUPPORTED_CHAINS.GNOSIS,
+          'primary',
+        );
+        destSafeAddress = deploymentTx.predictedAddress as Address;
+        needsDeployment = true;
+      }
+
+      try {
+        const quote = await getBaseUsdcToGnosisSdaiQuote({
+          amount: BigInt(input.amount),
+          fromAddress: sourceSafe.safeAddress as Address,
+          toAddress: destSafeAddress,
+          slippage: input.slippage,
+        });
+
+        return {
+          inputAmount: quote.inputAmount.toString(),
+          outputAmount: quote.outputAmount.toString(),
+          outputAmountMin: quote.outputAmountMin.toString(),
+          totalFeeUsd: quote.totalFeeUsd,
+          estimatedTime: quote.estimatedTime,
+          tool: quote.tool,
+          transaction: {
+            to: quote.transactionRequest.to,
+            data: quote.transactionRequest.data,
+            value: quote.transactionRequest.value.toString(),
+            chainId: quote.transactionRequest.chainId,
+          },
+          approvalAddress: quote.approvalAddress,
+          destinationSafeAddress: destSafeAddress,
+          needsDeployment,
+          // Additional context for sDAI
+          targetVault: {
+            address: GNOSIS_ASSETS.sDAI.address,
+            symbol: GNOSIS_ASSETS.sDAI.symbol,
+            decimals: GNOSIS_ASSETS.sDAI.decimals,
+          },
+        };
+      } catch (error) {
+        console.error('LI.FI Base->Gnosis sDAI quote error:', error);
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: `Failed to get bridge quote: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        });
+      }
+    }),
+
+  /**
+   * Get the appropriate bridge service for a chain pair
+   * Returns 'lifi' for Gnosis, 'across' for other supported routes
+   */
+  getBridgeService: protectedProcedure
+    .input(
+      z.object({
+        sourceChainId: z.number(),
+        destChainId: z.number(),
+      }),
+    )
+    .query(({ input }) => {
+      const service = getBridgeServiceForChains(
+        input.sourceChainId as SupportedChainId,
+        input.destChainId as SupportedChainId,
+      );
+
+      return {
+        service,
+        isLiFi: service === 'lifi',
+        isAcross: service === 'across',
+      };
+    }),
+
+  /**
+   * Get a quote for Base USDC -> Gnosis xDAI (Step 1 of 2-step Gnosis deposit)
+   * This bridges USDC to xDAI/WXDAI on Gnosis, which can then be deposited to sDAI vault
+   */
+  getBaseToGnosisXdaiQuote: protectedProcedure
+    .input(
+      z.object({
+        amount: z.string(), // In USDC smallest units (6 decimals)
+        slippage: z.number().min(0.1).max(5).optional().default(0.5),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const privyDid = requirePrivyDid(ctx);
+      const workspaceId = requireWorkspaceId(ctx.workspaceId);
+
+      // Get source Safe (on Base)
+      const sourceSafe = await getSafeOnChain(
+        privyDid,
+        workspaceId,
+        SUPPORTED_CHAINS.BASE,
+        'primary',
+      );
+
+      if (!sourceSafe) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'No Safe found on Base',
+        });
+      }
+
+      // Get or predict destination Safe address (on Gnosis)
+      let destSafeAddress: Address;
+      let needsDeployment = false;
+      const destSafe = await getSafeOnChain(
+        privyDid,
+        workspaceId,
+        SUPPORTED_CHAINS.GNOSIS,
+        'primary',
+      );
+
+      if (destSafe) {
+        destSafeAddress = destSafe.safeAddress as Address;
+      } else {
+        // Get deployment transaction to get predicted address
+        const deploymentTx = await getSafeDeploymentTransaction(
+          privyDid,
+          workspaceId,
+          SUPPORTED_CHAINS.GNOSIS,
+          'primary',
+        );
+        destSafeAddress = deploymentTx.predictedAddress as Address;
+        needsDeployment = true;
+      }
+
+      try {
+        const quote = await getBaseUsdcToGnosisXdaiQuote({
+          amount: BigInt(input.amount),
+          fromAddress: sourceSafe.safeAddress as Address,
+          toAddress: destSafeAddress,
+          slippage: input.slippage,
+        });
+
+        return {
+          inputAmount: quote.inputAmount.toString(),
+          outputAmount: quote.outputAmount.toString(),
+          outputAmountMin: quote.outputAmountMin.toString(),
+          totalFeeUsd: quote.totalFeeUsd,
+          estimatedTime: quote.estimatedTime,
+          tool: quote.tool,
+          transaction: {
+            to: quote.transactionRequest.to,
+            data: quote.transactionRequest.data,
+            value: quote.transactionRequest.value.toString(),
+            chainId: quote.transactionRequest.chainId,
+          },
+          approvalAddress: quote.approvalAddress,
+          destinationSafeAddress: destSafeAddress,
+          needsDeployment,
+          // Additional context for xDAI
+          targetAsset: {
+            address: GNOSIS_ASSETS.WXDAI.address,
+            symbol: 'xDAI',
+            decimals: GNOSIS_ASSETS.WXDAI.decimals,
+          },
+        };
+      } catch (error) {
+        console.error('LI.FI Base->Gnosis xDAI quote error:', error);
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: `Failed to get bridge quote: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        });
+      }
+    }),
+
+  /**
+   * Get xDAI/WXDAI balance on Gnosis for a Safe
+   * Used to show available balance for sDAI deposits
+   */
+  getGnosisXdaiBalance: protectedProcedure
+    .input(
+      z.object({
+        safeAddress: z.string().length(42),
+      }),
+    )
+    .query(async ({ input }) => {
+      const gnosisClient = getPublicClientForChain(SUPPORTED_CHAINS.GNOSIS);
+
+      // Get native xDAI balance
+      const nativeBalance = await gnosisClient.getBalance({
+        address: input.safeAddress as Address,
+      });
+
+      // Get WXDAI balance
+      const wxdaiBalance = await gnosisClient.readContract({
+        address: GNOSIS_ASSETS.WXDAI.address,
+        abi: [
+          {
+            inputs: [{ type: 'address', name: 'account' }],
+            name: 'balanceOf',
+            outputs: [{ type: 'uint256' }],
+            stateMutability: 'view',
+            type: 'function',
+          },
+        ] as const,
+        functionName: 'balanceOf',
+        args: [input.safeAddress as Address],
+      });
+
+      // Get sDAI balance (already deposited)
+      const sdaiBalance = await gnosisClient.readContract({
+        address: GNOSIS_ASSETS.sDAI.address,
+        abi: [
+          {
+            inputs: [{ type: 'address', name: 'account' }],
+            name: 'balanceOf',
+            outputs: [{ type: 'uint256' }],
+            stateMutability: 'view',
+            type: 'function',
+          },
+        ] as const,
+        functionName: 'balanceOf',
+        args: [input.safeAddress as Address],
+      });
+
+      return {
+        nativeXdai: nativeBalance.toString(),
+        wxdai: wxdaiBalance.toString(),
+        sdai: sdaiBalance.toString(),
+        // Total available for deposit (native + wrapped)
+        totalAvailableForDeposit: (nativeBalance + wxdaiBalance).toString(),
+      };
+    }),
+
+  // ============================================================
+  // Gnosis Withdrawal Bridge Quotes (Gnosis -> Base)
+  // ============================================================
+
+  /**
+   * Get quote for bridging Gnosis xDAI (via WXDAI) to Base USDC
+   * Used for step 2 of Gnosis withdrawals: xDAI -> USDC on Base
+   */
+  getGnosisXdaiToBaseUsdcQuote: protectedProcedure
+    .input(
+      z.object({
+        amount: z.string(), // Amount in xDAI (18 decimals) as string
+        slippage: z.number().optional().default(0.5),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const { getBaseUsdcToGnosisXdaiQuote: _, ...lifiService } = await import(
+        '../earn/lifi-bridge-service'
+      );
+      const { getGnosisXdaiToBaseUsdcQuote } = lifiService;
+
+      // Get user's Safes
+      const userSafesList = await db.query.userSafes.findMany({
+        where: eq(userSafes.userDid, ctx.user.privyDid),
+      });
+
+      // Find Base Safe (destination)
+      const baseSafe = userSafesList.find(
+        (s) => s.chainId === SUPPORTED_CHAINS.BASE,
+      );
+      if (!baseSafe) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'No Base Safe found for user',
+        });
+      }
+
+      // Find Gnosis Safe (source)
+      const gnosisSafe = userSafesList.find(
+        (s) => s.chainId === SUPPORTED_CHAINS.GNOSIS,
+      );
+      if (!gnosisSafe) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'No Gnosis Safe found for user',
+        });
+      }
+
+      try {
+        const quote = await getGnosisXdaiToBaseUsdcQuote({
+          amount: BigInt(input.amount),
+          fromAddress: gnosisSafe.safeAddress as Address,
+          toAddress: baseSafe.safeAddress as Address,
+          slippage: input.slippage,
+        });
+
+        return {
+          inputAmount: quote.inputAmount.toString(),
+          outputAmount: quote.outputAmount.toString(),
+          outputAmountMin: quote.outputAmountMin.toString(),
+          totalFeeUsd: quote.totalFeeUsd,
+          estimatedTime: quote.estimatedTime,
+          tool: quote.tool,
+          transactionRequest: {
+            to: quote.transactionRequest.to,
+            data: quote.transactionRequest.data,
+            value: quote.transactionRequest.value.toString(),
+            chainId: quote.transactionRequest.chainId,
+          },
+          approvalAddress: quote.approvalAddress,
+          needsDeployment: false, // Base Safe should already exist for withdrawals
+        };
+      } catch (error) {
+        console.error('[getGnosisXdaiToBaseUsdcQuote] Error:', error);
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message:
+            error instanceof Error
+              ? error.message
+              : 'Failed to get bridge quote',
+        });
+      }
+    }),
+
+  /**
+   * Get quote for bridging Gnosis sDAI directly to Base USDC
+   * This is the preferred route if liquidity is available
+   */
+  getGnosisSdaiToBaseUsdcQuote: protectedProcedure
+    .input(
+      z.object({
+        amount: z.string(), // Amount in sDAI (18 decimals) as string
+        slippage: z.number().optional().default(0.5),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const { getGnosisSdaiToBaseUsdcQuote } = await import(
+        '../earn/lifi-bridge-service'
+      );
+
+      // Get user's Safes
+      const userSafesList = await db.query.userSafes.findMany({
+        where: eq(userSafes.userDid, ctx.user.privyDid),
+      });
+
+      // Find Base Safe (destination)
+      const baseSafe = userSafesList.find(
+        (s) => s.chainId === SUPPORTED_CHAINS.BASE,
+      );
+      if (!baseSafe) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'No Base Safe found for user',
+        });
+      }
+
+      // Find Gnosis Safe (source)
+      const gnosisSafe = userSafesList.find(
+        (s) => s.chainId === SUPPORTED_CHAINS.GNOSIS,
+      );
+      if (!gnosisSafe) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'No Gnosis Safe found for user',
+        });
+      }
+
+      try {
+        const quote = await getGnosisSdaiToBaseUsdcQuote({
+          amount: BigInt(input.amount),
+          fromAddress: gnosisSafe.safeAddress as Address,
+          toAddress: baseSafe.safeAddress as Address,
+          slippage: input.slippage,
+        });
+
+        return {
+          inputAmount: quote.inputAmount.toString(),
+          outputAmount: quote.outputAmount.toString(),
+          outputAmountMin: quote.outputAmountMin.toString(),
+          totalFeeUsd: quote.totalFeeUsd,
+          estimatedTime: quote.estimatedTime,
+          tool: quote.tool,
+          transactionRequest: {
+            to: quote.transactionRequest.to,
+            data: quote.transactionRequest.data,
+            value: quote.transactionRequest.value.toString(),
+            chainId: quote.transactionRequest.chainId,
+          },
+          approvalAddress: quote.approvalAddress,
+          needsDeployment: false,
+        };
+      } catch (error) {
+        console.error('[getGnosisSdaiToBaseUsdcQuote] Error:', error);
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message:
+            error instanceof Error
+              ? error.message
+              : 'Failed to get bridge quote',
+        });
+      }
+    }),
+
+  // ============================================================
+  // Arbitrum Withdrawal Bridge Quotes (Arbitrum -> Base)
+  // ============================================================
+
+  /**
+   * Get quote for bridging Arbitrum USDC to Base USDC
+   * Used for Arbitrum vault withdrawals: withdraw USDC -> bridge to Base
+   */
+  getArbitrumUsdcToBaseQuote: protectedProcedure
+    .input(
+      z.object({
+        amount: z.string(), // Amount in USDC (6 decimals) as string
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const { getBridgeQuoteForVault } = await import(
+        '../earn/across-bridge-service'
+      );
+
+      // Get user's Safes
+      const userSafesList = await db.query.userSafes.findMany({
+        where: eq(userSafes.userDid, ctx.user.privyDid),
+      });
+
+      // Find Base Safe (destination)
+      const baseSafe = userSafesList.find(
+        (s) => s.chainId === SUPPORTED_CHAINS.BASE,
+      );
+      if (!baseSafe) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'No Base Safe found for user',
+        });
+      }
+
+      // Find Arbitrum Safe (source)
+      const arbitrumSafe = userSafesList.find(
+        (s) => s.chainId === SUPPORTED_CHAINS.ARBITRUM,
+      );
+      if (!arbitrumSafe) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'No Arbitrum Safe found for user',
+        });
+      }
+
+      try {
+        const quote = await getBridgeQuoteForVault({
+          amount: input.amount,
+          sourceChainId: SUPPORTED_CHAINS.ARBITRUM,
+          destChainId: SUPPORTED_CHAINS.BASE,
+          destinationSafeAddress: baseSafe.safeAddress as Address,
+        });
+
+        return {
+          inputAmount: quote.inputAmount.toString(),
+          outputAmount: quote.outputAmount.toString(),
+          totalFee: quote.totalFee.toString(),
+          lpFee: quote.lpFee.toString(),
+          relayerGasFee: quote.relayerGasFee.toString(),
+          estimatedFillTime: quote.estimatedFillTime,
+          sourceAddress: arbitrumSafe.safeAddress,
+          destinationAddress: baseSafe.safeAddress,
+        };
+      } catch (error) {
+        console.error('[getArbitrumUsdcToBaseQuote] Error:', error);
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message:
+            error instanceof Error
+              ? error.message
+              : 'Failed to get bridge quote',
+        });
+      }
+    }),
+
+  /**
+   * Get bridge transaction for Arbitrum USDC to Base
+   * Returns encoded transactions ready to be executed via Safe relay
+   */
+  getArbitrumToBaseBridgeTx: protectedProcedure
+    .input(
+      z.object({
+        amount: z.string(), // Amount in USDC (6 decimals) as string
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const { encodeBridgeTransfer } = await import(
+        '../earn/across-bridge-service'
+      );
+
+      // Get user's Safes
+      const userSafesList = await db.query.userSafes.findMany({
+        where: eq(userSafes.userDid, ctx.user.privyDid),
+      });
+
+      // Find Base Safe (destination)
+      const baseSafe = userSafesList.find(
+        (s) => s.chainId === SUPPORTED_CHAINS.BASE,
+      );
+      if (!baseSafe) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'No Base Safe found for user',
+        });
+      }
+
+      // Find Arbitrum Safe (source)
+      const arbitrumSafe = userSafesList.find(
+        (s) => s.chainId === SUPPORTED_CHAINS.ARBITRUM,
+      );
+      if (!arbitrumSafe) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'No Arbitrum Safe found for user',
+        });
+      }
+
+      try {
+        const transactions = await encodeBridgeTransfer({
+          depositor: arbitrumSafe.safeAddress as Address,
+          destinationSafeAddress: baseSafe.safeAddress as Address,
+          amount: input.amount,
+          sourceChainId: SUPPORTED_CHAINS.ARBITRUM,
+          destChainId: SUPPORTED_CHAINS.BASE,
+        });
+
+        return {
+          transactions: transactions.map((tx) => ({
+            to: tx.to,
+            data: tx.data,
+            value: tx.value.toString(),
+            chainId: tx.chainId,
+          })),
+          sourceAddress: arbitrumSafe.safeAddress,
+          destinationAddress: baseSafe.safeAddress,
+        };
+      } catch (error) {
+        console.error('[getArbitrumToBaseBridgeTx] Error:', error);
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message:
+            error instanceof Error
+              ? error.message
+              : 'Failed to encode bridge transaction',
+        });
+      }
+    }),
 });

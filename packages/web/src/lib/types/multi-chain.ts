@@ -12,6 +12,16 @@ export type SupportedChainId =
   (typeof SUPPORTED_CHAINS)[keyof typeof SUPPORTED_CHAINS];
 
 /**
+ * Vault asset configuration
+ */
+export interface VaultAsset {
+  symbol: string;
+  decimals: number;
+  isNative?: boolean;
+  address?: Address;
+}
+
+/**
  * Cross-chain vault information
  */
 export interface CrossChainVault {
@@ -24,6 +34,8 @@ export interface CrossChainVault {
   curator: string;
   appUrl: string;
   apy?: number;
+  asset?: VaultAsset;
+  category?: 'stable' | 'growth';
 }
 
 /**

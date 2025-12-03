@@ -4,10 +4,8 @@ import { TRPCError } from '@trpc/server';
 import { db } from '@/db/index';
 import { userProfilesTable, userSafes, users, workspaces } from '@/db/schema';
 import { alignRouter } from './align-router';
-import { earnRouter } from './earn-router';
 import { eq, and } from 'drizzle-orm';
 import { type Address } from 'viem';
-import { AUTO_EARN_MODULE_ADDRESS } from '@/lib/earn-module-constants';
 import { featureConfig } from '@/lib/feature-config';
 
 export const onboardingRouter = router({
@@ -260,27 +258,10 @@ export const onboardingRouter = router({
     const hasBankAccount = !!alignCustomer?.alignVirtualAccountId;
     const kycMarkedDone = workspace?.kycMarkedDone ?? false;
 
-    // Check if savings account is enabled
-    let hasSavingsAccount = false;
-    if (primarySafe?.safeAddress) {
-      try {
-        const earnCaller = earnRouter.createCaller(ctx);
-        const [moduleStatus, initStatus] = await Promise.all([
-          earnCaller.isSafeModuleActivelyEnabled({
-            safeAddress: primarySafe.safeAddress as Address,
-            moduleAddress: AUTO_EARN_MODULE_ADDRESS,
-          }),
-          earnCaller.getEarnModuleOnChainInitializationStatus({
-            safeAddress: primarySafe.safeAddress as Address,
-          }),
-        ]);
-        hasSavingsAccount =
-          (moduleStatus?.isEnabled || false) &&
-          (initStatus?.isInitializedOnChain || false);
-      } catch (error) {
-        console.error('Error checking savings account status:', error);
-      }
-    }
+    // NOTE: Savings module checks temporarily disabled - the earn module system
+    // is not currently in use. Always report savings as "available" since
+    // users can directly deposit/withdraw without module setup.
+    const hasSavingsAccount = !!primarySafe?.safeAddress;
 
     const steps = {
       createSafe: {
@@ -380,27 +361,10 @@ export const onboardingRouter = router({
     const kycSubStatus = alignCustomer?.kycSubStatus;
     const kycMarkedDone = workspace?.kycMarkedDone ?? false;
 
-    // Check if savings account is enabled
-    let hasSavingsAccount = false;
-    if (primarySafe?.safeAddress) {
-      try {
-        const earnCaller = earnRouter.createCaller(ctx);
-        const [moduleStatus, initStatus] = await Promise.all([
-          earnCaller.isSafeModuleActivelyEnabled({
-            safeAddress: primarySafe.safeAddress as Address,
-            moduleAddress: AUTO_EARN_MODULE_ADDRESS,
-          }),
-          earnCaller.getEarnModuleOnChainInitializationStatus({
-            safeAddress: primarySafe.safeAddress as Address,
-          }),
-        ]);
-        hasSavingsAccount =
-          (moduleStatus?.isEnabled || false) &&
-          (initStatus?.isInitializedOnChain || false);
-      } catch (error) {
-        console.error('Error checking savings account status:', error);
-      }
-    }
+    // NOTE: Savings module checks temporarily disabled - the earn module system
+    // is not currently in use. Always report savings as "available" since
+    // users can directly deposit/withdraw without module setup.
+    const hasSavingsAccount = !!primarySafe?.safeAddress;
 
     const tasks = [];
     const isSafeComplete = !!primarySafe;

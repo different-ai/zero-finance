@@ -11,7 +11,7 @@ import {
   type Chain,
   formatUnits,
 } from 'viem';
-import { base, arbitrum } from 'viem/chains';
+import { base, arbitrum, gnosis } from 'viem/chains';
 import {
   type SupportedChainId,
   SUPPORTED_CHAINS,
@@ -59,6 +59,10 @@ export class MultiChainRPCManager {
       arbitrum,
     );
     this.clients.set(SUPPORTED_CHAINS.ARBITRUM, arbitrumClient);
+
+    // Gnosis client
+    const gnosisClient = this.createClient(SUPPORTED_CHAINS.GNOSIS, gnosis);
+    this.clients.set(SUPPORTED_CHAINS.GNOSIS, gnosisClient);
   }
 
   /**

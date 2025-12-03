@@ -12,6 +12,7 @@ export const SUPPORTED_CHAINS = {
   BASE: 8453,
   ARBITRUM: 42161,
   MAINNET: 1,
+  GNOSIS: 100,
 } as const;
 
 export type SupportedChainId =
@@ -104,6 +105,26 @@ export const CHAIN_CONFIG: Record<SupportedChainId, ChainConfig> = {
       decimals: 18,
     },
     usdcAddress: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
+  },
+  [SUPPORTED_CHAINS.GNOSIS]: {
+    name: 'gnosis',
+    displayName: 'Gnosis',
+    color: '#04795B',
+    rpcUrls: {
+      public: [
+        'https://rpc.gnosischain.com',
+        'https://gnosis.drpc.org',
+        'https://rpc.ankr.com/gnosis',
+      ],
+    },
+    explorerUrl: 'https://gnosisscan.io',
+    nativeCurrency: {
+      name: 'xDAI',
+      symbol: 'xDAI',
+      decimals: 18,
+    },
+    // Gnosis uses USDC.e (bridged USDC from Circle)
+    usdcAddress: '0x2a22f9c3b484c3629090FeED35F17Ff8F88f76F0',
   },
 } as const;
 

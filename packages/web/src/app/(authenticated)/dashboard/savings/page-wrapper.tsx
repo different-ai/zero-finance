@@ -17,11 +17,7 @@ import { Wallet, AlertCircle } from 'lucide-react';
 import { useBimodal } from '@/components/ui/bimodal';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import {
-  BASE_USDC_VAULTS,
-  ALL_BASE_VAULTS,
-  BASE_CHAIN_ID,
-} from '@/server/earn/base-vaults';
+import { BASE_USDC_VAULTS } from '@/server/earn/base-vaults';
 import { ALL_CROSS_CHAIN_VAULTS } from '@/server/earn/cross-chain-vaults';
 import { USDC_ADDRESS } from '@/lib/constants';
 
@@ -162,20 +158,6 @@ export default function SavingsPageWrapper({
   });
   const userIsInsured = isDemoMode ? true : userProfile?.isInsured || false;
 
-  // Check workspace features
-  const workspaceId = primarySafe?.workspaceId;
-
-  const { data: workspaceFeatures } = trpc.workspace.getFeatures.useQuery(
-    { workspaceId: workspaceId! },
-    {
-      enabled: !!workspaceId && !isDemoMode,
-      staleTime: 5 * 60 * 1000, // Cache for 5 minutes
-    },
-  );
-
-  const hasMultiChainFeature =
-    workspaceFeatures?.includes('multi_chain') || false;
-
   // Get real savings state
   const { savingsState: realSavingsState, isLoading: isLoadingRealState } =
     useRealSavingsState(safeAddress, 0);
@@ -199,14 +181,15 @@ export default function SavingsPageWrapper({
     }
 
     // Banking mode: Only USDC vaults on Base (simple view)
-    // Technical mode: All vaults including ETH and cross-chain
+    // Technical mode: All vaults including ETH and cross-chain (always show all chains)
     if (isTechnical) {
-      return hasMultiChainFeature ? ALL_CROSS_CHAIN_VAULTS : ALL_BASE_VAULTS;
+      // Technical mode always shows all cross-chain vaults (Base, Arbitrum, Gnosis)
+      return ALL_CROSS_CHAIN_VAULTS;
     }
 
     // Default banking mode - just USDC on Base
     return BASE_USDC_VAULTS;
-  }, [isDemoMode, hasMultiChainFeature, isTechnical]);
+  }, [isDemoMode, isTechnical]);
 
   const baseVaultAddresses = useMemo(
     () => BASE_VAULTS.map((v) => v.address),
