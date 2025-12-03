@@ -10,8 +10,7 @@ import { StatsCard } from './components/stats-card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Terminal, Info, AlertTriangle } from 'lucide-react';
-import { AUTO_EARN_MODULE_ADDRESS } from '@/lib/earn-module-constants'; // Import constant
+import { Terminal, Info } from 'lucide-react';
 
 // Import PRIMARY_VAULT from base-vaults
 import { PRIMARY_VAULT } from '@/server/earn/base-vaults';
@@ -39,43 +38,15 @@ export default function EarnModulePage() {
   // Get the vault address from stats or fallback to the primary vault
   const vaultAddress = vaultStats?.[0]?.vaultAddress || VAULT_ADDRESS;
 
-  // Fetch on-chain status for Safe module enablement
-  const {
-    data: onChainSafeModuleStatus,
-    isLoading: isLoadingOnChainSafeModuleStatus,
-    isError: isErrorOnChainSafeModuleStatus,
-    error: errorOnChainSafeModuleStatus,
-  } = api.earn.isSafeModuleActivelyEnabled.useQuery(
-    {
-      safeAddress: primarySafeAddress!,
-      moduleAddress: AUTO_EARN_MODULE_ADDRESS,
-    },
-    {
-      enabled: !!primarySafeAddress,
-      staleTime: 15000, // Check occasionally
-    },
-  );
-  const isSafeModuleEnabledOnChain =
-    onChainSafeModuleStatus?.isEnabled || false;
-
-  // Fetch on-chain status for Earn module config installation (initialization)
-  const {
-    data: earnModuleOnChainInitStatus,
-    isLoading: isLoadingEarnModuleOnChainInitStatus,
-    isError: isErrorEarnModuleOnChainInitStatus,
-    error: errorEarnModuleOnChainInitStatus,
-  } = api.earn.getEarnModuleOnChainInitializationStatus.useQuery(
-    { safeAddress: primarySafeAddress! },
-    {
-      enabled: !!primarySafeAddress,
-      staleTime: 15000, // Check occasionally
-    },
-  );
-  const isEarnConfigInstalledOnChain =
-    earnModuleOnChainInitStatus?.isInitializedOnChain || false;
-
-  const isEarnFullySetUpOnChain =
-    isSafeModuleEnabledOnChain && isEarnConfigInstalledOnChain;
+  // NOTE: Module status checks temporarily disabled - the earn module system
+  // is not currently in use. These queries were causing errors when called
+  // with Gnosis Safe addresses (which don't exist on Base where the module lives).
+  //
+  // Previously: isSafeModuleActivelyEnabled and getEarnModuleOnChainInitializationStatus
+  // were used to gate access to deposit/withdraw cards.
+  //
+  // For now, we always show the deposit/withdraw UI since the module system is retired.
+  const isEarnFullySetUpOnChain = true; // Always allow access to deposit/withdraw
 
   // This DB flag is still useful for knowing if the user *intended* to enable it via our UI flow.
   // The AutoEarnListener might use this for certain UI states if needed,
@@ -90,12 +61,7 @@ export default function EarnModulePage() {
     }, 3000);
   };
 
-  if (
-    isLoadingPrimarySafe ||
-    (primarySafeAddress &&
-      (isLoadingOnChainSafeModuleStatus ||
-        isLoadingEarnModuleOnChainInitStatus))
-  ) {
+  if (isLoadingPrimarySafe) {
     return (
       <div className="space-y-4 p-4 md:p-8">
         <Skeleton className="h-8 w-1/4" />
@@ -124,8 +90,8 @@ export default function EarnModulePage() {
     );
   }
 
-  const showOnChainStatusErrors =
-    isErrorOnChainSafeModuleStatus || isErrorEarnModuleOnChainInitStatus;
+  // Module status errors temporarily disabled
+  const showOnChainStatusErrors = false;
 
   return (
     <div className="space-y-6 p-4 md:p-8">
@@ -177,23 +143,7 @@ export default function EarnModulePage() {
         <StatsCard safeAddress={primarySafeAddress as `0x${string}`} />
       )}
 
-      {primarySafeAddress && showOnChainStatusErrors && (
-        <Alert variant="default">
-          <AlertTriangle className="h-4 w-4 text-yellow-500" />
-          <AlertTitle>
-            Could Not Determine Full Auto-Earn On-Chain Status
-          </AlertTitle>
-          <AlertDescription>
-            There was an issue fetching the complete on-chain status of the
-            Auto-Earn module.
-            {isErrorOnChainSafeModuleStatus &&
-              ` Safe Module Check: ${errorOnChainSafeModuleStatus?.message || 'Unknown error'}.`}
-            {isErrorEarnModuleOnChainInitStatus &&
-              ` Earn Module Init Check: ${errorEarnModuleOnChainInitStatus?.message || 'Unknown error'}.`}
-            The manual trigger might not function correctly.
-          </AlertDescription>
-        </Alert>
-      )}
+      {/* Module status error alert temporarily disabled */}
 
       {primarySafeAddress && (
         <AutoEarnListener
