@@ -1,27 +1,108 @@
 # What is Zero Finance?
 
-Zero Finance (0 Finance) is an **open-source stablecoin bank** that combines traditional banking UX with DeFi-level yields. It's a Next.js application with smart contract automation for savings management.
+Zero Finance (0 Finance) is **insured high-yield savings infrastructure for businesses**. We provide safe and easy access to low-risk DeFi yields (6-10% APY vs 3-4% traditional), packaged with insurance, compliance, and a Mercury-like banking UX.
+
+**The One-Liner**: "The Stripe for high-yield savings" - Our API lets any fintech embed insured DeFi yields without building the complexity themselves.
 
 ## The Problem We Solve
 
-Traditional banks offer ~0.5% APY on deposits while crypto yield opportunities offer 5-10%+. But accessing DeFi is complex: wallets, gas fees, protocols, smart contract risk. Zero Finance abstracts this complexity behind a familiar banking interface.
+**Business banking is moving on-chain.** Businesses are already adopting stablecoin rails for cross-border transactions, supplier payments, and settlement. The spend layer is largely solved with on/off-ramp infrastructure.
+
+**What's missing is what they do with idle balances sitting on-chain.**
+
+DeFi yields are 2-3x higher than traditional bank rates. A business with $5M in idle cash earning 3% instead of 8-10% loses $250K-$350K annually. For well-funded startups raising $3-5M rounds, that's meaningful runway sitting idle.
+
+**But building this is hard:**
+
+1. DeFi protocol integrations (technical expertise required)
+2. Insurance partnerships (takes 6-12 months to establish)
+3. Compliance infrastructure (KYB/AML, self-custody architecture)
+4. Vault selection and risk management (requires DeFi expertise)
+5. On/off-ramp integration (banking relationships)
+
+**Result:** Most businesses stick with TradFi solutions offering 3-4% instead of DeFi's 8-10%.
 
 ## Core Value Propositions
 
-| Feature                | Description                                                                       |
-| ---------------------- | --------------------------------------------------------------------------------- |
-| **Get Paid Easily**    | Create invoices in seconds and get paid directly to your personal IBAN            |
-| **Spend Anywhere**     | Use a debit card worldwide with 0% conversion fees (Phase 3 - Planned)            |
-| **Optimize Yield**     | AI automatically allocates idle funds to highest-yielding opportunities (8%+ APY) |
-| **Non-Custodial**      | Users retain self-custody through Gnosis Safe wallets                             |
-| **Insurance Coverage** | Up to $1M coverage from licensed insurer (Chainproof)                             |
+| Feature               | Description                                                             |
+| --------------------- | ----------------------------------------------------------------------- |
+| **6-10% APY**         | 2-3x traditional rates via vetted DeFi vaults (Morpho, Origin)          |
+| **Insured Principal** | Smart contract exploit coverage via Chainproof (Munich Re reinsurance)  |
+| **Self-Custodial**    | Users retain control through Gnosis Safe wallets - we can't touch funds |
+| **Banking UX**        | ACH, IBAN, email login - no wallets, no gas fees, no crypto complexity  |
+| **Instant Liquidity** | On-chain or bank transfer withdrawals, no lock-ups                      |
+
+## The Vision: Platform Infrastructure
+
+**Phase 1 (Current)**: Direct B2B savings product - prove the model with startups
+**Phase 2**: Embedded partnerships - API for accelerators, neobanks, expense platforms
+**Phase 3**: Platform play - become the default yield infrastructure layer for fintech
+
+The direct savings account validates the infrastructure. The platform API is the $1B+ outcome.
 
 ## Product Roadmap
 
 - [x] **Phase 0**: Invoicing
 - [x] **Phase 1**: IBAN/ACH accounts
-- [x] **Phase 2**: Savings accounts
-- [ ] **Phase 3**: Debit/credit cards
+- [x] **Phase 2**: Savings accounts with yield
+- [ ] **Phase 3**: Auto-sweep integration (Mercury/Plaid)
+- [ ] **Phase 4**: Debit/credit cards
+- [ ] **Phase 5**: Platform API for embedded partners
+
+---
+
+# The Platform Play
+
+## Why This is Infrastructure, Not Just a Product
+
+0 Finance is architected as **API-first, white-label-ready** from day one. The direct savings product is Phase 1 validation; the platform API is the real opportunity.
+
+### Every Fintech Wants to Offer Yield
+
+- **Neobanks** (Mercury, Relay, Found) - Need yield to compete
+- **Expense platforms** (Ramp, Brex, Divvy) - Sitting on float
+- **Payroll providers** (Deel, Remote, Rippling) - Hold funds between payday
+- **Accelerators** (YC, Techstars, OrangeDAO) - Want perks for portfolio
+
+**But building this is complex.** We solve the hard problems once:
+
+- DeFi protocol integrations
+- Insurance partnerships (Chainproof/Munich Re)
+- Compliance infrastructure (self-custody = no MTL needed)
+- Vault selection and risk management
+
+### Platform Economics
+
+| Model            | Revenue                        | Margin                  |
+| ---------------- | ------------------------------ | ----------------------- |
+| **Direct B2B**   | 10% of yield (~90bps AUM)      | Negative at small scale |
+| **Platform API** | 20-30% rev share from partners | 50%+ at scale           |
+
+**Network effects compound:**
+
+- More partners → more AUM → better rates from protocols
+- More AUM → lower insurance premiums (economy of scale)
+- Better rates → more attractive to partners → flywheel
+
+### Platform GTM Strategy
+
+**Phase 1: Direct Validation (Current)**
+
+- Build AUM to $10M-50M to prove infrastructure reliability
+- Validate product works at scale
+- Build insurance relationships
+
+**Phase 2: Embedded Partnerships (6-12 months)**
+
+- Accelerators (OrangeDAO in progress, residence.xyz inbound)
+- Expense management platforms
+- Neobank competitors
+
+**Phase 3: Platform Scale (12-24 months)**
+
+- Major neobanks (Mercury, Brex)
+- Payroll providers (Deel, Rippling)
+- Become default yield infrastructure layer
 
 ---
 
@@ -29,13 +110,24 @@ Traditional banks offer ~0.5% APY on deposits while crypto yield opportunities o
 
 ## Target Users
 
-### 1. Startups (Primary)
+### 1. Startups (Primary ICP)
 
-- Treasury management for idle runway ($100K+ earning 8% instead of 0.5%)
-- Invoice creation and payment collection
-- Team collaboration via workspaces
+Crypto-native and AI startups with $3-5M seed rounds:
 
-### 2. Contractors/Freelancers
+- Understand the value prop (8% = extra headcount)
+- Have high idle cash ratios (need 18-24 months runway)
+- Are more risk-forward (VCs may be crypto funds)
+- Care about product velocity
+
+**The math**: A startup with $5M earning 8% instead of 3% gains $250K/year - that's an extra engineer.
+
+### 2. Platform Partners (Future)
+
+- Accelerators offering yield as a portfolio perk
+- Neobanks wanting to compete on yield
+- Expense platforms earning on float
+
+### 3. Contractors/Freelancers
 
 - Invoice submission to clients
 - Crypto payment reception
@@ -258,10 +350,57 @@ Supported vaults on Base:
 | Steakhouse USDC        | USDC  | Balanced    | Steakhouse        |
 | Super OETH             | ETH   | Market Risk | Origin Protocol   |
 
+**Vault Selection Criteria:**
+
+- Past performance and track record
+- Well-capitalized with significant TVL
+- Limited exposure to exotic assets
+- Over-collateralized lending only (ETH/BTC collateral)
+
 APY fetched from:
 
 - Morpho GraphQL: `https://blue-api.morpho.org/graphql`
 - Origin API: `https://api.originprotocol.com/api/v2/superoethb/apr/trailing/7`
+
+## 7. Insurance & Risk Model
+
+### Chainproof Insurance Partnership
+
+**Insurer**: Chainproof (licensed IIGB Bermuda)
+**Reinsurance**: Munich Re ($300B+ reinsurer) and Sompo ($20B+ Japanese insurer)
+**Cost**: Under 2% of principal annually
+**Coverage**: 100% of principal currently
+
+### What's Covered
+
+**Covered (Smart Contract Exploits):**
+
+- Reentrancy attacks
+- Flash loan attacks
+- Direct smart contract technical failures in vault code
+
+**NOT Covered:**
+
+- Strategy failures (vault manager bad decisions)
+- Market risks (crypto price volatility)
+- Stablecoin depegs (USDC losing peg)
+- Oracle failures or governance attacks
+
+### Risk Mitigation Strategy
+
+| Risk Type             | Mitigation                                              |
+| --------------------- | ------------------------------------------------------- |
+| **Smart Contract**    | Chainproof insurance (Munich Re backing)                |
+| **Stablecoin Depeg**  | Regulatory frameworks (Genius Act, MiCA)                |
+| **Bank Run**          | Self-custody - users always own funds                   |
+| **Custodian Failure** | If 0 Finance shuts down, users still control their Safe |
+| **Market/Strategy**   | Blue-chip collateral only, no exotic assets             |
+
+### Why Chainproof Over Alternatives
+
+- **vs Nexus Mutual**: DeFi protocols have real solvency risk from crypto pools
+- **vs Traditional (Marsh, Aon)**: Charge 5%+ if they'll even quote on DeFi
+- **Chainproof**: Traditional insurance backing at sub-2% premiums
 
 ---
 
@@ -392,14 +531,80 @@ RELAYER_PK=0x...
 
 ---
 
+# Business Model
+
+## Revenue Streams
+
+### Direct B2B (Current)
+
+- **Model**: 10% of yield generated = ~90 basis points of AUM annually
+- **Example**: $2M deposit × 9% yield × 10% = $18K/year per customer
+
+### Platform API (Future)
+
+- **Small fintechs**: 20-30% revenue share of yield generated
+- **Mid-market**: Fixed API fee ($5K-$10K/month) + 15-20% rev share
+- **Enterprise**: Custom licensing deals
+
+### Why Platform Economics Win
+
+At $100M partner AUM:
+
+- 9% gross yield = $9M annual yield generated
+- 20% rev share = $1.8M revenue to 0 Finance
+- Insurance cost: 2% → drops to 1.5% with volume
+- **Gross margin: 50%+ at scale**
+
+---
+
+# Competitive Positioning
+
+## Why Mercury/Coinbase Won't Build This
+
+**Mercury**:
+
+- Technical debt - not built for DeFi integration
+- Economics conflict - they make money on float (your deposits)
+- Pushing customers to higher yield hurts their business model
+
+**Coinbase**:
+
+- B2C focus - billions in retail trading fees
+- Brand perception - "where you buy crypto" not "where you bank"
+
+**If they validate the market, that's a win.** We're creating a category, not stealing share.
+
+## Our Moat
+
+1. **First-mover on insurance** - Chainproof partnership took months to establish
+2. **Self-custody architecture** - Partners avoid MTL requirements by using us
+3. **Network effects** - More AUM = better rates = more partners
+4. **Team expertise** - Built $75M infrastructure at Gnosis Pay
+
+---
+
 # Summary
 
-Zero Finance bridges traditional banking and DeFi by:
+Zero Finance is **infrastructure for embedded DeFi yields**, not just a savings product.
 
-1. **Abstracting complexity** behind familiar banking UX
-2. **Maintaining self-custody** via Gnosis Safe wallets
-3. **Automating yield** through smart contract modules
-4. **Providing banking rails** via virtual accounts
-5. **Supporting teams** with workspace-based access control
+**What we provide:**
 
-The 3-layer wallet architecture (Privy EOA → Privy Smart Wallet → Primary Safe) enables gasless transactions while keeping user funds in non-custodial smart wallets.
+1. **Insured high-yield savings** (6-10% vs 3-4% traditional)
+2. **Self-custody** via Gnosis Safe (no custodian failure risk)
+3. **Banking UX** with ACH/IBAN (no crypto complexity)
+4. **Platform API** for fintechs to embed yields
+
+**The architecture:**
+
+- 3-layer wallet hierarchy (Privy EOA → Smart Wallet → Primary Safe)
+- Gasless transactions via ERC-4337
+- FluidkeyEarnModule for automated vault deposits
+- Multi-chain support (Base primary, Arbitrum, Gnosis)
+
+**The vision:**
+
+- Phase 1: Direct B2B validates the infrastructure
+- Phase 2: Embedded partnerships scale distribution
+- Phase 3: Become the default yield layer for fintech
+
+**The thesis**: By 2030, every business will bank on-chain—not because they care about blockchain, but because instant global payments beat 3-day wires, programmable money beats manual treasury, and 8% yield beats 4%.
