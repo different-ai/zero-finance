@@ -408,12 +408,17 @@ export function WithdrawEarnCard({
   const recordWithdrawalMutation = trpc.earn.recordWithdrawal.useMutation();
 
   // Gnosis xDAI balance query (for bridge-back flow)
+  // Use effectiveSafeAddress to handle cases where targetSafeAddress might not be
+  // in multiChainPositions yet (e.g., newly deployed Safes)
   const isGnosisVault = chainId === SUPPORTED_CHAINS.GNOSIS;
+  const gnosisQueryAddress = isGnosisVault
+    ? targetSafeAddress || effectiveSafeAddress
+    : undefined;
   const { data: gnosisBalanceData, refetch: refetchGnosisBalance } =
     trpc.earn.getGnosisXdaiBalance.useQuery(
-      { safeAddress: targetSafeAddress ?? '' },
+      { safeAddress: gnosisQueryAddress ?? '' },
       {
-        enabled: !!targetSafeAddress && isGnosisVault,
+        enabled: !!gnosisQueryAddress && isGnosisVault,
         staleTime: 15000,
         refetchInterval: 15000,
       },
@@ -1910,6 +1915,13 @@ export function WithdrawEarnCard({
               <p className="font-mono text-[24px] tabular-nums text-[#101010]">
                 {displayXdaiBalance}{' '}
                 <span className="text-[12px] text-[#1B29FF]">xDAI</span>
+              </p>
+              {/* Debug: Show query address in technical mode */}
+              <p className="font-mono text-[10px] text-[#1B29FF]/60 mt-1">
+                QUERY_ADDR::
+                {gnosisQueryAddress
+                  ? `${gnosisQueryAddress.slice(0, 6)}...${gnosisQueryAddress.slice(-4)}`
+                  : 'NOT_SET'}
               </p>
             </div>
           </div>
