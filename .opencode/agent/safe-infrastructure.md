@@ -125,18 +125,43 @@ const txHash = await send([{ to, value, data }], gasLimit, {
 
 ### Getting the Correct Safe Address
 
-**IMPORTANT**: There are two query methods that may return different addresses:
+**CRITICAL RULE: ALWAYS query Safe addresses from the database. NEVER predict or derive addresses.**
 
-1. **User-scoped** (by Privy DID) - Use for balance queries and transactions:
+Safe addresses must be fetched from the `user_safes` table via the `getMultiChainUserSafes` function (server-side) or `getMultiChainPositions` query (client-side). Predicting addresses can lead to incorrect addresses being used for transactions.
+
+**Server-side (tRPC procedures):**
 
 ```typescript
+// CORRECT: Always use getMultiChainUserSafes with workspaceId
+const privyDid = requirePrivyDid(ctx);
+const workspaceId = requireWorkspaceId(ctx.workspaceId);
+const userSafesList = await getMultiChainUserSafes(privyDid, workspaceId);
+
+const baseSafe = userSafesList.find((s) => s.chainId === SUPPORTED_CHAINS.BASE);
+if (!baseSafe) {
+  throw new TRPCError({
+    code: 'NOT_FOUND',
+    message: 'No Base Safe found. Please set up your account first.',
+  });
+}
+
+// WRONG: Never query by userDid alone
+// const safes = await db.query.userSafes.findMany({
+//   where: eq(userSafes.userDid, ctx.user.privyDid), // Missing workspaceId!
+// });
+```
+
+**Client-side (React components):**
+
+```typescript
+// CORRECT: Use getMultiChainPositions for balance queries and transactions
 const { data: positions } = trpc.earn.getMultiChainPositions.useQuery();
 const baseSafe = positions?.safes.find(
   (s) => s.chainId === SUPPORTED_CHAINS.BASE,
 );
 ```
 
-2. **Workspace-scoped** (by workspace ID) - Use for workspace-level operations:
+**Workspace-scoped queries** (for admin/settings purposes only):
 
 ```typescript
 const { data: safes } = trpc.settings.userSafes.list.useQuery();
@@ -788,11 +813,12 @@ When adding a new chain to the multi-chain accounts UI:
 ## Your Responsibilities
 
 1. **Implement Safe interactions** - Follow the relay pattern for all Safe transactions
-2. **Debug address mismatches** - Understand the two query methods and when to use each
-3. **Handle multi-chain operations** - Deploy Safes, bridge funds, execute cross-chain deposits/withdrawals
-4. **Verify Safe deployment** - Always check bytecode before transactions
-5. **Maintain chain support** - Update providers.tsx, core.ts, and use-safe-relay.ts when adding chains
-6. **Optimize gas** - Use appropriate gas limits for different vault types
+2. **ALWAYS query Safes from database** - NEVER predict or derive Safe addresses. Use `getMultiChainUserSafes(privyDid, workspaceId)` on server, `getMultiChainPositions` on client
+3. **Debug address mismatches** - Understand the query methods and when to use each
+4. **Handle multi-chain operations** - Deploy Safes, bridge funds, execute cross-chain deposits/withdrawals
+5. **Verify Safe deployment** - Always check bytecode before transactions
+6. **Maintain chain support** - Update providers.tsx, core.ts, and use-safe-relay.ts when adding chains
+7. **Optimize gas** - Use appropriate gas limits for different vault types
 
 ## Code Quality Standards
 

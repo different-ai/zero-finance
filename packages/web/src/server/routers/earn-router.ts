@@ -3477,10 +3477,10 @@ export const earnRouter = router({
       );
       const { getGnosisXdaiToBaseUsdcQuote } = lifiService;
 
-      // Get user's Safes
-      const userSafesList = await db.query.userSafes.findMany({
-        where: eq(userSafes.userDid, ctx.user.privyDid),
-      });
+      // Get user's Safes using workspace-scoped query (NEVER predict addresses)
+      const privyDid = requirePrivyDid(ctx);
+      const workspaceId = requireWorkspaceId(ctx.workspaceId);
+      const userSafesList = await getMultiChainUserSafes(privyDid, workspaceId);
 
       // Find Base Safe (destination)
       const baseSafe = userSafesList.find(
@@ -3489,7 +3489,8 @@ export const earnRouter = router({
       if (!baseSafe) {
         throw new TRPCError({
           code: 'NOT_FOUND',
-          message: 'No Base Safe found for user',
+          message:
+            'No Base Safe found for user. Please set up your account first.',
         });
       }
 
@@ -3500,7 +3501,8 @@ export const earnRouter = router({
       if (!gnosisSafe) {
         throw new TRPCError({
           code: 'NOT_FOUND',
-          message: 'No Gnosis Safe found for user',
+          message:
+            'No Gnosis Safe found for user. Please set up your Gnosis account first.',
         });
       }
 
@@ -3556,10 +3558,10 @@ export const earnRouter = router({
         '../earn/lifi-bridge-service'
       );
 
-      // Get user's Safes
-      const userSafesList = await db.query.userSafes.findMany({
-        where: eq(userSafes.userDid, ctx.user.privyDid),
-      });
+      // Get user's Safes using workspace-scoped query (NEVER predict addresses)
+      const privyDid = requirePrivyDid(ctx);
+      const workspaceId = requireWorkspaceId(ctx.workspaceId);
+      const userSafesList = await getMultiChainUserSafes(privyDid, workspaceId);
 
       // Find Base Safe (destination)
       const baseSafe = userSafesList.find(
@@ -3568,7 +3570,8 @@ export const earnRouter = router({
       if (!baseSafe) {
         throw new TRPCError({
           code: 'NOT_FOUND',
-          message: 'No Base Safe found for user',
+          message:
+            'No Base Safe found for user. Please set up your account first.',
         });
       }
 
@@ -3579,7 +3582,8 @@ export const earnRouter = router({
       if (!gnosisSafe) {
         throw new TRPCError({
           code: 'NOT_FOUND',
-          message: 'No Gnosis Safe found for user',
+          message:
+            'No Gnosis Safe found for user. Please set up your Gnosis account first.',
         });
       }
 
@@ -3638,10 +3642,10 @@ export const earnRouter = router({
         '../earn/across-bridge-service'
       );
 
-      // Get user's Safes
-      const userSafesList = await db.query.userSafes.findMany({
-        where: eq(userSafes.userDid, ctx.user.privyDid),
-      });
+      // Get user's Safes using workspace-scoped query (NEVER predict addresses)
+      const privyDid = requirePrivyDid(ctx);
+      const workspaceId = requireWorkspaceId(ctx.workspaceId);
+      const userSafesList = await getMultiChainUserSafes(privyDid, workspaceId);
 
       // Find Base Safe (destination)
       const baseSafe = userSafesList.find(
@@ -3650,7 +3654,8 @@ export const earnRouter = router({
       if (!baseSafe) {
         throw new TRPCError({
           code: 'NOT_FOUND',
-          message: 'No Base Safe found for user',
+          message:
+            'No Base Safe found for user. Please set up your account first.',
         });
       }
 
@@ -3661,7 +3666,8 @@ export const earnRouter = router({
       if (!arbitrumSafe) {
         throw new TRPCError({
           code: 'NOT_FOUND',
-          message: 'No Arbitrum Safe found for user',
+          message:
+            'No Arbitrum Safe found for user. Please set up your Arbitrum account first.',
         });
       }
 
@@ -3710,10 +3716,10 @@ export const earnRouter = router({
         '../earn/across-bridge-service'
       );
 
-      // Get user's Safes
-      const userSafesList = await db.query.userSafes.findMany({
-        where: eq(userSafes.userDid, ctx.user.privyDid),
-      });
+      // Get user's Safes using workspace-scoped query (NEVER predict addresses)
+      const privyDid = requirePrivyDid(ctx);
+      const workspaceId = requireWorkspaceId(ctx.workspaceId);
+      const userSafesList = await getMultiChainUserSafes(privyDid, workspaceId);
 
       // Find Base Safe (destination)
       const baseSafe = userSafesList.find(
@@ -3722,7 +3728,8 @@ export const earnRouter = router({
       if (!baseSafe) {
         throw new TRPCError({
           code: 'NOT_FOUND',
-          message: 'No Base Safe found for user',
+          message:
+            'No Base Safe found for user. Please set up your account first.',
         });
       }
 
@@ -3733,7 +3740,8 @@ export const earnRouter = router({
       if (!arbitrumSafe) {
         throw new TRPCError({
           code: 'NOT_FOUND',
-          message: 'No Arbitrum Safe found for user',
+          message:
+            'No Arbitrum Safe found for user. Please set up your Arbitrum account first.',
         });
       }
 
