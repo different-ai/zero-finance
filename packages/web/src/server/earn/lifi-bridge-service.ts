@@ -164,9 +164,14 @@ export async function getLiFiBridgeQuote(params: {
   if (!response.ok) {
     const errorBody = await response.text();
     console.error('LI.FI API Error:', errorBody);
-    throw new Error(
-      `LI.FI API request failed: ${response.status} ${response.statusText}`,
-    );
+    // Try to parse error message from body
+    let errorMessage = `${response.status} ${response.statusText}`;
+    try {
+      const errorJson = JSON.parse(errorBody);
+      if (errorJson.message) errorMessage = errorJson.message;
+    } catch {}
+
+    throw new Error(`LI.FI API request failed: ${errorMessage}`);
   }
 
   const quote: LiFiQuote = await response.json();

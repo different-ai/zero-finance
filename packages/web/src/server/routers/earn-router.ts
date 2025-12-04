@@ -2020,6 +2020,16 @@ export const earnRouter = router({
                 monthlyApy = apyValue;
                 monthlyNetApy = apyValue;
                 weeklyNetApy = apyValue;
+              } else {
+                console.warn(
+                  `Spark API returned status ${response.status}. Using fallback APY.`,
+                );
+                // Fallback: Use a reasonable estimate for sDAI (~5-8% typically)
+                apy = 0.065; // 6.5% as fallback
+                netApy = 0.065;
+                monthlyApy = 0.065;
+                monthlyNetApy = 0.065;
+                weeklyNetApy = 0.065;
               }
             } catch (e) {
               console.warn(
@@ -2029,6 +2039,9 @@ export const earnRouter = router({
               // Fallback: Use a reasonable estimate for sDAI (~5-8% typically)
               apy = 0.065; // 6.5% as fallback
               netApy = 0.065;
+              monthlyApy = 0.065;
+              monthlyNetApy = 0.065;
+              weeklyNetApy = 0.065;
             }
           } else {
             // Fetch APY from Morpho GraphQL for other vaults

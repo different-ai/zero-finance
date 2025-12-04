@@ -136,6 +136,7 @@ export function WithdrawEarnCard({
     };
     approvalAddress?: string;
   } | null>(null);
+  const [bridgeQuoteError, setBridgeQuoteError] = useState<string | null>(null);
   const [isLoadingBridgeQuote, setIsLoadingBridgeQuote] = useState(false);
 
   // Arbitrum bridge-back state (for bridging USDC back to Base)
@@ -446,6 +447,7 @@ export function WithdrawEarnCard({
 
     const fetchBridgeQuote = async () => {
       setIsLoadingBridgeQuote(true);
+      setBridgeQuoteError(null);
       try {
         const amountIn18Decimals = parseUnits(bridgeAmount, 18);
         const quote = await trpcUtils.earn.getGnosisXdaiToBaseUsdcQuote.fetch({
@@ -459,6 +461,9 @@ export function WithdrawEarnCard({
           error,
         );
         setBridgeQuote(null);
+        setBridgeQuoteError(
+          error instanceof Error ? error.message : 'Failed to get bridge quote',
+        );
       } finally {
         setIsLoadingBridgeQuote(false);
       }
@@ -1210,6 +1215,13 @@ export function WithdrawEarnCard({
                 <div className="flex items-center gap-2 text-[10px] font-mono text-[#1B29FF]/60">
                   <Loader2 className="h-3 w-3 animate-spin" />
                   Fetching quote...
+                </div>
+              )}
+              {bridgeQuoteError && (
+                <div className="p-2 bg-[#EF4444]/5 border border-[#EF4444]/20 space-y-1">
+                  <p className="font-mono text-[10px] text-[#EF4444]">
+                    ERROR: {bridgeQuoteError}
+                  </p>
                 </div>
               )}
               {bridgeQuote && !isLoadingBridgeQuote && (
@@ -1965,6 +1977,13 @@ export function WithdrawEarnCard({
               <div className="flex items-center gap-2 text-[10px] font-mono text-[#1B29FF]/60">
                 <Loader2 className="h-3 w-3 animate-spin" />
                 Fetching quote...
+              </div>
+            )}
+            {bridgeQuoteError && (
+              <div className="p-2 bg-[#EF4444]/5 border border-[#EF4444]/20 space-y-1">
+                <p className="font-mono text-[10px] text-[#EF4444]">
+                  ERROR: {bridgeQuoteError}
+                </p>
               </div>
             )}
             {bridgeQuote && !isLoadingBridgeQuote && (
