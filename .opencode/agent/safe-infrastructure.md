@@ -1,7 +1,7 @@
 ---
 description: Use this agent for any task involving Safe wallets, Privy smart wallets, transaction relaying, multi-chain Safe operations, or wallet architecture questions. This agent understands the complete wallet hierarchy from Privy embedded wallets to user bank accounts (Safes).
 mode: subagent
-model: anthropic/claude-sonnet-4-20250514
+model: anthropic/claude-opus-4-5-20251101
 temperature: 0.3
 tools:
   read: true

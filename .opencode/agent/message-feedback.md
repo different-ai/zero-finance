@@ -1,7 +1,7 @@
 ---
 description: Analyze sent messages and their outcomes to create a virtuous feedback loop. Learns from what works, identifies patterns, and feeds insights back to improve future drafts.
 mode: subagent
-model: anthropic/claude-sonnet-4-20250514
+model: anthropic/claude-opus-4-5-20251101
 temperature: 0.3
 tools:
   notion_notion-search: true

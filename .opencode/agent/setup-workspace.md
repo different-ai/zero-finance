@@ -1,7 +1,7 @@
 ---
 description: Initialize the outreach system by loading configuration from your Notion "MCP Skills" page. Run this once after cloning or when configuration changes.
 mode: subagent
-model: anthropic/claude-sonnet-4-20250514
+model: anthropic/claude-opus-4-5-20251101
 temperature: 0.2
 tools:
   notion_notion-search: true

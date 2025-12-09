@@ -1,7 +1,7 @@
 ---
 description: This subagent should only be called manually by the user.
 mode: subagent
-model: anthropic/claude-sonnet-4-20250514
+model: anthropic/claude-opus-4-5-20251101
 temperature: 0.2
 tools:
   notion_notion-search: true
