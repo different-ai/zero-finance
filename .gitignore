@@ -72,4 +72,9 @@ data/
 
 # Research documentation
 research/
+
+# Claude settings
 .claude/settings.local.json
+
+# OpenCode workspace config (contains user-specific Notion IDs)
+.opencode/config/
