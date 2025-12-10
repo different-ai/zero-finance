@@ -149,6 +149,37 @@ const SPOKE_POOL_ADDRESSES: Record<SupportedChainId, Address> = {
 };
 ```
 
+#### 1.5b Add Chain to Across Client (if using Across)
+
+**File:** `packages/web/src/lib/across/across-client.ts`
+
+**CRITICAL:** The Across SDK client must be configured with the new chain:
+
+1. Import the chain from viem:
+
+```typescript
+import { base, arbitrum, optimism, mainnet, newchain } from 'viem/chains';
+```
+
+2. Add to the `createAcrossClient` chains array:
+
+```typescript
+this.client = createAcrossClient({
+  integratorId: '0x0000',
+  chains: [base, arbitrum, optimism, mainnet, newchain], // ← ADD
+  useTestnet: false,
+});
+```
+
+3. Add to the `getViemChainId()` switch statement:
+
+```typescript
+case SUPPORTED_CHAINS.NEW_CHAIN:
+  return newchain.id;
+```
+
+**Why this matters:** Without this, you'll get "Unsupported token address on given destination chain" error when trying to bridge.
+
 #### 1.6 Add Chain to Bridging Support Arrays
 
 **File:** `packages/web/src/app/(authenticated)/dashboard/tools/earn-module/components/deposit-earn-card.tsx`
