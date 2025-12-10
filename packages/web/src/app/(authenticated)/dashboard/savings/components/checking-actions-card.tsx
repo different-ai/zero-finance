@@ -48,6 +48,10 @@ const CHAIN_LOGOS: Record<SupportedChainId, { src: string; hasName: boolean }> =
       src: '/logos/_gnosis-logo.svg',
       hasName: true,
     },
+    [SUPPORTED_CHAINS.OPTIMISM]: {
+      src: '/logos/_optimism-logo.svg',
+      hasName: true,
+    },
   };
 
 // Asset icons as inline SVG components for better performance
