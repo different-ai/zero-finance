@@ -20,7 +20,7 @@ import {
   http,
   erc20Abi,
 } from 'viem';
-import { base, arbitrum, gnosis } from 'viem/chains';
+import { base, arbitrum, gnosis, optimism } from 'viem/chains';
 import { useSafeRelay } from '@/hooks/use-safe-relay';
 import { useSmartWallets } from '@privy-io/react-auth/smart-wallets';
 import {
@@ -31,7 +31,9 @@ import {
 } from '@/lib/constants';
 import {
   SUPPORTED_CHAINS,
+  CHAIN_CONFIG,
   type SupportedChainId,
+  getChainDisplayName,
 } from '@/lib/constants/chains';
 
 // Chains supported by Across Protocol for bridging
@@ -39,6 +41,7 @@ const ACROSS_SUPPORTED_CHAINS: SupportedChainId[] = [
   SUPPORTED_CHAINS.BASE,
   SUPPORTED_CHAINS.ARBITRUM,
   SUPPORTED_CHAINS.MAINNET,
+  SUPPORTED_CHAINS.OPTIMISM,
 ];
 
 // Chains that use LI.FI for bridging (Gnosis uses LI.FI, not Across)
@@ -282,15 +285,19 @@ export function DepositEarnCard({
     );
 
   // Fetch Base USDC balance for cross-chain deposits (source chain balance)
-  // This is needed for LI.FI bridging from Base to Gnosis
+  // This is needed for bridging from Base to other chains (Gnosis, Arbitrum, Optimism)
+  // For cross-chain, the safeAddress prop IS the Base safe (passed from page-wrapper via useUserSafes)
+  // We use baseSafeAddress (from multiChainPositions) as primary, falling back to safeAddress prop
+  const crossChainSourceSafe = baseSafeAddress ?? safeAddress;
   const { data: baseUsdcBalanceData, refetch: refetchBaseUsdcBalance } =
     trpc.earn.getSafeBalanceOnChain.useQuery(
       {
-        safeAddress: baseSafeAddress ?? effectiveSafeAddress,
+        safeAddress: crossChainSourceSafe!,
         chainId: SUPPORTED_CHAINS.BASE,
       },
       {
-        enabled: !!baseSafeAddress && isCrossChain && !isNativeAsset,
+        // Enable when we have ANY safe address and this is a cross-chain non-native deposit
+        enabled: !!crossChainSourceSafe && isCrossChain && !isNativeAsset,
         staleTime: 30000,
         refetchInterval: 30000,
       },
@@ -313,7 +320,7 @@ export function DepositEarnCard({
   const isLoadingBalance = isNativeAsset
     ? !nativeBalanceData && !!effectiveSafeAddress
     : isCrossChain
-      ? !baseUsdcBalanceData && !!baseSafeAddress
+      ? !baseUsdcBalanceData && !!crossChainSourceSafe
       : !erc20BalanceData && !!effectiveSafeAddress;
 
   // Debug logging
@@ -321,22 +328,28 @@ export function DepositEarnCard({
     console.log('[DepositEarnCard] Balance state:', {
       safeAddress,
       baseSafeAddress, // From multiChainPositions
+      crossChainSourceSafe, // Used for cross-chain source balance
       effectiveSafeAddress, // Used for balance queries and transactions
       isNativeAsset,
+      isCrossChain,
       chainId,
       nativeBalanceData,
       erc20BalanceData,
+      baseUsdcBalanceData, // Cross-chain source balance
       assetBalance: assetBalance.toString(),
       isLoadingBalance,
     });
   }, [
     safeAddress,
     baseSafeAddress,
+    crossChainSourceSafe,
     effectiveSafeAddress,
     isNativeAsset,
+    isCrossChain,
     chainId,
     nativeBalanceData,
     erc20BalanceData,
+    baseUsdcBalanceData,
     assetBalance,
     isLoadingBalance,
   ]);
@@ -415,17 +428,47 @@ export function DepositEarnCard({
     const verifyOnChainDeployment = async () => {
       setIsCheckingDeployment(true);
       try {
-        const targetChain =
-          chainId === SUPPORTED_CHAINS.GNOSIS ? gnosis : arbitrum;
-        const targetRpcUrl =
-          chainId === SUPPORTED_CHAINS.GNOSIS
-            ? process.env.NEXT_PUBLIC_GNOSIS_RPC_URL ||
-              'https://rpc.gnosischain.com'
-            : chainId === SUPPORTED_CHAINS.ARBITRUM
-              ? process.env.NEXT_PUBLIC_ARBITRUM_RPC_URL ||
+        // Get chain config for cross-chain verification
+        const getChainForId = (id: number) => {
+          switch (id) {
+            case SUPPORTED_CHAINS.GNOSIS:
+              return gnosis;
+            case SUPPORTED_CHAINS.OPTIMISM:
+              return optimism;
+            case SUPPORTED_CHAINS.ARBITRUM:
+              return arbitrum;
+            case SUPPORTED_CHAINS.BASE:
+            default:
+              return base;
+          }
+        };
+        const getRpcUrlForId = (id: number) => {
+          switch (id) {
+            case SUPPORTED_CHAINS.GNOSIS:
+              return (
+                process.env.NEXT_PUBLIC_GNOSIS_RPC_URL ||
+                'https://rpc.gnosischain.com'
+              );
+            case SUPPORTED_CHAINS.OPTIMISM:
+              return (
+                process.env.NEXT_PUBLIC_OPTIMISM_RPC_URL ||
+                'https://mainnet.optimism.io'
+              );
+            case SUPPORTED_CHAINS.ARBITRUM:
+              return (
+                process.env.NEXT_PUBLIC_ARBITRUM_RPC_URL ||
                 'https://arb1.arbitrum.io/rpc'
-              : process.env.NEXT_PUBLIC_BASE_RPC_URL ||
-                'https://mainnet.base.org';
+              );
+            case SUPPORTED_CHAINS.BASE:
+            default:
+              return (
+                process.env.NEXT_PUBLIC_BASE_RPC_URL ||
+                'https://mainnet.base.org'
+              );
+          }
+        };
+        const targetChain = getChainForId(chainId);
+        const targetRpcUrl = getRpcUrlForId(chainId);
 
         const targetPublicClient = createPublicClient({
           chain: targetChain,
@@ -1694,26 +1737,46 @@ export function DepositEarnCard({
   ) {
     const { deploymentInfo } = transactionState;
     const targetChainId = deploymentInfo.chainId as SupportedChainId;
-    const chainName =
-      targetChainId === SUPPORTED_CHAINS.ARBITRUM
-        ? 'Arbitrum'
-        : targetChainId === SUPPORTED_CHAINS.GNOSIS
-          ? 'Gnosis'
-          : `Chain ${targetChainId}`;
+    const chainName = getChainDisplayName(targetChainId);
 
     const handleDeploySafe = async () => {
       try {
         setTransactionState({ step: 'deploying-safe' });
 
         // Get chain-specific configuration
-        const targetChain =
-          targetChainId === SUPPORTED_CHAINS.GNOSIS ? gnosis : arbitrum;
-        const targetRpcUrl =
-          targetChainId === SUPPORTED_CHAINS.GNOSIS
-            ? process.env.NEXT_PUBLIC_GNOSIS_RPC_URL ||
-              'https://rpc.gnosischain.com'
-            : process.env.NEXT_PUBLIC_ARBITRUM_RPC_URL ||
-              'https://arb1.arbitrum.io/rpc';
+        const getTargetChain = () => {
+          switch (targetChainId) {
+            case SUPPORTED_CHAINS.GNOSIS:
+              return gnosis;
+            case SUPPORTED_CHAINS.OPTIMISM:
+              return optimism;
+            case SUPPORTED_CHAINS.ARBITRUM:
+            default:
+              return arbitrum;
+          }
+        };
+        const getTargetRpcUrl = () => {
+          switch (targetChainId) {
+            case SUPPORTED_CHAINS.GNOSIS:
+              return (
+                process.env.NEXT_PUBLIC_GNOSIS_RPC_URL ||
+                'https://rpc.gnosischain.com'
+              );
+            case SUPPORTED_CHAINS.OPTIMISM:
+              return (
+                process.env.NEXT_PUBLIC_OPTIMISM_RPC_URL ||
+                'https://mainnet.optimism.io'
+              );
+            case SUPPORTED_CHAINS.ARBITRUM:
+            default:
+              return (
+                process.env.NEXT_PUBLIC_ARBITRUM_RPC_URL ||
+                'https://arb1.arbitrum.io/rpc'
+              );
+          }
+        };
+        const targetChain = getTargetChain();
+        const targetRpcUrl = getTargetRpcUrl();
 
         console.log(
           `[DepositEarnCard] Deploying Safe on ${chainName}. Chain object:`,
@@ -2675,6 +2738,8 @@ export function DepositEarnCard({
                 disabled={
                   !amount ||
                   parseFloat(amount) <= 0 ||
+                  parseFloat(amount) > parseFloat(displayBalance) ||
+                  assetBalance === 0n ||
                   !xdaiBridgeQuote ||
                   isLoadingXdaiQuote ||
                   transactionState.step !== 'idle'
@@ -2720,7 +2785,7 @@ export function DepositEarnCard({
   // --- CROSS-CHAIN BRIDGING NOT SUPPORTED ---
   // Show message for chains not supported by any bridge provider
   if (isCrossChain && !isBridgingSupported && !isLiFiBridging) {
-    const chainName = `Chain ${chainId}`;
+    const chainName = getChainDisplayName(chainId);
 
     return (
       <div className="space-y-4 p-4 bg-[#fafafa] border border-[#1B29FF]/20 relative">
@@ -2759,8 +2824,8 @@ export function DepositEarnCard({
 
   // --- CROSS-CHAIN SPLIT VIEW ---
   if (isCrossChain && targetSafeAddress) {
-    const chainName = chainId === 42161 ? 'Arbitrum' : `Chain ${chainId}`;
-    const chainCode = chainId === 42161 ? 'ARB' : `CHAIN_${chainId}`;
+    const chainName = getChainDisplayName(chainId);
+    const chainCode = CHAIN_CONFIG[chainId].name.toUpperCase();
 
     return (
       <div className="space-y-6 p-4 bg-[#fafafa] border border-[#1B29FF]/20 relative">
@@ -2887,7 +2952,13 @@ export function DepositEarnCard({
               </div>
               <button
                 onClick={handleBridgeOnly}
-                disabled={!amount || parseFloat(amount) <= 0 || isLoadingQuote}
+                disabled={
+                  !amount ||
+                  parseFloat(amount) <= 0 ||
+                  parseFloat(amount) > parseFloat(displayBalance) ||
+                  assetBalance === 0n ||
+                  isLoadingQuote
+                }
                 className="px-4 h-10 font-mono uppercase bg-white border border-[#1B29FF]/30 hover:border-[#1B29FF] text-[#1B29FF] text-[11px] transition-colors flex items-center gap-2 whitespace-nowrap disabled:opacity-50"
               >
                 {isLoadingQuote ? (

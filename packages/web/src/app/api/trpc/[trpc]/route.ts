@@ -13,9 +13,21 @@ interface Logger {
 
 // Simple console logger implementation matching context.ts
 const log: Logger = {
-  info: (payload, message) => console.log(`[TRPC API] [INFO] ${message}`, JSON.stringify(payload, null, 2)),
-  error: (payload, message) => console.error(`[TRPC API] [ERROR] ${message}`, JSON.stringify(payload, null, 2)),
-  warn: (payload, message) => console.warn(`[TRPC API] [WARN] ${message}`, JSON.stringify(payload, null, 2)),
+  info: (payload, message) =>
+    console.log(
+      `[TRPC API] [INFO] ${message}`,
+      JSON.stringify(payload, null, 2),
+    ),
+  error: (payload, message) =>
+    console.error(
+      `[TRPC API] [ERROR] ${message}`,
+      JSON.stringify(payload, null, 2),
+    ),
+  warn: (payload, message) =>
+    console.warn(
+      `[TRPC API] [WARN] ${message}`,
+      JSON.stringify(payload, null, 2),
+    ),
 };
 
 // This is a fetch API route handler for the App Router
@@ -35,8 +47,7 @@ const handler = async (req: Request) => {
       } catch (error) {
         console.warn('Failed to get user in tRPC context', error);
       }
-      
-      console.log(`API Route: Context creation for user: ${user?.id}`);
+
       // Return a context compatible with the Context type
       const { db } = await import('@/db'); // Import db instance
       if (user?.id) {
@@ -46,7 +57,10 @@ const handler = async (req: Request) => {
           workspaceId = ensuredWorkspaceId;
           workspaceMembershipId = membership.id;
         } catch (workspaceError) {
-          console.error('Failed to ensure workspace during context creation:', workspaceError);
+          console.error(
+            'Failed to ensure workspace during context creation:',
+            workspaceError,
+          );
         }
       }
       return {
@@ -62,4 +76,4 @@ const handler = async (req: Request) => {
   });
 };
 
-export { handler as GET, handler as POST }; 
+export { handler as GET, handler as POST };

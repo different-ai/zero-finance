@@ -35,21 +35,23 @@ export const LANDING_CONTENT: {
 } = {
   hero: {
     company: {
-      badge: 'High-Yield Business Savings',
+      badge: '',
       headline: {
-        prefix: '',
-        highlight: 'Earn up to 8%',
-        suffix: 'on your idle treasury',
+        prefix: 'Your bank pays you 0.5%',
+        highlight: 'with your own money.',
+        suffix: '',
       },
       description:
-        'Open US or EU account numbers, wire USD or USDC. We automatically place your idle funds into vetted money market funds with balance protection up to $1M. Withdraw anytime with zero penalties or lock-ups.',
+        'Startups lose $50,000+ per year in yield they should be earning. Competitive yield, insurance coverage, instant withdrawals. Your funds stay in your control.',
       features: [
-        'Built on battle-tested money markets securing $8B+ in assets',
+        'Insurance included — deposits protected up to $1M',
+        'Withdraw anytime — no lock-ups, no penalties',
+        'Your funds, your control — we never touch your balance',
       ],
       cta: {
-        primary: { label: 'Sign up →', href: '/signin?source=crypto' },
+        primary: { label: 'Open account →', href: '/signin?source=crypto' },
         secondary: {
-          label: 'Book call',
+          label: 'Book a call',
           href: 'https://cal.com/team/0finance/30',
         },
       },

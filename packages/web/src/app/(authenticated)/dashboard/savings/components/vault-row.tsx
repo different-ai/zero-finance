@@ -7,7 +7,118 @@ import { WithdrawEarnCard } from '@/app/(authenticated)/dashboard/tools/earn-mod
 import { InsuranceContactPanel } from './insurance-contact-panel';
 import { toast } from 'sonner';
 import type { Address } from 'viem';
-import type { VaultViewModel, VaultAction } from './types';
+import type { VaultViewModel, VaultAction, SupportedChainId } from './types';
+import { SUPPORTED_CHAINS, CHAIN_CONFIG } from '@/lib/constants/chains';
+import Image from 'next/image';
+
+/**
+ * Chain logo configuration for technical mode display
+ * - hasName: true = logo includes chain name text (wide format, no text needed)
+ * - hasName: false = square icon only (need to show chain name text separately)
+ */
+type ChainLogoConfig = {
+  src: string;
+  alt: string;
+  hasName: boolean;
+  width?: number; // Custom width for wide logos
+};
+
+const CHAIN_LOGOS: Record<SupportedChainId, ChainLogoConfig> = {
+  [SUPPORTED_CHAINS.BASE]: {
+    src: '/logos/_base-logo.svg',
+    alt: 'Base',
+    hasName: true,
+    width: 50,
+  },
+  [SUPPORTED_CHAINS.ARBITRUM]: {
+    src: '/logos/_arbitrum-logo.png',
+    alt: 'Arbitrum',
+    hasName: true,
+    width: 70,
+  },
+  [SUPPORTED_CHAINS.MAINNET]: {
+    src: '/logos/_ethereum-logo.svg',
+    alt: 'Ethereum',
+    hasName: false,
+  },
+  [SUPPORTED_CHAINS.GNOSIS]: {
+    src: '/logos/_gnosis-logo-long.svg',
+    alt: 'Gnosis',
+    hasName: true,
+    width: 60,
+  },
+  [SUPPORTED_CHAINS.OPTIMISM]: {
+    src: '/logos/_optimism-logo-long.svg',
+    alt: 'Optimism',
+    hasName: true,
+    width: 70,
+  },
+};
+
+/**
+ * Chain badge component for technical mode
+ * Shows chain logo - wide logos with name don't need text, square icons show chain name
+ */
+function ChainBadge({ chainId }: { chainId: SupportedChainId }) {
+  const chainConfig = CHAIN_CONFIG[chainId];
+  const logo = CHAIN_LOGOS[chainId];
+
+  if (!logo) {
+    // Fallback to text badge if no logo
+    return (
+      <span
+        className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-mono uppercase tracking-wide"
+        style={{
+          backgroundColor: `${chainConfig.color}20`,
+          color: chainConfig.color,
+        }}
+      >
+        {chainConfig.displayName}
+      </span>
+    );
+  }
+
+  // Wide logo with name included - no text needed
+  if (logo.hasName) {
+    return (
+      <span
+        className="inline-flex items-center px-1.5 py-0.5 rounded"
+        style={{ backgroundColor: `${chainConfig.color}10` }}
+        title={chainConfig.displayName}
+      >
+        <Image
+          src={logo.src}
+          alt={logo.alt}
+          width={logo.width || 50}
+          height={14}
+          className="flex-shrink-0 h-[14px] w-auto"
+          unoptimized
+        />
+      </span>
+    );
+  }
+
+  // Square icon - show chain name text
+  return (
+    <span
+      className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-mono uppercase tracking-wide"
+      style={{ backgroundColor: `${chainConfig.color}15` }}
+      title={chainConfig.displayName}
+    >
+      <Image
+        src={logo.src}
+        alt={logo.alt}
+        width={14}
+        height={14}
+        className="flex-shrink-0"
+        unoptimized
+      />
+      <span style={{ color: chainConfig.color }}>
+        {chainConfig.name.toUpperCase()}
+      </span>
+    </span>
+  );
+}
 
 type VaultRowProps = {
   vault: VaultViewModel;
@@ -93,10 +204,10 @@ export function VaultRowDesktop({
           <div className="flex items-start gap-3">
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-2">
-                {/* Technical mode: Show basescan link. Banking mode: Plain text */}
+                {/* Technical mode: Show explorer link. Banking mode: Plain text */}
                 {isTechnical ? (
                   <a
-                    href={`https://basescan.org/address/${vault.address}`}
+                    href={`${CHAIN_CONFIG[vault.chainId].explorerUrl}/address/${vault.address}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-[15px] font-mono text-[#1B29FF] hover:underline truncate inline-flex items-center gap-1"
@@ -122,12 +233,11 @@ export function VaultRowDesktop({
                         : 'bg-[#2775ca]/10 text-[#2775ca]',
                   )}
                 >
-                  {isTechnical
-                    ? 'ERC-4626'
-                    : vault.asset.isNative
-                      ? 'ETH'
-                      : vault.asset.symbol}
+                  {vault.asset.isNative ? 'ETH' : vault.asset.symbol}
                 </span>
+
+                {/* Chain Badge (Technical mode only) */}
+                {isTechnical && <ChainBadge chainId={vault.chainId} />}
               </div>
 
               {/* Curator info */}
@@ -348,7 +458,7 @@ export function VaultRowMobile({
               <div className="flex flex-wrap items-center gap-2">
                 {isTechnical ? (
                   <a
-                    href={`https://basescan.org/address/${vault.address}`}
+                    href={`${CHAIN_CONFIG[vault.chainId].explorerUrl}/address/${vault.address}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-[15px] font-mono text-[#1B29FF] hover:underline inline-flex items-center gap-1"
@@ -374,12 +484,11 @@ export function VaultRowMobile({
                         : 'bg-[#2775ca]/10 text-[#2775ca]',
                   )}
                 >
-                  {isTechnical
-                    ? 'ERC-4626'
-                    : vault.asset.isNative
-                      ? 'ETH'
-                      : vault.asset.symbol}
+                  {vault.asset.isNative ? 'ETH' : vault.asset.symbol}
                 </span>
+
+                {/* Chain Badge (Technical mode only) */}
+                {isTechnical && <ChainBadge chainId={vault.chainId} />}
               </div>
               {isTechnical ? (
                 <p className="text-[11px] font-mono text-[#101010]/70">

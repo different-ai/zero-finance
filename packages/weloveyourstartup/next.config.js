@@ -1,14 +1,25 @@
+const path = require('path');
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
   images: {
-    domains: ['pbs.twimg.com', 'abs.twimg.com'],
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'pbs.twimg.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'abs.twimg.com',
+      },
+    ],
   },
   typescript: {
     ignoreBuildErrors: true,
   },
-  eslint: {
-    ignoreDuringBuilds: true,
+  turbopack: {
+    root: path.join(__dirname, '../../'),
   },
 };
 

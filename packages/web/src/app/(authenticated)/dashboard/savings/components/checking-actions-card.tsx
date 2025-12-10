@@ -32,7 +32,7 @@ import type { Address } from 'viem';
 import Image from 'next/image';
 import { BlueprintGrid, Crosshairs } from '@/components/ui/bimodal';
 
-// Chain logo mapping - using long logos that include chain names
+// Chain logo mapping - long logos include chain name, square logos need text
 const CHAIN_LOGOS: Record<SupportedChainId, { src: string; hasName: boolean }> =
   {
     [SUPPORTED_CHAINS.BASE]: { src: '/logos/_base-logo.svg', hasName: true },
@@ -45,7 +45,11 @@ const CHAIN_LOGOS: Record<SupportedChainId, { src: string; hasName: boolean }> =
       hasName: false,
     },
     [SUPPORTED_CHAINS.GNOSIS]: {
-      src: '/logos/_gnosis-logo.svg',
+      src: '/logos/_gnosis-logo-long.svg',
+      hasName: true,
+    },
+    [SUPPORTED_CHAINS.OPTIMISM]: {
+      src: '/logos/_optimism-logo-long.svg',
       hasName: true,
     },
   };

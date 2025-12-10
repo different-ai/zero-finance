@@ -1,8 +1,10 @@
 'use client';
 
+import { useMemo } from 'react';
 import { Shield } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { VaultRowDesktop, VaultRowMobile } from './vault-row';
+import { CHAIN_CONFIG } from '@/lib/constants/chains';
 import type {
   VaultViewModel,
   SelectedVaultState,
@@ -198,18 +200,44 @@ export function VaultsSection({
       </div>
 
       {/* Footer Status */}
+      <FooterStatus vaults={vaults} isTechnical={isTechnical} />
+    </div>
+  );
+}
+
+/**
+ * Footer status showing active chains and contract info
+ */
+function FooterStatus({
+  vaults,
+  isTechnical,
+}: {
+  vaults: VaultViewModel[];
+  isTechnical: boolean;
+}) {
+  // Get unique chains from vaults
+  const activeChains = useMemo(() => {
+    const chainIds = [...new Set(vaults.map((v) => v.chainId))];
+    return chainIds.map((id) => CHAIN_CONFIG[id].name.toUpperCase());
+  }, [vaults]);
+
+  if (isTechnical) {
+    return (
       <div className="mt-8 flex items-center justify-center">
-        {isTechnical ? (
-          <div className="font-mono text-[11px] text-[#1B29FF]/60 text-center p-4 border border-dashed border-[#1B29FF]/20 bg-[#1B29FF]/5 rounded">
-            SYS_STATUS: ONLINE | CHAIN: BASE | CONTRACTS: ERC-4626
-          </div>
-        ) : (
-          <p className="flex items-center gap-2 text-[13px] text-[#101010]/40">
-            <Shield className="w-4 h-4" />
-            Funds are held in non-custodial smart contracts
-          </p>
-        )}
+        <div className="font-mono text-[11px] text-[#1B29FF]/60 text-center p-4 border border-dashed border-[#1B29FF]/20 bg-[#1B29FF]/5 rounded">
+          SYS_STATUS: ONLINE | CHAINS: {activeChains.join(', ')} | CONTRACTS:
+          ERC-4626
+        </div>
       </div>
+    );
+  }
+
+  return (
+    <div className="mt-8 flex items-center justify-center">
+      <p className="flex items-center gap-2 text-[13px] text-[#101010]/40">
+        <Shield className="w-4 h-4" />
+        Funds are held in non-custodial smart contracts
+      </p>
     </div>
   );
 }

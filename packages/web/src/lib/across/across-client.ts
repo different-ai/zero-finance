@@ -9,7 +9,7 @@
  */
 
 import { createAcrossClient, type Quote } from '@across-protocol/app-sdk';
-import { base, arbitrum } from 'viem/chains';
+import { base, arbitrum, optimism, mainnet } from 'viem/chains';
 import type { SupportedChainId } from '@/lib/types/multi-chain';
 import { SUPPORTED_CHAINS, getUSDCAddress } from '@/lib/constants/chains';
 
@@ -42,7 +42,7 @@ class AcrossClientSingleton {
     // TODO: Replace with actual integrator ID from Across team
     this.client = createAcrossClient({
       integratorId: '0x0000', // Placeholder - need to fill form at https://docs.google.com/forms/d/e/1FAIpQLSe-HY6mzTeGZs91HxObkQmwkMQuH7oy8ngZ1ROiu-f4SR4oMw/viewform
-      chains: [base, arbitrum],
+      chains: [base, arbitrum, optimism, mainnet],
       useTestnet: false, // Production mode
     });
   }
@@ -88,10 +88,22 @@ export async function getAcrossBridgeQuote(params: {
   const outputToken = getUSDCAddress(destinationChainId);
 
   // Map our chain IDs to viem chain IDs
-  const originViemChainId =
-    originChainId === SUPPORTED_CHAINS.BASE ? base.id : arbitrum.id;
-  const destViemChainId =
-    destinationChainId === SUPPORTED_CHAINS.BASE ? base.id : arbitrum.id;
+  const getViemChainId = (chainId: SupportedChainId): number => {
+    switch (chainId) {
+      case SUPPORTED_CHAINS.BASE:
+        return base.id;
+      case SUPPORTED_CHAINS.ARBITRUM:
+        return arbitrum.id;
+      case SUPPORTED_CHAINS.OPTIMISM:
+        return optimism.id;
+      case SUPPORTED_CHAINS.MAINNET:
+        return mainnet.id;
+      default:
+        throw new Error(`Unsupported chain for Across bridging: ${chainId}`);
+    }
+  };
+  const originViemChainId = getViemChainId(originChainId);
+  const destViemChainId = getViemChainId(destinationChainId);
 
   try {
     const client = AcrossClientSingleton.getInstance().getClient();

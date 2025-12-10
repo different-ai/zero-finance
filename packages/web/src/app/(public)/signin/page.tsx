@@ -7,7 +7,7 @@ export default function SignInPage() {
   return (
     <Suspense
       fallback={
-        <section className="relative min-h-screen border-y border-[#101010]/10 bg-white/90 overflow-hidden flex items-center justify-center">
+        <section className="relative min-h-screen bg-white/90 overflow-hidden flex items-center justify-center">
           <GeneratedComponent className="z-0 bg-[#F6F5EF]" />
           <div className="relative z-10 flex items-center gap-3">
             <Loader2 className="h-5 w-5 animate-spin text-[#1B29FF]" />

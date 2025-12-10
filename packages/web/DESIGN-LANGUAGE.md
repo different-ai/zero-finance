@@ -73,12 +73,14 @@ const content = CONTENT[isTechnical ? 'technical' : 'company'];
 **Content Guidelines:**
 
 **Company Mode:**
+
 - Banking-first language ("Business Savings Account", "High-Yield")
 - Serif headlines for warmth and approachability
 - Feature bullets emphasize safety, insurance, ease of use
 - Example: "Insurance included — 100% coverage on all deposits"
 
 **Technical Mode:**
+
 - Protocol-first language ("PROTOCOL::TREASURY_AUTOMATION")
 - Monospace typography for precision and technical feel
 - Feature bullets emphasize architecture, audits, on-chain details
@@ -89,8 +91,8 @@ const content = CONTENT[isTechnical ? 'technical' : 'company'];
 ```jsx
 // Badge
 <p className={`uppercase tracking-[0.14em] text-[12px] mb-3 ${
-  isTechnical 
-    ? 'font-mono text-[#1B29FF]' 
+  isTechnical
+    ? 'font-mono text-[#1B29FF]'
     : 'text-[#101010]/60'
 }`}>
   {content.badge}
@@ -98,8 +100,8 @@ const content = CONTENT[isTechnical ? 'technical' : 'company'];
 
 // Headline
 <h1 className={`leading-[0.96] tracking-[-0.015em] text-[#101010] mb-6 ${
-  isTechnical 
-    ? 'font-mono text-[48px] sm:text-[56px] lg:text-[64px]' 
+  isTechnical
+    ? 'font-mono text-[48px] sm:text-[56px] lg:text-[64px]'
     : 'font-serif text-[56px] sm:text-[64px] lg:text-[72px]'
 }`}>
   <span className="text-[#1B29FF]">{content.headline.highlight}</span>
@@ -160,25 +162,25 @@ Place the `BimodalToggle` in the header with the label "Experience":
 - Use for: Flyers, print materials, promotional content
 - Speed: 0.3 with 45° angle for dynamic feel
 
-### Technical Identity (Structural Accent)
+### Technical Identity (Developer Mode)
 
-_Used strictly for Advanced/Developer views, Smart Contract interactions, and Technical Details._
+_Used for Developer views, Smart Contract interactions, and Technical Details._
 
-**Core Aesthetic: Architectural Blueprint**
-Integrating the precision of CAD into the elegance of modern banking. Instead of a black void, we use the "Blueprint" metaphor on our existing light canvas.
+**Core Aesthetic: Engineering Precision**
+Clean, data-dense interfaces that reveal the underlying system architecture while maintaining elegance.
 
 **Key Characteristics:**
 
-- **Structure over Decoration**: Reveal the grid lines and alignment points that define the UI.
-- **Monospace Elegance**: Use `IBM Plex Mono` for transactional data to suggest precision.
-- **Brand Integration**: Use the Brand Blue (`#1B29FF`) for technical lines and grids instead of neon greens.
-- **Subtle Dimensions**: Add "measurement" lines or coordinate markers (`[x:001]`) as subtle decorative elements in advanced cards.
+- **Data Density**: Monospace typography (`IBM Plex Mono`) for transactional data and precision
+- **Protocol Naming**: Use `NAMESPACE::IDENTIFIER` format (e.g., `BALANCE::AVAILABLE`, `PROTOCOL::MORPHO`)
+- **Brand Integration**: Use Brand Blue (`#1B29FF`) as the primary accent color
+- **Minimal Decoration**: Subtle corner crosshairs and thin borders instead of heavy ornamentation
 
 **Visual Elements:**
 
-- **Grid Overlays**: Faint, technical grids (`#1B29FF` at 5% opacity).
-- **Crosshairs**: Corner markers on advanced cards.
-- **Technical Labels**: Small, uppercase, monospace labels (`TX_HASH`, `BLOCK_ID`) in muted blue.
+- **Crosshairs**: Minimal corner markers using brand blue at 40% opacity
+- **Technical Labels**: Uppercase, tracked-out, monospace labels (`text-[10px]` to `text-[11px]`)
+- **Accent Borders**: `border-[#1B29FF]/30` for cards, `border-[#1B29FF]/20` for containers
 
 ---
 
@@ -621,92 +623,147 @@ Styling: White background, `#1B29FF` focus ring, 12px height, 11px width per slo
 - Keep headlines at `text-[56-72px]` for impact
 - Accent spans use `text-[#1B29FF]` not `text-[#0050ff]`
 
-### Advanced/Power User Pattern (Blueprint Aesthetic)
+### Technical Mode Component Patterns
 
-When a user toggles "Advanced Details" or "Technical View", the UI reveals the underlying structure (Blueprint Mode) while maintaining the elegant light theme.
+When a component operates in technical mode (`isTechnical = true`), it reveals precise data and protocol details while maintaining a clean, engineering-focused aesthetic.
+
+#### Container Pattern
 
 ```jsx
-{
-  /* Initially hidden - progressive disclosure */
-}
-<div className="mt-4">
-  <button
-    onClick={() => setShowAdvanced(!showAdvanced)}
-    className="text-[13px] text-ink-60 hover:text-[#1B29FF] transition-colors flex items-center gap-1"
-  >
-    <TerminalSquare className="h-4 w-4" />
-    <span>Technical Details</span>
-  </button>
+// Technical mode wrapper
+<div className="space-y-6 p-4 bg-[#fafafa] border border-[#1B29FF]/20 relative">
+  {/* Content cards */}
+</div>
 
-  {showAdvanced && (
-    <div className="mt-3 relative overflow-hidden rounded-md bg-white border border-[#1B29FF]/20 shadow-sm">
-      {/* Blueprint Grid Background */}
-      <div
-        className="absolute inset-0 pointer-events-none opacity-100"
-        style={{
-          backgroundImage:
-            'linear-gradient(to right, rgba(27,41,255,0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(27,41,255,0.05) 1px, transparent 1px)',
-          backgroundSize: '20px 20px',
-        }}
-      />
-
-      {/* Header with Crosshairs */}
-      <div className="flex justify-between items-center px-4 py-2 border-b border-[#1B29FF]/10 bg-[#F7F7F2]/50 relative z-10">
-        <span className="font-mono text-[10px] text-[#1B29FF] tracking-wider uppercase">
-          STRUCT::TX_DETAILS
-        </span>
-        {/* Decorative CAD crosshair */}
-        <div className="h-3 w-3 relative">
-          <div className="absolute top-1/2 w-full h-px bg-[#1B29FF]/40"></div>
-          <div className="absolute left-1/2 h-full w-px bg-[#1B29FF]/40"></div>
-        </div>
-      </div>
-
-      {/* Main Content */}
-      <div className="p-4 space-y-3 relative z-10">
-        <div className="grid grid-cols-[120px_1fr] gap-2 items-baseline">
-          <span className="font-mono text-[11px] text-ink-60 uppercase tracking-wide">
-            TX_HASH
-          </span>
-          <code className="font-mono text-[12px] text-[#1B29FF] break-all bg-[#1B29FF]/5 px-1 py-0.5 rounded">
-            0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb
-          </code>
-        </div>
-
-        <div className="grid grid-cols-[120px_1fr] gap-2 items-baseline">
-          <span className="font-mono text-[11px] text-ink-60 uppercase tracking-wide">
-            BLOCK_ID
-          </span>
-          <div className="flex items-center gap-2">
-            <span className="font-mono text-[12px] text-[#101010] tabular-nums">
-              12,345,678
-            </span>
-            <span className="font-mono text-[10px] text-[#10b981]">
-              [CONFIRMED]
-            </span>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-[120px_1fr] gap-2 items-baseline">
-          <span className="font-mono text-[11px] text-ink-60 uppercase tracking-wide">
-            GAS_EST
-          </span>
-          <span className="font-mono text-[12px] text-[#101010] tabular-nums">
-            21,000 GWEI
-          </span>
-        </div>
-      </div>
+// Technical mode card
+<div className="bg-white border border-[#1B29FF]/30 p-4 relative">
+  <div className="flex justify-between items-start mb-3">
+    <div>
+      <p className="font-mono uppercase tracking-[0.14em] text-[11px] text-[#1B29FF] mb-1">
+        BALANCE::AVAILABLE
+      </p>
+      <p className="font-mono text-[24px] tabular-nums text-[#101010]">
+        1,234.56 <span className="text-[12px] text-[#1B29FF]">USDC</span>
+      </p>
     </div>
-  )}
-</div>;
+    {/* Crosshair decoration */}
+    <div className="h-3 w-3 relative">
+      <div className="absolute top-1/2 w-full h-px bg-[#1B29FF]/40" />
+      <div className="absolute left-1/2 h-full w-px bg-[#1B29FF]/40" />
+    </div>
+  </div>
+</div>
 ```
 
-**Key Changes:**
+#### Form Elements Pattern
 
-- **Container**: Maintains `bg-white` to fit the dashboard, but adds `border-[#1B29FF]/20`.
-- **Visuals**: Faint blueprint grid background (`rgba(27,41,255,0.05)`).
-- **Typography**: Monospace for all labels and data, but dark/blue text instead of white/neon.
-- **Vibe**: "Architectural Plan" vs "Hacker Terminal". Elegant, precise, readable.
+```jsx
+// Technical mode input
+<div className="space-y-2">
+  <label className="font-mono text-[10px] text-[#1B29FF]/70 uppercase">
+    INPUT::DEPOSIT_AMOUNT
+  </label>
+  <div className="relative">
+    <input
+      type="number"
+      className="w-full h-10 px-3 font-mono bg-white border border-[#1B29FF]/30 focus:border-[#1B29FF] focus:outline-none text-[14px] transition-colors"
+    />
+    <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-2">
+      <span className="font-mono text-[10px] text-[#1B29FF]/70">USDC</span>
+      <button className="font-mono px-2 py-1 text-[10px] text-[#1B29FF] border border-[#1B29FF]/30 hover:border-[#1B29FF] bg-white hover:bg-[#1B29FF]/5">
+        MAX
+      </button>
+    </div>
+  </div>
+</div>
+
+// Technical mode primary button
+<button className="w-full h-10 font-mono uppercase bg-white border-2 border-[#1B29FF] text-[#1B29FF] hover:bg-[#1B29FF] hover:text-white transition-colors flex items-center justify-center gap-2">
+  <ArrowDownToLine className="h-4 w-4" />
+  <span>[ EXECUTE DEPOSIT ]</span>
+</button>
+
+// Technical mode secondary button
+<button className="px-4 h-10 font-mono uppercase bg-white border border-[#1B29FF]/30 hover:border-[#1B29FF] text-[#1B29FF] text-[11px] transition-colors">
+  BRIDGE
+</button>
+```
+
+#### Status States Pattern
+
+```jsx
+// Success state
+<div className="bg-[#10B981]/5 border border-[#10B981]/30 p-4">
+  <div className="flex gap-3">
+    <CheckCircle className="h-5 w-5 text-[#10B981]" />
+    <div>
+      <p className="font-mono text-[14px] font-medium text-[#101010]">
+        DEPOSIT::COMPLETE — 100.00 USDC
+      </p>
+      <p className="font-mono text-[12px] text-[#101010]/60">
+        NOTE: BALANCE_UPDATE may take up to 60s
+      </p>
+    </div>
+  </div>
+</div>
+
+// Warning state
+<div className="bg-[#F59E0B]/5 border border-[#F59E0B]/30 p-3">
+  <div className="flex gap-2 items-start">
+    <AlertCircle className="h-4 w-4 text-[#F59E0B]" />
+    <p className="font-mono text-[11px] text-[#F59E0B]">
+      WARN: BALANCE = 0
+    </p>
+  </div>
+</div>
+
+// Info box
+<div className="p-2 bg-[#1B29FF]/5 border border-[#1B29FF]/10">
+  <p className="font-mono text-[10px] text-[#101010]/70">
+    FEE: $0.50 • EST_TIME: 30s
+  </p>
+</div>
+```
+
+#### Crosshair Decoration Component
+
+```jsx
+// Reusable crosshair for card corners
+const Crosshair = () => (
+  <div className="h-3 w-3 relative">
+    <div className="absolute top-1/2 w-full h-px bg-[#1B29FF]/40" />
+    <div className="absolute left-1/2 h-full w-px bg-[#1B29FF]/40" />
+  </div>
+);
+```
+
+#### Typography Reference
+
+| Element     | Classes                                                            |
+| ----------- | ------------------------------------------------------------------ |
+| Card Title  | `font-mono uppercase tracking-[0.14em] text-[11px] text-[#1B29FF]` |
+| Large Value | `font-mono text-[24px] tabular-nums text-[#101010]`                |
+| Value Unit  | `text-[12px] text-[#1B29FF]`                                       |
+| Input Label | `font-mono text-[10px] text-[#1B29FF]/70 uppercase`                |
+| Help Text   | `font-mono text-[10px] text-[#1B29FF]/60`                          |
+| Button Text | `font-mono uppercase` with `[ BRACKETS ]`                          |
+
+#### Naming Conventions
+
+Use `NAMESPACE::IDENTIFIER` format for labels:
+
+- `BALANCE::AVAILABLE`, `BALANCE::ARBITRUM`
+- `PROTOCOL::MORPHO`, `PROTOCOL::SUPER_OETH`
+- `INPUT::DEPOSIT_AMOUNT`, `INPUT::BRIDGE_AMOUNT`
+- `SOURCE::BASE_CHAIN`, `ROUTE::ACROSS_BRIDGE`
+
+**Key Principles:**
+
+- **Container**: Light gray background (`bg-[#fafafa]`) with accent border
+- **Cards**: White background with `border-[#1B29FF]/30`
+- **Typography**: Monospace for all text, tabular-nums for numbers
+- **Accents**: Brand blue at various opacities (30%, 40%, 70%)
+- **Vibe**: Engineering precision meets elegant banking
 
 ---
 
@@ -1309,19 +1366,19 @@ Designed to look like a modern neobank or fintech app. Emphasizes trust, clarity
 </div>
 ```
 
-#### Mode B: Technical View (Blueprint)
+#### Mode B: Technical View (Developer)
 
-Designed to look like an architectural blueprint or developer terminal. Emphasizes precision, raw data, and structure.
+Designed for developers and power users. Emphasizes precision, raw data, and protocol visibility.
 
 **Visual Language:**
 
-- **Background**: Blueprint grid overlay using CSS linear gradients (`24px` grid squares)
+- **Background**: Light gray (`bg-[#fafafa]`) with subtle accent borders
 - **Typography**:
   - Global: Monospace (`font-mono`, IBM Plex Mono)
-  - Color: Brand Blue (`#1B29FF`) to mimic blueprint lines
-  - Data: `tabular-nums` for alignment
-- **Cards**: Sharper corners (`rounded-sm`), flat shadows (`shadow-none`)
-- **Decorations**: "Architectural Crosshairs" in corners, meta-data tags (`ID::STRAT_01`)
+  - Color: Brand Blue (`#1B29FF`) for labels and accents
+  - Data: `tabular-nums` for aligned numbers
+- **Cards**: Minimal corners, thin blue borders (`border-[#1B29FF]/30`)
+- **Decorations**: Corner crosshairs, `NAMESPACE::IDENTIFIER` labels
 
 **UX Characteristics:**
 
@@ -1332,39 +1389,25 @@ Designed to look like an architectural blueprint or developer terminal. Emphasiz
 
 ```jsx
 // Technical Mode Card
-<div className="relative bg-white border border-[#1B29FF]/20 rounded-sm shadow-none">
-  {/* Blueprint Grid Background */}
-  <div
-    className="absolute inset-0 pointer-events-none opacity-100"
-    style={{
-      backgroundImage:
-        'linear-gradient(to right, rgba(27,41,255,0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(27,41,255,0.05) 1px, transparent 1px)',
-      backgroundSize: '24px 24px',
-    }}
-  />
-
-  {/* Crosshair Decorations */}
-  <div className="absolute top-2 left-2 h-3 w-3">
-    <div className="absolute top-1/2 w-full h-px bg-[#1B29FF]/40" />
-    <div className="absolute left-1/2 h-full w-px bg-[#1B29FF]/40" />
-  </div>
-
-  <div className="relative z-10 p-6">
-    <div className="flex items-center justify-between mb-3">
-      <span className="font-mono text-[10px] text-[#1B29FF] tracking-wider uppercase">
+<div className="bg-white border border-[#1B29FF]/30 p-4 relative">
+  <div className="flex justify-between items-start mb-3">
+    <div>
+      <p className="font-mono uppercase tracking-[0.14em] text-[11px] text-[#1B29FF] mb-1">
         BALANCE::PRIMARY
-      </span>
-      <span className="font-mono text-[10px] text-[#101010]/50">
-        ID::ACC_001
-      </span>
+      </p>
+      <p className="font-mono text-[24px] tabular-nums text-[#101010]">
+        2,500,000.00
+        <span className="ml-1 text-[12px] text-[#1B29FF]">USDC</span>
+      </p>
+      <p className="font-mono text-[12px] text-[#101010]/50 mt-1">
+        ≈ $2,500,000.00 USD
+      </p>
     </div>
-    <p className="font-mono text-[28px] tabular-nums text-[#101010]">
-      2,500,000.00
-      <span className="ml-1 text-[14px] text-[#1B29FF]">USDC</span>
-    </p>
-    <p className="mt-2 font-mono text-[11px] text-[#101010]/60">
-      ≈ $2,500,000.00 USD
-    </p>
+    {/* Crosshair Decoration */}
+    <div className="h-3 w-3 relative">
+      <div className="absolute top-1/2 w-full h-px bg-[#1B29FF]/40" />
+      <div className="absolute left-1/2 h-full w-px bg-[#1B29FF]/40" />
+    </div>
   </div>
 </div>
 ```
@@ -1431,52 +1474,43 @@ By switching typography instantly, we signal to the user's brain that they have 
 </div>
 ```
 
-### Blueprint Grid Background Component
+### Technical Mode Helper Components
 
 ```jsx
-const BlueprintGrid = ({ className }: { className?: string }) => (
-  <div
-    className={cn("absolute inset-0 pointer-events-none", className)}
-    style={{
-      backgroundImage: `
-        linear-gradient(to right, rgba(27,41,255,0.05) 1px, transparent 1px),
-        linear-gradient(to bottom, rgba(27,41,255,0.05) 1px, transparent 1px)
-      `,
-      backgroundSize: '24px 24px',
-    }}
-  />
+// Crosshair decoration for technical cards
+const Crosshair = () => (
+  <div className="h-3 w-3 relative">
+    <div className="absolute top-1/2 w-full h-px bg-[#1B29FF]/40" />
+    <div className="absolute left-1/2 h-full w-px bg-[#1B29FF]/40" />
+  </div>
 );
 
-// Architectural Crosshairs (corner decorations)
-const Crosshairs = ({ position = 'top-left' }: { position?: string }) => {
-  const positionClasses = {
-    'top-left': 'top-2 left-2',
-    'top-right': 'top-2 right-2',
-    'bottom-left': 'bottom-2 left-2',
-    'bottom-right': 'bottom-2 right-2',
-  };
+// Technical mode wrapper container
+const TechnicalContainer = ({ children }: { children: React.ReactNode }) => (
+  <div className="space-y-6 p-4 bg-[#fafafa] border border-[#1B29FF]/20 relative">
+    {children}
+  </div>
+);
 
-  return (
-    <div className={cn("absolute h-3 w-3", positionClasses[position])}>
-      <div className="absolute top-1/2 w-full h-px bg-[#1B29FF]/40" />
-      <div className="absolute left-1/2 h-full w-px bg-[#1B29FF]/40" />
-    </div>
-  );
-};
+// Technical mode card
+const TechnicalCard = ({ children }: { children: React.ReactNode }) => (
+  <div className="bg-white border border-[#1B29FF]/30 p-4 relative">
+    {children}
+  </div>
+);
 ```
 
 ### Styling Reference Tables
 
 **Card Styling by Mode:**
 
-| Property      | Banking Mode                              | Technical Mode        |
-| ------------- | ----------------------------------------- | --------------------- |
-| Background    | `bg-white`                                | `bg-white`            |
-| Border        | `border-[#101010]/10`                     | `border-[#1B29FF]/20` |
-| Border Radius | `rounded-[12px]`                          | `rounded-sm`          |
-| Shadow        | `shadow-[0_2px_8px_rgba(16,16,16,0.04)]`  | `shadow-none`         |
-| Hover Shadow  | `shadow-[0_6px_16px_rgba(16,16,16,0.08)]` | none                  |
-| Grid Overlay  | none                                      | Blueprint grid        |
+| Property      | Banking Mode                             | Technical Mode        |
+| ------------- | ---------------------------------------- | --------------------- |
+| Background    | `bg-white`                               | `bg-white`            |
+| Border        | `border-[#101010]/10`                    | `border-[#1B29FF]/30` |
+| Border Radius | `rounded-[12px]`                         | none (sharp corners)  |
+| Shadow        | `shadow-[0_2px_8px_rgba(16,16,16,0.04)]` | `shadow-none`         |
+| Container BG  | none                                     | `bg-[#fafafa]`        |
 
 **Typography by Mode:**
 
@@ -1496,29 +1530,49 @@ const Crosshairs = ({ position = 'top-left' }: { position?: string }) => {
 ### Implementation Pattern
 
 ```jsx
-function BimodalCard({ isTechnical, children }) {
+function BimodalCard({ isTechnical, title, value, unit, children }) {
   return (
     <div
       className={cn(
-        'relative overflow-hidden transition-all duration-300',
+        'p-4 relative transition-all duration-300',
         isTechnical
-          ? 'bg-white border-[#1B29FF]/20 rounded-sm shadow-none'
-          : 'bg-white border-[#101010]/10 rounded-[12px] shadow-[0_2px_8px_rgba(16,16,16,0.04)]',
+          ? 'bg-white border border-[#1B29FF]/30'
+          : 'bg-white border border-[#101010]/10 rounded-[12px] shadow-[0_2px_8px_rgba(16,16,16,0.04)]',
       )}
     >
-      {/* Blueprint Grid (Technical only) */}
-      {isTechnical && <BlueprintGrid />}
-
-      {/* Crosshairs (Technical only) */}
-      {isTechnical && (
-        <>
-          <Crosshairs position="top-left" />
-          <Crosshairs position="top-right" />
-        </>
-      )}
-
-      {/* Content */}
-      <div className="relative z-10 p-6">{children}</div>
+      <div className="flex justify-between items-start mb-3">
+        <div>
+          <p
+            className={cn(
+              'uppercase tracking-[0.14em] text-[11px] mb-1',
+              isTechnical ? 'font-mono text-[#1B29FF]' : 'text-[#101010]/60',
+            )}
+          >
+            {title}
+          </p>
+          <p
+            className={cn(
+              'text-[24px] tabular-nums text-[#101010]',
+              isTechnical && 'font-mono',
+            )}
+          >
+            {value}{' '}
+            {unit && (
+              <span
+                className={cn(
+                  'text-[12px]',
+                  isTechnical ? 'text-[#1B29FF]' : 'text-[#101010]/60',
+                )}
+              >
+                {unit}
+              </span>
+            )}
+          </p>
+        </div>
+        {/* Crosshair (Technical only) */}
+        {isTechnical && <Crosshair />}
+      </div>
+      {children}
     </div>
   );
 }
@@ -1543,8 +1597,8 @@ Don't use for:
 
 - Use `transition-all duration-300` for smooth morphing between modes
 - Content should reflow gracefully - never jump
-- Grid and crosshairs should fade in/out with the transition
-- Typography changes should feel "liquid and premium"
+- Crosshairs should fade in/out with the transition
+- Typography changes should feel clean and intentional
 
 ---
 

@@ -36,7 +36,7 @@ import {
   type Address,
 } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
-import { base, mainnet, arbitrum, gnosis } from 'viem/chains';
+import { base, mainnet, arbitrum, gnosis, optimism } from 'viem/chains';
 import crypto from 'crypto';
 
 // Multi-chain imports
@@ -199,6 +199,9 @@ let arbitrumPublicClient: ReturnType<typeof createPublicClient> | null = null;
 // Gnosis public client singleton
 let gnosisPublicClient: ReturnType<typeof createPublicClient> | null = null;
 
+// Optimism public client singleton
+let optimismPublicClient: ReturnType<typeof createPublicClient> | null = null;
+
 function getPublicClientForChain(chainId: number) {
   if (chainId === BASE_CHAIN_ID) {
     return publicClient;
@@ -255,6 +258,22 @@ function getPublicClientForChain(chainId: number) {
     }
 
     return gnosisPublicClient;
+  }
+
+  if (chainId === SUPPORTED_CHAINS.OPTIMISM) {
+    if (!optimismPublicClient) {
+      const rpcUrl =
+        process.env.OPTIMISM_RPC_URL ??
+        process.env.NEXT_PUBLIC_OPTIMISM_RPC_URL ??
+        'https://mainnet.optimism.io';
+
+      optimismPublicClient = createPublicClient({
+        chain: optimism,
+        transport: http(rpcUrl),
+      });
+    }
+
+    return optimismPublicClient;
   }
 
   throw new Error(`Unsupported chain id ${chainId} for public client`);
@@ -803,25 +822,19 @@ export const earnRouter = router({
     )
     .query(async ({ input }) => {
       const { safeAddress } = input;
-      console.log('on chain initialization status check for safe', safeAddress);
       if (!AUTO_EARN_MODULE_ADDRESS) {
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
           message: 'Auto-earn module address not configured on the server.',
         });
       }
-      // log more info about the public client
-      console.log('public client', publicClient);
-      console.log('chain', publicClient.chain);
       try {
-        console.log('reading contract');
         const isInitializedResult = await publicClient.readContract({
           address: AUTO_EARN_MODULE_ADDRESS, // Calling the Earn Module contract
           abi: EARN_MODULE_IS_INITIALIZED_ABI,
           functionName: 'isInitialized',
           args: [safeAddress], // Checking for the specific Safe
         });
-        console.log('isInitializedResult', isInitializedResult);
         return { isInitializedOnChain: isInitializedResult };
       } catch (error: any) {
         console.error(
@@ -996,8 +1009,6 @@ export const earnRouter = router({
             ),
           ),
       });
-
-      console.log('deposits', deposits);
 
       if (!deposits.length) {
         return []; // No deposits yet for this safe

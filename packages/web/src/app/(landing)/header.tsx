@@ -9,7 +9,7 @@ export function Header() {
   const { isTechnical, toggle } = useBimodal();
 
   return (
-    <header className="border-b border-[#101010]/10 bg-transparent">
+    <header className="absolute top-0 left-0 right-0 z-50 bg-transparent">
       <div className="mx-auto max-w-[1200px] px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
         <div className="flex items-center justify-between">
           <Link href="/" className="flex items-center">

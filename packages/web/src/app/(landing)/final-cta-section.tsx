@@ -33,8 +33,8 @@ export function FinalCTASection() {
             </p>
             <p className="mt-2 text-[14px] sm:text-[15px] font-medium text-[#101010]">
               {mode === 'consumer'
-                ? 'Join thousands of users earning on their stablecoin holdings.'
-                : 'Trusted by leading startups securing over $2M+ in high-yield deposits.'}
+                ? 'Our treasury is in Zero. We use what we build.'
+                : 'Our treasury is in Zero. We use what we build.'}
             </p>
             <div className="mt-6 sm:mt-8 flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6">
               <Link

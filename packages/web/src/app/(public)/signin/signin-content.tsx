@@ -288,14 +288,14 @@ export default function SignInContent() {
     setEmailError('');
   };
   return (
-    <section className="relative min-h-screen border-y border-[#101010]/10 bg-[#F6F5EF] md:bg-white/90 overflow-hidden">
+    <section className="relative min-h-screen bg-[#F6F5EF] md:bg-white/90 overflow-hidden">
       {/* Gradient Background - Hidden on mobile for performance */}
       <div className="hidden md:block">
         <GeneratedComponent className="z-0 bg-[#F6F5EF]" />
       </div>
 
-      {/* Header */}
-      <div className="relative z-10 border-b border-[#101010]/10 bg-white/80 backdrop-blur-sm">
+      {/* Header - Transparent, blends with gradient */}
+      <header className="absolute top-0 left-0 right-0 z-50 bg-transparent">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <Link href="/" className="flex items-center">
@@ -321,9 +321,9 @@ export default function SignInContent() {
             </div>
           </div>
         </div>
-      </div>
+      </header>
 
-      <div className="relative z-10 max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 lg:py-20">
+      <div className="relative z-10 max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-8 sm:pt-24 sm:pb-12 lg:pt-28 lg:pb-20">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-0 max-w-5xl mx-auto rounded-xl overflow-hidden border border-[#101010]/10 shadow-[0_2px_8px_rgba(16,16,16,0.04)]">
           {/* Left side - Value Proposition - Hidden on mobile */}
           <div
@@ -702,13 +702,15 @@ export default function SignInContent() {
               </div>
             </div>
 
-            {/* Backed by Orange DAO */}
+            {/* Trust signals */}
             <div className="mt-8 pt-6 border-t border-[#101010]/10">
-              <p className="text-[11px] uppercase tracking-[0.14em] text-[#101010]/60 mb-3 text-center">
-                Backed By
-              </p>
-              <div className="flex items-center justify-center">
-                <OrangeDAOLogo className="h-7 w-auto opacity-60" />
+              <div className="flex flex-wrap items-center justify-center gap-4 text-[12px] text-[#101010]/50">
+                <div className="flex items-center gap-2">
+                  <span>Backed by</span>
+                  <OrangeDAOLogo className="h-4 w-auto opacity-70" />
+                </div>
+                <span className="hidden sm:inline">·</span>
+                <span>Built by ex-fintech engineers</span>
               </div>
             </div>
           </div>
