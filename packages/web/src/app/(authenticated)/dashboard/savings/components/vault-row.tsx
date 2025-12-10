@@ -7,7 +7,71 @@ import { WithdrawEarnCard } from '@/app/(authenticated)/dashboard/tools/earn-mod
 import { InsuranceContactPanel } from './insurance-contact-panel';
 import { toast } from 'sonner';
 import type { Address } from 'viem';
-import type { VaultViewModel, VaultAction } from './types';
+import type { VaultViewModel, VaultAction, SupportedChainId } from './types';
+import { SUPPORTED_CHAINS, CHAIN_CONFIG } from '@/lib/constants/chains';
+import Image from 'next/image';
+
+// Chain logo mapping for technical mode display
+const CHAIN_LOGOS: Record<SupportedChainId, { src: string; alt: string }> = {
+  [SUPPORTED_CHAINS.BASE]: { src: '/logos/_base-logo.svg', alt: 'Base' },
+  [SUPPORTED_CHAINS.ARBITRUM]: {
+    src: '/logos/_arbitrum-logo.png',
+    alt: 'Arbitrum',
+  },
+  [SUPPORTED_CHAINS.MAINNET]: {
+    src: '/logos/_ethereum-logo.svg',
+    alt: 'Ethereum',
+  },
+  [SUPPORTED_CHAINS.GNOSIS]: { src: '/logos/_gnosis-logo.svg', alt: 'Gnosis' },
+  [SUPPORTED_CHAINS.OPTIMISM]: {
+    src: '/logos/_optimism-logo.svg',
+    alt: 'Optimism',
+  },
+};
+
+/**
+ * Chain badge component for technical mode
+ * Shows chain logo with fallback to text
+ */
+function ChainBadge({ chainId }: { chainId: SupportedChainId }) {
+  const chainConfig = CHAIN_CONFIG[chainId];
+  const logo = CHAIN_LOGOS[chainId];
+
+  if (!logo) {
+    // Fallback to text badge if no logo
+    return (
+      <span
+        className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-mono uppercase tracking-wide"
+        style={{
+          backgroundColor: `${chainConfig.color}20`,
+          color: chainConfig.color,
+        }}
+      >
+        {chainConfig.displayName}
+      </span>
+    );
+  }
+
+  return (
+    <span
+      className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-mono uppercase tracking-wide"
+      style={{ backgroundColor: `${chainConfig.color}15` }}
+      title={chainConfig.displayName}
+    >
+      <Image
+        src={logo.src}
+        alt={logo.alt}
+        width={14}
+        height={14}
+        className="flex-shrink-0"
+        unoptimized
+      />
+      <span style={{ color: chainConfig.color }}>
+        {chainConfig.name.toUpperCase()}
+      </span>
+    </span>
+  );
+}
 
 type VaultRowProps = {
   vault: VaultViewModel;
@@ -93,10 +157,10 @@ export function VaultRowDesktop({
           <div className="flex items-start gap-3">
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-2">
-                {/* Technical mode: Show basescan link. Banking mode: Plain text */}
+                {/* Technical mode: Show explorer link. Banking mode: Plain text */}
                 {isTechnical ? (
                   <a
-                    href={`https://basescan.org/address/${vault.address}`}
+                    href={`${CHAIN_CONFIG[vault.chainId].explorerUrl}/address/${vault.address}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-[15px] font-mono text-[#1B29FF] hover:underline truncate inline-flex items-center gap-1"
@@ -128,6 +192,9 @@ export function VaultRowDesktop({
                       ? 'ETH'
                       : vault.asset.symbol}
                 </span>
+
+                {/* Chain Badge (Technical mode only) */}
+                {isTechnical && <ChainBadge chainId={vault.chainId} />}
               </div>
 
               {/* Curator info */}
@@ -348,7 +415,7 @@ export function VaultRowMobile({
               <div className="flex flex-wrap items-center gap-2">
                 {isTechnical ? (
                   <a
-                    href={`https://basescan.org/address/${vault.address}`}
+                    href={`${CHAIN_CONFIG[vault.chainId].explorerUrl}/address/${vault.address}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-[15px] font-mono text-[#1B29FF] hover:underline inline-flex items-center gap-1"
@@ -380,6 +447,9 @@ export function VaultRowMobile({
                       ? 'ETH'
                       : vault.asset.symbol}
                 </span>
+
+                {/* Chain Badge (Technical mode only) */}
+                {isTechnical && <ChainBadge chainId={vault.chainId} />}
               </div>
               {isTechnical ? (
                 <p className="text-[11px] font-mono text-[#101010]/70">
