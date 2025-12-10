@@ -11,27 +11,52 @@ import type { VaultViewModel, VaultAction, SupportedChainId } from './types';
 import { SUPPORTED_CHAINS, CHAIN_CONFIG } from '@/lib/constants/chains';
 import Image from 'next/image';
 
-// Chain logo mapping for technical mode display
-const CHAIN_LOGOS: Record<SupportedChainId, { src: string; alt: string }> = {
-  [SUPPORTED_CHAINS.BASE]: { src: '/logos/_base-logo.svg', alt: 'Base' },
+/**
+ * Chain logo configuration for technical mode display
+ * - hasName: true = logo includes chain name text (wide format, no text needed)
+ * - hasName: false = square icon only (need to show chain name text separately)
+ */
+type ChainLogoConfig = {
+  src: string;
+  alt: string;
+  hasName: boolean;
+  width?: number; // Custom width for wide logos
+};
+
+const CHAIN_LOGOS: Record<SupportedChainId, ChainLogoConfig> = {
+  [SUPPORTED_CHAINS.BASE]: {
+    src: '/logos/_base-logo.svg',
+    alt: 'Base',
+    hasName: true,
+    width: 50,
+  },
   [SUPPORTED_CHAINS.ARBITRUM]: {
     src: '/logos/_arbitrum-logo.png',
     alt: 'Arbitrum',
+    hasName: true,
+    width: 70,
   },
   [SUPPORTED_CHAINS.MAINNET]: {
     src: '/logos/_ethereum-logo.svg',
     alt: 'Ethereum',
+    hasName: false,
   },
-  [SUPPORTED_CHAINS.GNOSIS]: { src: '/logos/_gnosis-logo.svg', alt: 'Gnosis' },
+  [SUPPORTED_CHAINS.GNOSIS]: {
+    src: '/logos/_gnosis-logo-long.svg',
+    alt: 'Gnosis',
+    hasName: true,
+    width: 60,
+  },
   [SUPPORTED_CHAINS.OPTIMISM]: {
-    src: '/logos/_optimism-logo.svg',
+    src: '/optimism-square-logo.png',
     alt: 'Optimism',
+    hasName: false,
   },
 };
 
 /**
  * Chain badge component for technical mode
- * Shows chain logo with fallback to text
+ * Shows chain logo - wide logos with name don't need text, square icons show chain name
  */
 function ChainBadge({ chainId }: { chainId: SupportedChainId }) {
   const chainConfig = CHAIN_CONFIG[chainId];
@@ -52,6 +77,27 @@ function ChainBadge({ chainId }: { chainId: SupportedChainId }) {
     );
   }
 
+  // Wide logo with name included - no text needed
+  if (logo.hasName) {
+    return (
+      <span
+        className="inline-flex items-center px-1.5 py-0.5 rounded"
+        style={{ backgroundColor: `${chainConfig.color}10` }}
+        title={chainConfig.displayName}
+      >
+        <Image
+          src={logo.src}
+          alt={logo.alt}
+          width={logo.width || 50}
+          height={14}
+          className="flex-shrink-0 h-[14px] w-auto"
+          unoptimized
+        />
+      </span>
+    );
+  }
+
+  // Square icon - show chain name text
   return (
     <span
       className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-mono uppercase tracking-wide"
