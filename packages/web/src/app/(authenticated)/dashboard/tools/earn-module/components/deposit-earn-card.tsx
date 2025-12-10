@@ -41,6 +41,7 @@ const ACROSS_SUPPORTED_CHAINS: SupportedChainId[] = [
   SUPPORTED_CHAINS.BASE,
   SUPPORTED_CHAINS.ARBITRUM,
   SUPPORTED_CHAINS.MAINNET,
+  SUPPORTED_CHAINS.OPTIMISM,
 ];
 
 // Chains that use LI.FI for bridging (Gnosis uses LI.FI, not Across)

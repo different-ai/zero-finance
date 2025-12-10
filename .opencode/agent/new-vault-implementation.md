@@ -149,7 +149,31 @@ const SPOKE_POOL_ADDRESSES: Record<SupportedChainId, Address> = {
 };
 ```
 
-#### 1.6 Add to Multi-Chain Safe Manager
+#### 1.6 Add Chain to Bridging Support Arrays
+
+**File:** `packages/web/src/app/(authenticated)/dashboard/tools/earn-module/components/deposit-earn-card.tsx`
+
+Add to `ACROSS_SUPPORTED_CHAINS` if using Across Protocol:
+
+```typescript
+const ACROSS_SUPPORTED_CHAINS: SupportedChainId[] = [
+  SUPPORTED_CHAINS.BASE,
+  SUPPORTED_CHAINS.ARBITRUM,
+  SUPPORTED_CHAINS.MAINNET,
+  SUPPORTED_CHAINS.NEW_CHAIN, // ← ADD
+];
+```
+
+Or add to `LIFI_SUPPORTED_CHAINS` if using LI.FI Protocol:
+
+```typescript
+const LIFI_SUPPORTED_CHAINS: SupportedChainId[] = [
+  SUPPORTED_CHAINS.GNOSIS,
+  SUPPORTED_CHAINS.NEW_CHAIN, // ← ADD
+];
+```
+
+#### 1.7 Add to Multi-Chain Safe Manager
 
 **File:** `packages/web/src/server/earn/multi-chain-safe-manager.ts`
 
@@ -164,7 +188,7 @@ const status: MultiChainSafeStatus = {
 };
 ```
 
-#### 1.7 Add Environment Variables
+#### 1.8 Add Environment Variables
 
 **File:** `packages/web/.env.example`
 
@@ -338,17 +362,18 @@ After implementation, verify:
 
 When adding a new chain + vault, expect to modify:
 
-| File                                      | Change                      |
-| ----------------------------------------- | --------------------------- |
-| `lib/constants/chains.ts`                 | Add chain ID + config       |
-| `components/providers.tsx`                | Add to wagmi/Privy          |
-| `lib/sponsor-tx/core.ts`                  | Add RPC + chain mapping     |
-| `server/earn/{chain}-vaults.ts`           | NEW FILE - vault config     |
-| `server/earn/cross-chain-vaults.ts`       | Import + register vaults    |
-| `server/earn/across-bridge-service.ts`    | Add SpokePool (if bridging) |
-| `server/earn/multi-chain-safe-manager.ts` | Add to status object        |
-| `.env.example`                            | Document RPC env vars       |
-| `public/logos/`                           | Add chain logo (optional)   |
+| File                                                 | Change                      |
+| ---------------------------------------------------- | --------------------------- |
+| `lib/constants/chains.ts`                            | Add chain ID + config       |
+| `components/providers.tsx`                           | Add to wagmi/Privy          |
+| `lib/sponsor-tx/core.ts`                             | Add RPC + chain mapping     |
+| `server/earn/{chain}-vaults.ts`                      | NEW FILE - vault config     |
+| `server/earn/cross-chain-vaults.ts`                  | Import + register vaults    |
+| `server/earn/across-bridge-service.ts`               | Add SpokePool (if bridging) |
+| `tools/earn-module/components/deposit-earn-card.tsx` | Add to bridging arrays      |
+| `server/earn/multi-chain-safe-manager.ts`            | Add to status object        |
+| `.env.example`                                       | Document RPC env vars       |
+| `public/logos/`                                      | Add chain logo (optional)   |
 
 ---
 
