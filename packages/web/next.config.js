@@ -63,8 +63,8 @@ const nextConfig = {
   experimental: {
     optimizePackageImports: ['lucide-react', '@radix-ui/react-icons'],
   },
-  // Empty turbopack config to acknowledge we're aware of the webpack config
-  // TODO: Migrate webpack customizations to turbopack when needed
+  // Empty turbopack config - we use --webpack flag for builds due to pino/thread-stream
+  // bundling issues in Turbopack. See: https://github.com/vercel/next.js/pull/86884
   turbopack: {},
   outputFileTracingRoot: path.join(__dirname, '../../'),
   staticPageGenerationTimeout: 180,
@@ -126,9 +126,13 @@ const nextConfig = {
     'require-in-the-middle',
     '@metamask/sdk',
     '@wagmi/connectors',
-    'sonic-boom',
+    // pino and related packages have dynamic worker requires that break bundling
+    // See: https://github.com/vercel/next.js/pull/86884
     'pino',
     'pino-pretty',
+    'pino-roll',
+    'thread-stream',
+    'sonic-boom',
   ],
 };
 
