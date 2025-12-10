@@ -344,9 +344,11 @@ Add to `getVaultsGroupedByChain()`:
 
 Download official brand assets and add to logos folder.
 
-#### 3.2 Update CHAIN_LOGOS Map
+#### 3.2 Update CHAIN_LOGOS Maps
 
-**File:** `packages/web/src/app/(authenticated)/dashboard/savings/components/checking-actions-card.tsx`
+There are TWO files with chain logo mappings that need updating:
+
+**File 1:** `packages/web/src/app/(authenticated)/dashboard/savings/components/checking-actions-card.tsx`
 
 ```typescript
 const CHAIN_LOGOS: Record<SupportedChainId, { src: string; hasName: boolean }> =
@@ -354,9 +356,41 @@ const CHAIN_LOGOS: Record<SupportedChainId, { src: string; hasName: boolean }> =
     // ... existing
     [SUPPORTED_CHAINS.NEW_CHAIN]: {
       src: '/logos/_chainname-logo.svg',
-      hasName: true,
+      hasName: true, // true if logo includes chain name, false if icon-only
     },
   };
+```
+
+**File 2:** `packages/web/src/app/(authenticated)/dashboard/savings/components/vault-row.tsx`
+
+```typescript
+const CHAIN_LOGOS: Record<SupportedChainId, ChainLogoConfig> = {
+  // ... existing
+  [SUPPORTED_CHAINS.NEW_CHAIN]: {
+    src: '/logos/_chainname-logo.svg',
+    alt: 'Chain Name',
+    hasName: true,
+    width: 60, // Custom width for wide logos
+  },
+};
+```
+
+#### 3.3 Add Public Client to Earn Router
+
+**File:** `packages/web/src/server/routers/earn-router.ts`
+
+Add a public client for reading on-chain data:
+
+```typescript
+import { newchain } from 'viem/chains';
+
+// Near the top with other public client definitions:
+const newchainPublicClient = createPublicClient({
+  chain: newchain,
+  transport: http(process.env.NEWCHAIN_RPC_URL || 'https://public-rpc.com'),
+});
+
+// In procedures that need to read from this chain, add to the client selection logic
 ```
 
 ---
@@ -392,6 +426,11 @@ After implementation, verify:
 - [ ] RPC URLs work (test with `curl` or browser)
 - [ ] Privy dashboard has chain enabled
 - [ ] Environment variables documented in .env.example
+- [ ] Chain logo displays correctly in vault list (technical mode)
+- [ ] Chain name shows correctly (not "Chain X") in all messages
+- [ ] Across client has chain in `chains` array (if using Across)
+- [ ] Safe deployment switch statements include new chain
+- [ ] earn-router.ts has public client for chain
 
 ---
 
@@ -411,6 +450,11 @@ After implementation, verify:
 3. **SpokePool Placeholder**: Don't use `0x000...000` for Across - it will fail silently
 4. **Missing Type Updates**: SUPPORTED_CHAINS change triggers Record<> type errors in multiple files
 5. **RPC Rate Limits**: Use paid RPC for production, public RPCs have low limits
+6. **Across Client Not Configured**: Must add chain to `createAcrossClient({ chains: [...] })` in across-client.ts
+7. **Safe Deployment Uses Wrong Chain**: Must add chain to switch statements in deposit-earn-card.tsx `getChainForId()` and `getTargetChain()`
+8. **"Chain X" Instead of Chain Name**: Use `getChainDisplayName()` from chains.ts, not hardcoded strings
+9. **Missing Public Client**: earn-router.ts needs a public client for reading on-chain vault data
+10. **Logo Not Showing**: Must update CHAIN_LOGOS in BOTH vault-row.tsx AND checking-actions-card.tsx
 
 ---
 
@@ -418,18 +462,22 @@ After implementation, verify:
 
 When adding a new chain + vault, expect to modify:
 
-| File                                                 | Change                      |
-| ---------------------------------------------------- | --------------------------- |
-| `lib/constants/chains.ts`                            | Add chain ID + config       |
-| `components/providers.tsx`                           | Add to wagmi/Privy          |
-| `lib/sponsor-tx/core.ts`                             | Add RPC + chain mapping     |
-| `server/earn/{chain}-vaults.ts`                      | NEW FILE - vault config     |
-| `server/earn/cross-chain-vaults.ts`                  | Import + register vaults    |
-| `server/earn/across-bridge-service.ts`               | Add SpokePool (if bridging) |
-| `tools/earn-module/components/deposit-earn-card.tsx` | Add to bridging arrays      |
-| `server/earn/multi-chain-safe-manager.ts`            | Add to status object        |
-| `.env.example`                                       | Document RPC env vars       |
-| `public/logos/`                                      | Add chain logo (optional)   |
+| File                                                 | Change                                  |
+| ---------------------------------------------------- | --------------------------------------- |
+| `lib/constants/chains.ts`                            | Add chain ID + config                   |
+| `components/providers.tsx`                           | Add to wagmi/Privy                      |
+| `lib/sponsor-tx/core.ts`                             | Add RPC + chain mapping                 |
+| `lib/across/across-client.ts`                        | Add to SDK chains + getViemChainId()    |
+| `server/earn/{chain}-vaults.ts`                      | NEW FILE - vault config                 |
+| `server/earn/cross-chain-vaults.ts`                  | Import + register vaults                |
+| `server/earn/across-bridge-service.ts`               | Add SpokePool (if bridging)             |
+| `server/routers/earn-router.ts`                      | Add public client for chain             |
+| `tools/earn-module/components/deposit-earn-card.tsx` | Bridging arrays + Safe deployment logic |
+| `server/earn/multi-chain-safe-manager.ts`            | Add to status object                    |
+| `savings/components/vault-row.tsx`                   | Add to CHAIN_LOGOS                      |
+| `savings/components/checking-actions-card.tsx`       | Add to CHAIN_LOGOS                      |
+| `.env.example`                                       | Document RPC env vars                   |
+| `public/logos/`                                      | Add chain logo                          |
 
 ---
 
@@ -464,8 +512,14 @@ Files changed:
 1. `chains.ts` - Added OPTIMISM: 10 + config
 2. `providers.tsx` - Added optimism import + to arrays
 3. `core.ts` - Added RPC + chain mapping
-4. `optimism-vaults.ts` - NEW FILE
-5. `cross-chain-vaults.ts` - Import + register
-6. `across-bridge-service.ts` - Added SpokePool
-7. `multi-chain-safe-manager.ts` - Added to status
-8. `.env.example` - Added OPTIMISM_RPC_URL
+4. `across-client.ts` - Added optimism to SDK chains + getViemChainId()
+5. `optimism-vaults.ts` - NEW FILE
+6. `cross-chain-vaults.ts` - Import + register
+7. `across-bridge-service.ts` - Added SpokePool
+8. `earn-router.ts` - Added Optimism public client
+9. `deposit-earn-card.tsx` - Added to ACROSS_SUPPORTED_CHAINS + Safe deployment switches
+10. `multi-chain-safe-manager.ts` - Added to status
+11. `vault-row.tsx` - Added to CHAIN_LOGOS
+12. `checking-actions-card.tsx` - Added to CHAIN_LOGOS
+13. `.env.example` - Added OPTIMISM_RPC_URL
+14. `public/logos/_optimism-logo-long.svg` - Chain logo
