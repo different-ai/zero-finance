@@ -20,7 +20,7 @@ import {
   http,
   erc20Abi,
 } from 'viem';
-import { base, arbitrum, gnosis } from 'viem/chains';
+import { base, arbitrum, gnosis, optimism } from 'viem/chains';
 import { useSafeRelay } from '@/hooks/use-safe-relay';
 import { useSmartWallets } from '@privy-io/react-auth/smart-wallets';
 import {
@@ -418,17 +418,47 @@ export function DepositEarnCard({
     const verifyOnChainDeployment = async () => {
       setIsCheckingDeployment(true);
       try {
-        const targetChain =
-          chainId === SUPPORTED_CHAINS.GNOSIS ? gnosis : arbitrum;
-        const targetRpcUrl =
-          chainId === SUPPORTED_CHAINS.GNOSIS
-            ? process.env.NEXT_PUBLIC_GNOSIS_RPC_URL ||
-              'https://rpc.gnosischain.com'
-            : chainId === SUPPORTED_CHAINS.ARBITRUM
-              ? process.env.NEXT_PUBLIC_ARBITRUM_RPC_URL ||
+        // Get chain config for cross-chain verification
+        const getChainForId = (id: number) => {
+          switch (id) {
+            case SUPPORTED_CHAINS.GNOSIS:
+              return gnosis;
+            case SUPPORTED_CHAINS.OPTIMISM:
+              return optimism;
+            case SUPPORTED_CHAINS.ARBITRUM:
+              return arbitrum;
+            case SUPPORTED_CHAINS.BASE:
+            default:
+              return base;
+          }
+        };
+        const getRpcUrlForId = (id: number) => {
+          switch (id) {
+            case SUPPORTED_CHAINS.GNOSIS:
+              return (
+                process.env.NEXT_PUBLIC_GNOSIS_RPC_URL ||
+                'https://rpc.gnosischain.com'
+              );
+            case SUPPORTED_CHAINS.OPTIMISM:
+              return (
+                process.env.NEXT_PUBLIC_OPTIMISM_RPC_URL ||
+                'https://mainnet.optimism.io'
+              );
+            case SUPPORTED_CHAINS.ARBITRUM:
+              return (
+                process.env.NEXT_PUBLIC_ARBITRUM_RPC_URL ||
                 'https://arb1.arbitrum.io/rpc'
-              : process.env.NEXT_PUBLIC_BASE_RPC_URL ||
-                'https://mainnet.base.org';
+              );
+            case SUPPORTED_CHAINS.BASE:
+            default:
+              return (
+                process.env.NEXT_PUBLIC_BASE_RPC_URL ||
+                'https://mainnet.base.org'
+              );
+          }
+        };
+        const targetChain = getChainForId(chainId);
+        const targetRpcUrl = getRpcUrlForId(chainId);
 
         const targetPublicClient = createPublicClient({
           chain: targetChain,
@@ -1704,14 +1734,39 @@ export function DepositEarnCard({
         setTransactionState({ step: 'deploying-safe' });
 
         // Get chain-specific configuration
-        const targetChain =
-          targetChainId === SUPPORTED_CHAINS.GNOSIS ? gnosis : arbitrum;
-        const targetRpcUrl =
-          targetChainId === SUPPORTED_CHAINS.GNOSIS
-            ? process.env.NEXT_PUBLIC_GNOSIS_RPC_URL ||
-              'https://rpc.gnosischain.com'
-            : process.env.NEXT_PUBLIC_ARBITRUM_RPC_URL ||
-              'https://arb1.arbitrum.io/rpc';
+        const getTargetChain = () => {
+          switch (targetChainId) {
+            case SUPPORTED_CHAINS.GNOSIS:
+              return gnosis;
+            case SUPPORTED_CHAINS.OPTIMISM:
+              return optimism;
+            case SUPPORTED_CHAINS.ARBITRUM:
+            default:
+              return arbitrum;
+          }
+        };
+        const getTargetRpcUrl = () => {
+          switch (targetChainId) {
+            case SUPPORTED_CHAINS.GNOSIS:
+              return (
+                process.env.NEXT_PUBLIC_GNOSIS_RPC_URL ||
+                'https://rpc.gnosischain.com'
+              );
+            case SUPPORTED_CHAINS.OPTIMISM:
+              return (
+                process.env.NEXT_PUBLIC_OPTIMISM_RPC_URL ||
+                'https://mainnet.optimism.io'
+              );
+            case SUPPORTED_CHAINS.ARBITRUM:
+            default:
+              return (
+                process.env.NEXT_PUBLIC_ARBITRUM_RPC_URL ||
+                'https://arb1.arbitrum.io/rpc'
+              );
+          }
+        };
+        const targetChain = getTargetChain();
+        const targetRpcUrl = getTargetRpcUrl();
 
         console.log(
           `[DepositEarnCard] Deploying Safe on ${chainName}. Chain object:`,

@@ -173,7 +173,32 @@ const LIFI_SUPPORTED_CHAINS: SupportedChainId[] = [
 ];
 ```
 
-#### 1.7 Add to Multi-Chain Safe Manager
+#### 1.7 Add Chain to Safe Deployment Logic
+
+**File:** `packages/web/src/app/(authenticated)/dashboard/tools/earn-module/components/deposit-earn-card.tsx`
+
+**CRITICAL:** There are TWO places in deposit-earn-card.tsx with chain switch statements that MUST include your new chain:
+
+1. **`getChainForId()` / `getRpcUrlForId()`** - Used for on-chain deployment verification
+2. **`getTargetChain()` / `getTargetRpcUrl()`** - Used for Safe deployment
+
+Add your chain to BOTH switch statements:
+
+```typescript
+import { base, arbitrum, gnosis, optimism, newchain } from 'viem/chains';
+
+// In getChainForId() and getTargetChain():
+case SUPPORTED_CHAINS.NEW_CHAIN:
+  return newchain;
+
+// In getRpcUrlForId() and getTargetRpcUrl():
+case SUPPORTED_CHAINS.NEW_CHAIN:
+  return process.env.NEXT_PUBLIC_CHAINNAME_RPC_URL || 'https://public-rpc.com';
+```
+
+**Why this matters:** Without this, Safe deployment will use the wrong chain (defaults to Arbitrum), causing deployment to fail or deploy to wrong network.
+
+#### 1.8 Add to Multi-Chain Safe Manager
 
 **File:** `packages/web/src/server/earn/multi-chain-safe-manager.ts`
 
@@ -188,7 +213,7 @@ const status: MultiChainSafeStatus = {
 };
 ```
 
-#### 1.8 Add Environment Variables
+#### 1.9 Add Environment Variables
 
 **File:** `packages/web/.env.example`
 
