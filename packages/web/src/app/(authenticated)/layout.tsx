@@ -50,8 +50,6 @@ export default async function AuthenticatedLayout({
     redirect('/signin?error=profile_creation_failed');
   }
 
-  console.log('userProfile', userProfile);
-
   // Render the dashboard for authenticated users only
   return <DashboardClientLayout>{children}</DashboardClientLayout>;
 }

@@ -57,10 +57,6 @@ export const userSafesRouter = router({
         message: 'Workspace context is unavailable.',
       });
     }
-    console.log(
-      `Fetching safes for workspace: ${workspaceId}, user: ${privyDid}`,
-    );
-
     try {
       // Get ALL Safes in workspace (not just user's)
       const safes = await db.query.userSafes.findMany({
@@ -76,7 +72,6 @@ export const userSafesRouter = router({
         createdBy: safe.userDid,
       }));
 
-      console.log(`Found ${safes.length} safes in workspace ${workspaceId}`);
       return safesWithOwnership;
     } catch (error) {
       console.error(

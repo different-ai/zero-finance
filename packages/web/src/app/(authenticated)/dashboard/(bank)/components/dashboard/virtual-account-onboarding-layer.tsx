@@ -45,10 +45,17 @@ export function VirtualAccountOnboardingLayer({
 }: Props) {
   const [showTasks, setShowTasks] = useState(false);
   const [isAccountInfoOpen, setIsAccountInfoOpen] = useState(false);
-  const { isTechnical, isHydrated } = useBimodal();
+  const [mounted, setMounted] = useState(false);
+  const { isTechnical } = useBimodal();
 
-  // Prevent hydration mismatch by using consistent value until hydrated
-  const effectiveTechnical = isHydrated ? isTechnical : false;
+  // Use local mounted state to prevent hydration mismatch
+  // This ensures we always render the non-technical version on first render
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Only use technical mode after component has mounted on client
+  const effectiveTechnical = mounted && isTechnical;
 
   const isFullyCompleted = useMemo(() => {
     if (!initialData) return false;
@@ -67,11 +74,12 @@ export function VirtualAccountOnboardingLayer({
             ? 'bg-white border border-[#1B29FF]/20 rounded-sm shadow-none'
             : 'bg-white border border-[#101010]/10 rounded-[12px] shadow-[0_2px_8px_rgba(16,16,16,0.04)]',
         )}
+        suppressHydrationWarning
       >
-        {/* Blueprint Grid (Technical only) */}
+        {/* Blueprint Grid (Technical only) - only render after mount */}
         {effectiveTechnical && <BlueprintGrid />}
 
-        {/* Crosshairs (Technical only) */}
+        {/* Crosshairs (Technical only) - only render after mount */}
         {effectiveTechnical && (
           <>
             <Crosshairs position="top-left" />
@@ -79,14 +87,14 @@ export function VirtualAccountOnboardingLayer({
           </>
         )}
 
-        {/* Meta Tag (Technical only) */}
+        {/* Meta Tag (Technical only) - only render after mount */}
         {effectiveTechnical && (
           <div className="absolute top-2 right-8 font-mono text-[9px] text-[#101010]/40 tracking-wider">
             ID::ONBOARD_001
           </div>
         )}
 
-        <div className="relative z-10 p-5 sm:p-6">
+        <div className="relative z-10 p-5 sm:p-6" suppressHydrationWarning>
           {/* Header */}
           <div className="pb-4">
             <h3

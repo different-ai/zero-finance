@@ -7,7 +7,12 @@ const nextConfig = {
 
   images: {
     formats: ['image/avif', 'image/webp'],
-    domains: ['0.finance'],
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: '0.finance',
+      },
+    ],
     minimumCacheTTL: 60,
   },
 

@@ -24,5 +24,3 @@ const pool = new Pool({
 
 // Create the Drizzle instance with the full schema
 export const db = drizzle(pool, { schema });
-
-console.log('Database connection initialized with unified schema.'); 
