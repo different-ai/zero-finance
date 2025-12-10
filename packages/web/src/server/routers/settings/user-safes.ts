@@ -106,11 +106,12 @@ export const userSafesRouter = router({
       });
     }
     try {
-      // Query by workspace only - all workspace members share access to the workspace's primary Safe
+      // Query by workspace AND Base chain (8453) - the primary Safe for transfers is always on Base
       const primarySafe = await db.query.userSafes.findFirst({
         where: and(
           eq(userSafes.safeType, 'primary'),
           eq(userSafes.workspaceId, workspaceId),
+          eq(userSafes.chainId, 8453), // Base chain - primary chain for transfers
         ),
         columns: { safeAddress: true },
       });
