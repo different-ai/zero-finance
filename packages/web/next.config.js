@@ -126,6 +126,9 @@ const nextConfig = {
     'require-in-the-middle',
     '@metamask/sdk',
     '@wagmi/connectors',
+    'sonic-boom',
+    'pino',
+    'pino-pretty',
   ],
 };
 

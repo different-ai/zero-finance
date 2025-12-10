@@ -8,6 +8,8 @@ import { Dithering } from '@paper-design/shaders-react';
 import { useBimodal } from '@/components/ui/bimodal';
 import { cn } from '@/lib/utils';
 import { LANDING_CONTENT } from './content';
+import { OrangeDAOLogo } from '@/components/orange-dao-logo';
+import { CurrentYieldBadge } from './current-yield-badge';
 
 export function HeroSection() {
   const { isTechnical, mode } = useBimodal();
@@ -16,7 +18,7 @@ export function HeroSection() {
   return (
     <>
       {/* Demo Panel - Bank Statement Style */}
-      <section className="relative border-y border-[#101010]/10 bg-white/90 overflow-hidden">
+      <section className="relative border-b border-[#101010]/10 bg-white/90 overflow-hidden">
         <GradientBackground variant="demo" className="z-0 bg-[#F6F5EF]" />
 
         {/* Blueprint grid overlay for technical mode */}
@@ -34,7 +36,7 @@ export function HeroSection() {
         )}
 
         <>
-          <div className="relative z-10 mx-auto max-w-[1200px] px-4 sm:px-6 lg:px-8 pt-16 sm:pt-20 lg:pt-24 w-full">
+          <div className="relative z-10 mx-auto max-w-[1200px] px-4 sm:px-6 lg:px-8 pt-20 sm:pt-24 lg:pt-32 w-full">
             <p
               className={cn(
                 'uppercase tracking-[0.14em] sm:tracking-[0.18em] text-[11px] sm:text-[12px] lg:text-[13px] font-medium',
@@ -55,7 +57,10 @@ export function HeroSection() {
             </p>
             <div className="mt-3 space-y-2">
               {content.features.map((feature, i) => (
-                <div key={i} className="flex items-center gap-2 text-[13px] text-[#101010]/60">
+                <div
+                  key={i}
+                  className="flex items-center gap-2 text-[13px] text-[#101010]/60"
+                >
                   <svg
                     className="w-4 h-4 text-[#1B29FF]"
                     fill="currentColor"
@@ -73,6 +78,19 @@ export function HeroSection() {
                 </div>
               ))}
             </div>
+
+            {/* Live yield badge + Backed by + Team texture */}
+            <div className="mt-6 flex flex-wrap items-center gap-4">
+              <CurrentYieldBadge />
+              <div className="flex items-center gap-2 text-[13px] text-[#101010]/60">
+                <span>Backed by</span>
+                <OrangeDAOLogo className="h-4 w-auto opacity-70" />
+              </div>
+              <span className="text-[12px] text-[#101010]/50">
+                Created by engineers behind platforms processing billions in transactions
+              </span>
+            </div>
+
             <div className="mt-8 sm:mt-10 flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6">
               {isTechnical ? (
                 <>

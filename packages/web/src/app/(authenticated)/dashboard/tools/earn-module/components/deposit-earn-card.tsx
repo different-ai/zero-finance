@@ -285,15 +285,19 @@ export function DepositEarnCard({
     );
 
   // Fetch Base USDC balance for cross-chain deposits (source chain balance)
-  // This is needed for LI.FI bridging from Base to Gnosis
+  // This is needed for bridging from Base to other chains (Gnosis, Arbitrum, Optimism)
+  // For cross-chain, the safeAddress prop IS the Base safe (passed from page-wrapper via useUserSafes)
+  // We use baseSafeAddress (from multiChainPositions) as primary, falling back to safeAddress prop
+  const crossChainSourceSafe = baseSafeAddress ?? safeAddress;
   const { data: baseUsdcBalanceData, refetch: refetchBaseUsdcBalance } =
     trpc.earn.getSafeBalanceOnChain.useQuery(
       {
-        safeAddress: baseSafeAddress ?? effectiveSafeAddress,
+        safeAddress: crossChainSourceSafe!,
         chainId: SUPPORTED_CHAINS.BASE,
       },
       {
-        enabled: !!baseSafeAddress && isCrossChain && !isNativeAsset,
+        // Enable when we have ANY safe address and this is a cross-chain non-native deposit
+        enabled: !!crossChainSourceSafe && isCrossChain && !isNativeAsset,
         staleTime: 30000,
         refetchInterval: 30000,
       },
@@ -316,7 +320,7 @@ export function DepositEarnCard({
   const isLoadingBalance = isNativeAsset
     ? !nativeBalanceData && !!effectiveSafeAddress
     : isCrossChain
-      ? !baseUsdcBalanceData && !!baseSafeAddress
+      ? !baseUsdcBalanceData && !!crossChainSourceSafe
       : !erc20BalanceData && !!effectiveSafeAddress;
 
   // Debug logging
@@ -324,22 +328,28 @@ export function DepositEarnCard({
     console.log('[DepositEarnCard] Balance state:', {
       safeAddress,
       baseSafeAddress, // From multiChainPositions
+      crossChainSourceSafe, // Used for cross-chain source balance
       effectiveSafeAddress, // Used for balance queries and transactions
       isNativeAsset,
+      isCrossChain,
       chainId,
       nativeBalanceData,
       erc20BalanceData,
+      baseUsdcBalanceData, // Cross-chain source balance
       assetBalance: assetBalance.toString(),
       isLoadingBalance,
     });
   }, [
     safeAddress,
     baseSafeAddress,
+    crossChainSourceSafe,
     effectiveSafeAddress,
     isNativeAsset,
+    isCrossChain,
     chainId,
     nativeBalanceData,
     erc20BalanceData,
+    baseUsdcBalanceData,
     assetBalance,
     isLoadingBalance,
   ]);
@@ -2728,6 +2738,8 @@ export function DepositEarnCard({
                 disabled={
                   !amount ||
                   parseFloat(amount) <= 0 ||
+                  parseFloat(amount) > parseFloat(displayBalance) ||
+                  assetBalance === 0n ||
                   !xdaiBridgeQuote ||
                   isLoadingXdaiQuote ||
                   transactionState.step !== 'idle'
@@ -2940,7 +2952,13 @@ export function DepositEarnCard({
               </div>
               <button
                 onClick={handleBridgeOnly}
-                disabled={!amount || parseFloat(amount) <= 0 || isLoadingQuote}
+                disabled={
+                  !amount ||
+                  parseFloat(amount) <= 0 ||
+                  parseFloat(amount) > parseFloat(displayBalance) ||
+                  assetBalance === 0n ||
+                  isLoadingQuote
+                }
                 className="px-4 h-10 font-mono uppercase bg-white border border-[#1B29FF]/30 hover:border-[#1B29FF] text-[#1B29FF] text-[11px] transition-colors flex items-center gap-2 whitespace-nowrap disabled:opacity-50"
               >
                 {isLoadingQuote ? (

@@ -11,6 +11,10 @@ if (!process.env.POSTGRES_URL) {
   throw new Error('POSTGRES_URL environment variable is not set');
 }
 
+// Debug: Log which database we're connecting to (redact password)
+const dbHost = process.env.POSTGRES_URL?.match(/@([^/]+)\//)?.[1] || 'unknown';
+console.log(`[DB] Connecting to database host: ${dbHost}`);
+
 // Create a connection pool
 const pool = new Pool({
   connectionString: process.env.POSTGRES_URL,

@@ -233,11 +233,7 @@ export function VaultRowDesktop({
                         : 'bg-[#2775ca]/10 text-[#2775ca]',
                   )}
                 >
-                  {isTechnical
-                    ? 'ERC-4626'
-                    : vault.asset.isNative
-                      ? 'ETH'
-                      : vault.asset.symbol}
+                  {vault.asset.isNative ? 'ETH' : vault.asset.symbol}
                 </span>
 
                 {/* Chain Badge (Technical mode only) */}
@@ -488,11 +484,7 @@ export function VaultRowMobile({
                         : 'bg-[#2775ca]/10 text-[#2775ca]',
                   )}
                 >
-                  {isTechnical
-                    ? 'ERC-4626'
-                    : vault.asset.isNative
-                      ? 'ETH'
-                      : vault.asset.symbol}
+                  {vault.asset.isNative ? 'ETH' : vault.asset.symbol}
                 </span>
 
                 {/* Chain Badge (Technical mode only) */}

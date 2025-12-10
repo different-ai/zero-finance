@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { usePrivy } from '@privy-io/react-auth';
 import { Check, Loader2, ArrowRight } from 'lucide-react';
+import { Dithering } from '@paper-design/shaders-react';
 import { useBimodal } from '@/components/ui/bimodal';
 import { cn } from '@/lib/utils';
 
@@ -49,62 +50,34 @@ export function ApiWaitlistSection({ onSubmit }: ApiWaitlistSectionProps) {
     }
   };
 
-  const { mode } = useBimodal();
+  const { mode, isTechnical } = useBimodal();
 
-  const features =
-    mode === 'consumer'
-      ? [
-          'Bank-level security with smart contract protection',
-          'Instant deposits and withdrawals',
-          'USDC stablecoin backed 1:1 with US dollars',
-          'Transparent on-chain yield sources',
-        ]
-      : [
-          'RESTful API with comprehensive documentation',
-          'White-label solution for your brand',
-          'Sub-1 week integration time',
-          'Self-custody architecture — users own their funds',
-        ];
+  const features = [
+    'RESTful API with comprehensive documentation',
+    'White-label solution for your brand',
+    'Sub-1 week integration time',
+    'Self-custody architecture — users own their funds',
+  ];
 
-  const useCases =
-    mode === 'consumer'
-      ? [
-          {
-            title: 'Emergency Fund',
-            description: 'Build your safety net with market-leading rates',
-          },
-          {
-            title: 'Savings Goals',
-            description: 'Grow your money while saving for big purchases',
-          },
-          {
-            title: 'Passive Income',
-            description: 'Earn consistently on your idle stablecoin balance',
-          },
-          {
-            title: 'Dollar Holdings',
-            description: 'Hold USD digitally while earning competitive yield',
-          },
-        ]
-      : [
-          {
-            title: 'Corporate Banking',
-            description:
-              'Offer high-yield treasury management to business customers',
-          },
-          {
-            title: 'Neobanks',
-            description: 'Add competitive savings rates to your product suite',
-          },
-          {
-            title: 'Crypto Wallets',
-            description: 'Enable idle balance yield for your users',
-          },
-          {
-            title: 'Payment Apps',
-            description: 'Let users earn while they save for upcoming payments',
-          },
-        ];
+  const useCases = [
+    {
+      title: 'Corporate Banking',
+      description:
+        'Offer high-yield treasury management to business customers',
+    },
+    {
+      title: 'Neobanks',
+      description: 'Add competitive savings rates to your product suite',
+    },
+    {
+      title: 'Crypto Wallets',
+      description: 'Enable idle balance yield for your users',
+    },
+    {
+      title: 'Payment Apps',
+      description: 'Let users earn while they save for upcoming payments',
+    },
+  ];
 
   return (
     <section
@@ -113,35 +86,48 @@ export function ApiWaitlistSection({ onSubmit }: ApiWaitlistSectionProps) {
     >
       {/* Solid cream background */}
       <div className="absolute inset-0 bg-[#F6F5EF] z-0" />
+      
+      {/* Dithering background - very subtle for readability */}
+      <div className="absolute inset-0 z-[1] opacity-10">
+        <Dithering
+          colorBack="#00000000"
+          colorFront="#1B29FF"
+          speed={0.05}
+          shape="warp"
+          type="4x4"
+          size={2}
+          scale={0.6}
+          pxSize={0.05}
+          style={{
+            width: '100%',
+            height: '100%',
+            position: 'absolute',
+            top: 0,
+            left: 0,
+          }}
+        />
+      </div>
 
       <div className="relative z-10 max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-20 lg:py-24">
         <div className="text-center mb-12">
-          <p className="uppercase tracking-[0.14em] text-[12px] text-[#101010]/60 mb-3">
-            {mode === 'consumer'
-              ? 'Start Growing Your Money'
-              : 'For Developers & Partners'}
+          <p className={cn(
+            "uppercase tracking-[0.14em] text-[12px] mb-3",
+            isTechnical ? 'font-mono text-[#1B29FF]' : 'text-[#101010]/60'
+          )}>
+            {isTechnical ? 'API ACCESS' : 'For Developers & Partners'}
           </p>
           <h2 className="font-serif text-[48px] sm:text-[64px] lg:text-[72px] leading-[0.96] tracking-[-0.015em] text-[#101010] mb-6">
-            {mode === 'consumer' ? (
-              <>
-                Save Smarter with{' '}
-                <span className="text-[#1B29FF]">High-Yield</span>
-                <br />
-                Stablecoin Accounts
-              </>
-            ) : (
-              <>
-                Embed <span className="text-[#1B29FF]">High-Yield Savings</span>
-                <br />
-                in Your App
-              </>
-            )}
+            <>
+              Embed <span className="text-[#1B29FF]">0 Finance</span>
+              <br />
+              in Your App
+            </>
           </h2>
-          <p className="text-[16px] leading-[1.5] text-[#101010]/80 max-w-[600px] mx-auto">
-            {mode === 'consumer'
-              ? 'Open a USDC savings account that earns competitive yield automatically. No lock-ups, no hidden fees, just transparent returns on your digital dollars.'
-              : 'Integrate competitive high-yield savings directly into your fintech product. We handle the DeFi complexity, insurance, and compliance — you get a clean REST API.'}
-          </p>
+          {mode !== 'consumer' && (
+            <p className="text-[16px] leading-[1.5] text-[#101010]/80 max-w-[600px] mx-auto">
+              Allow your users to save more and easily with our API.
+            </p>
+          )}
         </div>
 
         {/* Two-column layout */}
@@ -150,7 +136,7 @@ export function ApiWaitlistSection({ onSubmit }: ApiWaitlistSectionProps) {
           <div className="bg-white/95 backdrop-blur-sm p-8 lg:p-12">
             <div className="mb-8">
               <h3 className="text-[20px] font-semibold tracking-[-0.01em] text-[#101010] mb-6">
-                {mode === 'consumer' ? 'Why Choose 0 Finance' : 'What You Get'}
+                What You Get
               </h3>
               <div className="space-y-3">
                 {features.map((feature, index) => (
@@ -168,7 +154,7 @@ export function ApiWaitlistSection({ onSubmit }: ApiWaitlistSectionProps) {
 
             <div>
               <h3 className="text-[20px] font-semibold tracking-[-0.01em] text-[#101010] mb-6">
-                {mode === 'consumer' ? 'Perfect For' : 'Use Cases'}
+                Use Cases
               </h3>
               <div className="space-y-4">
                 {useCases.map((item, index) => (
@@ -206,18 +192,12 @@ export function ApiWaitlistSection({ onSubmit }: ApiWaitlistSectionProps) {
             ) : (
               <>
                 <h3 className="text-[24px] font-semibold tracking-[-0.01em] text-[#101010] mb-3">
-                  {mode === 'consumer'
-                    ? 'Start Earning Today'
-                    : 'Request API Access'}
+                  Request API Access
                 </h3>
                 <p className="text-[14px] text-[#101010]/60 mb-6">
                   {authenticated
-                    ? mode === 'consumer'
-                      ? "You're signed in! Start earning in seconds."
-                      : "You're signed in! Join the waitlist with one click."
-                    : mode === 'consumer'
-                      ? 'Open your high-yield account in under a minute.'
-                      : "Join the waitlist and we'll reach out to discuss your needs."}
+                    ? "You're signed in! Join the waitlist with one click."
+                    : "Join the waitlist and we'll reach out to discuss your integration needs."}
                 </p>
 
                 <form onSubmit={handleSubmit} className="space-y-4">
@@ -239,40 +219,36 @@ export function ApiWaitlistSection({ onSubmit }: ApiWaitlistSectionProps) {
                     </div>
                   )}
 
-                  {mode === 'business' && (
-                    <div>
-                      <label className="block text-[13px] font-medium text-[#101010] mb-2">
-                        Company Name
-                      </label>
-                      <input
-                        type="text"
-                        value={companyName}
-                        onChange={(e) => setCompanyName(e.target.value)}
-                        required
-                        className="w-full h-12 px-4 bg-white border border-[#101010]/20 rounded-md 
-                                 focus:border-[#1B29FF] focus:ring-2 focus:ring-[#1B29FF]/20 
-                                 text-[15px] placeholder:text-[#101010]/40 transition-colors"
-                        placeholder="Acme Inc."
-                      />
-                    </div>
-                  )}
+                  <div>
+                    <label className="block text-[13px] font-medium text-[#101010] mb-2">
+                      Company Name
+                    </label>
+                    <input
+                      type="text"
+                      value={companyName}
+                      onChange={(e) => setCompanyName(e.target.value)}
+                      required
+                      className="w-full h-12 px-4 bg-white border border-[#101010]/20 rounded-md 
+                               focus:border-[#1B29FF] focus:ring-2 focus:ring-[#1B29FF]/20 
+                               text-[15px] placeholder:text-[#101010]/40 transition-colors"
+                      placeholder="Acme Inc."
+                    />
+                  </div>
 
-                  {mode === 'business' && (
-                    <div>
-                      <label className="block text-[13px] font-medium text-[#101010] mb-2">
-                        Use Case (Optional)
-                      </label>
-                      <textarea
-                        value={useCase}
-                        onChange={(e) => setUseCase(e.target.value)}
-                        rows={3}
-                        className="w-full px-4 py-3 bg-white border border-[#101010]/20 rounded-md 
-                                 focus:border-[#1B29FF] focus:ring-2 focus:ring-[#1B29FF]/20 
-                                 text-[15px] placeholder:text-[#101010]/40 transition-colors resize-none"
-                        placeholder="Tell us about your integration plans..."
-                      />
-                    </div>
-                  )}
+                  <div>
+                    <label className="block text-[13px] font-medium text-[#101010] mb-2">
+                      Use Case (Optional)
+                    </label>
+                    <textarea
+                      value={useCase}
+                      onChange={(e) => setUseCase(e.target.value)}
+                      rows={3}
+                      className="w-full px-4 py-3 bg-white border border-[#101010]/20 rounded-md 
+                               focus:border-[#1B29FF] focus:ring-2 focus:ring-[#1B29FF]/20 
+                               text-[15px] placeholder:text-[#101010]/40 transition-colors resize-none"
+                      placeholder="Tell us about your integration plans..."
+                    />
+                  </div>
 
                   {error && (
                     <div className="p-3 bg-red-50 border border-red-200 rounded-md">
@@ -294,12 +270,12 @@ export function ApiWaitlistSection({ onSubmit }: ApiWaitlistSectionProps) {
                       </>
                     ) : authenticated ? (
                       <>
-                        {mode === 'consumer' ? 'Open Account' : 'Join Waitlist'}
+                        Join Waitlist
                         <ArrowRight className="h-4 w-4" />
                       </>
                     ) : (
                       <>
-                        {mode === 'consumer' ? 'Get Started' : 'Request Access'}
+                        Request Access
                         <ArrowRight className="h-4 w-4" />
                       </>
                     )}
