@@ -36,7 +36,7 @@ import {
   type Address,
 } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
-import { base, mainnet, arbitrum, gnosis } from 'viem/chains';
+import { base, mainnet, arbitrum, gnosis, optimism } from 'viem/chains';
 import crypto from 'crypto';
 
 // Multi-chain imports
@@ -199,6 +199,9 @@ let arbitrumPublicClient: ReturnType<typeof createPublicClient> | null = null;
 // Gnosis public client singleton
 let gnosisPublicClient: ReturnType<typeof createPublicClient> | null = null;
 
+// Optimism public client singleton
+let optimismPublicClient: ReturnType<typeof createPublicClient> | null = null;
+
 function getPublicClientForChain(chainId: number) {
   if (chainId === BASE_CHAIN_ID) {
     return publicClient;
@@ -255,6 +258,22 @@ function getPublicClientForChain(chainId: number) {
     }
 
     return gnosisPublicClient;
+  }
+
+  if (chainId === SUPPORTED_CHAINS.OPTIMISM) {
+    if (!optimismPublicClient) {
+      const rpcUrl =
+        process.env.OPTIMISM_RPC_URL ??
+        process.env.NEXT_PUBLIC_OPTIMISM_RPC_URL ??
+        'https://mainnet.optimism.io';
+
+      optimismPublicClient = createPublicClient({
+        chain: optimism,
+        transport: http(rpcUrl),
+      });
+    }
+
+    return optimismPublicClient;
   }
 
   throw new Error(`Unsupported chain id ${chainId} for public client`);
