@@ -48,9 +48,10 @@ const CHAIN_LOGOS: Record<SupportedChainId, ChainLogoConfig> = {
     width: 60,
   },
   [SUPPORTED_CHAINS.OPTIMISM]: {
-    src: '/optimism-square-logo.png',
+    src: '/logos/_optimism-logo-long.svg',
     alt: 'Optimism',
-    hasName: false,
+    hasName: true,
+    width: 70,
   },
 };
 

@@ -31,7 +31,9 @@ import {
 } from '@/lib/constants';
 import {
   SUPPORTED_CHAINS,
+  CHAIN_CONFIG,
   type SupportedChainId,
+  getChainDisplayName,
 } from '@/lib/constants/chains';
 
 // Chains supported by Across Protocol for bridging
@@ -1694,12 +1696,7 @@ export function DepositEarnCard({
   ) {
     const { deploymentInfo } = transactionState;
     const targetChainId = deploymentInfo.chainId as SupportedChainId;
-    const chainName =
-      targetChainId === SUPPORTED_CHAINS.ARBITRUM
-        ? 'Arbitrum'
-        : targetChainId === SUPPORTED_CHAINS.GNOSIS
-          ? 'Gnosis'
-          : `Chain ${targetChainId}`;
+    const chainName = getChainDisplayName(targetChainId);
 
     const handleDeploySafe = async () => {
       try {
@@ -2720,7 +2717,7 @@ export function DepositEarnCard({
   // --- CROSS-CHAIN BRIDGING NOT SUPPORTED ---
   // Show message for chains not supported by any bridge provider
   if (isCrossChain && !isBridgingSupported && !isLiFiBridging) {
-    const chainName = `Chain ${chainId}`;
+    const chainName = getChainDisplayName(chainId);
 
     return (
       <div className="space-y-4 p-4 bg-[#fafafa] border border-[#1B29FF]/20 relative">
@@ -2759,8 +2756,8 @@ export function DepositEarnCard({
 
   // --- CROSS-CHAIN SPLIT VIEW ---
   if (isCrossChain && targetSafeAddress) {
-    const chainName = chainId === 42161 ? 'Arbitrum' : `Chain ${chainId}`;
-    const chainCode = chainId === 42161 ? 'ARB' : `CHAIN_${chainId}`;
+    const chainName = getChainDisplayName(chainId);
+    const chainCode = CHAIN_CONFIG[chainId].name.toUpperCase();
 
     return (
       <div className="space-y-6 p-4 bg-[#fafafa] border border-[#1B29FF]/20 relative">

@@ -49,8 +49,8 @@ const CHAIN_LOGOS: Record<SupportedChainId, { src: string; hasName: boolean }> =
       hasName: true,
     },
     [SUPPORTED_CHAINS.OPTIMISM]: {
-      src: '/optimism-square-logo.png',
-      hasName: false,
+      src: '/logos/_optimism-logo-long.svg',
+      hasName: true,
     },
   };
 
