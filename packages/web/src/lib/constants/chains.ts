@@ -13,6 +13,7 @@ export const SUPPORTED_CHAINS = {
   ARBITRUM: 42161,
   MAINNET: 1,
   GNOSIS: 100,
+  OPTIMISM: 10,
 } as const;
 
 export type SupportedChainId =
@@ -125,6 +126,28 @@ export const CHAIN_CONFIG: Record<SupportedChainId, ChainConfig> = {
     },
     // Gnosis uses USDC.e (bridged USDC from Circle)
     usdcAddress: '0x2a22f9c3b484c3629090FeED35F17Ff8F88f76F0',
+  },
+  [SUPPORTED_CHAINS.OPTIMISM]: {
+    name: 'optimism',
+    displayName: 'Optimism',
+    color: '#FF0420',
+    rpcUrls: {
+      alchemy: process.env.OPTIMISM_RPC_URL,
+      public: [
+        'https://mainnet.optimism.io',
+        'https://optimism.llamarpc.com',
+        'https://optimism.drpc.org',
+      ],
+    },
+    explorerUrl: 'https://optimistic.etherscan.io',
+    nativeCurrency: {
+      name: 'Ethereum',
+      symbol: 'ETH',
+      decimals: 18,
+    },
+    // Native USDC on Optimism (NOT bridged USDC.e)
+    usdcAddress: '0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85',
+    acrossMulticallHandler: '0x924a9f036260DdD5808007E1AA95f08eD08aA569',
   },
 } as const;
 

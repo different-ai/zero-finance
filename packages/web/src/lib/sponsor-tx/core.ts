@@ -3,7 +3,7 @@
 import Safe, { EthSafeTransaction } from '@safe-global/protocol-kit';
 import type { MetaTransactionData } from '@safe-global/safe-core-sdk-types';
 import { Address, Hex, encodeFunctionData } from 'viem';
-import { base, arbitrum, gnosis } from 'viem/chains';
+import { base, arbitrum, gnosis, optimism } from 'viem/chains';
 import type { Chain } from 'viem/chains';
 import { getBaseRpcUrl } from '@/lib/base-rpc-url';
 import { SUPPORTED_CHAINS } from '@/lib/constants/chains';
@@ -39,6 +39,11 @@ function getRpcUrlForChain(chainId: number): string {
       process.env.NEXT_PUBLIC_GNOSIS_RPC_URL || 'https://rpc.gnosischain.com'
     );
   }
+  if (chainId === SUPPORTED_CHAINS.OPTIMISM) {
+    return (
+      process.env.NEXT_PUBLIC_OPTIMISM_RPC_URL || 'https://mainnet.optimism.io'
+    );
+  }
   return getBaseRpcUrl(); // Default to Base
 }
 
@@ -51,6 +56,9 @@ function getChainForId(chainId: number): Chain {
   }
   if (chainId === SUPPORTED_CHAINS.GNOSIS) {
     return gnosis;
+  }
+  if (chainId === SUPPORTED_CHAINS.OPTIMISM) {
+    return optimism;
   }
   return base;
 }

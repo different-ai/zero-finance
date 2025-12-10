@@ -1,7 +1,7 @@
 'use client';
 
 import { PrivyProvider } from '@privy-io/react-auth';
-import { base, mainnet, arbitrum, gnosis } from 'viem/chains';
+import { base, mainnet, arbitrum, gnosis, optimism } from 'viem/chains';
 import { ReactNode, useState } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from 'next-themes';
@@ -56,12 +56,13 @@ function getQueryClient() {
 }
 
 const wagmiConfig = createConfig({
-  chains: [base, mainnet, arbitrum, gnosis],
+  chains: [base, mainnet, arbitrum, gnosis, optimism],
   transports: {
     [base.id]: http(),
     [mainnet.id]: http(),
     [arbitrum.id]: http(),
     [gnosis.id]: http(),
+    [optimism.id]: http(),
   },
 });
 
@@ -90,7 +91,7 @@ export function Providers({ children }: { children: ReactNode }) {
         externalWallets: {
           coinbaseWallet: {},
         },
-        supportedChains: [base, arbitrum, gnosis],
+        supportedChains: [base, arbitrum, gnosis, optimism],
         defaultChain: base,
         embeddedWallets: {
           ethereum: {
