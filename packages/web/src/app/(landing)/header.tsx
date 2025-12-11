@@ -1,13 +1,8 @@
-'use client';
-
 import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { useBimodal, BimodalToggle } from '@/components/ui/bimodal';
 
 export function Header() {
-  const { isTechnical, toggle } = useBimodal();
-
   return (
     <header className="absolute top-0 left-0 right-0 z-50 bg-transparent">
       <div className="mx-auto max-w-[1200px] px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
@@ -25,40 +20,23 @@ export function Header() {
             </span>
           </Link>
           <nav className="flex items-center gap-3 sm:gap-4">
-            {/* Bimodal Toggle */}
-            <div className="hidden md:flex items-center gap-3">
-              <span className="text-[11px] text-[#101010]/60 uppercase tracking-wider">
-                Experience
-              </span>
-              <BimodalToggle
-                isTechnical={isTechnical}
-                onToggle={toggle}
-                showLabels={true}
-              />
-            </div>
             <Link
-              className={`hidden sm:inline-flex px-3 sm:px-4 py-1.5 sm:py-2 text-[#101010] hover:text-[#0050ff] text-[12px] sm:text-[13px] font-medium transition-colors ${
-                isTechnical ? 'font-mono' : ''
-              }`}
+              className="hidden sm:inline-flex px-3 sm:px-4 py-1.5 sm:py-2 text-[#101010] hover:text-[#0050ff] text-[12px] sm:text-[13px] font-medium transition-colors"
               href="#api-access"
             >
-              {isTechnical ? 'API::ACCESS' : 'API'}
+              API
             </Link>
             <Link
-              className={`px-3 sm:px-4 py-1.5 sm:py-2 text-[#101010] hover:text-[#0050ff] text-[12px] sm:text-[13px] font-medium transition-colors ${
-                isTechnical ? 'font-mono' : ''
-              }`}
+              className="px-3 sm:px-4 py-1.5 sm:py-2 text-[#101010] hover:text-[#0050ff] text-[12px] sm:text-[13px] font-medium transition-colors"
               href="/dashboard?demo=true"
             >
-              {isTechnical ? 'DEMO::MODE' : 'Demo'}
+              Demo
             </Link>
             <Link
-              className={`px-3 sm:px-4 py-1.5 sm:py-2 bg-[#1B29FF] hover:bg-[#1420CC] text-white text-[12px] sm:text-[13px] font-medium rounded-md transition-all ${
-                isTechnical ? 'font-mono' : ''
-              }`}
+              className="px-3 sm:px-4 py-1.5 sm:py-2 bg-[#1B29FF] hover:bg-[#1420CC] text-white text-[12px] sm:text-[13px] font-medium rounded-md transition-all"
               href="/signin"
             >
-              {isTechnical ? 'AUTH::LOGIN' : 'Sign in'}
+              Sign in
             </Link>
           </nav>
         </div>

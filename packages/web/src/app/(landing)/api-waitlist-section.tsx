@@ -4,8 +4,6 @@ import React, { useState } from 'react';
 import { usePrivy } from '@privy-io/react-auth';
 import { Check, Loader2, ArrowRight } from 'lucide-react';
 import { Dithering } from '@paper-design/shaders-react';
-import { useBimodal } from '@/components/ui/bimodal';
-import { cn } from '@/lib/utils';
 
 interface ApiWaitlistSectionProps {
   onSubmit: (data: {
@@ -50,8 +48,6 @@ export function ApiWaitlistSection({ onSubmit }: ApiWaitlistSectionProps) {
     }
   };
 
-  const { mode, isTechnical } = useBimodal();
-
   const features = [
     'RESTful API with comprehensive documentation',
     'White-label solution for your brand',
@@ -62,8 +58,7 @@ export function ApiWaitlistSection({ onSubmit }: ApiWaitlistSectionProps) {
   const useCases = [
     {
       title: 'Corporate Banking',
-      description:
-        'Offer high-yield treasury management to business customers',
+      description: 'Offer high-yield treasury management to business customers',
     },
     {
       title: 'Neobanks',
@@ -86,7 +81,7 @@ export function ApiWaitlistSection({ onSubmit }: ApiWaitlistSectionProps) {
     >
       {/* Solid cream background */}
       <div className="absolute inset-0 bg-[#F6F5EF] z-0" />
-      
+
       {/* Dithering background - very subtle for readability */}
       <div className="absolute inset-0 z-[1] opacity-10">
         <Dithering
@@ -110,24 +105,14 @@ export function ApiWaitlistSection({ onSubmit }: ApiWaitlistSectionProps) {
 
       <div className="relative z-10 max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-20 lg:py-24">
         <div className="text-center mb-12">
-          <p className={cn(
-            "uppercase tracking-[0.14em] text-[12px] mb-3",
-            isTechnical ? 'font-mono text-[#1B29FF]' : 'text-[#101010]/60'
-          )}>
-            {isTechnical ? 'API ACCESS' : 'For Developers & Partners'}
+          <p className="uppercase tracking-[0.14em] text-[12px] mb-3 text-[#101010]/60">
+            For Developers & Partners
           </p>
           <h2 className="font-serif text-[48px] sm:text-[64px] lg:text-[72px] leading-[0.96] tracking-[-0.015em] text-[#101010] mb-6">
-            <>
-              Embed <span className="text-[#1B29FF]">0 Finance</span>
-              <br />
-              in Your App
-            </>
+            Embed <span className="text-[#1B29FF]">0 Finance</span>
+            <br />
+            in Your App
           </h2>
-          {mode !== 'consumer' && (
-            <p className="text-[16px] leading-[1.5] text-[#101010]/80 max-w-[600px] mx-auto">
-              Allow your users to save more and easily with our API.
-            </p>
-          )}
         </div>
 
         {/* Two-column layout */}

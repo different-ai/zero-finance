@@ -5,15 +5,12 @@ import Link from 'next/link';
 import { GradientBackground } from './gradient-background';
 import { BrowserFrame } from '@/components/BrowserFrame';
 import { Dithering } from '@paper-design/shaders-react';
-import { useBimodal } from '@/components/ui/bimodal';
-import { cn } from '@/lib/utils';
 import { LANDING_CONTENT } from './content';
 import { OrangeDAOLogo } from '@/components/orange-dao-logo';
 import { CurrentYieldBadge } from './current-yield-badge';
 
 export function HeroSection() {
-  const { isTechnical, mode } = useBimodal();
-  const content = LANDING_CONTENT.hero[isTechnical ? 'technical' : 'company'];
+  const content = LANDING_CONTENT.hero;
 
   return (
     <>
@@ -21,30 +18,13 @@ export function HeroSection() {
       <section className="relative border-b border-[#101010]/10 bg-white/90 overflow-hidden">
         <GradientBackground variant="demo" className="z-0 bg-[#F6F5EF]" />
 
-        {/* Blueprint grid overlay for technical mode */}
-        {isTechnical && (
-          <div
-            className="absolute inset-0 z-[1] pointer-events-none opacity-[0.02]"
-            style={{
-              backgroundImage: `
-                linear-gradient(to right, #1B29FF 1px, transparent 1px),
-                linear-gradient(to bottom, #1B29FF 1px, transparent 1px)
-              `,
-              backgroundSize: '24px 24px',
-            }}
-          />
-        )}
-
         <>
           <div className="relative z-10 mx-auto max-w-[1200px] px-4 sm:px-6 lg:px-8 pt-20 sm:pt-24 lg:pt-32 w-full">
-            <p
-              className={cn(
-                'uppercase tracking-[0.14em] sm:tracking-[0.18em] text-[11px] sm:text-[12px] lg:text-[13px] font-medium',
-                isTechnical ? 'font-mono text-[#1B29FF]' : 'text-[#101010]/70',
-              )}
-            >
-              {content.badge}
-            </p>
+            {content.badge && (
+              <p className="uppercase tracking-[0.14em] sm:tracking-[0.18em] text-[11px] sm:text-[12px] lg:text-[13px] font-medium text-[#101010]/70">
+                {content.badge}
+              </p>
+            )}
             <h1 className="mt-3 font-serif text-[36px] sm:text-[52px] md:text-[72px] lg:text-[88px] leading-[0.96] tracking-[-0.015em] text-[#101010]">
               {content.headline.prefix}{' '}
               <span className="text-[#1B29FF] text-[44px] sm:text-[64px] md:text-[88px] lg:text-[108px] leading-[0.9]">
@@ -72,9 +52,7 @@ export function HeroSection() {
                       clipRule="evenodd"
                     />
                   </svg>
-                  <span className={cn(isTechnical && 'font-mono text-[12px]')}>
-                    {feature}
-                  </span>
+                  <span>{feature}</span>
                 </div>
               ))}
             </div>
@@ -87,42 +65,24 @@ export function HeroSection() {
                 <OrangeDAOLogo className="h-4 w-auto opacity-70" />
               </div>
               <span className="text-[12px] text-[#101010]/50">
-                Created by engineers behind platforms processing billions in transactions
+                Created by engineers behind platforms processing billions in
+                transactions
               </span>
             </div>
 
             <div className="mt-8 sm:mt-10 flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6">
-              {isTechnical ? (
-                <>
-                  <a
-                    href={content.cta.primary.href}
-                    className="inline-flex items-center px-6 py-3 text-[15px] sm:text-[16px] font-mono font-medium text-white bg-[#1B29FF] hover:bg-[#1420CC] border-2 border-[#1B29FF] hover:border-[#1420CC] transition-all uppercase tracking-wide"
-                  >
-                    {content.cta.primary.label}
-                  </a>
-                  <Link
-                    className="inline-flex items-center px-6 py-3 text-[15px] sm:text-[16px] font-mono border-2 border-[#101010]/20 hover:border-[#1B29FF] hover:bg-[#1B29FF]/5 transition-all"
-                    href={content.cta.secondary.href}
-                  >
-                    {content.cta.secondary.label}
-                  </Link>
-                </>
-              ) : (
-                <>
-                  <Link
-                    className="inline-flex items-center px-6 py-3 text-[15px] sm:text-[16px] font-medium text-white bg-[#1B29FF] hover:bg-[#1420CC] rounded-md transition-colors"
-                    href={content.cta.primary.href}
-                  >
-                    {content.cta.primary.label}
-                  </Link>
-                  <Link
-                    className="inline-flex items-center text-[14px] sm:text-[15px] lg:text-[16px] text-[#101010] hover:text-[#1B29FF] underline decoration-[#101010]/30 underline-offset-[4px] hover:decoration-[#1B29FF] transition-colors"
-                    href={content.cta.secondary.href}
-                  >
-                    {content.cta.secondary.label}
-                  </Link>
-                </>
-              )}
+              <Link
+                className="inline-flex items-center px-6 py-3 text-[15px] sm:text-[16px] font-medium text-white bg-[#1B29FF] hover:bg-[#1420CC] rounded-md transition-colors"
+                href={content.cta.primary.href}
+              >
+                {content.cta.primary.label}
+              </Link>
+              <Link
+                className="inline-flex items-center text-[14px] sm:text-[15px] lg:text-[16px] text-[#101010] hover:text-[#1B29FF] underline decoration-[#101010]/30 underline-offset-[4px] hover:decoration-[#1B29FF] transition-colors"
+                href={content.cta.secondary.href}
+              >
+                {content.cta.secondary.label}
+              </Link>
             </div>
           </div>
         </>
@@ -288,14 +248,10 @@ export function HeroSection() {
         </div>
         <div className="relative z-10 mx-auto max-w-[1200px] px-4 sm:px-6 lg:px-8">
           <p className="uppercase tracking-[0.14em] sm:tracking-[0.18em] text-[11px] sm:text-[12px] text-[#101010]/60">
-            {mode === 'consumer'
-              ? 'Simple as any savings account'
-              : 'Simple as any savings account'}
+            Simple as any savings account
           </p>
           <h2 className="mt-2 font-serif text-[24px] sm:text-[30px] lg:text-[36px] leading-[1.1] tracking-[-0.01em] text-[#101010]">
-            {mode === 'consumer'
-              ? 'Sign Up → Deposit → Earn'
-              : 'Connect → Sweep → Earn'}
+            Sign Up → Deposit → Earn
           </h2>
           <div className="mt-6 sm:mt-8 grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-[#101010]/10 border border-[#101010]/10 bg-white/95 backdrop-blur-sm shadow-[0_2px_8px_rgba(16,16,16,0.04)]">
             <div className="p-4 sm:p-6">
@@ -303,14 +259,11 @@ export function HeroSection() {
                 1
               </div>
               <h3 className="mt-2 text-[15px] sm:text-[16px] font-medium text-[#101010]">
-                {mode === 'consumer'
-                  ? 'Create your account'
-                  : 'Connect your bank'}
+                Create your account
               </h3>
               <p className="mt-1 text-[13px] sm:text-[14px] text-[#101010]/70">
-                {mode === 'consumer'
-                  ? 'Sign up with email or wallet in under 60 seconds. No bank connection required.'
-                  : 'Link Mercury, Brex, or any bank via Plaid. Set your operating balance threshold.'}
+                Sign up with email or wallet in under 60 seconds. No bank
+                connection required.
               </p>
             </div>
             <div className="p-4 sm:p-6">
@@ -318,12 +271,11 @@ export function HeroSection() {
                 2
               </div>
               <h3 className="mt-2 text-[15px] sm:text-[16px] font-medium text-[#101010]">
-                {mode === 'consumer' ? 'Deposit USDC' : 'Auto-sweep idle cash'}
+                Deposit USDC
               </h3>
               <p className="mt-1 text-[13px] sm:text-[14px] text-[#101010]/70">
-                {mode === 'consumer'
-                  ? 'Transfer USDC from any wallet or exchange. Your funds start earning immediately.'
-                  : 'Funds above your threshold automatically sweep to high-yield strategies. No manual transfers.'}
+                Transfer USDC from any wallet or exchange. Your funds start
+                earning immediately.
               </p>
             </div>
             <div className="p-4 sm:p-6">
@@ -331,24 +283,12 @@ export function HeroSection() {
                 3
               </div>
               <h3 className="mt-2 text-[15px] sm:text-[16px] font-medium text-[#101010]">
-                {mode === 'consumer'
-                  ? 'Earn & withdraw anytime'
-                  : 'Spend & withdraw freely'}
+                Earn & withdraw anytime
               </h3>
               <p className="mt-1 text-[13px] sm:text-[14px] text-[#101010]/70">
-                {mode === 'consumer'
-                  ? 'Watch your balance grow with daily compounding. Withdraw instantly, no penalties or lock-ups.'
-                  : 'Use your corporate card globally or withdraw anytime. No penalties, no lock-ups, instant liquidity.'}
+                Watch your balance grow with daily compounding. Withdraw
+                instantly, no penalties or lock-ups.
               </p>
-              {mode === 'business' && (
-                <div className="mt-3 flex items-center">
-                  <img
-                    src="/Visa_Brandmark_Blue_RGB_2021.png"
-                    alt="Visa"
-                    className="h-6 w-auto"
-                  />
-                </div>
-              )}
             </div>
           </div>
         </div>
