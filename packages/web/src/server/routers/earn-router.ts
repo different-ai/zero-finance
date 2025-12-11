@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { router, protectedProcedure } from '../create-router';
+import { router, protectedProcedure, publicProcedure } from '../create-router';
 import { db } from '@/db';
 import {
   userSafes,
@@ -450,6 +450,22 @@ const ERC4626_VAULT_ABI_FOR_INFO = parseAbi([
 ]);
 
 export const earnRouter = router({
+  // Public endpoint for landing page APY display
+  publicApy: publicProcedure.query(async () => {
+    const { PRIMARY_VAULT } = await import('../earn/base-vaults');
+    const { apyBasisPoints, source, snapshot } = await getVaultApyBasisPoints(
+      PRIMARY_VAULT.address,
+    );
+
+    return {
+      apyPercent: apyBasisPoints / 100, // e.g., 800 -> 8.00
+      apyBasisPoints,
+      source,
+      vaultName: PRIMARY_VAULT.displayName,
+      lastUpdated: snapshot.capturedAt.toISOString(),
+    };
+  }),
+
   recordInstall: protectedProcedure
     .input(z.object({ safeAddress: z.string().length(42) }))
     .mutation(async ({ ctx, input }) => {

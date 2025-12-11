@@ -17,9 +17,19 @@ import {
   X,
   Calendar,
 } from 'lucide-react';
+import { trpc } from '@/utils/trpc';
 
 export default function LegalPage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // Fetch live APY from public endpoint
+  const { data: apyData } = trpc.earn.publicApy.useQuery(undefined, {
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    refetchOnWindowFocus: false,
+  });
+
+  // Format APY for display (e.g., 8.5% or "~8%")
+  const displayApy = apyData ? `${apyData.apyPercent.toFixed(1)}%` : '~8%'; // Fallback while loading
 
   return (
     <div className="min-h-screen w-full bg-[#F7F7F2]">
@@ -125,7 +135,7 @@ export default function LegalPage() {
           <div className="text-center mb-8 sm:mb-12">
             <Shield className="w-12 h-12 sm:w-16 sm:h-16 text-[#0050ff] mx-auto mb-3 sm:mb-4" />
             <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-[#101010] mb-3 sm:mb-4">
-              8% APY - Fully Insured
+              {displayApy} APY - Fully Insured
             </h2>
             <p className="text-[14px] sm:text-[16px] lg:text-[18px] text-[#101010]/70 max-w-3xl mx-auto">
               Your yield is protected by enterprise-grade smart contract
@@ -205,7 +215,7 @@ export default function LegalPage() {
 
           <div className="bg-blue-50 border border-blue-200 rounded-xl p-8">
             <h3 className="text-xl font-bold text-[#0f1e46] mb-4">
-              How the 8% Yield Works
+              How the {displayApy} Yield Works
             </h3>
             <div className="space-y-4">
               <div className="flex items-start gap-4">
@@ -543,8 +553,8 @@ export default function LegalPage() {
                 performance doesn't guarantee future results.
               </li>
               <li>
-                • The 10% APY is variable and subject to change based on market
-                conditions and protocol performance.
+                • The APY is variable (currently {displayApy}) and subject to
+                change based on market conditions and protocol performance.
               </li>
               <li>
                 • Insurance covers smart contract risks but not market risks or
@@ -586,15 +596,15 @@ export default function LegalPage() {
 
             <div className="bg-white rounded-lg p-6 shadow-sm">
               <h3 className="font-semibold text-gray-900 mb-2">
-                How is the 8% yield sustainable?
+                How is the {displayApy} yield sustainable?
               </h3>
               <p className="text-gray-700">
                 The yield comes from established DeFi protocols that have been
                 operating for years. These include lending markets (like Aave),
-                liquidity provision, and other yield strategies. The 8% includes
-                the base protocol yield plus additional optimization strategies.
-                This is sustainable because it's based on real economic
-                activity, not speculation.
+                liquidity provision, and other yield strategies. The{' '}
+                {displayApy} includes the base protocol yield plus additional
+                optimization strategies. This is sustainable because it's based
+                on real economic activity, not speculation.
               </p>
             </div>
 
@@ -670,8 +680,8 @@ export default function LegalPage() {
             Ready to take control?
           </h2>
           <p className="text-xl text-[#5a6b91] mb-8">
-            Join companies earning 10% APY with full custody and insurance
-            protection
+            Join companies earning {displayApy} APY with full custody and
+            insurance protection
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link
