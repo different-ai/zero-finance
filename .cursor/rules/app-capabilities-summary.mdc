@@ -68,6 +68,7 @@
 * action logs console.
 * real-time activity tracking & visualization (sparklines, badges)
 * animated status alerts & notifications
+* public sign-in uses **email one-time codes** (privy) with a single banking-first experience (no mode toggle)
 * **welcome slideshow** – 3-slide interactive tutorial for new users:
   * slide 1: virtual bank account features (ach/iban setup)
   * slide 2: gmail integration & ai-powered inbox
