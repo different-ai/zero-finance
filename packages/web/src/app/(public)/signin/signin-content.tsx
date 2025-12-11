@@ -45,12 +45,12 @@ interface SigninContent extends SigninContentBase {
 const SIGNIN_CONTENT: SigninContent = {
   badge: 'Business Savings Account',
   headline: {
-    prefix: 'Earn',
-    highlight: '8% APY',
-    suffix: 'on your treasury',
+    prefix: 'Get paid on your',
+    highlight: 'idle treasury',
+    suffix: '',
   },
   description:
-    'High-yield savings for startups. No minimums, no lock-ups, full liquidity.',
+    'Earn more on your idle treasury. No minimums, no lock-ups. ',
   features: [
     '8% target APY with daily compounding',
     'Insurance included — up to $1M coverage',
@@ -66,12 +66,17 @@ export default function SignInContent() {
   const posthog = usePostHog();
   const content = SIGNIN_CONTENT;
 
+  // Privy's `useLoginWithEmail` state machine doesn't expose a guaranteed "reset"
+  // method. To make "Change email" reliable, we control the UI step locally.
+  const [forceEmailStep, setForceEmailStep] = useState(false);
+
   const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
   const [emailError, setEmailError] = useState('');
 
   const emailInputRef = useRef<HTMLInputElement>(null);
   const codeInputRef = useRef<HTMLInputElement>(null);
+  const autoSubmitTimeoutRef = useRef<number | null>(null);
 
   const source = (searchParams.get('source') as SourceType) || null;
   const inviteToken = searchParams.get('invite');
@@ -109,10 +114,10 @@ export default function SignInContent() {
 
   // Auto-focus email input on mount
   useEffect(() => {
-    if (!authenticated && state.status === 'initial') {
+    if (!authenticated && (forceEmailStep || state.status === 'initial')) {
       emailInputRef.current?.focus();
     }
-  }, [authenticated, state.status]);
+  }, [authenticated, state.status, forceEmailStep]);
 
   // Auto-focus code input when awaiting code
   useEffect(() => {
@@ -140,6 +145,7 @@ export default function SignInContent() {
     }
 
     setEmailError('');
+    setForceEmailStep(false);
     posthog?.capture('signin_code_sent', {
       source: source || 'direct',
     });
@@ -175,6 +181,7 @@ export default function SignInContent() {
     });
 
     try {
+      setForceEmailStep(false);
       await sendCode({ email: email.trim() });
     } catch (error) {
       setEmailError('Failed to resend code. Please try again.');
@@ -182,9 +189,15 @@ export default function SignInContent() {
   };
 
   const handleBackToEmail = () => {
+    if (autoSubmitTimeoutRef.current) {
+      window.clearTimeout(autoSubmitTimeoutRef.current);
+      autoSubmitTimeoutRef.current = null;
+    }
     setCode('');
-    setEmail('');
     setEmailError('');
+    setForceEmailStep(true);
+    // Focus next tick so the email step has rendered.
+    window.setTimeout(() => emailInputRef.current?.focus(), 0);
   };
   return (
     <section className="relative min-h-screen bg-[#F6F5EF] md:bg-white/90 overflow-hidden">
@@ -303,7 +316,8 @@ export default function SignInContent() {
               {!authenticated && (
                 <>
                   {/* Step 1: Email Input */}
-                  {(state.status === 'initial' ||
+                  {(forceEmailStep ||
+                    state.status === 'initial' ||
                     state.status === 'sending-code' ||
                     state.status === 'error') && (
                     <form onSubmit={handleSendCode} className="space-y-4">
@@ -363,7 +377,7 @@ export default function SignInContent() {
                   )}
 
                   {/* Step 2: Code Sent Confirmation */}
-                  {state.status === 'awaiting-code-input' && (
+                  {!forceEmailStep && state.status === 'awaiting-code-input' && (
                     <div className="space-y-4">
                       <div className="p-4 bg-[#EAF0FF] border border-[#1B29FF]/20 rounded-md">
                         <div className="flex items-start gap-3">
@@ -396,11 +410,24 @@ export default function SignInContent() {
                             value={code}
                             onChange={(value) => {
                               setCode(value);
-                              // Auto-submit when 6 digits entered
+                              // Auto-submit when 6 digits entered (cancelable so
+                              // "Change email" is reliable).
+                              if (autoSubmitTimeoutRef.current) {
+                                window.clearTimeout(autoSubmitTimeoutRef.current);
+                                autoSubmitTimeoutRef.current = null;
+                              }
                               if (value.length === 6) {
-                                setTimeout(() => {
-                                  loginWithCode({ code: value.trim() });
-                                }, 100);
+                                autoSubmitTimeoutRef.current = window.setTimeout(
+                                  () => {
+                                    if (
+                                      !forceEmailStep &&
+                                      state.status === 'awaiting-code-input'
+                                    ) {
+                                      loginWithCode({ code: value.trim() });
+                                    }
+                                  },
+                                  100,
+                                );
                               }
                             }}
                             inputMode="numeric"
@@ -439,7 +466,7 @@ export default function SignInContent() {
                   )}
 
                   {/* Step 3: Submitting Code */}
-                  {state.status === 'submitting-code' && (
+                  {!forceEmailStep && state.status === 'submitting-code' && (
                     <div className="p-6 bg-white border border-[#101010]/10 rounded-md">
                       <div className="flex items-center justify-center gap-3">
                         <Loader2 className="h-5 w-5 animate-spin text-[#1B29FF]" />
