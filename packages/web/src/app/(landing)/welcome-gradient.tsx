@@ -1,5 +1,5 @@
 /** @paper-design/shaders-react@0.0.54 */
-import { MeshGradient } from '@paper-design/shaders-react';
+import { Dithering } from '@paper-design/shaders-react';
 
 /**
  * Code exported from Paper
@@ -12,14 +12,24 @@ export default function GeneratedComponent({
   className?: string;
 }) {
   return (
-    <MeshGradient
-      className={`absolute inset-0 z-0 ${className}`}
-      speed={0.2}
-    //   transparent also
-      colors={[ '#668fff', '#1B29FF',  'rgba(246, 245, 239, 0)']}
-      distortion={0.8}
-      swirl={0.1}
-      style={{ height: '100vh', width: '100vw' }}
-    />
+    <div className="absolute inset-0 z-0 opacity-10">
+    <Dithering
+      colorBack="#00000000"
+      colorFront="#1B29FF"
+      speed={0.05}
+      shape="warp"
+      type="4x4"
+      size={2}
+      scale={0.6}
+      pxSize={0.05}
+      style={{
+        width: '100%',
+        height: '100%',
+        position: 'absolute',
+        top: 0,
+          left: 0,
+        }}
+      />
+    </div>
   );
 }

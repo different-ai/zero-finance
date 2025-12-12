@@ -22,7 +22,7 @@ import {
   createPublicClient,
   http,
 } from 'viem';
-import { base, arbitrum, gnosis } from 'viem/chains';
+import { base, arbitrum, gnosis, optimism } from 'viem/chains';
 import { useSafeRelay } from '@/hooks/use-safe-relay';
 import { SUPPORTED_CHAINS } from '@/lib/constants/chains';
 import {
@@ -31,10 +31,6 @@ import {
 } from '@/server/earn/base-vaults';
 import { ALL_CROSS_CHAIN_VAULTS } from '@/server/earn/cross-chain-vaults';
 import { useSmartWallets } from '@privy-io/react-auth/smart-wallets';
-import Safe, {
-  SafeAccountConfig,
-  SafeDeploymentConfig,
-} from '@safe-global/protocol-kit';
 
 // Contract addresses for superOETH → ETH swap on Base
 const SUPER_OETH_ADDRESS =
@@ -94,6 +90,11 @@ type WithdrawStep =
 interface DeploymentInfo {
   chainId: number;
   predictedAddress: string;
+  transaction: {
+    to: string;
+    data: string;
+    value: string;
+  };
 }
 
 interface WithdrawState {
@@ -148,6 +149,16 @@ export function WithdrawEarnCard({
     estimatedFillTime: number;
   } | null>(null);
   const [isLoadingArbBridgeQuote, setIsLoadingArbBridgeQuote] = useState(false);
+
+  // Optimism bridge-back state (for bridging USDC back to Base)
+  const [opBridgeAmount, setOpBridgeAmount] = useState('');
+  const [opBridgeQuote, setOpBridgeQuote] = useState<{
+    inputAmount: string;
+    outputAmount: string;
+    totalFee: string;
+    estimatedFillTime: number;
+  } | null>(null);
+  const [isLoadingOpBridgeQuote, setIsLoadingOpBridgeQuote] = useState(false);
 
   // Track initial balance for poll-until-changed
   const initialBalanceRef = useRef<bigint | null>(null);
@@ -225,13 +236,24 @@ export function WithdrawEarnCard({
   // Select chain based on chainId
   const isArbitrum = chainId === 42161;
   const isGnosis = chainId === 100;
-  const chain = isGnosis ? gnosis : isArbitrum ? arbitrum : base;
+  const isOptimism = chainId === 10;
+
+  const chain = isGnosis
+    ? gnosis
+    : isOptimism
+      ? optimism
+      : isArbitrum
+        ? arbitrum
+        : base;
   const rpcUrl = isGnosis
     ? process.env.NEXT_PUBLIC_GNOSIS_RPC_URL || 'https://rpc.gnosischain.com'
-    : isArbitrum
-      ? process.env.NEXT_PUBLIC_ARBITRUM_RPC_URL ||
-        'https://arb1.arbitrum.io/rpc'
-      : process.env.NEXT_PUBLIC_BASE_RPC_URL;
+    : isOptimism
+      ? process.env.NEXT_PUBLIC_OPTIMISM_RPC_URL ||
+        'https://mainnet.optimism.io'
+      : isArbitrum
+        ? process.env.NEXT_PUBLIC_ARBITRUM_RPC_URL ||
+          'https://arb1.arbitrum.io/rpc'
+        : process.env.NEXT_PUBLIC_BASE_RPC_URL;
 
   const publicClient = createPublicClient({
     chain,
@@ -286,13 +308,37 @@ export function WithdrawEarnCard({
           console.log(
             '[WithdrawEarnCard] Safe registered but not deployed, prompting deployment',
           );
-          setWithdrawState({
-            step: 'needs-safe-deployment',
-            deploymentInfo: {
-              chainId: chainId,
-              predictedAddress: targetSafeAddress,
-            },
-          });
+          try {
+            const res = await safeDeploymentMutation.mutateAsync({
+              targetChainId: chainId,
+              safeType: 'primary',
+            });
+
+            setWithdrawState({
+              step: 'needs-safe-deployment',
+              deploymentInfo: {
+                chainId: chainId,
+                predictedAddress: res.predictedAddress,
+                transaction: {
+                  to: res.to,
+                  data: res.data,
+                  value: res.value,
+                },
+              },
+            });
+          } catch (err) {
+            console.error(
+              '[WithdrawEarnCard] Failed to fetch deployment info after on-chain mismatch:',
+              err,
+            );
+            setWithdrawState({
+              step: 'error',
+              errorMessage:
+                err instanceof Error
+                  ? err.message
+                  : 'Failed to load account setup info. Please refresh.',
+            });
+          }
         }
       } catch (err) {
         console.error(
@@ -306,7 +352,14 @@ export function WithdrawEarnCard({
     };
 
     checkSafeDeployment();
-  }, [isCrossChain, targetSafeAddress, chainId, publicClient]);
+  }, [
+    isCrossChain,
+    targetSafeAddress,
+    chainId,
+    publicClient,
+    withdrawState.step,
+    safeDeploymentMutation,
+  ]);
 
   // Check if Safe needs to be deployed on target chain (for cross-chain withdrawals)
   const needsSafeDeployment = useMemo(() => {
@@ -356,6 +409,11 @@ export function WithdrawEarnCard({
               deploymentInfo: {
                 chainId: chainId,
                 predictedAddress: res.predictedAddress,
+                transaction: {
+                  to: res.to,
+                  data: res.data,
+                  value: res.value,
+                },
               },
             });
           },
@@ -473,8 +531,9 @@ export function WithdrawEarnCard({
     return () => clearTimeout(debounceTimer);
   }, [isGnosisVault, bridgeAmount, trpcUtils]);
 
-  // Arbitrum detection
+  // Arbitrum / Optimism detection
   const isArbitrumVault = chainId === SUPPORTED_CHAINS.ARBITRUM;
+  const isOptimismVault = chainId === SUPPORTED_CHAINS.OPTIMISM;
 
   // Fetch Arbitrum -> Base bridge quote when bridge amount changes
   useEffect(() => {
@@ -509,6 +568,40 @@ export function WithdrawEarnCard({
     const debounceTimer = setTimeout(fetchArbBridgeQuote, 500);
     return () => clearTimeout(debounceTimer);
   }, [isArbitrumVault, arbBridgeAmount, trpcUtils]);
+
+  // Fetch Optimism -> Base bridge quote when bridge amount changes
+  useEffect(() => {
+    if (
+      !isOptimismVault ||
+      !opBridgeAmount ||
+      parseFloat(opBridgeAmount) <= 0
+    ) {
+      setOpBridgeQuote(null);
+      return;
+    }
+
+    const fetchOpBridgeQuote = async () => {
+      setIsLoadingOpBridgeQuote(true);
+      try {
+        const amountIn6Decimals = parseUnits(opBridgeAmount, 6); // USDC has 6 decimals
+        const quote = await trpcUtils.earn.getOptimismUsdcToBaseQuote.fetch({
+          amount: amountIn6Decimals.toString(),
+        });
+        setOpBridgeQuote(quote);
+      } catch (error) {
+        console.error(
+          '[WithdrawEarnCard] Failed to fetch Optimism bridge quote:',
+          error,
+        );
+        setOpBridgeQuote(null);
+      } finally {
+        setIsLoadingOpBridgeQuote(false);
+      }
+    };
+
+    const debounceTimer = setTimeout(fetchOpBridgeQuote, 500);
+    return () => clearTimeout(debounceTimer);
+  }, [isOptimismVault, opBridgeAmount, trpcUtils]);
 
   // Cache share decimals to avoid repeated RPC calls - use ref to avoid re-renders
   const cachedShareDecimalsRef = useRef<Record<string, number>>({});
@@ -972,6 +1065,7 @@ export function WithdrawEarnCard({
         smartWalletAddress,
         gnosisClient,
         targetSafeAddress,
+        gnosis,
       );
 
       console.log('[WithdrawEarnCard] Bridge tx hash:', bridgeTxHash);
@@ -1019,6 +1113,9 @@ export function WithdrawEarnCard({
 
   // Handler for bridging Arbitrum USDC back to Base
   const arbBridgeMutation = trpc.earn.getArbitrumToBaseBridgeTx.useMutation();
+
+  // Handler for bridging Optimism USDC back to Base
+  const opBridgeMutation = trpc.earn.getOptimismToBaseBridgeTx.useMutation();
 
   const handleArbBridgeToBase = async () => {
     if (!arbBridgeAmount || !targetSafeAddress || !baseSafeAddress) return;
@@ -1069,6 +1166,7 @@ export function WithdrawEarnCard({
         smartWalletAddress,
         arbitrumClient,
         targetSafeAddress,
+        arbitrum,
       );
 
       console.log('[WithdrawEarnCard] Arbitrum bridge tx hash:', bridgeTxHash);
@@ -1110,6 +1208,95 @@ export function WithdrawEarnCard({
     if (vaultInfo) {
       const maxAmount = formatUnits(vaultInfo.assets, vaultInfo.assetDecimals);
       setArbBridgeAmount(maxAmount);
+    }
+  };
+
+  const handleOpBridgeToBase = async () => {
+    if (!opBridgeAmount || !targetSafeAddress || !baseSafeAddress) return;
+
+    try {
+      setIsBridging(true);
+      setWithdrawState({ step: 'processing' });
+
+      const opBridgeAmountBigInt = parseUnits(opBridgeAmount, 6); // USDC has 6 decimals
+
+      const bridgeResult = await opBridgeMutation.mutateAsync({
+        amount: opBridgeAmountBigInt.toString(),
+      });
+
+      // Get the smart wallet client for Optimism
+      const optimismClient = await getClientForChain({ id: chainId });
+      if (!optimismClient) {
+        throw new Error('Failed to get Optimism client');
+      }
+
+      const smartWalletAddress = optimismClient.account?.address;
+      if (!smartWalletAddress) {
+        throw new Error('No smart wallet address found');
+      }
+
+      const { buildSafeTx, relaySafeTx } = await import(
+        '@/lib/sponsor-tx/core'
+      );
+
+      const transactions = bridgeResult.transactions.map((tx) => ({
+        to: tx.to as Address,
+        value: tx.value,
+        data: tx.data as `0x${string}`,
+      }));
+
+      const safeTx = await buildSafeTx(transactions, {
+        safeAddress: targetSafeAddress,
+        chainId,
+        gas: 400_000n,
+      });
+
+      const bridgeTxHash = await relaySafeTx(
+        safeTx,
+        smartWalletAddress,
+        optimismClient,
+        targetSafeAddress,
+        optimism,
+      );
+
+      console.log('[WithdrawEarnCard] Optimism bridge tx hash:', bridgeTxHash);
+
+      setWithdrawState({
+        step: 'confirming',
+        txHash: bridgeTxHash,
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 10000));
+
+      setWithdrawState({
+        step: 'success',
+        txHash: bridgeTxHash,
+        withdrawnAmount: opBridgeAmount,
+        outputAsset: 'USDC (arriving on Base)',
+      });
+
+      setOpBridgeAmount('');
+      toast.success(
+        'Bridge initiated! Funds will arrive on Base in ~2-10 minutes.',
+      );
+    } catch (error) {
+      console.error('[WithdrawEarnCard] Optimism bridge error:', error);
+      setWithdrawState({
+        step: 'error',
+        errorMessage: error instanceof Error ? error.message : 'Bridge failed',
+      });
+      toast.error(
+        `Bridge failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      );
+    } finally {
+      setIsBridging(false);
+    }
+  };
+
+  const handleMaxOpBridge = () => {
+    if (vaultInfo) {
+      const maxAmount = formatUnits(vaultInfo.assets, vaultInfo.assetDecimals);
+      setOpBridgeAmount(maxAmount);
     }
   };
 
@@ -1486,6 +1673,8 @@ export function WithdrawEarnCard({
         return 'Gnosis';
       case SUPPORTED_CHAINS.ARBITRUM:
         return 'Arbitrum';
+      case SUPPORTED_CHAINS.OPTIMISM:
+        return 'Optimism';
       case SUPPORTED_CHAINS.BASE:
         return 'Base';
       default:
@@ -1513,67 +1702,39 @@ export function WithdrawEarnCard({
         );
       }
 
-      const ownerAddress = targetClient.account?.address;
-      if (!ownerAddress) {
-        throw new Error('No valid owner address found (Smart Wallet)');
-      }
+      // Use backend-provided predicted address + deployment tx.
+      // The backend clones the Base Safe owners/threshold.
+      const predictedSafeAddress = withdrawState.deploymentInfo
+        .predictedAddress as Address;
 
-      console.log('[WithdrawEarnCard] Owner address:', ownerAddress);
-
-      // Create Safe configuration
-      const safeAccountConfig: SafeAccountConfig = {
-        owners: [ownerAddress as Address],
-        threshold: 1,
-      };
-
-      // Use the Base Safe address as salt nonce for deterministic address matching
-      // CRITICAL: Use baseSafeAddress from getMultiChainPositions, NOT safeAddress prop
-      // The safeAddress prop may come from workspace-scoped query which can be different
-      if (!baseSafeAddress) {
-        throw new Error(
-          'Base Safe address not found. Cannot deploy cross-chain Safe without Base Safe.',
-        );
-      }
-      const saltNonce = baseSafeAddress.toLowerCase();
-      const safeDeploymentConfig: SafeDeploymentConfig = {
-        saltNonce,
-        safeVersion: '1.4.1',
-      };
+      console.log(
+        `[WithdrawEarnCard] Predicted Safe address on ${chainName}: ${predictedSafeAddress}`,
+      );
 
       // Get RPC URL for target chain
       const targetRpcUrl =
         targetChainId === SUPPORTED_CHAINS.GNOSIS
           ? process.env.NEXT_PUBLIC_GNOSIS_RPC_URL ||
             'https://rpc.gnosischain.com'
-          : targetChainId === SUPPORTED_CHAINS.ARBITRUM
-            ? process.env.NEXT_PUBLIC_ARBITRUM_RPC_URL ||
-              'https://arb1.arbitrum.io/rpc'
-            : process.env.NEXT_PUBLIC_BASE_RPC_URL ||
-              'https://mainnet.base.org';
-
-      // Initialize the Protocol Kit
-      const protocolKit = await Safe.init({
-        predictedSafe: {
-          safeAccountConfig,
-          safeDeploymentConfig,
-        },
-        provider: targetRpcUrl,
-      });
-
-      // Get the predicted Safe address
-      const predictedSafeAddress = (await protocolKit.getAddress()) as Address;
-      console.log(
-        `[WithdrawEarnCard] Predicted Safe address on ${chainName}: ${predictedSafeAddress}`,
-      );
+          : targetChainId === SUPPORTED_CHAINS.OPTIMISM
+            ? process.env.NEXT_PUBLIC_OPTIMISM_RPC_URL ||
+              'https://mainnet.optimism.io'
+            : targetChainId === SUPPORTED_CHAINS.ARBITRUM
+              ? process.env.NEXT_PUBLIC_ARBITRUM_RPC_URL ||
+                'https://arb1.arbitrum.io/rpc'
+              : process.env.NEXT_PUBLIC_BASE_RPC_URL ||
+                'https://mainnet.base.org';
 
       // Check if Safe is already deployed
       const targetPublicClient = createPublicClient({
         chain:
           targetChainId === SUPPORTED_CHAINS.GNOSIS
             ? gnosis
-            : targetChainId === SUPPORTED_CHAINS.ARBITRUM
-              ? arbitrum
-              : base,
+            : targetChainId === SUPPORTED_CHAINS.OPTIMISM
+              ? optimism
+              : targetChainId === SUPPORTED_CHAINS.ARBITRUM
+                ? arbitrum
+                : base,
         transport: http(targetRpcUrl),
       });
 
@@ -1595,14 +1756,11 @@ export function WithdrawEarnCard({
         // Deploy the Safe
         console.log('[WithdrawEarnCard] Deploying new Safe...');
 
-        const deploymentTransaction =
-          await protocolKit.createSafeDeploymentTransaction();
-
-        // Send deployment transaction via smart wallet
+        // Send backend-generated deployment transaction via smart wallet
         const txHash = await targetClient.sendTransaction({
-          to: deploymentTransaction.to as Address,
-          data: deploymentTransaction.data as `0x${string}`,
-          value: BigInt(deploymentTransaction.value || '0'),
+          to: withdrawState.deploymentInfo.transaction.to as Address,
+          data: withdrawState.deploymentInfo.transaction.data as `0x${string}`,
+          value: BigInt(withdrawState.deploymentInfo.transaction.value || '0'),
         });
 
         console.log('[WithdrawEarnCard] Deployment tx hash:', txHash);
@@ -2216,6 +2374,194 @@ export function WithdrawEarnCard({
         {/* Help text */}
         <p className="font-mono text-[10px] text-center text-[#101010]/40">
           2-STEP WITHDRAWAL: Vault → Arb USDC → Base USDC
+        </p>
+      </div>
+    );
+  }
+
+  // --- OPTIMISM 2-STEP WITHDRAWAL FLOW ---
+  // Step 1: Withdraw from vault (get USDC on Optimism)
+  // Step 2: Bridge USDC -> Base (via Across Protocol)
+  if (isOptimismVault && targetSafeAddress) {
+    return (
+      <div className="space-y-6 p-4 bg-[#fafafa] border border-[#1B29FF]/20 relative">
+        {/* Blueprint grid overlay */}
+        <div
+          className="absolute inset-0 pointer-events-none opacity-[0.03]"
+          style={{
+            backgroundImage: `
+              linear-gradient(to right, #1B29FF 1px, transparent 1px),
+              linear-gradient(to bottom, #1B29FF 1px, transparent 1px)
+            `,
+            backgroundSize: '20px 20px',
+          }}
+        />
+
+        {/* Success Banner */}
+        <SuccessBanner />
+
+        {/* Processing Banner */}
+        <ProcessingBanner />
+
+        {/* TOP CARD: Vault Balance - Withdraw USDC */}
+        <div className="bg-white border border-[#1B29FF]/30 p-4 relative">
+          <div className="flex justify-between items-start mb-3">
+            <div>
+              <p className="font-mono uppercase tracking-[0.14em] text-[11px] text-[#1B29FF] mb-1">
+                VAULT::OP_USDC_BALANCE
+              </p>
+              <p className="font-mono text-[24px] tabular-nums text-[#101010]">
+                {displayBalance}{' '}
+                <span className="text-[12px] text-[#1B29FF]">USDC</span>
+              </p>
+              <p className="text-[12px] font-mono text-[#101010]/50">
+                ≈ ${displayBalance} USD
+              </p>
+            </div>
+          </div>
+
+          {/* Withdraw from vault */}
+          <div className="space-y-2">
+            <label className="font-mono text-[10px] text-[#1B29FF]/70 uppercase">
+              INPUT::WITHDRAW_AMOUNT (Vault → Optimism USDC)
+            </label>
+            <div className="relative">
+              <input
+                type="number"
+                placeholder="0.0"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                className="w-full h-10 px-3 font-mono bg-white border border-[#1B29FF]/30 focus:border-[#1B29FF] focus:outline-none text-[14px] transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                step="0.000001"
+                min="0"
+                max={availableBalance}
+                disabled={isProcessing}
+              />
+              <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                <span className="font-mono text-[10px] text-[#1B29FF]/70">
+                  USDC
+                </span>
+                <button
+                  type="button"
+                  onClick={handleMax}
+                  className="font-mono px-2 py-1 text-[10px] text-[#1B29FF] border border-[#1B29FF]/30 hover:border-[#1B29FF] transition-colors bg-white hover:bg-[#1B29FF]/5"
+                  disabled={isProcessing}
+                >
+                  MAX
+                </button>
+              </div>
+            </div>
+            <button
+              onClick={handleWithdraw}
+              disabled={disableWithdraw}
+              className="w-full h-10 font-mono uppercase bg-white border-2 border-[#1B29FF] text-[#1B29FF] hover:bg-[#1B29FF] hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            >
+              {isProcessing ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <ArrowUpFromLine className="h-4 w-4" />
+              )}
+              <span className="leading-none">[ WITHDRAW FROM VAULT ]</span>
+            </button>
+          </div>
+
+          <p className="font-mono text-[10px] text-center text-[#1B29FF]/60 mt-3">
+            Redeems vault shares for USDC on Optimism
+          </p>
+        </div>
+
+        {/* BOTTOM CARD: Optimism USDC Balance - Bridge to Base */}
+        <div className="bg-white border border-[#1B29FF]/30 p-4 relative">
+          <div className="flex justify-between items-start mb-3">
+            <div>
+              <p className="font-mono uppercase tracking-[0.14em] text-[11px] text-[#1B29FF] mb-1">
+                BALANCE::OP_USDC (Spendable)
+              </p>
+              <p className="font-mono text-[14px] tabular-nums text-[#101010]/70">
+                Enter amount to bridge back to Base
+              </p>
+            </div>
+          </div>
+
+          {/* Bridge to Base Input & Button */}
+          <div className="space-y-2">
+            <label className="font-mono text-[10px] text-[#1B29FF]/70 uppercase">
+              INPUT::BRIDGE_AMOUNT (Op USDC → Base USDC)
+            </label>
+            <div className="relative">
+              <input
+                type="number"
+                placeholder="0.0"
+                value={opBridgeAmount}
+                onChange={(e) => setOpBridgeAmount(e.target.value)}
+                className="w-full h-10 px-3 font-mono bg-white border border-[#1B29FF]/30 focus:border-[#1B29FF] focus:outline-none text-[14px] transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                step="0.000001"
+                min="0"
+                disabled={isBridging}
+              />
+              <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                <span className="font-mono text-[10px] text-[#1B29FF]/70">
+                  USDC
+                </span>
+                <button
+                  type="button"
+                  onClick={handleMaxOpBridge}
+                  className="font-mono px-2 py-1 text-[10px] text-[#1B29FF] border border-[#1B29FF]/30 hover:border-[#1B29FF] transition-colors bg-white hover:bg-[#1B29FF]/5"
+                  disabled={isBridging}
+                >
+                  MAX
+                </button>
+              </div>
+            </div>
+
+            {/* Bridge Quote Info */}
+            {isLoadingOpBridgeQuote && (
+              <div className="flex items-center gap-2 text-[10px] font-mono text-[#1B29FF]/60">
+                <Loader2 className="h-3 w-3 animate-spin" />
+                Fetching quote...
+              </div>
+            )}
+            {opBridgeQuote && !isLoadingOpBridgeQuote && (
+              <div className="p-2 bg-[#1B29FF]/5 border border-[#1B29FF]/20 space-y-1">
+                <p className="font-mono text-[10px] text-[#1B29FF]">
+                  OUTPUT ≈ {formatUnits(BigInt(opBridgeQuote.outputAmount), 6)}{' '}
+                  USDC
+                </p>
+                <p className="font-mono text-[10px] text-[#101010]/50">
+                  Fee: ~{formatUnits(BigInt(opBridgeQuote.totalFee), 6)} USDC •
+                  ETA: ~{Math.ceil(opBridgeQuote.estimatedFillTime / 60)} min
+                </p>
+              </div>
+            )}
+
+            <button
+              onClick={handleOpBridgeToBase}
+              disabled={
+                !opBridgeAmount ||
+                parseFloat(opBridgeAmount) <= 0 ||
+                !opBridgeQuote ||
+                isLoadingOpBridgeQuote ||
+                isBridging
+              }
+              className="w-full h-10 font-mono uppercase bg-white border-2 border-[#1B29FF] text-[#1B29FF] hover:bg-[#1B29FF] hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            >
+              {isBridging ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <ArrowUpFromLine className="h-4 w-4" />
+              )}
+              <span className="leading-none">[ BRIDGE TO BASE ]</span>
+            </button>
+          </div>
+
+          <p className="font-mono text-[10px] text-center text-[#1B29FF]/60 mt-3">
+            Bridge via Across Protocol • Funds arrive on Base in ~2-10 min
+          </p>
+        </div>
+
+        {/* Help text */}
+        <p className="font-mono text-[10px] text-center text-[#101010]/40">
+          2-STEP WITHDRAWAL: Vault → Op USDC → Base USDC
         </p>
       </div>
     );

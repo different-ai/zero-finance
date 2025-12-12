@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { router, protectedProcedure } from '../create-router';
+import { router, protectedProcedure, publicProcedure } from '../create-router';
 import { db } from '@/db';
 import {
   userSafes,
@@ -450,6 +450,22 @@ const ERC4626_VAULT_ABI_FOR_INFO = parseAbi([
 ]);
 
 export const earnRouter = router({
+  // Public endpoint for landing page APY display
+  publicApy: publicProcedure.query(async () => {
+    const { PRIMARY_VAULT } = await import('../earn/base-vaults');
+    const { apyBasisPoints, source, snapshot } = await getVaultApyBasisPoints(
+      PRIMARY_VAULT.address,
+    );
+
+    return {
+      apyPercent: apyBasisPoints / 100, // e.g., 800 -> 8.00
+      apyBasisPoints,
+      source,
+      vaultName: PRIMARY_VAULT.displayName,
+      lastUpdated: snapshot.capturedAt.toISOString(),
+    };
+  }),
+
   recordInstall: protectedProcedure
     .input(z.object({ safeAddress: z.string().length(42) }))
     .mutation(async ({ ctx, input }) => {
@@ -1317,16 +1333,28 @@ export const earnRouter = router({
       // Select chain and RPC based on chainId
       const isArbitrum = chainId === 42161;
       const isGnosis = chainId === 100;
-      const chain = isGnosis ? gnosis : isArbitrum ? arbitrum : base;
+      const isOptimism = chainId === 10;
+
+      const chain = isGnosis
+        ? gnosis
+        : isOptimism
+          ? optimism
+          : isArbitrum
+            ? arbitrum
+            : base;
       const rpcUrl = isGnosis
         ? (process.env.GNOSIS_RPC_URL ??
           process.env.NEXT_PUBLIC_GNOSIS_RPC_URL ??
           'https://rpc.gnosischain.com')
-        : isArbitrum
-          ? (process.env.ARBITRUM_RPC_URL ??
-            process.env.NEXT_PUBLIC_ARBITRUM_RPC_URL ??
-            'https://arb1.arbitrum.io/rpc')
-          : BASE_RPC_URL;
+        : isOptimism
+          ? (process.env.OPTIMISM_RPC_URL ??
+            process.env.NEXT_PUBLIC_OPTIMISM_RPC_URL ??
+            'https://mainnet.optimism.io')
+          : isArbitrum
+            ? (process.env.ARBITRUM_RPC_URL ??
+              process.env.NEXT_PUBLIC_ARBITRUM_RPC_URL ??
+              'https://arb1.arbitrum.io/rpc')
+            : BASE_RPC_URL;
 
       // Get the user's Safe on the target chain using workspace context
       const workspaceId = ctx.workspaceId;
@@ -3777,6 +3805,153 @@ export const earnRouter = router({
         };
       } catch (error) {
         console.error('[getArbitrumToBaseBridgeTx] Error:', error);
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message:
+            error instanceof Error
+              ? error.message
+              : 'Failed to encode bridge transaction',
+        });
+      }
+    }),
+
+  // ============================================================
+  // Optimism Withdrawal Bridge Quotes (Optimism -> Base)
+  // ============================================================
+
+  /**
+   * Get quote for bridging Optimism USDC to Base USDC
+   * Used for Optimism vault withdrawals: withdraw USDC -> bridge to Base
+   */
+  getOptimismUsdcToBaseQuote: protectedProcedure
+    .input(
+      z.object({
+        amount: z.string(), // Amount in USDC (6 decimals) as string
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const { getBridgeQuoteForVault } = await import(
+        '../earn/across-bridge-service'
+      );
+
+      const privyDid = requirePrivyDid(ctx);
+      const workspaceId = requireWorkspaceId(ctx.workspaceId);
+      const userSafesList = await getMultiChainUserSafes(privyDid, workspaceId);
+
+      const baseSafe = userSafesList.find(
+        (s) => s.chainId === SUPPORTED_CHAINS.BASE,
+      );
+      if (!baseSafe) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message:
+            'No Base Safe found for user. Please set up your account first.',
+        });
+      }
+
+      const optimismSafe = userSafesList.find(
+        (s) => s.chainId === SUPPORTED_CHAINS.OPTIMISM,
+      );
+      if (!optimismSafe) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message:
+            'No Optimism Safe found for user. Please set up your Optimism account first.',
+        });
+      }
+
+      try {
+        const quote = await getBridgeQuoteForVault({
+          amount: input.amount,
+          sourceChainId: SUPPORTED_CHAINS.OPTIMISM,
+          destChainId: SUPPORTED_CHAINS.BASE,
+          destinationSafeAddress: baseSafe.safeAddress as Address,
+        });
+
+        return {
+          inputAmount: quote.inputAmount.toString(),
+          outputAmount: quote.outputAmount.toString(),
+          totalFee: quote.totalFee.toString(),
+          lpFee: quote.lpFee.toString(),
+          relayerGasFee: quote.relayerGasFee.toString(),
+          estimatedFillTime: quote.estimatedFillTime,
+          sourceAddress: optimismSafe.safeAddress,
+          destinationAddress: baseSafe.safeAddress,
+        };
+      } catch (error) {
+        console.error('[getOptimismUsdcToBaseQuote] Error:', error);
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message:
+            error instanceof Error
+              ? error.message
+              : 'Failed to get bridge quote',
+        });
+      }
+    }),
+
+  /**
+   * Get bridge transaction for Optimism USDC to Base
+   * Returns encoded transactions ready to be executed via Safe relay
+   */
+  getOptimismToBaseBridgeTx: protectedProcedure
+    .input(
+      z.object({
+        amount: z.string(), // Amount in USDC (6 decimals) as string
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const { encodeBridgeTransfer } = await import(
+        '../earn/across-bridge-service'
+      );
+
+      const privyDid = requirePrivyDid(ctx);
+      const workspaceId = requireWorkspaceId(ctx.workspaceId);
+      const userSafesList = await getMultiChainUserSafes(privyDid, workspaceId);
+
+      const baseSafe = userSafesList.find(
+        (s) => s.chainId === SUPPORTED_CHAINS.BASE,
+      );
+      if (!baseSafe) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message:
+            'No Base Safe found for user. Please set up your account first.',
+        });
+      }
+
+      const optimismSafe = userSafesList.find(
+        (s) => s.chainId === SUPPORTED_CHAINS.OPTIMISM,
+      );
+      if (!optimismSafe) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message:
+            'No Optimism Safe found for user. Please set up your Optimism account first.',
+        });
+      }
+
+      try {
+        const transactions = await encodeBridgeTransfer({
+          depositor: optimismSafe.safeAddress as Address,
+          destinationSafeAddress: baseSafe.safeAddress as Address,
+          amount: input.amount,
+          sourceChainId: SUPPORTED_CHAINS.OPTIMISM,
+          destChainId: SUPPORTED_CHAINS.BASE,
+        });
+
+        return {
+          transactions: transactions.map((tx) => ({
+            to: tx.to,
+            data: tx.data,
+            value: tx.value.toString(),
+            chainId: tx.chainId,
+          })),
+          sourceAddress: optimismSafe.safeAddress,
+          destinationAddress: baseSafe.safeAddress,
+        };
+      } catch (error) {
+        console.error('[getOptimismToBaseBridgeTx] Error:', error);
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
           message:

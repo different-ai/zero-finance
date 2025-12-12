@@ -25,15 +25,8 @@ import { usePostHog } from 'posthog-js/react';
 import { api } from '@/trpc/react';
 import { OrangeDAOLogo } from '@/components/orange-dao-logo';
 import GeneratedComponent from '@/app/(landing)/welcome-gradient';
-import { useBimodal, BimodalToggle } from '@/components/ui/bimodal';
 
 export type SourceType = 'adhd' | 'e-commerce' | 'solo' | null;
-
-interface TechnicalFeature {
-  label: string;
-  value: string;
-  status: string;
-}
 
 interface SigninContentBase {
   badge: string;
@@ -45,117 +38,25 @@ interface SigninContentBase {
   description: string;
 }
 
-interface CompanySigninContent extends SigninContentBase {
+interface SigninContent extends SigninContentBase {
   features: string[];
 }
 
-interface TechnicalSigninContent extends SigninContentBase {
-  features: TechnicalFeature[];
-}
-
-interface BimodalSigninContent {
-  company: CompanySigninContent;
-  technical: TechnicalSigninContent;
-}
-
-const SIGNIN_CONTENT: BimodalSigninContent = {
-  company: {
-    badge: 'High-Yield Business Savings',
-    headline: {
-      prefix: '',
-      highlight: 'High-Yield',
-      suffix: 'on your idle treasury',
-    },
-    description:
-      'High-yield savings for startups. No minimums, no lock-ups, full liquidity.',
-    features: [
-      'Insurance included — up to $1M coverage from a licensed insurer',
-      'Wire USD — automatic conversion to earning balance',
-      'Same-day ACH transfers in and out',
-      'Start earning 8-10% APY in 2 minutes',
-    ],
+const SIGNIN_CONTENT: SigninContent = {
+  badge: 'Business Savings Account',
+  headline: {
+    prefix: 'Get paid on your',
+    highlight: 'idle treasury',
+    suffix: '',
   },
-  technical: {
-    badge: 'PROTOCOL::TREASURY_AUTOMATION',
-    headline: {
-      prefix: '',
-      highlight: 'yield.optimize()',
-      suffix: '',
-    },
-    description:
-      'Algorithmic yield optimization on battle-tested DeFi protocols. Non-custodial, audited, insured.',
-    features: [
-      {
-        label: 'ARCH',
-        value: 'Non-custodial smart contract wallets',
-        status: 'active',
-      },
-      {
-        label: 'AUDIT',
-        value: 'Smart contract audited',
-        status: 'verified',
-      },
-      {
-        label: 'INSURANCE',
-        value: 'Chainproof coverage enabled',
-        status: 'active',
-      },
-      {
-        label: 'YIELD',
-        value: '8-10% APY • Real-time settlement',
-        status: 'live',
-      },
-    ],
-  },
-};
-
-// Blueprint grid background component for technical mode
-const BlueprintGrid = ({ className }: { className?: string }) => (
-  <div
-    className={`absolute inset-0 pointer-events-none ${className || ''}`}
-    style={{
-      backgroundImage: `
-        linear-gradient(to right, rgba(27,41,255,0.04) 1px, transparent 1px),
-        linear-gradient(to bottom, rgba(27,41,255,0.04) 1px, transparent 1px)
-      `,
-      backgroundSize: '24px 24px',
-    }}
-  />
-);
-
-// Architectural crosshairs decoration
-const Crosshairs = ({
-  position,
-}: {
-  position: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
-}) => {
-  const positionClasses = {
-    'top-left': 'top-3 left-3',
-    'top-right': 'top-3 right-3',
-    'bottom-left': 'bottom-3 left-3',
-    'bottom-right': 'bottom-3 right-3',
-  };
-
-  return (
-    <div className={`absolute h-3 w-3 ${positionClasses[position]}`}>
-      <div className="absolute top-1/2 w-full h-px bg-[#1B29FF]/30" />
-      <div className="absolute left-1/2 h-full w-px bg-[#1B29FF]/30" />
-    </div>
-  );
-};
-
-// Status indicator dot
-const StatusDot = ({ status }: { status: string }) => {
-  const colors = {
-    active: 'bg-emerald-400',
-    verified: 'bg-[#1B29FF]',
-    live: 'bg-emerald-400 animate-pulse',
-  };
-  return (
-    <span
-      className={`inline-block w-1.5 h-1.5 rounded-full ${colors[status as keyof typeof colors] || 'bg-[#1B29FF]'}`}
-    />
-  );
+  description:
+    'Earn more on your idle treasury. No minimums, no lock-ups. ',
+  features: [
+    '8% target APY with daily compounding',
+    'Insurance included — up to $1M coverage',
+    'Instant withdrawals — no lockups',
+    'ACH and wire transfers in and out',
+  ],
 };
 
 export default function SignInContent() {
@@ -163,9 +64,11 @@ export default function SignInContent() {
   const { sendCode, loginWithCode, state } = useLoginWithEmail();
   const searchParams = useSearchParams();
   const posthog = usePostHog();
-  const { isTechnical, toggle } = useBimodal();
+  const content = SIGNIN_CONTENT;
 
-  const content = SIGNIN_CONTENT[isTechnical ? 'technical' : 'company'];
+  // Privy's `useLoginWithEmail` state machine doesn't expose a guaranteed "reset"
+  // method. To make "Change email" reliable, we control the UI step locally.
+  const [forceEmailStep, setForceEmailStep] = useState(false);
 
   const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
@@ -173,6 +76,7 @@ export default function SignInContent() {
 
   const emailInputRef = useRef<HTMLInputElement>(null);
   const codeInputRef = useRef<HTMLInputElement>(null);
+  const autoSubmitTimeoutRef = useRef<number | null>(null);
 
   const source = (searchParams.get('source') as SourceType) || null;
   const inviteToken = searchParams.get('invite');
@@ -210,10 +114,10 @@ export default function SignInContent() {
 
   // Auto-focus email input on mount
   useEffect(() => {
-    if (!authenticated && state.status === 'initial') {
+    if (!authenticated && (forceEmailStep || state.status === 'initial')) {
       emailInputRef.current?.focus();
     }
-  }, [authenticated, state.status]);
+  }, [authenticated, state.status, forceEmailStep]);
 
   // Auto-focus code input when awaiting code
   useEffect(() => {
@@ -241,6 +145,7 @@ export default function SignInContent() {
     }
 
     setEmailError('');
+    setForceEmailStep(false);
     posthog?.capture('signin_code_sent', {
       source: source || 'direct',
     });
@@ -276,6 +181,7 @@ export default function SignInContent() {
     });
 
     try {
+      setForceEmailStep(false);
       await sendCode({ email: email.trim() });
     } catch (error) {
       setEmailError('Failed to resend code. Please try again.');
@@ -283,9 +189,15 @@ export default function SignInContent() {
   };
 
   const handleBackToEmail = () => {
+    if (autoSubmitTimeoutRef.current) {
+      window.clearTimeout(autoSubmitTimeoutRef.current);
+      autoSubmitTimeoutRef.current = null;
+    }
     setCode('');
-    setEmail('');
     setEmailError('');
+    setForceEmailStep(true);
+    // Focus next tick so the email step has rendered.
+    window.setTimeout(() => emailInputRef.current?.focus(), 0);
   };
   return (
     <section className="relative min-h-screen bg-[#F6F5EF] md:bg-white/90 overflow-hidden">
@@ -310,15 +222,6 @@ export default function SignInContent() {
                 finance
               </span>
             </Link>
-
-            {/* Bimodal Toggle */}
-            <div className="hidden md:flex items-center gap-2">
-              <BimodalToggle
-                isTechnical={isTechnical}
-                onToggle={toggle}
-                showLabels={true}
-              />
-            </div>
           </div>
         </div>
       </header>
@@ -327,161 +230,42 @@ export default function SignInContent() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-0 max-w-5xl mx-auto rounded-xl overflow-hidden border border-[#101010]/10 shadow-[0_2px_8px_rgba(16,16,16,0.04)]">
           {/* Left side - Value Proposition - Hidden on mobile */}
           <div
-            className={`hidden lg:block backdrop-blur-sm p-8 lg:p-12 relative overflow-hidden transition-all duration-300 ${
-              isTechnical
-                ? 'bg-white border-r border-[#1B29FF]/10'
-                : 'bg-white/95'
-            }`}
+            className="hidden lg:block backdrop-blur-sm p-8 lg:p-12 relative overflow-hidden bg-white/95"
           >
-            {/* Blueprint Grid for Technical Mode */}
-            {isTechnical && (
-              <>
-                <BlueprintGrid className="opacity-100" />
-                <Crosshairs position="top-left" />
-                <Crosshairs position="top-right" />
-                <Crosshairs position="bottom-left" />
-                <Crosshairs position="bottom-right" />
-              </>
-            )}
-
             <div className="relative z-10 mb-8">
               {/* Badge/Label */}
-              {isTechnical ? (
-                <div className="flex items-center gap-3 mb-4">
-                  <span className="font-mono text-[10px] text-[#1B29FF] tracking-[0.2em] uppercase bg-[#1B29FF]/5 px-2.5 py-1 rounded-sm border border-[#1B29FF]/20">
-                    {content.badge}
-                  </span>
-                  <span className="font-mono text-[10px] text-emerald-600 flex items-center gap-1.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                    ONLINE
-                  </span>
-                </div>
-              ) : (
-                <p className="uppercase tracking-[0.14em] text-[12px] mb-3 text-[#101010]/60">
-                  {content.badge}
-                </p>
-              )}
+              <p className="uppercase tracking-[0.14em] text-[12px] mb-3 text-[#101010]/60">
+                {content.badge}
+              </p>
 
               {/* Headline */}
-              {isTechnical ? (
-                <div className="mb-6">
-                  <div className="font-mono text-[10px] text-[#1B29FF]/60 mb-2 tracking-wider">
-                    {'// Initialize treasury protocol'}
-                  </div>
-                  <h1 className="font-mono text-[42px] lg:text-[52px] leading-[1.1] tracking-tight text-[#101010]">
-                    <span className="text-[#1B29FF]">{'>'}</span>{' '}
-                    <span className="text-[#1B29FF]">
-                      {content.headline.highlight}
-                    </span>
-                  </h1>
-                  <div className="font-mono text-[11px] text-[#101010]/50 mt-2 flex items-center gap-2">
-                    <span className="text-emerald-500">$</span>
-                    <span>maximizing yield on idle assets...</span>
-                    <span className="animate-pulse text-[#1B29FF]">_</span>
-                  </div>
-                </div>
-              ) : (
-                <h1 className="font-serif text-[56px] sm:text-[64px] lg:text-[72px] leading-[0.96] tracking-[-0.015em] text-[#101010] mb-6">
-                  {content.headline.prefix && (
-                    <span>{content.headline.prefix} </span>
-                  )}
-                  <span className="text-[#1B29FF]">
-                    {content.headline.highlight}
-                  </span>
-                  {content.headline.suffix && (
-                    <span> {content.headline.suffix}</span>
-                  )}
-                </h1>
-              )}
+              <h1 className="font-serif text-[56px] sm:text-[64px] lg:text-[72px] leading-[0.96] tracking-[-0.015em] text-[#101010] mb-6">
+                {content.headline.prefix && (
+                  <span>{content.headline.prefix} </span>
+                )}
+                <span className="text-[#1B29FF]">{content.headline.highlight}</span>
+                {content.headline.suffix && (
+                  <span> {content.headline.suffix}</span>
+                )}
+              </h1>
 
               {/* Description */}
-              <p
-                className={`max-w-[400px] ${
-                  isTechnical
-                    ? 'font-mono text-[13px] leading-[1.6] text-[#101010]/70'
-                    : 'text-[16px] leading-[1.5] text-[#101010]/80'
-                }`}
-              >
+              <p className="max-w-[400px] text-[16px] leading-[1.5] text-[#101010]/80">
                 {content.description}
               </p>
             </div>
 
             {/* Features */}
-            <div className={`mb-8 ${isTechnical ? 'space-y-2' : 'space-y-4'}`}>
-              {isTechnical ? (
-                // Technical mode: Blueprint-style feature list (light theme)
-                <div className="bg-[#F7F7F2] border border-[#1B29FF]/20 rounded-sm overflow-hidden">
-                  <div className="flex items-center gap-2 px-3 py-2 border-b border-[#1B29FF]/10 bg-white">
-                    <span className="font-mono text-[10px] text-[#1B29FF] tracking-wider uppercase">
-                      SYSTEM::STATUS
-                    </span>
-                    <span className="ml-auto font-mono text-[10px] text-emerald-500 flex items-center gap-1.5">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                      ONLINE
-                    </span>
+            <div className="mb-8 space-y-4">
+              {content.features.map((item, index) => (
+                <div key={index} className="flex items-start gap-3">
+                  <div className="h-5 w-5 rounded-full bg-[#1B29FF]/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <Check className="h-3 w-3 text-[#1B29FF]" />
                   </div>
-                  <div className="p-3 space-y-2.5">
-                    {(
-                      content.features as Array<{
-                        label: string;
-                        value: string;
-                        status: string;
-                      }>
-                    ).map((item, index) => (
-                      <div key={index} className="flex items-start gap-3 group">
-                        <div className="flex items-center gap-2 min-w-[80px]">
-                          <StatusDot status={item.status} />
-                          <span className="font-mono text-[10px] text-[#1B29FF] tracking-wider uppercase">
-                            {item.label}
-                          </span>
-                        </div>
-                        <span className="font-mono text-[11px] text-[#101010]/70 leading-relaxed">
-                          {item.value}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="px-3 py-2 border-t border-[#1B29FF]/10 bg-white">
-                    <div className="font-mono text-[10px] text-emerald-600 flex items-center gap-2">
-                      <Check className="h-3 w-3" />
-                      All systems operational
-                    </div>
-                  </div>
+                  <span className="text-[14px] text-[#101010]/70">{item}</span>
                 </div>
-              ) : (
-                // Company mode: Standard feature list
-                (content.features as string[]).map(
-                  (item: string, index: number) => (
-                    <div key={index} className="flex items-start gap-3">
-                      <div className="h-5 w-5 rounded-full bg-[#1B29FF]/10 flex items-center justify-center flex-shrink-0 mt-0.5">
-                        <Check className="h-3 w-3 text-[#1B29FF]" />
-                      </div>
-                      <span className="text-[14px] text-[#101010]/70">
-                        {item}
-                      </span>
-                    </div>
-                  ),
-                )
-              )}
+              ))}
             </div>
-
-            {/* Technical mode: Protocol info footer */}
-            {isTechnical && (
-              <div className="relative z-10 pt-4 border-t border-[#1B29FF]/10">
-                <div className="flex items-center justify-between">
-                  <div className="font-mono text-[10px] text-[#101010]/40 flex items-center gap-3">
-                    <span>v2.4.1</span>
-                    <span className="text-[#1B29FF]/30">|</span>
-                    <span>Base L2</span>
-                    <span className="text-[#1B29FF]/30">|</span>
-                    <span>Morpho Blue</span>
-                  </div>
-                  <div className="font-mono text-[10px] text-[#1B29FF]/40">
-                    [x:001 y:042]
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
 
           {/* Right side - Sign In */}
@@ -510,12 +294,12 @@ export default function SignInContent() {
             <div className="space-y-6">
               <div className="text-center">
                 <h2 className="text-[24px] font-semibold tracking-[-0.01em] text-[#101010] mb-2">
-                  {inviteToken ? 'Accept Invitation' : 'Get Started'}
+                  {inviteToken ? 'Accept invitation' : 'Open your account'}
                 </h2>
                 <p className="text-[14px] text-[#101010]/70">
                   {inviteToken
                     ? 'Sign in to join your company'
-                    : 'Sign in or create your account'}
+                    : 'Enter your email to get a 6-digit sign-in code.'}
                 </p>
               </div>
 
@@ -532,7 +316,8 @@ export default function SignInContent() {
               {!authenticated && (
                 <>
                   {/* Step 1: Email Input */}
-                  {(state.status === 'initial' ||
+                  {(forceEmailStep ||
+                    state.status === 'initial' ||
                     state.status === 'sending-code' ||
                     state.status === 'error') && (
                     <form onSubmit={handleSendCode} className="space-y-4">
@@ -592,7 +377,7 @@ export default function SignInContent() {
                   )}
 
                   {/* Step 2: Code Sent Confirmation */}
-                  {state.status === 'awaiting-code-input' && (
+                  {!forceEmailStep && state.status === 'awaiting-code-input' && (
                     <div className="space-y-4">
                       <div className="p-4 bg-[#EAF0FF] border border-[#1B29FF]/20 rounded-md">
                         <div className="flex items-start gap-3">
@@ -625,11 +410,24 @@ export default function SignInContent() {
                             value={code}
                             onChange={(value) => {
                               setCode(value);
-                              // Auto-submit when 6 digits entered
+                              // Auto-submit when 6 digits entered (cancelable so
+                              // "Change email" is reliable).
+                              if (autoSubmitTimeoutRef.current) {
+                                window.clearTimeout(autoSubmitTimeoutRef.current);
+                                autoSubmitTimeoutRef.current = null;
+                              }
                               if (value.length === 6) {
-                                setTimeout(() => {
-                                  loginWithCode({ code: value.trim() });
-                                }, 100);
+                                autoSubmitTimeoutRef.current = window.setTimeout(
+                                  () => {
+                                    if (
+                                      !forceEmailStep &&
+                                      state.status === 'awaiting-code-input'
+                                    ) {
+                                      loginWithCode({ code: value.trim() });
+                                    }
+                                  },
+                                  100,
+                                );
                               }
                             }}
                             inputMode="numeric"
@@ -668,7 +466,7 @@ export default function SignInContent() {
                   )}
 
                   {/* Step 3: Submitting Code */}
-                  {state.status === 'submitting-code' && (
+                  {!forceEmailStep && state.status === 'submitting-code' && (
                     <div className="p-6 bg-white border border-[#101010]/10 rounded-md">
                       <div className="flex items-center justify-center gap-3">
                         <Loader2 className="h-5 w-5 animate-spin text-[#1B29FF]" />
