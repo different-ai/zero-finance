@@ -3,7 +3,7 @@
 import { useCallback, useMemo, useState, useEffect } from 'react';
 import type { MetaTransactionData } from '@safe-global/safe-core-sdk-types';
 import { Address, type Hex, isAddress } from 'viem';
-import { base, arbitrum } from 'viem/chains';
+import { base, arbitrum, gnosis, optimism } from 'viem/chains';
 import type { Chain } from 'viem/chains';
 import { useSmartWallets } from '@privy-io/react-auth/smart-wallets';
 import { relaySafeTx } from '@/lib/sponsor-tx/core';
@@ -16,6 +16,12 @@ import { SUPPORTED_CHAINS } from '@/lib/constants/chains';
 function getChainForId(chainId: number): Chain {
   if (chainId === SUPPORTED_CHAINS.ARBITRUM) {
     return arbitrum;
+  }
+  if (chainId === SUPPORTED_CHAINS.GNOSIS) {
+    return gnosis;
+  }
+  if (chainId === SUPPORTED_CHAINS.OPTIMISM) {
+    return optimism;
   }
   return base;
 }

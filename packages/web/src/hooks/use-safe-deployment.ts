@@ -1,13 +1,10 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Address, createPublicClient, http } from 'viem';
-import { base, arbitrum, gnosis } from 'viem/chains';
+import { type Address, type Hex, createPublicClient, http } from 'viem';
+import { base, arbitrum, gnosis, optimism } from 'viem/chains';
 import { useSmartWallets } from '@privy-io/react-auth/smart-wallets';
-import Safe, {
-  type SafeAccountConfig,
-  type SafeDeploymentConfig,
-} from '@safe-global/protocol-kit';
+
 import { SUPPORTED_CHAINS } from '@/lib/constants/chains';
 import { trpc } from '@/utils/trpc';
 
@@ -15,8 +12,16 @@ export type DeploymentState =
   | { status: 'idle' }
   | { status: 'checking' }
   | { status: 'deployed'; address: Address }
-  | { status: 'needs-deployment'; predictedAddress: Address }
-  | { status: 'deploying'; predictedAddress: Address }
+  | {
+      status: 'needs-deployment';
+      predictedAddress: Address;
+      deploymentTransaction: { to: Address; data: Hex; value: bigint };
+    }
+  | {
+      status: 'deploying';
+      predictedAddress: Address;
+      deploymentTransaction: { to: Address; data: Hex; value: bigint };
+    }
   | { status: 'success'; address: Address; txHash?: string }
   | { status: 'error'; message: string };
 
@@ -94,13 +99,24 @@ export function useSafeDeployment({
   // Determine chain and RPC URL based on target chain
   const isArbitrum = targetChainId === SUPPORTED_CHAINS.ARBITRUM;
   const isGnosis = targetChainId === SUPPORTED_CHAINS.GNOSIS;
-  const chain = isGnosis ? gnosis : isArbitrum ? arbitrum : base;
+  const isOptimism = targetChainId === SUPPORTED_CHAINS.OPTIMISM;
+
+  const chain = isGnosis
+    ? gnosis
+    : isOptimism
+      ? optimism
+      : isArbitrum
+        ? arbitrum
+        : base;
   const rpcUrl = isGnosis
     ? process.env.NEXT_PUBLIC_GNOSIS_RPC_URL || 'https://rpc.gnosischain.com'
-    : isArbitrum
-      ? process.env.NEXT_PUBLIC_ARBITRUM_RPC_URL ||
-        'https://arb1.arbitrum.io/rpc'
-      : process.env.NEXT_PUBLIC_BASE_RPC_URL || 'https://mainnet.base.org';
+    : isOptimism
+      ? process.env.NEXT_PUBLIC_OPTIMISM_RPC_URL ||
+        'https://mainnet.optimism.io'
+      : isArbitrum
+        ? process.env.NEXT_PUBLIC_ARBITRUM_RPC_URL ||
+          'https://arb1.arbitrum.io/rpc'
+        : process.env.NEXT_PUBLIC_BASE_RPC_URL || 'https://mainnet.base.org';
 
   // Create public client for target chain
   const publicClient = useMemo(() => {
@@ -115,6 +131,7 @@ export function useSafeDeployment({
     const names: Record<number, string> = {
       [SUPPORTED_CHAINS.BASE]: 'Base',
       [SUPPORTED_CHAINS.ARBITRUM]: 'Arbitrum',
+      [SUPPORTED_CHAINS.OPTIMISM]: 'Optimism',
       [SUPPORTED_CHAINS.GNOSIS]: 'Gnosis',
     };
     return names[chainId] || `Chain ${chainId}`;
@@ -146,19 +163,53 @@ export function useSafeDeployment({
 
         if (isDeployed) {
           setState({ status: 'deployed', address: targetSafeFromDB });
-        } else {
-          // Safe exists in DB but not deployed on-chain
-          setState({
-            status: 'needs-deployment',
-            predictedAddress: targetSafeFromDB,
-          });
+          return;
         }
-      } catch (err) {
-        console.error('[useSafeDeployment] Failed to check deployment:', err);
+
+        // Safe exists in DB but not deployed on-chain.
+        // Fetch a deterministic deployment tx (cloned from Base Safe owners/threshold).
+        const result = await safeDeploymentMutation.mutateAsync({
+          targetChainId,
+          safeType: 'primary',
+        });
+
         setState({
           status: 'needs-deployment',
-          predictedAddress: targetSafeFromDB,
+          predictedAddress: result.predictedAddress as Address,
+          deploymentTransaction: {
+            to: result.to as Address,
+            data: result.data as Hex,
+            value: BigInt(result.value || '0'),
+          },
         });
+      } catch (err) {
+        console.error('[useSafeDeployment] Failed to check deployment:', err);
+
+        try {
+          const result = await safeDeploymentMutation.mutateAsync({
+            targetChainId,
+            safeType: 'primary',
+          });
+
+          setState({
+            status: 'needs-deployment',
+            predictedAddress: result.predictedAddress as Address,
+            deploymentTransaction: {
+              to: result.to as Address,
+              data: result.data as Hex,
+              value: BigInt(result.value || '0'),
+            },
+          });
+        } catch (innerErr) {
+          console.error(
+            '[useSafeDeployment] Failed to fetch deployment info after deployment check error:',
+            innerErr,
+          );
+          setState({
+            status: 'error',
+            message: 'Failed to load account setup info. Please refresh.',
+          });
+        }
       }
     };
 
@@ -171,6 +222,7 @@ export function useSafeDeployment({
     publicClient,
     getChainName,
     state.status,
+    safeDeploymentMutation,
   ]);
 
   // Fetch deployment info when no Safe in DB
@@ -196,6 +248,11 @@ export function useSafeDeployment({
         setState({
           status: 'needs-deployment',
           predictedAddress: result.predictedAddress as Address,
+          deploymentTransaction: {
+            to: result.to as Address,
+            data: result.data as Hex,
+            value: BigInt(result.value || '0'),
+          },
         });
       } catch (err) {
         console.error(
@@ -233,7 +290,11 @@ export function useSafeDeployment({
     }
 
     const predictedAddress = state.predictedAddress;
-    setState({ status: 'deploying', predictedAddress });
+    setState({
+      status: 'deploying',
+      predictedAddress,
+      deploymentTransaction: state.deploymentTransaction,
+    });
 
     try {
       const chainName = getChainName(targetChainId);
@@ -247,45 +308,11 @@ export function useSafeDeployment({
         );
       }
 
-      const ownerAddress = targetClient.account?.address;
-      if (!ownerAddress) {
-        throw new Error('No valid owner address found (Smart Wallet)');
-      }
-
-      console.log('[useSafeDeployment] Owner address:', ownerAddress);
-
-      // Create Safe configuration
-      const safeAccountConfig: SafeAccountConfig = {
-        owners: [ownerAddress as Address],
-        threshold: 1,
-      };
-
-      // Use Base Safe address as salt nonce for deterministic address matching
-      const saltNonce = baseSafeAddress.toLowerCase();
-      const safeDeploymentConfig: SafeDeploymentConfig = {
-        saltNonce,
-        safeVersion: '1.4.1',
-      };
-
-      // Initialize Protocol Kit
-      const protocolKit = await Safe.init({
-        predictedSafe: {
-          safeAccountConfig,
-          safeDeploymentConfig,
-        },
-        provider: rpcUrl,
-      });
-
-      // Get predicted address
-      const computedPredictedAddress =
-        (await protocolKit.getAddress()) as Address;
-      console.log(
-        `[useSafeDeployment] Computed predicted address: ${computedPredictedAddress}`,
-      );
+      const deploymentTransaction = state.deploymentTransaction;
 
       // Check if already deployed on-chain
       const code = await publicClient.getBytecode({
-        address: computedPredictedAddress,
+        address: predictedAddress,
       });
 
       let txHash: string | undefined;
@@ -298,13 +325,10 @@ export function useSafeDeployment({
         // Deploy the Safe
         console.log('[useSafeDeployment] Deploying new Safe...');
 
-        const deploymentTransaction =
-          await protocolKit.createSafeDeploymentTransaction();
-
         txHash = await targetClient.sendTransaction({
-          to: deploymentTransaction.to as Address,
-          data: deploymentTransaction.data as `0x${string}`,
-          value: BigInt(deploymentTransaction.value || '0'),
+          to: deploymentTransaction.to,
+          data: deploymentTransaction.data,
+          value: deploymentTransaction.value,
         });
 
         console.log('[useSafeDeployment] Deployment tx hash:', txHash);
@@ -323,7 +347,7 @@ export function useSafeDeployment({
 
       // Register the Safe in database
       await registerSafeMutation.mutateAsync({
-        safeAddress: computedPredictedAddress,
+        safeAddress: predictedAddress,
         chainId: targetChainId,
         safeType: 'primary',
       });
@@ -335,13 +359,13 @@ export function useSafeDeployment({
 
       setState({
         status: 'success',
-        address: computedPredictedAddress,
+        address: predictedAddress,
         txHash,
       });
 
-      onDeploymentComplete?.(computedPredictedAddress);
+      onDeploymentComplete?.(predictedAddress);
 
-      return computedPredictedAddress;
+      return predictedAddress;
     } catch (err) {
       console.error('[useSafeDeployment] Deployment failed:', err);
       setState({

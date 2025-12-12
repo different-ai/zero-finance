@@ -34,6 +34,7 @@ import {
   CHAIN_CONFIG,
   type SupportedChainId,
   getChainDisplayName,
+  getUSDCAddress,
 } from '@/lib/constants/chains';
 
 // Chains supported by Across Protocol for bridging
@@ -52,10 +53,7 @@ import {
   type VaultAsset,
   type BaseVault,
 } from '@/server/earn/base-vaults';
-import Safe, {
-  SafeAccountConfig,
-  SafeDeploymentConfig,
-} from '@safe-global/protocol-kit';
+import Safe from '@safe-global/protocol-kit';
 import { cn } from '@/lib/utils';
 import { usePrivy, useWallets } from '@privy-io/react-auth';
 import { buildSafeTx, relaySafeTx, getSafeTxHash } from '@/lib/sponsor-tx/core';
@@ -1241,21 +1239,47 @@ export function DepositEarnCard({
       setTransactionState({ step: 'checking' });
 
       // 1. Get RPC and Public Client for Target Chain
-      const rpcUrl =
-        chainId === 42161
-          ? process.env.NEXT_PUBLIC_ARBITRUM_RPC_URL
-          : process.env.NEXT_PUBLIC_BASE_RPC_URL;
-      const targetChain = chainId === 42161 ? arbitrum : base;
+      const getRpcUrlForChain = (id: number) => {
+        switch (id) {
+          case SUPPORTED_CHAINS.ARBITRUM:
+            return process.env.NEXT_PUBLIC_ARBITRUM_RPC_URL;
+          case SUPPORTED_CHAINS.OPTIMISM:
+            return (
+              process.env.NEXT_PUBLIC_OPTIMISM_RPC_URL ||
+              'https://mainnet.optimism.io'
+            );
+          case SUPPORTED_CHAINS.GNOSIS:
+            return (
+              process.env.NEXT_PUBLIC_GNOSIS_RPC_URL ||
+              'https://rpc.gnosischain.com'
+            );
+          case SUPPORTED_CHAINS.BASE:
+          default:
+            return process.env.NEXT_PUBLIC_BASE_RPC_URL;
+        }
+      };
+      const getChainForId = (id: number) => {
+        switch (id) {
+          case SUPPORTED_CHAINS.ARBITRUM:
+            return arbitrum;
+          case SUPPORTED_CHAINS.OPTIMISM:
+            return optimism;
+          case SUPPORTED_CHAINS.GNOSIS:
+            return gnosis;
+          case SUPPORTED_CHAINS.BASE:
+          default:
+            return base;
+        }
+      };
+      const rpcUrl = getRpcUrlForChain(chainId);
+      const targetChain = getChainForId(chainId);
       const targetPublicClient = createPublicClient({
         chain: targetChain,
         transport: http(rpcUrl),
       });
 
       // 2. Check Allowance on Target Chain
-      const targetUSDC =
-        chainId === 42161
-          ? '0xaf88d065e77c8cC2239327C5EDb3A432268e5831' // Arb USDC
-          : USDC_ADDRESS;
+      const targetUSDC = getUSDCAddress(chainId as SupportedChainId);
 
       const allowance = await targetPublicClient.readContract({
         address: targetUSDC as Address,
@@ -1791,55 +1815,11 @@ export function DepositEarnCard({
           );
         }
 
-        // Use Smart Wallet as owner for gas sponsorship through paymaster
-        // This allows transactions to be relayed through the 4337 bundler
-        const ownerAddress = targetClient.account?.address;
-
-        if (!ownerAddress) {
-          throw new Error('No valid owner address found (Smart Wallet)');
-        }
+        // Use backend-provided predicted address + deployment tx.
+        // The backend clones the Base Safe owners/threshold, ensuring all Safes stay consistent.
+        const predictedSafeAddress = deploymentInfo.predictedAddress as Address;
 
         console.log(`[DepositEarnCard] Starting ${chainName} Safe deployment`);
-        console.log('[DepositEarnCard] Owner address:', ownerAddress);
-
-        // Create Safe configuration
-        const safeAccountConfig: SafeAccountConfig = {
-          owners: [ownerAddress as Address],
-          threshold: 1,
-        };
-
-        // Use the Base Safe address as salt nonce for deterministic address matching
-        // This MUST match the backend logic in multi-chain-safe-manager.ts
-        // CRITICAL: Use baseSafeAddress from getMultiChainPositions, NOT safeAddress prop
-        // The safeAddress prop may come from workspace-scoped query which can be different
-        if (!baseSafeAddress) {
-          throw new Error(
-            'Base Safe address not found. Cannot deploy cross-chain Safe without Base Safe.',
-          );
-        }
-        const saltNonce = baseSafeAddress.toLowerCase();
-        const safeDeploymentConfig: SafeDeploymentConfig = {
-          saltNonce,
-          safeVersion: '1.4.1',
-        };
-
-        console.log('[DepositEarnCard] Safe config:', {
-          safeAccountConfig,
-          safeDeploymentConfig,
-        });
-
-        // Initialize the Protocol Kit with target chain RPC
-        const protocolKit = await Safe.init({
-          predictedSafe: {
-            safeAccountConfig,
-            safeDeploymentConfig,
-          },
-          provider: targetRpcUrl,
-        });
-
-        // Get the predicted Safe address
-        const predictedSafeAddress =
-          (await protocolKit.getAddress()) as Address;
         console.log(
           `[DepositEarnCard] Predicted Safe address on ${chainName}: ${predictedSafeAddress}`,
         );
@@ -1875,15 +1855,9 @@ export function DepositEarnCard({
           return;
         }
 
-        // Create the Safe deployment transaction
-        // This will throw if the SDK thinks it's deployed, but we checked above.
-        // Double check that we are not trying to deploy to an address that exists.
-        const deploymentTransaction =
-          await protocolKit.createSafeDeploymentTransaction();
-
         setTransactionState({ step: 'waiting-deployment' });
 
-        // Send the deployment transaction using Privy smart wallet
+        // Send the backend-generated deployment transaction using Privy smart wallet
         console.log(
           `[DepositEarnCard] Sending deployment transaction on ${chainName}...`,
         );
@@ -1896,9 +1870,9 @@ export function DepositEarnCard({
 
         const userOpHash = await targetClient.sendTransaction(
           {
-            to: deploymentTransaction.to as Address,
-            value: BigInt(deploymentTransaction.value || '0'),
-            data: deploymentTransaction.data as `0x${string}`,
+            to: deploymentInfo.transaction.to as Address,
+            value: BigInt(deploymentInfo.transaction.value || '0'),
+            data: deploymentInfo.transaction.data as `0x${string}`,
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             chain: targetChain as any,
           },
