@@ -535,6 +535,31 @@ export function WithdrawEarnCard({
   const isArbitrumVault = chainId === SUPPORTED_CHAINS.ARBITRUM;
   const isOptimismVault = chainId === SUPPORTED_CHAINS.OPTIMISM;
 
+  // Query target Safe USDC balance for Arbitrum/Optimism (for bridge-back flow)
+  // This shows USDC that's in the Safe but NOT in the vault (e.g., after a vault redemption)
+  // Use effectiveSafeAddress which falls back to safeAddress prop if targetSafeAddress is undefined
+  const { data: targetSafeUsdcBalance, refetch: refetchTargetSafeBalance } =
+    trpc.earn.getSafeBalanceOnChain.useQuery(
+      {
+        safeAddress: effectiveSafeAddress,
+        chainId,
+      },
+      {
+        enabled:
+          !!effectiveSafeAddress &&
+          isCrossChain &&
+          (isArbitrumVault || isOptimismVault),
+        staleTime: 15000,
+        refetchInterval: 15000,
+      },
+    );
+
+  // Parse target Safe USDC balance
+  const targetSafeUsdcBigInt = useMemo(() => {
+    if (!targetSafeUsdcBalance) return 0n;
+    return BigInt(targetSafeUsdcBalance.balance);
+  }, [targetSafeUsdcBalance]);
+
   // Fetch Arbitrum -> Base bridge quote when bridge amount changes
   useEffect(() => {
     if (
@@ -1205,7 +1230,12 @@ export function WithdrawEarnCard({
   };
 
   const handleMaxArbBridge = () => {
-    if (vaultInfo) {
+    // Use the Safe USDC balance (not vault assets) for bridge max
+    if (targetSafeUsdcBigInt > 0n) {
+      const maxAmount = formatUnits(targetSafeUsdcBigInt, 6);
+      setArbBridgeAmount(maxAmount);
+    } else if (vaultInfo) {
+      // Fallback to vault assets if Safe balance not loaded yet
       const maxAmount = formatUnits(vaultInfo.assets, vaultInfo.assetDecimals);
       setArbBridgeAmount(maxAmount);
     }
@@ -1294,7 +1324,12 @@ export function WithdrawEarnCard({
   };
 
   const handleMaxOpBridge = () => {
-    if (vaultInfo) {
+    // Use the Safe USDC balance (not vault assets) for bridge max
+    if (targetSafeUsdcBigInt > 0n) {
+      const maxAmount = formatUnits(targetSafeUsdcBigInt, 6);
+      setOpBridgeAmount(maxAmount);
+    } else if (vaultInfo) {
+      // Fallback to vault assets if Safe balance not loaded yet
       const maxAmount = formatUnits(vaultInfo.assets, vaultInfo.assetDecimals);
       setOpBridgeAmount(maxAmount);
     }
@@ -1326,7 +1361,7 @@ export function WithdrawEarnCard({
     );
   }
 
-  // No balance state - but for Gnosis, also check xDAI balance for bridge-back
+  // No balance state - but for cross-chain vaults, also check Safe balance for bridge-back
   if (!vaultInfo || vaultInfo.assets === 0n) {
     // For Gnosis vaults, if there's no sDAI but there IS xDAI, show bridge-back UI
     if (isGnosisVault && gnosisXdaiBalance.totalAvailable > 0n) {
@@ -1456,6 +1491,153 @@ export function WithdrawEarnCard({
       );
     }
 
+    // For Arbitrum/Optimism vaults, if there's no vault balance but there IS USDC in the Safe, show bridge-back UI
+    if (
+      (isArbitrumVault || isOptimismVault) &&
+      targetSafeUsdcBigInt > 0n &&
+      targetSafeAddress
+    ) {
+      const chainCode = isArbitrumVault ? 'ARB' : 'OP';
+      const chainName = isArbitrumVault ? 'Arbitrum' : 'Optimism';
+      const availableUsdc = formatUnits(targetSafeUsdcBigInt, 6);
+      const displayUsdcBalance = parseFloat(availableUsdc).toLocaleString(
+        undefined,
+        { minimumFractionDigits: 2, maximumFractionDigits: 6 },
+      );
+      const bridgeAmountState = isArbitrumVault
+        ? arbBridgeAmount
+        : opBridgeAmount;
+      const setBridgeAmountState = isArbitrumVault
+        ? setArbBridgeAmount
+        : setOpBridgeAmount;
+      const bridgeQuoteState = isArbitrumVault ? arbBridgeQuote : opBridgeQuote;
+      const isLoadingBridgeQuoteState = isArbitrumVault
+        ? isLoadingArbBridgeQuote
+        : isLoadingOpBridgeQuote;
+      const handleBridge = isArbitrumVault
+        ? handleArbBridgeToBase
+        : handleOpBridgeToBase;
+
+      const handleMaxBridgeUsdc = () => {
+        setBridgeAmountState(availableUsdc);
+      };
+
+      return (
+        <div className="space-y-6 p-4 bg-[#fafafa] border border-[#1B29FF]/20 relative">
+          {/* Blueprint grid overlay */}
+          <div
+            className="absolute inset-0 pointer-events-none opacity-[0.03]"
+            style={{
+              backgroundImage: `
+                linear-gradient(to right, #1B29FF 1px, transparent 1px),
+                linear-gradient(to bottom, #1B29FF 1px, transparent 1px)
+              `,
+              backgroundSize: '20px 20px',
+            }}
+          />
+
+          {/* USDC Balance Card - Bridge Back to Base */}
+          <div className="bg-white border border-[#1B29FF]/30 p-4 relative">
+            <div className="flex justify-between items-start mb-3">
+              <div>
+                <p className="font-mono uppercase tracking-[0.14em] text-[11px] text-[#1B29FF] mb-1">
+                  BALANCE::{chainCode}_USDC
+                </p>
+                <p className="font-mono text-[24px] tabular-nums text-[#101010]">
+                  {displayUsdcBalance}{' '}
+                  <span className="text-[12px] text-[#1B29FF]">USDC</span>
+                </p>
+                <p className="text-[12px] font-mono text-[#101010]/50">
+                  ≈ ${displayUsdcBalance} USD
+                </p>
+              </div>
+            </div>
+
+            {/* Bridge to Base Input & Button */}
+            <div className="space-y-2">
+              <label className="font-mono text-[10px] text-[#1B29FF]/70 uppercase">
+                INPUT::BRIDGE_AMOUNT ({chainCode} USDC → Base USDC)
+              </label>
+              <div className="relative">
+                <input
+                  type="number"
+                  placeholder="0.0"
+                  value={bridgeAmountState}
+                  onChange={(e) => setBridgeAmountState(e.target.value)}
+                  className="w-full h-10 px-3 font-mono bg-white border border-[#1B29FF]/30 focus:border-[#1B29FF] focus:outline-none text-[14px] transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  step="0.000001"
+                  min="0"
+                  max={availableUsdc}
+                  disabled={isBridging}
+                />
+                <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                  <span className="font-mono text-[10px] text-[#1B29FF]/70">
+                    USDC
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleMaxBridgeUsdc}
+                    className="font-mono px-2 py-1 text-[10px] text-[#1B29FF] border border-[#1B29FF]/30 hover:border-[#1B29FF] transition-colors bg-white hover:bg-[#1B29FF]/5"
+                    disabled={isBridging}
+                  >
+                    MAX
+                  </button>
+                </div>
+              </div>
+
+              {/* Bridge Quote Info */}
+              {isLoadingBridgeQuoteState && (
+                <div className="flex items-center gap-2 text-[10px] font-mono text-[#1B29FF]/60">
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                  Fetching quote...
+                </div>
+              )}
+              {bridgeQuoteState && !isLoadingBridgeQuoteState && (
+                <div className="p-2 bg-[#1B29FF]/5 border border-[#1B29FF]/20 space-y-1">
+                  <p className="font-mono text-[10px] text-[#1B29FF]">
+                    OUTPUT ≈{' '}
+                    {formatUnits(BigInt(bridgeQuoteState.outputAmount), 6)} USDC
+                  </p>
+                  <p className="font-mono text-[10px] text-[#101010]/50">
+                    Fee: ~{formatUnits(BigInt(bridgeQuoteState.totalFee), 6)}{' '}
+                    USDC • ETA: ~
+                    {Math.ceil(bridgeQuoteState.estimatedFillTime / 60)} min
+                  </p>
+                </div>
+              )}
+
+              <button
+                onClick={handleBridge}
+                disabled={
+                  !bridgeAmountState ||
+                  parseFloat(bridgeAmountState) <= 0 ||
+                  !bridgeQuoteState ||
+                  isLoadingBridgeQuoteState ||
+                  isBridging
+                }
+                className="w-full h-10 font-mono uppercase bg-white border-2 border-[#1B29FF] text-[#1B29FF] hover:bg-[#1B29FF] hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {isBridging ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <ArrowUpFromLine className="h-4 w-4" />
+                )}
+                <span className="leading-none">[ BRIDGE TO BASE ]</span>
+              </button>
+            </div>
+
+            <p className="font-mono text-[10px] text-center text-[#1B29FF]/60 mt-3">
+              Bridge via Across Protocol • Funds arrive on Base in ~2-10 min
+            </p>
+          </div>
+
+          <p className="font-mono text-[10px] text-center text-[#101010]/40">
+            No funds in vault. Use this to bridge {chainName} USDC back to Base.
+          </p>
+        </div>
+      );
+    }
+
     return (
       <div className="bg-[#F7F7F2] border border-[#101010]/10 p-4">
         <div className="flex gap-3">
@@ -1471,6 +1653,11 @@ export function WithdrawEarnCard({
                   Shares: {vaultInfo?.shares?.toString() ?? 'null'} | Assets:{' '}
                   {vaultInfo?.assets?.toString() ?? 'null'}
                 </div>
+                {(isArbitrumVault || isOptimismVault) && (
+                  <div>
+                    Safe USDC: {targetSafeUsdcBalance?.formatted ?? '0'}
+                  </div>
+                )}
                 {baseSafeAddress &&
                   baseSafeAddress !== effectiveSafeAddress && (
                     <div className="text-orange-500">
@@ -2289,8 +2476,20 @@ export function WithdrawEarnCard({
               <p className="font-mono uppercase tracking-[0.14em] text-[11px] text-[#1B29FF] mb-1">
                 BALANCE::ARB_USDC (Spendable)
               </p>
-              <p className="font-mono text-[14px] tabular-nums text-[#101010]/70">
-                Enter amount to bridge back to Base
+              <p className="font-mono text-[24px] tabular-nums text-[#101010]">
+                {targetSafeUsdcBalance?.formatted
+                  ? parseFloat(targetSafeUsdcBalance.formatted).toLocaleString(
+                      undefined,
+                      {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 6,
+                      },
+                    )
+                  : '0.00'}{' '}
+                <span className="text-[12px] text-[#1B29FF]">USDC</span>
+              </p>
+              <p className="text-[12px] font-mono text-[#101010]/50">
+                ≈ ${targetSafeUsdcBalance?.formatted || '0.00'} USD
               </p>
             </div>
           </div>
@@ -2477,8 +2676,20 @@ export function WithdrawEarnCard({
               <p className="font-mono uppercase tracking-[0.14em] text-[11px] text-[#1B29FF] mb-1">
                 BALANCE::OP_USDC (Spendable)
               </p>
-              <p className="font-mono text-[14px] tabular-nums text-[#101010]/70">
-                Enter amount to bridge back to Base
+              <p className="font-mono text-[24px] tabular-nums text-[#101010]">
+                {targetSafeUsdcBalance?.formatted
+                  ? parseFloat(targetSafeUsdcBalance.formatted).toLocaleString(
+                      undefined,
+                      {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 6,
+                      },
+                    )
+                  : '0.00'}{' '}
+                <span className="text-[12px] text-[#1B29FF]">USDC</span>
+              </p>
+              <p className="text-[12px] font-mono text-[#101010]/50">
+                ≈ ${targetSafeUsdcBalance?.formatted || '0.00'} USD
               </p>
             </div>
           </div>
