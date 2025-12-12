@@ -18,6 +18,14 @@ async function sendLoopsTransactionalEmail({
     return;
   }
 
+  // Skip in development mode to avoid triggering real emails
+  if (process.env.NODE_ENV === 'development') {
+    console.log(
+      `[DEV] Skipping Loops email (transactionalId: ${transactionalId}) to ${email}`,
+    );
+    return { success: true };
+  }
+
   const response = await fetch('https://app.loops.so/api/v1/transactional', {
     method: 'POST',
     headers: {
@@ -61,7 +69,7 @@ export const waitlistRouter = router({
         process.env.LOOPS_TRANSACTIONAL_ID_WAITLIST_CONFIRMATION;
       const internalNotificationId =
         process.env.LOOPS_TRANSACTIONAL_ID_INTERNAL_NOTIFICATION;
-      const internalEmail = 'ben@0.finance'
+      const internalEmail = 'ben@0.finance';
 
       if (!userConfirmationId || !internalNotificationId || !internalEmail) {
         console.error(
@@ -104,7 +112,9 @@ export const waitlistRouter = router({
       } catch (error) {
         console.error('Failed to process waitlist request with Loops:', error);
         // The error is already specific from sendLoopsTransactionalEmail, so just re-throwing
-        throw new Error('Failed to join waitlist due to email sending failure.');
+        throw new Error(
+          'Failed to join waitlist due to email sending failure.',
+        );
       }
     }),
-}); 
+});

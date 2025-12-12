@@ -105,14 +105,19 @@ export async function POST(req: NextRequest) {
     // TODO: Add idempotency check (store event.id in DB)
 
     if (event.type === 'user.created' && event.data?.email) {
-      // Send to Loops for email marketing
+      // Send to Loops for email marketing (skip in development)
       const loopsApiKey = process.env.LOOPS_API_KEY;
+      const isDevelopment = process.env.NODE_ENV === 'development';
       if (!loopsApiKey) {
         console.error(
           'LOOPS_API_KEY is not set. Cannot send contact to Loops.',
         );
         // Decide if this should be a hard error or just a warning
         // For now, let's log and continue, but not send to Loops.
+      } else if (isDevelopment) {
+        console.log(
+          `[DEV] Skipping Loops contact creation for ${event.data.email}`,
+        );
       } else {
         await fetch('https://app.loops.so/api/v1/contacts/create', {
           method: 'POST',

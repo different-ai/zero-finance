@@ -28,13 +28,25 @@ export async function joinApiWaitlist(data: {
     // IMPORTANT: Trim all env vars to remove trailing newlines
     const LOOPS_API_KEY = process.env.LOOPS_API_KEY?.trim();
     const LOOPS_API_BASE_URL = 'https://app.loops.so/api/v1';
+    const IS_DEVELOPMENT = process.env.NODE_ENV === 'development';
+
+    // Skip in development mode to avoid triggering real emails
+    if (IS_DEVELOPMENT) {
+      console.log(
+        `[DEV] Skipping Loops API waitlist emails for ${data.email || data.privyDid}`,
+      );
+      return { success: true };
+    }
 
     if (LOOPS_API_KEY) {
       try {
         // Send internal notification
         const internalEmailPayload = {
-          email: (process.env.INTERNAL_NOTIFICATION_EMAIL || 'ben@0.finance').trim(),
-          transactionalId: process.env.LOOPS_TRANSACTIONAL_ID_API_WAITLIST_INTERNAL?.trim(),
+          email: (
+            process.env.INTERNAL_NOTIFICATION_EMAIL || 'ben@0.finance'
+          ).trim(),
+          transactionalId:
+            process.env.LOOPS_TRANSACTIONAL_ID_API_WAITLIST_INTERNAL?.trim(),
           dataVariables: {
             companyName: data.companyName,
             email: data.email || 'Not provided',
@@ -43,63 +55,93 @@ export async function joinApiWaitlist(data: {
             timestamp: new Date().toISOString(),
           },
         };
-        
-        console.log('[INTERNAL EMAIL] Request:', JSON.stringify({
-          url: `${LOOPS_API_BASE_URL}/transactional`,
-          method: 'POST',
-          payload: internalEmailPayload,
-        }, null, 2));
-        
-        const internalResponse = await fetch(`${LOOPS_API_BASE_URL}/transactional`, {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${LOOPS_API_KEY}`,
-            'Content-Type': 'application/json',
+
+        console.log(
+          '[INTERNAL EMAIL] Request:',
+          JSON.stringify(
+            {
+              url: `${LOOPS_API_BASE_URL}/transactional`,
+              method: 'POST',
+              payload: internalEmailPayload,
+            },
+            null,
+            2,
+          ),
+        );
+
+        const internalResponse = await fetch(
+          `${LOOPS_API_BASE_URL}/transactional`,
+          {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${LOOPS_API_KEY}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(internalEmailPayload),
           },
-          body: JSON.stringify(internalEmailPayload),
-        });
-        
+        );
+
         const internalResponseText = await internalResponse.text();
-        console.log('[INTERNAL EMAIL] Response status:', internalResponse.status);
+        console.log(
+          '[INTERNAL EMAIL] Response status:',
+          internalResponse.status,
+        );
         console.log('[INTERNAL EMAIL] Response body:', internalResponseText);
-        
+
         if (!internalResponse.ok) {
-          console.error('[INTERNAL EMAIL] Failed with status:', internalResponse.status);
+          console.error(
+            '[INTERNAL EMAIL] Failed with status:',
+            internalResponse.status,
+          );
         }
 
         // Send user confirmation if they provided an email
         if (data.email) {
           const userEmailPayload = {
             email: data.email,
-            transactionalId: process.env.LOOPS_TRANSACTIONAL_ID_API_WAITLIST_CONFIRMATION?.trim(),
+            transactionalId:
+              process.env.LOOPS_TRANSACTIONAL_ID_API_WAITLIST_CONFIRMATION?.trim(),
             dataVariables: {
               companyName: data.companyName,
               useCase: data.useCase || 'Not provided',
               calLink: 'https://cal.com/team/0finance/30',
             },
           };
-          
-          console.log('[USER EMAIL] Request:', JSON.stringify({
-            url: `${LOOPS_API_BASE_URL}/transactional`,
-            method: 'POST',
-            payload: userEmailPayload,
-          }, null, 2));
-          
-          const userResponse = await fetch(`${LOOPS_API_BASE_URL}/transactional`, {
-            method: 'POST',
-            headers: {
-              Authorization: `Bearer ${LOOPS_API_KEY}`,
-              'Content-Type': 'application/json',
+
+          console.log(
+            '[USER EMAIL] Request:',
+            JSON.stringify(
+              {
+                url: `${LOOPS_API_BASE_URL}/transactional`,
+                method: 'POST',
+                payload: userEmailPayload,
+              },
+              null,
+              2,
+            ),
+          );
+
+          const userResponse = await fetch(
+            `${LOOPS_API_BASE_URL}/transactional`,
+            {
+              method: 'POST',
+              headers: {
+                Authorization: `Bearer ${LOOPS_API_KEY}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify(userEmailPayload),
             },
-            body: JSON.stringify(userEmailPayload),
-          });
-          
+          );
+
           const userResponseText = await userResponse.text();
           console.log('[USER EMAIL] Response status:', userResponse.status);
           console.log('[USER EMAIL] Response body:', userResponseText);
-          
+
           if (!userResponse.ok) {
-            console.error('[USER EMAIL] Failed with status:', userResponse.status);
+            console.error(
+              '[USER EMAIL] Failed with status:',
+              userResponse.status,
+            );
           }
         }
 

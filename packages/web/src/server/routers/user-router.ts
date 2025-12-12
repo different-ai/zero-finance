@@ -55,12 +55,21 @@ export const userRouter = router({
     .mutation(async ({ input }: { input: SyncInput }) => {
       const { privyUserId, email, name } = input;
       const loopsApiKey = process.env.LOOPS_API_KEY;
+      const isDevelopment = process.env.NODE_ENV === 'development';
 
       if (!loopsApiKey) {
         console.error(
           'LOOPS_API_KEY is not set. Cannot sync contact to Loops.',
         );
         return { success: false, message: 'Loops API key not configured.' };
+      }
+
+      // Skip in development mode to avoid triggering real API calls
+      if (isDevelopment) {
+        console.log(
+          `[DEV] Skipping Loops contact sync for ${email || privyUserId}`,
+        );
+        return { success: true, message: 'Skipped in development mode.' };
       }
 
       // 1. Check if user exists using privyDid and if already synced

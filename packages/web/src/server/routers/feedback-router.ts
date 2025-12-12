@@ -4,6 +4,7 @@ import { TRPCError } from '@trpc/server';
 
 const LOOPS_API_KEY = process.env.LOOPS_API_KEY;
 const LOOPS_API_BASE_URL = 'https://app.loops.so/api/v1';
+const IS_DEVELOPMENT = process.env.NODE_ENV === 'development';
 
 export const feedbackRouter = router({
   sendFeedback: protectedProcedure
@@ -11,7 +12,7 @@ export const feedbackRouter = router({
       z.object({
         feedback: z.string().min(1).max(5000),
         userEmail: z.string().email(),
-      })
+      }),
     )
     .mutation(async ({ input, ctx }) => {
       const { feedback, userEmail } = input;
@@ -23,12 +24,18 @@ export const feedbackRouter = router({
         });
       }
 
+      // Skip in development mode to avoid triggering real emails
+      if (IS_DEVELOPMENT) {
+        console.log(`[DEV] Skipping Loops feedback email from ${userEmail}`);
+        return { success: true };
+      }
+
       try {
         // send transactional email via loops
         const response = await fetch(`${LOOPS_API_BASE_URL}/transactional`, {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${LOOPS_API_KEY}`,
+            Authorization: `Bearer ${LOOPS_API_KEY}`,
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
@@ -55,7 +62,7 @@ export const feedbackRouter = router({
         await fetch(`${LOOPS_API_BASE_URL}/transactional`, {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${LOOPS_API_KEY}`,
+            Authorization: `Bearer ${LOOPS_API_KEY}`,
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
@@ -77,4 +84,4 @@ export const feedbackRouter = router({
         });
       }
     }),
-}); 
+});

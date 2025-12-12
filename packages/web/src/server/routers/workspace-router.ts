@@ -21,6 +21,7 @@ import {
 
 const LOOPS_API_KEY = process.env.LOOPS_API_KEY;
 const LOOPS_API_BASE_URL = 'https://app.loops.so/api/v1';
+const IS_DEVELOPMENT = process.env.NODE_ENV === 'development';
 
 export const workspaceRouter = router({
   /**
@@ -115,8 +116,8 @@ export const workspaceRouter = router({
         })
         .where(eq(workspaces.id, input.workspaceId));
 
-      // Send notification to founders via Loops
-      if (LOOPS_API_KEY) {
+      // Send notification to founders via Loops (skip in development)
+      if (LOOPS_API_KEY && !IS_DEVELOPMENT) {
         try {
           await fetch(`${LOOPS_API_BASE_URL}/transactional`, {
             method: 'POST',

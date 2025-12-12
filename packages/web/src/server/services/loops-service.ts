@@ -1,5 +1,6 @@
 const LOOPS_API_KEY = process.env.LOOPS_API_KEY;
 const LOOPS_API_BASE_URL = 'https://app.loops.so/api/v1';
+const IS_DEVELOPMENT = process.env.NODE_ENV === 'development';
 
 export const LoopsEvent = {
   KYC_APPROVED: 'kyc-approved',
@@ -76,6 +77,14 @@ class LoopsApiClient {
     if (!email) {
       console.warn('LoopsService: Email is required to send an event.');
       return { success: false, message: 'Email is required.' };
+    }
+
+    // Skip sending events in development mode to avoid triggering real emails
+    if (IS_DEVELOPMENT) {
+      console.log(
+        `[DEV] LoopsService: Skipping event '${eventName}' for ${email} (development mode)`,
+      );
+      return { success: true, message: 'Skipped in development mode.' };
     }
 
     if (this.apiKey === 'placeholder-missing-api-key') {
