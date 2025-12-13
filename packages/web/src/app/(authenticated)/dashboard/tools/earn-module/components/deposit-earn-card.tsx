@@ -160,6 +160,19 @@ export function DepositEarnCard({
   zapper,
   isTechnical = false,
 }: DepositEarnCardProps) {
+  const toRpcOrigin = (url?: string) => {
+    if (!url) return 'missing';
+    try {
+      return new URL(url).origin;
+    } catch {
+      return 'invalid';
+    }
+  };
+
+  const logDebug = (label: string, data: Record<string, unknown>) => {
+    // Keep these logs copy-pastable and safe (no full RPC URLs).
+    console.log(`[DepositEarnCard][Debug] ${label}`, data);
+  };
   // Look up vault configuration from address if not provided via props
   const vaultConfig = ALL_BASE_VAULTS.find(
     (v) => v.address.toLowerCase() === vaultAddress.toLowerCase(),
@@ -178,6 +191,7 @@ export function DepositEarnCard({
   const depositTarget =
     isNativeAsset && resolvedZapper ? resolvedZapper : vaultAddress;
   const { wallets } = useWallets();
+  const { user } = usePrivy();
   const [amount, setAmount] = useState('');
   const [depositAmount, setDepositAmount] = useState(''); // Separate state for deposit on target chain
   const [transactionState, setTransactionState] = useState<TransactionState>({
@@ -418,6 +432,42 @@ export function DepositEarnCard({
     boolean | null
   >(null);
   const [isCheckingDeployment, setIsCheckingDeployment] = useState(false);
+
+  // Useful for debugging "quote shows but action disabled" issues.
+  useEffect(() => {
+    logDebug('Identity + Safe selection snapshot', {
+      isTechnical,
+      chainId,
+      isCrossChain,
+      safeAddressProp: safeAddress,
+      baseSafeAddress,
+      crossChainSourceSafe,
+      effectiveSafeAddress,
+      targetSafeAddress,
+      isTargetSafeDeployed,
+      privyUserId: user?.id,
+      eoaAddress: user?.wallet?.address,
+      smartWalletAddress: smartWalletClient?.account?.address,
+      isRelayReady,
+      transactionStep: transactionState.step,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    isTechnical,
+    chainId,
+    isCrossChain,
+    safeAddress,
+    baseSafeAddress,
+    crossChainSourceSafe,
+    effectiveSafeAddress,
+    targetSafeAddress,
+    isTargetSafeDeployed,
+    user?.id,
+    user?.wallet?.address,
+    smartWalletClient?.account?.address,
+    isRelayReady,
+    transactionState.step,
+  ]);
 
   // Verify target Safe is deployed on-chain when we have an address from DB
   useEffect(() => {
@@ -1150,6 +1200,21 @@ export function DepositEarnCard({
   // Handle "Bridge Funds" Step
   const handleBridgeFunds = async (amountInSmallestUnit: bigint) => {
     try {
+      logDebug('Bridge start', {
+        chainId,
+        isCrossChain,
+        isBridgingSupported,
+        isLiFiBridging,
+        amountUi: amount,
+        amountInSmallestUnit: amountInSmallestUnit.toString(),
+        baseSafeAddress,
+        crossChainSourceSafe,
+        effectiveSafeAddress,
+        targetSafeAddress,
+        isTargetSafeDeployed,
+        isRelayReady,
+      });
+
       setTransactionState({
         step: 'bridging',
         bridgeQuote: bridgeQuote ?? undefined,
@@ -1159,6 +1224,13 @@ export function DepositEarnCard({
         amount: amountInSmallestUnit.toString(),
         sourceChainId: SUPPORTED_CHAINS.BASE,
         destChainId: chainId,
+      });
+
+      logDebug('Bridge result', {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        bridgeResultKeys: Object.keys(bridgeResult as any),
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        needsDeployment: (bridgeResult as any)?.needsDeployment,
       });
 
       if (bridgeResult.needsDeployment) {
@@ -1185,6 +1257,12 @@ export function DepositEarnCard({
         value: tx.value,
         data: tx.data as `0x${string}`,
       }));
+
+      logDebug('Bridge tx relay', {
+        txCount: txsToRelay.length,
+        gas: '500000',
+        safeUsedByRelay: effectiveSafeAddress,
+      });
 
       const bridgeTxHash = await sendTxViaRelay(txsToRelay, 500_000n);
       console.log('[DepositEarnCard] Bridge tx sent:', bridgeTxHash);
@@ -1228,14 +1306,20 @@ export function DepositEarnCard({
     }
   };
 
-  const { user } = usePrivy();
-
   // Handle "Deposit on Target Chain" Step
   const handleTargetChainDeposit = async (
     amountInSmallestUnit: bigint,
     targetSafe: Address,
   ) => {
     try {
+      logDebug('Target-chain deposit start', {
+        chainId,
+        vaultAddress,
+        targetSafe,
+        amountUi: depositAmount,
+        amountInSmallestUnit: amountInSmallestUnit.toString(),
+      });
+
       setTransactionState({ step: 'checking' });
 
       // 1. Get RPC and Public Client for Target Chain
@@ -1273,6 +1357,13 @@ export function DepositEarnCard({
       };
       const rpcUrl = getRpcUrlForChain(chainId);
       const targetChain = getChainForId(chainId);
+
+      logDebug('Target-chain RPC selection', {
+        chainId,
+        targetChainId: targetChain.id,
+        rpcOrigin: toRpcOrigin(rpcUrl),
+      });
+
       const targetPublicClient = createPublicClient({
         chain: targetChain,
         transport: http(rpcUrl),
@@ -1289,15 +1380,30 @@ export function DepositEarnCard({
       });
 
       // 3. Determine Owner type of the Safe
-      const owners = await targetPublicClient.readContract({
-        address: targetSafe,
-        abi: parseAbi(['function getOwners() view returns (address[])']),
-        functionName: 'getOwners',
+      const [bytecode, owners] = await Promise.all([
+        targetPublicClient.getBytecode({ address: targetSafe }),
+        targetPublicClient.readContract({
+          address: targetSafe,
+          abi: parseAbi(['function getOwners() view returns (address[])']),
+          functionName: 'getOwners',
+        }) as Promise<Address[]>,
+      ]);
+
+      logDebug('Target Safe on-chain check', {
+        targetSafe,
+        chainId,
+        hasBytecode: !!(bytecode && bytecode !== '0x'),
+        owners,
       });
 
       // Get smart wallet address for comparison
       const targetClient = await getClientForChain({ id: chainId });
       const smartWalletAddress = targetClient?.account?.address;
+
+      logDebug('Target-chain identity', {
+        eoaAddress: user?.wallet?.address,
+        smartWalletAddress,
+      });
 
       const isSmartWalletOwner =
         smartWalletAddress &&
@@ -1319,6 +1425,13 @@ export function DepositEarnCard({
       );
       console.log('[DepositEarnCard] isEoaOwner:', isEoaOwner);
       console.log('[DepositEarnCard] isSmartWalletOwner:', isSmartWalletOwner);
+
+      logDebug('Owner classification', {
+        targetSafe,
+        chainId,
+        isEoaOwner,
+        isSmartWalletOwner,
+      });
 
       // 4. Handle based on owner type
       if (isEoaOwner) {
