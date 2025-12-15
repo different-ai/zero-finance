@@ -1802,47 +1802,6 @@ export function DepositEarnCard({
     maximumFractionDigits: 6,
   });
 
-  // Mirror the exact Bridge button disabled logic so we can debug "quote shows but button disabled".
-  const bridgeButtonGate = {
-    noAmount: !amount,
-    nonPositive: !!amount && parseFloat(amount) <= 0,
-    // NOTE: this matches the current UI logic (and is potentially buggy if displayBalance includes commas).
-    exceedsDisplayedBalance:
-      !!amount && parseFloat(amount) > parseFloat(displayBalance),
-    zeroBalance: assetBalance === 0n,
-    isLoadingQuote,
-  };
-  const bridgeDisabled = Object.values(bridgeButtonGate).some(Boolean);
-
-  useEffect(() => {
-    if (!isCrossChain) return;
-    if (!amount) return;
-
-    logDebug('Bridge button gate', {
-      chainId,
-      amount,
-      displayBalance,
-      parsedDisplayBalance: Number.isNaN(parseFloat(displayBalance))
-        ? 'NaN'
-        : parseFloat(displayBalance),
-      assetBalance: assetBalance.toString(),
-      isLoadingQuote,
-      bridgeQuotePresent: !!bridgeQuote,
-      bridgeDisabled,
-      bridgeButtonGate,
-    });
-  }, [
-    amount,
-    assetBalance,
-    bridgeDisabled,
-    bridgeQuote,
-    bridgeButtonGate,
-    chainId,
-    displayBalance,
-    isCrossChain,
-    isLoadingQuote,
-  ]);
-
   // Show skeleton only on initial load, not on data updates
   if (showSkeleton) {
     return (
@@ -2866,7 +2825,7 @@ export function DepositEarnCard({
                 disabled={
                   !amount ||
                   parseFloat(amount) <= 0 ||
-                  parseFloat(amount) > parseFloat(displayBalance) ||
+                  parseFloat(amount) > parseFloat(availableBalance) ||
                   assetBalance === 0n ||
                   !xdaiBridgeQuote ||
                   isLoadingXdaiQuote ||
@@ -3083,7 +3042,7 @@ export function DepositEarnCard({
                 disabled={
                   !amount ||
                   parseFloat(amount) <= 0 ||
-                  parseFloat(amount) > parseFloat(displayBalance) ||
+                  parseFloat(amount) > parseFloat(availableBalance) ||
                   assetBalance === 0n ||
                   isLoadingQuote
                 }
