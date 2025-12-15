@@ -698,7 +698,7 @@ export function CheckingActionsCard({
               }
             >
               <ArrowRightCircle className="h-5 w-5" />
-              {isTechnical ? '[ WITHDRAW ]' : 'Withdraw'}
+              {isTechnical ? '[ WITHDRAW ]' : 'Transfer'}
             </Button>
           </DialogTrigger>
           <DialogContent
@@ -711,18 +711,13 @@ export function CheckingActionsCard({
           </DialogContent>
         </Dialog>
 
-        {/* Transfer Between Networks */}
-        {!isDemoMode && baseSafe && arbitrumSafe && (
+        {/* Transfer Between Networks - Technical mode only */}
+        {isTechnical && !isDemoMode && baseSafe && arbitrumSafe && (
           <Dialog open={isBridgeModalOpen} onOpenChange={setIsBridgeModalOpen}>
             <DialogTrigger asChild>
               <Button
                 variant="outline"
-                className={cn(
-                  'flex-1 min-w-[120px] inline-flex items-center justify-center gap-2 transition-all duration-200',
-                  isTechnical
-                    ? 'border border-[#1B29FF]/40 bg-white text-[#1B29FF] font-mono px-4 py-2.5 rounded-sm hover:border-[#1B29FF] hover:bg-[#1B29FF]/5 text-[13px]'
-                    : 'px-5 py-3 text-[15px] font-semibold text-[#101010] border border-[#101010]/10 hover:border-[#1B29FF]/20 hover:text-[#1B29FF] hover:bg-[#F7F7F2]',
-                )}
+                className="flex-1 min-w-[120px] inline-flex items-center justify-center gap-2 transition-all duration-200 border border-[#1B29FF]/40 bg-white text-[#1B29FF] font-mono px-4 py-2.5 rounded-sm hover:border-[#1B29FF] hover:bg-[#1B29FF]/5 text-[13px]"
                 disabled={!hasAnyBalance}
                 title={
                   !hasAnyBalance
@@ -731,7 +726,7 @@ export function CheckingActionsCard({
                 }
               >
                 <ArrowLeftRight className="h-5 w-5" />
-                {isTechnical ? 'BRIDGE' : 'Transfer'}
+                BRIDGE
               </Button>
             </DialogTrigger>
             <DialogContent className="bg-white border-[#101010]/10 max-w-md">

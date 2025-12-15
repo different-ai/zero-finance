@@ -43,6 +43,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { usePrivy } from '@privy-io/react-auth';
+import { useBimodal } from '@/components/ui/bimodal';
 
 interface TeamTabProps {
   companyId?: string; // Kept for backwards compatibility, but not used
@@ -50,6 +51,7 @@ interface TeamTabProps {
 
 export function TeamTab({ companyId }: TeamTabProps) {
   const { user } = usePrivy();
+  const { isTechnical } = useBimodal();
   const [copiedLink, setCopiedLink] = useState<string | null>(null);
   const [copiedAddress, setCopiedAddress] = useState<string | null>(null);
   const [memberToRemove, setMemberToRemove] = useState<any>(null);
@@ -250,26 +252,28 @@ export function TeamTab({ companyId }: TeamTabProps) {
                 </p>
               </div>
             </div>
-            <div className="flex items-start gap-3">
-              <div className="flex-shrink-0 w-6 h-6 rounded-full bg-[#1B29FF] text-white text-sm flex items-center justify-center">
-                2
+            {isTechnical && (
+              <div className="flex items-start gap-3">
+                <div className="flex-shrink-0 w-6 h-6 rounded-full bg-[#1B29FF] text-white text-sm flex items-center justify-center">
+                  2
+                </div>
+                <div>
+                  <p className="font-medium text-[#101010]">
+                    Once they join, add them as a Safe owner
+                  </p>
+                  <p className="text-sm text-[#666666]">
+                    After they appear in the team list, go to{' '}
+                    <a
+                      href="/dashboard/settings/advanced-wallet"
+                      className="text-[#1B29FF] underline"
+                    >
+                      Advanced Wallet Settings
+                    </a>{' '}
+                    to add them as a Safe owner
+                  </p>
+                </div>
               </div>
-              <div>
-                <p className="font-medium text-[#101010]">
-                  Once they join, add them as a Safe owner
-                </p>
-                <p className="text-sm text-[#666666]">
-                  After they appear in the team list, go to{' '}
-                  <a
-                    href="/dashboard/settings/advanced-wallet"
-                    className="text-[#1B29FF] underline"
-                  >
-                    Advanced Wallet Settings
-                  </a>{' '}
-                  to add them as a Safe owner
-                </p>
-              </div>
-            </div>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -288,27 +292,30 @@ export function TeamTab({ companyId }: TeamTabProps) {
         <CardContent>
           {canManageTeam && (
             <div className="space-y-4">
-              <div className="flex items-center space-x-2 p-3 border rounded-lg bg-[#F7F7F2]">
-                <Checkbox
-                  id="add-safe-owner"
-                  checked={addAsSafeOwner}
-                  onCheckedChange={(checked) =>
-                    setAddAsSafeOwner(checked as boolean)
-                  }
-                />
-                <div className="flex-1">
-                  <Label
-                    htmlFor="add-safe-owner"
-                    className="text-sm font-medium cursor-pointer"
-                  >
-                    Also add as Safe co-owner (requires confirmation)
-                  </Label>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    The invited user will be queued to become a Safe owner after
-                    they join
-                  </p>
+              {/* Safe co-owner option - Technical mode only */}
+              {isTechnical && (
+                <div className="flex items-center space-x-2 p-3 border rounded-lg bg-[#F7F7F2]">
+                  <Checkbox
+                    id="add-safe-owner"
+                    checked={addAsSafeOwner}
+                    onCheckedChange={(checked) =>
+                      setAddAsSafeOwner(checked as boolean)
+                    }
+                  />
+                  <div className="flex-1">
+                    <Label
+                      htmlFor="add-safe-owner"
+                      className="text-sm font-medium cursor-pointer"
+                    >
+                      Also add as Safe co-owner (requires confirmation)
+                    </Label>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      The invited user will be queued to become a Safe owner
+                      after they join
+                    </p>
+                  </div>
                 </div>
-              </div>
+              )}
               <Button
                 onClick={handleCreateTeamInvite}
                 className="w-full bg-[#1B29FF] hover:bg-[#1420CC]"
@@ -441,7 +448,9 @@ export function TeamTab({ companyId }: TeamTabProps) {
                       >
                         {member.role}
                       </Badge>
-                      {member.walletAddress &&
+                      {/* Safe Owner badge - Technical mode only */}
+                      {isTechnical &&
+                        member.walletAddress &&
                         isSafeOwner(member.walletAddress) && (
                           <Badge
                             variant="outline"
@@ -484,8 +493,8 @@ export function TeamTab({ companyId }: TeamTabProps) {
         </CardContent>
       </Card>
 
-      {/* Safe Owners Section */}
-      {primarySafeAddress && (
+      {/* Safe Owners Section - Technical mode only */}
+      {isTechnical && primarySafeAddress && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -562,8 +571,8 @@ export function TeamTab({ companyId }: TeamTabProps) {
         </Card>
       )}
 
-      {/* No Safe Warning */}
-      {!primarySafeAddress && !isLoadingSafes && (
+      {/* No Safe Warning - Technical mode only */}
+      {isTechnical && !primarySafeAddress && !isLoadingSafes && (
         <Card className="border-orange-200 bg-orange-50">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-orange-700">

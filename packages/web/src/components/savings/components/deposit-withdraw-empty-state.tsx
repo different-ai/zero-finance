@@ -10,6 +10,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Info, ArrowDownToLine, Wallet, RefreshCw } from 'lucide-react';
+import { useBimodal } from '@/components/ui/bimodal';
 
 interface DepositWithdrawEmptyStateProps {
   type: 'deposit' | 'withdraw';
@@ -24,6 +25,7 @@ export function DepositWithdrawEmptyState({
   hasNoVaultData,
   onRefresh,
 }: DepositWithdrawEmptyStateProps) {
+  const { isTechnical } = useBimodal();
   const isDeposit = type === 'deposit';
   const Icon = isDeposit ? ArrowDownToLine : Wallet;
   const title = isDeposit ? 'Deposit Funds' : 'Withdraw Funds';
@@ -79,12 +81,15 @@ export function DepositWithdrawEmptyState({
           <div className="bg-muted/50 rounded-lg p-4 space-y-2">
             <p className="text-sm text-muted-foreground">
               {isDeposit
-                ? "Once initialized, you'll be able to deposit USDC into your high-yield savings vault."
+                ? isTechnical
+                  ? "Once initialized, you'll be able to deposit USDC into your high-yield savings vault."
+                  : "Once initialized, you'll be able to deposit funds into your high-yield savings account."
                 : "Once initialized, you'll be able to withdraw your funds at any time with no penalties."}
             </p>
             <p className="text-sm text-muted-foreground">
-              The vault earns approximately 8% APY through the Morpho × Gauntlet
-              optimized yield strategy.
+              {isTechnical
+                ? 'The vault earns approximately 8% APY through the Morpho × Gauntlet optimized yield strategy.'
+                : 'Your savings account earns approximately 8% APY through our institutional-grade yield strategy.'}
             </p>
           </div>
 
