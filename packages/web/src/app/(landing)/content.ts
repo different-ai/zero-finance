@@ -68,7 +68,7 @@ export const LANDING_CONTENT: {
       id: 'security',
       title: 'Institutional-Grade Security',
       description:
-        'Bank-level security with self-custody benefits. Your funds are protected by insurance coverage up to $1M from a licensed insurer and battle-tested DeFi protocols securing $8B+ in assets. Email login for easy access.',
+        'Bank-level security with self-custody benefits. Your funds are protected by insurance coverage up to $1M from a licensed insurer. Email login for easy access.',
     },
   ],
 };
