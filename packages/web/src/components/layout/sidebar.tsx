@@ -73,11 +73,6 @@ export function Sidebar() {
           icon: Banknote,
         },
         {
-          name: isTechnical ? 'Payroll' : 'Contractors',
-          href: '/dashboard/contractors',
-          icon: Users,
-        },
-        {
           name: 'Invoices',
           href: '/dashboard/invoices',
           icon: FileText,
