@@ -339,7 +339,7 @@ export function Sidebar() {
         )}
       >
         {authenticated && user && (
-          <div className="p-4">
+          <div className="p-4 bg-zinc-50">
             <div className="relative" ref={dropdownRef}>
               <button
                 onClick={() => setDropdownOpen(!dropdownOpen)}
