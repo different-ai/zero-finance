@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { ArrowRight, Building2, Users, Settings2, Wallet } from 'lucide-react';
+import { ArrowRight, Users, Settings2, Wallet } from 'lucide-react';
 import Link from 'next/link';
 import { useBimodal } from '@/components/ui/bimodal';
 import { cn } from '@/lib/utils';
@@ -37,19 +37,20 @@ export function SettingsClientContent() {
       path: '/dashboard/settings/advanced-wallet',
       technicalOnly: true,
     },
-    {
-      id: 'payment-accounts',
-      title: isTechnical ? 'ACCOUNTS::VIRTUAL' : 'Payment & Virtual Accounts',
-      description: isTechnical
-        ? 'Configure virtual IBANs, fiat on/off ramps, and auto-conversion rules'
-        : 'Manage virtual bank accounts and transfer funds between fiat and crypto',
-      icon: Building2,
-      features: isTechnical
-        ? ['Virtual IBANs', 'On/Off ramp', 'Auto-convert']
-        : ['Virtual accounts', 'Fiat transfers', 'Auto-conversion'],
-      path: '/dashboard/settings/payment-accounts',
-      technicalOnly: true,
-    },
+    // Payment accounts page hidden - accessed directly via URL only
+    // {
+    //   id: 'payment-accounts',
+    //   title: isTechnical ? 'ACCOUNTS::VIRTUAL' : 'Payment & Virtual Accounts',
+    //   description: isTechnical
+    //     ? 'Configure virtual IBANs, fiat on/off ramps, and auto-conversion rules'
+    //     : 'Manage virtual bank accounts and transfer funds between fiat and crypto',
+    //   icon: Building2,
+    //   features: isTechnical
+    //     ? ['Virtual IBANs', 'On/Off ramp', 'Auto-convert']
+    //     : ['Virtual accounts', 'Fiat transfers', 'Auto-conversion'],
+    //   path: '/dashboard/settings/payment-accounts',
+    //   technicalOnly: true,
+    // },
     {
       id: 'company',
       title: isTechnical ? 'WORKSPACE::CONFIG' : 'Workspace & Company',

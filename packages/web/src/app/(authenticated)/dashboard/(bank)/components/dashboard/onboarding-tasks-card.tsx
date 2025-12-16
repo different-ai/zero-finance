@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { CheckCircle, Circle, Loader2, AlertTriangle } from 'lucide-react';
+import { Circle, Loader2, AlertTriangle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { api } from '@/trpc/react';

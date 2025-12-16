@@ -157,10 +157,16 @@ export function VirtualAccountOnboardingLayer({
               )}
             >
               {effectiveTechnical
-                ? 'UNLOCK::HIGHER_LIMITS'
+                ? 'UNLOCK::FIAT_LIMITS'
                 : 'Want higher limits?'}
               <ArrowRight className="h-3 w-3" />
             </button>
+            {effectiveTechnical && (
+              <p className="font-mono text-[10px] text-[#101010]/40 mt-1">
+                KYC limits apply to fiat on/off-ramping only. Crypto deposits
+                unlimited.
+              </p>
+            )}
           </div>
         </div>
       </div>

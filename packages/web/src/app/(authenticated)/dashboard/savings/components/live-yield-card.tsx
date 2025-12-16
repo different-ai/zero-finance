@@ -41,13 +41,7 @@ export function LiveYieldCard({
       {isTechnical && (
         <div
           className="absolute inset-0 pointer-events-none opacity-40"
-          style={{
-            backgroundImage: `
-              linear-gradient(to right, rgba(27,41,255,0.03) 1px, transparent 1px),
-              linear-gradient(to bottom, rgba(27,41,255,0.03) 1px, transparent 1px)
-            `,
-            backgroundSize: '24px 24px',
-          }}
+         
         />
       )}
 

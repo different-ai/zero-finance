@@ -194,23 +194,26 @@ export function DashboardSummary({
                   }
                 />
 
-                {/* Crypto Option */}
-                <button
-                  onClick={() => setIsDepositOpen(false)}
-                  className="w-full flex items-center gap-4 p-4 border border-[#1B29FF]/20 hover:bg-[#1B29FF]/5 hover:border-[#1B29FF]/40 transition-all text-left"
-                >
-                  <div className="h-12 w-12 flex items-center justify-center bg-[#1B29FF]/10">
-                    <Wallet className="h-6 w-6 text-[#1B29FF]" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-[15px] font-medium text-[#1B29FF] font-mono">
-                      Crypto Deposit
-                    </p>
-                    <p className="text-[13px] text-[#101010]/60">
-                      USDC on Base network
-                    </p>
-                  </div>
-                </button>
+                {/* Crypto Option - Opens AccountInfoDialog with USDC section */}
+                <AccountInfoDialog
+                  isDemoMode={isDemoMode}
+                  safeAddress={safeAddress}
+                  trigger={
+                    <button className="w-full flex items-center gap-4 p-4 border border-[#1B29FF]/20 hover:bg-[#1B29FF]/5 hover:border-[#1B29FF]/40 transition-all text-left">
+                      <div className="h-12 w-12 flex items-center justify-center bg-[#1B29FF]/10">
+                        <Wallet className="h-6 w-6 text-[#1B29FF]" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-[15px] font-medium text-[#1B29FF] font-mono">
+                          Crypto Deposit
+                        </p>
+                        <p className="text-[13px] text-[#101010]/60">
+                          USDC on Base network
+                        </p>
+                      </div>
+                    </button>
+                  }
+                />
               </div>
             </DialogContent>
           </Dialog>

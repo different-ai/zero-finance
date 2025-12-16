@@ -55,13 +55,7 @@ export function VaultsSection({
       {isTechnical && (
         <div
           className="absolute inset-0 pointer-events-none z-0 opacity-60"
-          style={{
-            backgroundImage: `
-              linear-gradient(to right, rgba(27,41,255,0.03) 1px, transparent 1px),
-              linear-gradient(to bottom, rgba(27,41,255,0.03) 1px, transparent 1px)
-            `,
-            backgroundSize: '24px 24px',
-          }}
+        
         >
           {/* Architectural Crosshairs */}
           <div className="absolute top-0 left-0 w-4 h-4 border-l border-t border-[#1B29FF]/30" />

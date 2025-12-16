@@ -7,13 +7,7 @@ import { cn } from '@/lib/utils';
 export const BlueprintGrid = ({ className }: { className?: string }) => (
   <div
     className={cn('absolute inset-0 pointer-events-none', className)}
-    style={{
-      backgroundImage: `
-        linear-gradient(to right, rgba(27,41,255,0.05) 1px, transparent 1px),
-        linear-gradient(to bottom, rgba(27,41,255,0.05) 1px, transparent 1px)
-      `,
-      backgroundSize: '24px 24px',
-    }}
+  
   />
 );
 
