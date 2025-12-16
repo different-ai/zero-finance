@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Building2, Globe, Copy, Check, Loader2 } from 'lucide-react';
+import { Building2, Globe, Loader2 } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -10,12 +10,11 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { BankingInstructionsDisplay } from './banking-instructions-display';
-import { Skeleton } from '@/components/ui/skeleton';
+import { CryptoDepositDisplay } from './crypto-deposit-display';
 import { cn } from '@/lib/utils';
 import { useBimodal } from '@/components/ui/bimodal';
 import { usePrivy } from '@privy-io/react-auth';
 import { api } from '@/trpc/react';
-import { getChainDisplayName } from '@/lib/constants/chains';
 
 // Demo data for when in demo mode
 const demoFundingSources = [
@@ -58,9 +57,6 @@ export function AccountInfoDialog({
   const { isTechnical } = useBimodal();
   const [internalOpen, setInternalOpen] = useState(false);
   const [showAdvancedDetails, setShowAdvancedDetails] = useState(false);
-  const [copiedSafeAddress, setCopiedSafeAddress] = useState<string | null>(
-    null,
-  );
   const [hasRequestedStarterAccounts, setHasRequestedStarterAccounts] =
     useState(false);
 
@@ -132,17 +128,6 @@ export function AccountInfoDialog({
         createStarterAccountsMutation.mutate();
       }
     }
-  };
-
-  const handleCopyAddress = (address: string) => {
-    if (!address || typeof navigator === 'undefined') return;
-    navigator.clipboard
-      .writeText(address)
-      .then(() => {
-        setCopiedSafeAddress(address);
-        setTimeout(() => setCopiedSafeAddress(null), 2000);
-      })
-      .catch((error) => console.error('Failed to copy address', error));
   };
 
   return (
@@ -240,85 +225,53 @@ export function AccountInfoDialog({
         )}
 
         {/* Advanced/USDC Account Details Section - Only show in Technical mode */}
-        {isTechnical &&
-          (isDemoMode ||
-            (multiChainData?.safes && multiChainData.safes.length > 0)) && (
-            <div className="mt-6 border-t border-[#1B29FF]/10 pt-4">
-              <button
-                type="button"
-                onClick={() => setShowAdvancedDetails((prev) => !prev)}
-                className="inline-flex items-center gap-2 text-[12px] font-medium transition-colors text-[#1B29FF] hover:text-[#1B29FF]/80 font-mono"
-              >
-                <Globe className="h-4 w-4" />
-                {showAdvancedDetails ? 'HIDE::USDC_DETAILS' : 'USDC'}
-              </button>
+        {isTechnical && (
+          <div className="mt-6 border-t border-[#1B29FF]/10 pt-4">
+            <button
+              type="button"
+              onClick={() => setShowAdvancedDetails((prev) => !prev)}
+              className="inline-flex items-center gap-2 text-[12px] font-medium transition-colors text-[#1B29FF] hover:text-[#1B29FF]/80 font-mono"
+            >
+              <Globe className="h-4 w-4" />
+              {showAdvancedDetails ? 'HIDE::USDC_DETAILS' : 'USDC'}
+            </button>
 
-              {showAdvancedDetails && (
-                <div className="mt-3 space-y-2">
-                  <p className="text-[11px] px-1 mb-2 text-[#1B29FF]/60 font-mono">
-                    Wallet addresses for direct USDC deposits (no USDT)
+            {showAdvancedDetails && (
+              <div className="mt-4">
+                {isDemoMode ? (
+                  <CryptoDepositDisplay
+                    safeAddress={
+                      safeAddress ||
+                      '0x0000000000000000000000000000000000000000'
+                    }
+                    chainName="Base"
+                  />
+                ) : multiChainData?.safes && multiChainData.safes.length > 0 ? (
+                  <CryptoDepositDisplay
+                    safeAddress={
+                      multiChainData.safes.find((s) => s.chainId === 8453)
+                        ?.address || multiChainData.safes[0].address
+                    }
+                    chainName="Base"
+                  />
+                ) : (
+                  <p
+                    className={cn(
+                      'text-[13px] py-4',
+                      isTechnical
+                        ? 'font-mono text-[#1B29FF]/60'
+                        : 'text-[#101010]/60',
+                    )}
+                  >
+                    {isTechnical
+                      ? 'NO_SAFE::DEPLOY_REQUIRED'
+                      : 'No wallet address available. Complete onboarding to create your account.'}
                   </p>
-                  {isDemoMode ? (
-                    <div className="p-3 text-[12px] rounded-sm border border-[#1B29FF]/20 bg-[#1B29FF]/5">
-                      <div className="flex items-center justify-between gap-3">
-                        <div>
-                          <span className="uppercase tracking-[0.1em] text-[10px] block mb-0.5 text-[#1B29FF]/70 font-mono">
-                            PRIMARY::DEMO
-                          </span>
-                          <code className="font-mono text-[11px] text-[#1B29FF]">
-                            {safeAddress || '0x...demo'}
-                          </code>
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    multiChainData?.safes.map((safe) => (
-                      <div
-                        key={safe.id}
-                        className="p-3 text-[12px] rounded-sm border border-[#1B29FF]/20 bg-[#1B29FF]/5"
-                      >
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                          <div className="flex items-center gap-2">
-                            {/* Base logo for Base chain */}
-                            {safe.chainId === 8453 && (
-                              <img
-                                src="/logos/_base-logo.svg"
-                                alt="Base"
-                                className="h-4 w-auto"
-                              />
-                            )}
-                            <div>
-                              <span className="uppercase tracking-[0.1em] text-[10px] block mb-0.5 text-[#1B29FF]/70 font-mono">
-                                {`CHAIN::${getChainDisplayName(safe.chainId).toUpperCase()}`}
-                              </span>
-                              <code className="font-mono text-[11px] break-all text-[#1B29FF]">
-                                {safe.address}
-                              </code>
-                            </div>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => handleCopyAddress(safe.address)}
-                            className="self-start sm:self-auto flex-shrink-0 inline-flex items-center gap-1 px-3 py-1 text-[11px] transition-colors rounded-sm border border-[#1B29FF]/30 bg-white text-[#1B29FF] hover:border-[#1B29FF] hover:bg-[#1B29FF]/5 font-mono"
-                          >
-                            {copiedSafeAddress === safe.address ? (
-                              <>
-                                <Check className="h-3 w-3" /> Copied
-                              </>
-                            ) : (
-                              <>
-                                <Copy className="h-3 w-3" /> Copy
-                              </>
-                            )}
-                          </button>
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-              )}
-            </div>
-          )}
+                )}
+              </div>
+            )}
+          </div>
+        )}
 
         {isDemoMode && (
           <div
