@@ -13,19 +13,14 @@ import {
   User,
   Phone,
   MessageSquare,
-  X,
-  Sparkles,
   Banknote,
-  Users,
   Building,
-  Activity,
-  Cpu,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { usePrivy } from '@privy-io/react-auth';
 import { featureConfigClient } from '@/lib/feature-config-client';
 import { api } from '@/trpc/react';
-import { useBimodal, BimodalToggle } from '@/components/ui/bimodal';
+import { useBimodal } from '@/components/ui/bimodal';
 
 // Navigation items types
 type NavigationItem = {
@@ -40,9 +35,8 @@ export function Sidebar() {
   const { logout, authenticated, user } = usePrivy();
   const router = useRouter();
   const [dropdownOpen, setDropdownOpen] = useState(false);
-  const [showPromo, setShowPromo] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const { isTechnical, toggle, mode } = useBimodal();
+  const { isTechnical } = useBimodal();
 
   // Fetch workspace data
   const { data: workspaceData } = api.workspace.getOrCreateWorkspace.useQuery();
@@ -94,17 +88,6 @@ export function Sidebar() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Check if user has dismissed promo before
-  useEffect(() => {
-    // wait a second
-    setTimeout(() => {
-      const promoDismissed = localStorage.getItem('zero-pro-promo-dismissed');
-      if (!promoDismissed) {
-        setShowPromo(true);
-      }
-    }, 1000);
-  }, []);
-
   const handleLogout = async () => {
     try {
       await logout();
@@ -113,11 +96,6 @@ export function Sidebar() {
       console.error('Logout error:', error);
       window.location.href = '/';
     }
-  };
-
-  const handleDismissPromo = () => {
-    setShowPromo(false);
-    localStorage.setItem('zero-pro-promo-dismissed', 'true');
   };
 
   return (
@@ -259,42 +237,6 @@ export function Sidebar() {
 
       {/* Spacer to push bottom content down */}
       <div className="flex-1" />
-
-      {/* Bimodal Toggle */}
-      <div className="px-4 pb-3 border-b border-[#101010]/10">
-        <div
-          className={cn(
-            'p-3 rounded-lg transition-colors duration-200',
-            isTechnical
-              ? 'bg-[#1B29FF]/5 border border-[#1B29FF]/10'
-              : 'bg-[#F7F7F2]',
-          )}
-        >
-          <p
-            className={cn(
-              'text-[10px] uppercase tracking-wider mb-2',
-              isTechnical ? 'text-[#1B29FF]/70 font-mono' : 'text-[#101010]/50',
-            )}
-          >
-            {isTechnical ? 'MODE::SELECT' : 'View Mode'}
-          </p>
-          <BimodalToggle
-            isTechnical={isTechnical}
-            onToggle={toggle}
-            showLabels={true}
-          />
-          <p
-            className={cn(
-              'text-[10px] mt-2 leading-relaxed',
-              isTechnical ? 'text-[#1B29FF]/60 font-mono' : 'text-[#101010]/50',
-            )}
-          >
-            {isTechnical
-              ? 'I bank in crypto (On-chain view)'
-              : 'I bank in dollars (Fiat view)'}
-          </p>
-        </div>
-      </div>
 
       {/* Bottom utility navigation */}
       <div className="px-4 pb-3 space-y-1">

@@ -24,14 +24,16 @@ import {
   Euro,
   DollarSign,
   FileText,
+  Plus,
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { SimplifiedOffRamp } from '@/components/transfers/simplified-off-ramp';
 import { usePrivy } from '@privy-io/react-auth';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
+import { useBimodal } from '@/components/ui/bimodal';
 
-import { cn, formatUsd } from '@/lib/utils';
+import { cn } from '@/lib/utils';
 import Link from 'next/link';
 import { HelpMenu } from '@/components/dashboard/help-menu';
 import { api } from '@/trpc/react';
@@ -76,11 +78,12 @@ export function FundsDisplay({
   fundingSources: propFundingSources,
   userData: propUserData,
 }: FundsDisplayProps) {
-  const [isCopied, setIsCopied] = useState(false);
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [isMoveModalOpen, setIsMoveModalOpen] = useState(false);
+  const [isAddFundsOpen, setIsAddFundsOpen] = useState(false);
   const { ready, authenticated, user } = usePrivy();
   const isMobile = useIsMobile();
+  const { isTechnical } = useBimodal();
 
   // Use tRPC to fetch funding sources and user data
   const {
@@ -100,13 +103,8 @@ export function FundsDisplay({
     navigator.clipboard
       .writeText(text)
       .then(() => {
-        if (field === 'balance') {
-          setIsCopied(true);
-          setTimeout(() => setIsCopied(false), 2000);
-        } else {
-          setCopiedField(field);
-          setTimeout(() => setCopiedField(null), 2000);
-        }
+        setCopiedField(field);
+        setTimeout(() => setCopiedField(null), 2000);
       })
       .catch((err) => console.error('Failed to copy:', err));
   };
@@ -142,7 +140,7 @@ export function FundsDisplay({
                 }
                 className="h-8 w-8 hover:bg-[#F7F7F2] transition-colors"
               >
-                {isCopied ? (
+                {copiedField === 'balance' ? (
                   <Check className="h-4 w-4 text-[#1B29FF]" />
                 ) : (
                   <Copy className="h-4 w-4 text-[#101010]/60" />
@@ -160,17 +158,83 @@ export function FundsDisplay({
       </div>
       <div className="p-6">
         <div className="flex flex-col sm:flex-row gap-3">
+          {/* Add Funds Button */}
+          <Dialog open={isAddFundsOpen} onOpenChange={setIsAddFundsOpen}>
+            <DialogTrigger asChild>
+              <Button className="flex-1 inline-flex items-center justify-center px-6 py-3 text-[16px] font-medium text-white bg-[#1B29FF] hover:bg-[#1420CC] transition-colors gap-2">
+                <Plus className="h-5 w-5" />
+                Add Funds
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="bg-white border-[#101010]/10 max-w-md">
+              <DialogHeader className="border-b border-[#101010]/10 pb-4">
+                <DialogTitle className="font-serif text-[24px] leading-[1.1] text-[#101010]">
+                  {isTechnical ? 'Select Funding Method' : 'Add Funds'}
+                </DialogTitle>
+              </DialogHeader>
+              <div className="space-y-3 pt-4">
+                {/* Bank Transfer Option */}
+                <button
+                  onClick={() => {
+                    setIsAddFundsOpen(false);
+                    // Trigger the Account Details dialog to show bank info
+                    refetchFundingSources();
+                  }}
+                  className="w-full flex items-center gap-4 p-4 border border-[#101010]/10 hover:bg-[#F7F7F2] hover:border-[#101010]/20 transition-all"
+                >
+                  <div className="h-12 w-12 flex items-center justify-center bg-[#F7F7F2]">
+                    <Building2 className="h-6 w-6 text-[#101010]/70" />
+                  </div>
+                  <div className="flex-1 text-left">
+                    <p className="text-[15px] font-medium text-[#101010]">
+                      {isTechnical ? 'Wire Transfer' : 'Bank Transfer'}
+                    </p>
+                    <p className="text-[13px] text-[#101010]/60">
+                      {isTechnical
+                        ? 'ACH / SEPA / Wire via virtual account'
+                        : 'Send from your bank account'}
+                    </p>
+                  </div>
+                </button>
+
+                {/* Crypto Option - Only show in Technical mode */}
+                {isTechnical && (
+                  <button
+                    onClick={() => {
+                      setIsAddFundsOpen(false);
+                      // Could navigate to crypto tab or show wallet address
+                    }}
+                    className="w-full flex items-center gap-4 p-4 border border-[#1B29FF]/20 hover:bg-[#1B29FF]/5 hover:border-[#1B29FF]/40 transition-all"
+                  >
+                    <div className="h-12 w-12 flex items-center justify-center bg-[#1B29FF]/10">
+                      <Wallet className="h-6 w-6 text-[#1B29FF]" />
+                    </div>
+                    <div className="flex-1 text-left">
+                      <p className="text-[15px] font-medium text-[#1B29FF] font-mono">
+                        Crypto Deposit
+                      </p>
+                      <p className="text-[13px] text-[#101010]/60">
+                        USDC on Base network
+                      </p>
+                    </div>
+                  </button>
+                )}
+              </div>
+            </DialogContent>
+          </Dialog>
+
+          {/* Move Funds Button */}
           <Dialog open={isMoveModalOpen} onOpenChange={setIsMoveModalOpen}>
             <DialogTrigger asChild>
               <Button
-                className="flex-1 inline-flex items-center justify-center px-6 py-3 text-[16px] font-medium text-white bg-[#1B29FF] hover:bg-[#1420CC] transition-colors gap-2"
+                className="flex-1 inline-flex items-center justify-center px-6 py-3 text-[16px] font-medium text-[#101010] bg-white hover:bg-[#F7F7F2] hover:text-[#1B29FF] border border-[#101010]/10 hover:border-[#1B29FF]/20 transition-all duration-150 gap-2 group"
                 title={
                   !hasVirtualAccounts
                     ? 'Connect a bank account to enable transfers'
                     : undefined
                 }
               >
-                <ArrowRightCircle className="h-5 w-5" />
+                <ArrowRightCircle className="h-5 w-5 text-[#101010]/60 group-hover:text-[#1B29FF] transition-colors" />
                 Move Funds
               </Button>
             </DialogTrigger>
@@ -181,6 +245,7 @@ export function FundsDisplay({
             </DialogContent>
           </Dialog>
 
+          {/* Account Details Button */}
           <Dialog onOpenChange={(open) => open && refetchFundingSources()}>
             <DialogTrigger asChild>
               <Button className="flex-1 inline-flex items-center justify-center px-6 py-3 text-[16px] font-medium text-[#101010] bg-white hover:bg-[#F7F7F2] hover:text-[#1B29FF] border border-[#101010]/10 hover:border-[#1B29FF]/20 transition-all duration-150 gap-2 group">
@@ -205,7 +270,12 @@ export function FundsDisplay({
               ) : (
                 <>
                   <Tabs defaultValue="all" className="w-full mt-6">
-                    <TabsList className="grid w-full grid-cols-4 bg-[#F7F7F2] p-1">
+                    <TabsList
+                      className={cn(
+                        'grid w-full bg-[#F7F7F2] p-1',
+                        isTechnical ? 'grid-cols-4' : 'grid-cols-3',
+                      )}
+                    >
                       <TabsTrigger
                         value="all"
                         className="data-[state=active]:bg-white data-[state=active]:text-[#101010] text-[#101010]/60 text-[14px] font-medium transition-colors"
@@ -224,12 +294,15 @@ export function FundsDisplay({
                       >
                         EUR
                       </TabsTrigger>
-                      <TabsTrigger
-                        value="crypto"
-                        className="data-[state=active]:bg-white data-[state=active]:text-[#101010] text-[#101010]/60 text-[14px] font-medium transition-colors"
-                      >
-                        Crypto
-                      </TabsTrigger>
+                      {/* Only show Crypto tab in Technical mode */}
+                      {isTechnical && (
+                        <TabsTrigger
+                          value="crypto"
+                          className="data-[state=active]:bg-white data-[state=active]:text-[#1B29FF] text-[#1B29FF]/60 text-[14px] font-medium font-mono transition-colors"
+                        >
+                          CRYPTO
+                        </TabsTrigger>
+                      )}
                     </TabsList>
 
                     <TabsContent value="all" className="space-y-4 mt-6">
