@@ -25,8 +25,14 @@ const BASE_TRANSACTION_SERVICE_URL =
 
 // Define structure for a transaction item (matching the frontend component)
 // Simplified version based on Safe Service response structure
+// NOTE: The Safe Transaction Service API returns `txType` for /all-transactions/ endpoint
+// but some endpoints may use `type`. We support both for compatibility.
 interface TransactionItemFromService {
-  type: 'ETHEREUM_TRANSACTION' | 'MODULE_TRANSACTION' | 'MULTISIG_TRANSACTION';
+  type?: 'ETHEREUM_TRANSACTION' | 'MODULE_TRANSACTION' | 'MULTISIG_TRANSACTION';
+  txType?:
+    | 'ETHEREUM_TRANSACTION'
+    | 'MODULE_TRANSACTION'
+    | 'MULTISIG_TRANSACTION';
   txHash?: string;
   transactionHash?: string;
   executionDate: string; // ISO 8601 date string
@@ -71,8 +77,12 @@ function mapTxItem(
     | { address: string; symbol: string; decimals: number }
     | undefined;
 
+  // Handle both 'type' and 'txType' field names from the API
+  // The /all-transactions/ endpoint returns 'txType', while other endpoints may use 'type'
+  const txType = tx.type || tx.txType;
+
   // Skip unexecuted multisig for now
-  if (tx.type === 'MULTISIG_TRANSACTION' && !tx.isExecuted) {
+  if (txType === 'MULTISIG_TRANSACTION' && !tx.isExecuted) {
     return null;
   }
 
@@ -103,7 +113,7 @@ function mapTxItem(
 
   // If no transfers found, try to determine type from transaction type
   if (type === 'module') {
-    if (tx.type === 'ETHEREUM_TRANSACTION') {
+    if (txType === 'ETHEREUM_TRANSACTION') {
       // Check if this is an incoming ETH transfer to the safe
       if (
         safeAddress &&
@@ -114,7 +124,7 @@ function mapTxItem(
         type = 'incoming';
         value = tx.value;
       }
-    } else if (tx.type === 'MULTISIG_TRANSACTION') {
+    } else if (txType === 'MULTISIG_TRANSACTION') {
       // For multisig transactions, check the decoded data
       if (
         tx.dataDecoded?.method === 'transfer' ||
@@ -135,7 +145,7 @@ function mapTxItem(
   }
 
   // Handle creation transactions
-  if (!tx.to && tx.type === 'ETHEREUM_TRANSACTION') {
+  if (!tx.to && txType === 'ETHEREUM_TRANSACTION') {
     type = 'creation';
   }
 
