@@ -376,7 +376,7 @@ export function CheckingActionsCard({
           {isTechnical ? (
             <>
               <p className="font-mono text-[10px] text-[#1B29FF] tracking-wider uppercase mb-2">
-                BALANCE::AVAILABLE
+                FUNDS::READY_TO_ALLOCATE
               </p>
               <p className="font-mono text-[28px] tabular-nums text-[#101010]">
                 {displayBalance.toLocaleString('en-US', {
@@ -392,13 +392,13 @@ export function CheckingActionsCard({
           ) : (
             <>
               <p className="uppercase tracking-[0.16em] text-[11px] text-[#101010]/60 mb-2">
-                Available Balance
+                Ready to Allocate
               </p>
               <p className="text-[32px] sm:text-[40px] font-semibold leading-[0.95] tabular-nums text-[#101010]">
                 {formatUsd(displayBalance)}
               </p>
               <p className="mt-3 text-[13px] text-[#101010]/60">
-                Ready to transfer or invest
+                Funds available for vault deposits
               </p>
             </>
           )}
