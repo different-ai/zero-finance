@@ -719,8 +719,9 @@ class AlignApiClient {
       destination_address: string;
     },
   ): Promise<AlignVirtualAccount> {
+    const sanitizedCustomerId = customerId.trim();
     const response = await this.fetchWithAuth(
-      `/v0/customers/${customerId}/virtual-account`,
+      `/v0/customers/${sanitizedCustomerId}/virtual-account`,
       {
         method: 'POST',
         body: JSON.stringify(data),

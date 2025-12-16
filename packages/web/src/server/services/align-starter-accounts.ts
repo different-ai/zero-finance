@@ -14,7 +14,7 @@ export async function createStarterVirtualAccounts(params: {
   workspaceId: string;
   destinationAddress: string;
 }) {
-  const companyCustomerId = process.env.ALIGN_COMPANY_CUSTOMER_ID;
+  const companyCustomerId = process.env.ALIGN_COMPANY_CUSTOMER_ID?.trim();
   const featureEnabled = true;
 
   if (!featureEnabled) {
