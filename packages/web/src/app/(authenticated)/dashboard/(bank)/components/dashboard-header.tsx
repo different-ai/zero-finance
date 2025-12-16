@@ -33,7 +33,7 @@ export function DashboardHeader() {
         )}
       >
         {isTechnical
-          ? 'Multi-chain treasury overview. Manage balances, vaults, and transactions.'
+          ? 'View your balances, manage deposits, and track your financial activity.'
           : 'View your balances, manage deposits, and track your financial activity.'}
       </p>
     </div>
