@@ -12,18 +12,23 @@ import {
 } from '@/components/ui/dialog';
 import {
   ArrowRightCircle,
+  ArrowLeft,
   ChevronRight,
   Building2,
   Wallet,
   TrendingUp,
+  Loader2,
 } from 'lucide-react';
 import { useBimodal } from '@/components/ui/bimodal';
 import { cn, formatUsd } from '@/lib/utils';
 import { SimplifiedOffRamp } from '@/components/transfers/simplified-off-ramp';
-import { AccountInfoDialog } from '@/components/virtual-accounts/account-info-dialog';
+import { BankingInstructionsDisplay } from '@/components/virtual-accounts/banking-instructions-display';
+import { CryptoDepositDisplay } from '@/components/virtual-accounts/crypto-deposit-display';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { api } from '@/trpc/react';
 import { usePrivy } from '@privy-io/react-auth';
+
+type DepositView = 'select' | 'bank' | 'crypto';
 
 type DashboardSummaryProps = {
   availableBalance: number;
@@ -43,16 +48,41 @@ export function DashboardSummary({
   const { isTechnical } = useBimodal();
   const isMobile = useIsMobile();
   const [isDepositOpen, setIsDepositOpen] = useState(false);
+  const [depositView, setDepositView] = useState<DepositView>('select');
   const [isTransferOpen, setIsTransferOpen] = useState(false);
   const { ready, authenticated, user } = usePrivy();
 
   // Fetch funding sources for transfer modal
-  const { data: accountData, refetch: refetchFundingSources } =
-    api.align.getVirtualAccountDetails.useQuery(undefined, {
-      enabled: !isDemoMode && ready && authenticated && !!user?.id,
-    });
+  const {
+    data: accountData,
+    isLoading: isLoadingFundingSources,
+    refetch: refetchFundingSources,
+  } = api.align.getVirtualAccountDetails.useQuery(undefined, {
+    enabled: !isDemoMode && ready && authenticated && !!user?.id,
+  });
+
+  // Fetch multi-chain positions for crypto deposit address
+  const { data: multiChainData } = api.earn.getMultiChainPositions.useQuery(
+    undefined,
+    {
+      enabled: !isDemoMode && ready && authenticated,
+      staleTime: 30000,
+    },
+  );
 
   const fundingSources = isDemoMode ? [] : accountData?.fundingSources || [];
+  const userData = isDemoMode ? null : accountData?.userData;
+
+  // Get Base Safe address for crypto deposits
+  const baseSafe = multiChainData?.safes?.find((s) => s.chainId === 8453);
+
+  // Reset deposit view when dialog closes
+  const handleDepositOpenChange = (open: boolean) => {
+    setIsDepositOpen(open);
+    if (!open) {
+      setDepositView('select');
+    }
+  };
 
   return (
     <div className="flex flex-col sm:flex-row gap-4 items-stretch">
@@ -158,77 +188,322 @@ export function DashboardSummary({
 
       {/* Action Buttons - Outside the card, on the right */}
       <div className="flex flex-col justify-center gap-2 items-center sm:min-w-[250px] sm:max-w-[180px]">
-        {/* Deposit Button - Banking mode opens AccountInfoDialog directly, Technical mode shows options */}
-        {isTechnical ? (
-          <Dialog open={isDepositOpen} onOpenChange={setIsDepositOpen}>
-            <DialogTrigger asChild>
-              <Button className="w-full justify-center bg-[#1B29FF] text-white hover:bg-[#1420CC] font-mono">
-                DEPOSIT
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="bg-white border-[#101010]/10 max-w-md">
-              <DialogHeader className="border-b border-[#101010]/10 pb-4">
-                <DialogTitle className="font-serif text-[24px] leading-[1.1] text-[#101010]">
-                  Select Funding Method
-                </DialogTitle>
-              </DialogHeader>
-              <div className="space-y-3 pt-4">
-                {/* Bank Transfer Option */}
-                <AccountInfoDialog
-                  isDemoMode={isDemoMode}
-                  safeAddress={safeAddress}
-                  trigger={
-                    <button className="w-full flex items-center gap-4 p-4 border border-[#101010]/10 hover:bg-[#F7F7F2] hover:border-[#101010]/20 transition-all text-left">
-                      <div className="h-12 w-12 flex items-center justify-center bg-[#F7F7F2]">
-                        <Building2 className="h-6 w-6 text-[#101010]/70" />
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-[15px] font-medium text-[#101010]">
-                          Wire Transfer
-                        </p>
-                        <p className="text-[13px] text-[#101010]/60">
-                          ACH / SEPA / Wire via virtual account
-                        </p>
-                      </div>
-                    </button>
-                  }
-                />
+        {/* Deposit Button */}
+        <Dialog open={isDepositOpen} onOpenChange={handleDepositOpenChange}>
+          <DialogTrigger asChild>
+            <Button
+              className={cn(
+                'w-full justify-center bg-[#1B29FF] text-white hover:bg-[#1420CC]',
+                isTechnical && 'font-mono',
+              )}
+            >
+              {isTechnical ? 'DEPOSIT' : 'Deposit'}
+            </Button>
+          </DialogTrigger>
+          <DialogContent
+            className={cn(
+              'bg-white border-[#101010]/10',
+              depositView === 'select'
+                ? 'max-w-md'
+                : 'max-w-2xl max-h-[90vh] overflow-y-auto',
+            )}
+          >
+            {/* Selection View */}
+            {depositView === 'select' && (
+              <>
+                <DialogHeader className="border-b border-[#101010]/10 pb-4">
+                  <DialogTitle
+                    className={cn(
+                      isTechnical
+                        ? 'font-mono text-[18px] text-[#1B29FF]'
+                        : 'text-[22px] font-semibold tracking-[-0.01em] text-[#101010]',
+                    )}
+                  >
+                    {isTechnical ? 'DEPOSIT::FUNDS' : 'Deposit'}
+                  </DialogTitle>
+                </DialogHeader>
+                <div className="space-y-3 pt-6 pb-2">
+                  {/* Bank Transfer Option */}
+                  <button
+                    onClick={() => {
+                      setDepositView('bank');
+                      refetchFundingSources();
+                    }}
+                    className={cn(
+                      'w-full flex items-center gap-4 p-5 transition-all group text-left',
+                      isTechnical
+                        ? 'border border-[#1B29FF]/20 hover:border-[#1B29FF]/40 hover:bg-[#1B29FF]/5'
+                        : 'border border-[#101010]/10 rounded-[12px] hover:border-[#1B29FF]/30 hover:shadow-[0_2px_8px_rgba(16,16,16,0.04)]',
+                    )}
+                  >
+                    <div
+                      className={cn(
+                        'h-12 w-12 flex items-center justify-center',
+                        isTechnical
+                          ? 'bg-[#1B29FF]/10'
+                          : 'bg-[#F7F7F2] rounded-full',
+                      )}
+                    >
+                      <Building2
+                        className={cn(
+                          'h-6 w-6',
+                          isTechnical ? 'text-[#1B29FF]' : 'text-[#101010]/70',
+                        )}
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <p
+                        className={cn(
+                          'text-[16px] font-medium mb-0.5',
+                          isTechnical
+                            ? 'font-mono text-[#1B29FF]'
+                            : 'text-[#101010]',
+                        )}
+                      >
+                        {isTechnical ? 'WIRE::TRANSFER' : 'Wire Transfer'}
+                      </p>
+                      <p
+                        className={cn(
+                          'text-[13px]',
+                          isTechnical
+                            ? 'font-mono text-[#101010]/60'
+                            : 'text-[#101010]/60',
+                        )}
+                      >
+                        {isTechnical
+                          ? 'ACH / SEPA / Wire → USDC'
+                          : 'Send from your bank account'}
+                      </p>
+                    </div>
+                    <ArrowRightCircle
+                      className={cn(
+                        'h-5 w-5 transition-colors',
+                        isTechnical
+                          ? 'text-[#1B29FF]/40 group-hover:text-[#1B29FF]'
+                          : 'text-[#101010]/20 group-hover:text-[#1B29FF]',
+                      )}
+                    />
+                  </button>
 
-                {/* Crypto Option - Opens AccountInfoDialog with USDC section */}
-                <AccountInfoDialog
-                  isDemoMode={isDemoMode}
-                  safeAddress={safeAddress}
-                  trigger={
-                    <button className="w-full flex items-center gap-4 p-4 border border-[#1B29FF]/20 hover:bg-[#1B29FF]/5 hover:border-[#1B29FF]/40 transition-all text-left">
-                      <div className="h-12 w-12 flex items-center justify-center bg-[#1B29FF]/10">
-                        <Wallet className="h-6 w-6 text-[#1B29FF]" />
+                  {/* Crypto Deposit Option */}
+                  {(baseSafe || safeAddress) && (
+                    <button
+                      onClick={() => setDepositView('crypto')}
+                      className={cn(
+                        'w-full flex items-center gap-4 p-5 transition-all group text-left',
+                        isTechnical
+                          ? 'border border-[#1B29FF]/20 hover:border-[#1B29FF]/40 hover:bg-[#1B29FF]/5'
+                          : 'border border-[#101010]/10 rounded-[12px] hover:border-[#1B29FF]/30 hover:shadow-[0_2px_8px_rgba(16,16,16,0.04)]',
+                      )}
+                    >
+                      <div
+                        className={cn(
+                          'h-12 w-12 flex items-center justify-center',
+                          isTechnical
+                            ? 'bg-[#1B29FF]/10'
+                            : 'bg-[#F7F7F2] rounded-full',
+                        )}
+                      >
+                        <Wallet
+                          className={cn(
+                            'h-6 w-6',
+                            isTechnical
+                              ? 'text-[#1B29FF]'
+                              : 'text-[#101010]/70',
+                          )}
+                        />
                       </div>
                       <div className="flex-1">
-                        <p className="text-[15px] font-medium text-[#1B29FF] font-mono">
-                          Crypto Deposit
+                        <p
+                          className={cn(
+                            'text-[16px] font-medium mb-0.5',
+                            isTechnical
+                              ? 'font-mono text-[#1B29FF]'
+                              : 'text-[#101010]',
+                          )}
+                        >
+                          {isTechnical ? 'CRYPTO::DEPOSIT' : 'Crypto Deposit'}
                         </p>
-                        <p className="text-[13px] text-[#101010]/60">
-                          USDC on Base network
+                        <p
+                          className={cn(
+                            'text-[13px]',
+                            isTechnical
+                              ? 'font-mono text-[#101010]/60'
+                              : 'text-[#101010]/60',
+                          )}
+                        >
+                          {isTechnical
+                            ? 'USDC on Base → Direct to Safe'
+                            : 'Send USDC on Base network'}
                         </p>
                       </div>
+                      <ArrowRightCircle
+                        className={cn(
+                          'h-5 w-5 transition-colors',
+                          isTechnical
+                            ? 'text-[#1B29FF]/40 group-hover:text-[#1B29FF]'
+                            : 'text-[#101010]/20 group-hover:text-[#1B29FF]',
+                        )}
+                      />
                     </button>
-                  }
-                />
-              </div>
-            </DialogContent>
-          </Dialog>
-        ) : (
-          /* Banking mode - Deposit button opens AccountInfoDialog directly */
-          <AccountInfoDialog
-            isDemoMode={isDemoMode}
-            safeAddress={safeAddress}
-            trigger={
-              <Button className="w-full justify-center bg-[#1B29FF] text-white hover:bg-[#1420CC]">
-                Deposit
-              </Button>
-            }
-          />
-        )}
+                  )}
+                </div>
+              </>
+            )}
+
+            {/* Bank Transfer View */}
+            {depositView === 'bank' && (
+              <>
+                <DialogHeader className="border-b border-[#101010]/10 pb-4">
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => setDepositView('select')}
+                      className={cn(
+                        'p-2 -ml-2 transition-colors',
+                        isTechnical
+                          ? 'hover:bg-[#1B29FF]/10 text-[#1B29FF]'
+                          : 'hover:bg-[#F7F7F2] text-[#101010]/60 rounded-full',
+                      )}
+                    >
+                      <ArrowLeft className="h-5 w-5" />
+                    </button>
+                    <DialogTitle
+                      className={cn(
+                        'flex items-center gap-2',
+                        isTechnical
+                          ? 'font-mono text-[18px] text-[#1B29FF]'
+                          : 'text-[22px] font-semibold tracking-[-0.01em] text-[#101010]',
+                      )}
+                    >
+                      <Building2
+                        className={cn(
+                          'h-5 w-5',
+                          isTechnical ? 'text-[#1B29FF]' : 'text-[#101010]/60',
+                        )}
+                      />
+                      {isTechnical ? 'WIRE::TRANSFER' : 'Wire Transfer'}
+                    </DialogTitle>
+                  </div>
+                </DialogHeader>
+
+                {isLoadingFundingSources ? (
+                  <div className="py-12 text-center">
+                    <Loader2
+                      className={cn(
+                        'h-8 w-8 animate-spin mx-auto mb-4',
+                        'text-[#1B29FF]',
+                      )}
+                    />
+                    <p
+                      className={cn(
+                        'text-[14px]',
+                        isTechnical
+                          ? 'font-mono text-[#1B29FF]'
+                          : 'text-[#101010]/60',
+                      )}
+                    >
+                      {isTechnical
+                        ? 'LOADING::ACCOUNTS'
+                        : 'Loading accounts...'}
+                    </p>
+                  </div>
+                ) : fundingSources.length > 0 ? (
+                  <BankingInstructionsDisplay
+                    accounts={fundingSources}
+                    userData={userData}
+                  />
+                ) : (
+                  <div
+                    className={cn(
+                      'py-12 text-center',
+                      isTechnical && 'font-mono',
+                    )}
+                  >
+                    <div
+                      className={cn(
+                        'mx-auto mb-4 h-16 w-16 flex items-center justify-center',
+                        isTechnical
+                          ? 'bg-[#1B29FF]/10'
+                          : 'bg-[#F7F7F2] rounded-full',
+                      )}
+                    >
+                      <Building2
+                        className={cn(
+                          'h-8 w-8',
+                          isTechnical ? 'text-[#1B29FF]' : 'text-[#101010]/40',
+                        )}
+                      />
+                    </div>
+                    <p
+                      className={cn(
+                        'text-[16px] font-medium mb-2',
+                        isTechnical ? 'text-[#1B29FF]' : 'text-[#101010]',
+                      )}
+                    >
+                      {isTechnical
+                        ? 'NO_ACCOUNTS::FOUND'
+                        : 'No bank accounts yet'}
+                    </p>
+                    <p
+                      className={cn(
+                        'text-[14px] max-w-[300px] mx-auto',
+                        'text-[#101010]/60',
+                      )}
+                    >
+                      {isTechnical
+                        ? 'INIT::ONBOARDING -> CREATE::VIRTUAL_ACCOUNTS'
+                        : 'Complete onboarding to get your virtual bank accounts.'}
+                    </p>
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* Crypto Deposit View */}
+            {depositView === 'crypto' && (baseSafe || safeAddress) && (
+              <>
+                <DialogHeader className="border-b border-[#101010]/10 pb-4">
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => setDepositView('select')}
+                      className={cn(
+                        'p-2 -ml-2 transition-colors',
+                        isTechnical
+                          ? 'hover:bg-[#1B29FF]/10 text-[#1B29FF]'
+                          : 'hover:bg-[#F7F7F2] text-[#101010]/60 rounded-full',
+                      )}
+                    >
+                      <ArrowLeft className="h-5 w-5" />
+                    </button>
+                    <DialogTitle
+                      className={cn(
+                        'flex items-center gap-2',
+                        isTechnical
+                          ? 'font-mono text-[18px] text-[#1B29FF]'
+                          : 'text-[22px] font-semibold tracking-[-0.01em] text-[#101010]',
+                      )}
+                    >
+                      <Wallet
+                        className={cn(
+                          'h-5 w-5',
+                          isTechnical ? 'text-[#1B29FF]' : 'text-[#101010]/60',
+                        )}
+                      />
+                      {isTechnical ? 'CRYPTO::DEPOSIT' : 'Crypto Deposit'}
+                    </DialogTitle>
+                  </div>
+                </DialogHeader>
+
+                <div className="py-6">
+                  <CryptoDepositDisplay
+                    safeAddress={baseSafe?.address || safeAddress || ''}
+                    chainName="Base"
+                  />
+                </div>
+              </>
+            )}
+          </DialogContent>
+        </Dialog>
 
         {/* Transfer Button */}
         <Dialog
