@@ -11,8 +11,10 @@ import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { Skeleton } from '@/components/ui/skeleton';
 import { TeamTab } from './team-tab';
 import { cn } from '@/lib/utils';
+import { useBimodal } from '@/components/ui/bimodal';
 
 export default function CompanySettingsPage() {
+  const { isTechnical } = useBimodal();
   const [companyData, setCompanyData] = useState({
     name: '',
     email: '',
@@ -121,10 +123,18 @@ export default function CompanySettingsPage() {
         });
       }
 
-      toast.success('Company settings saved successfully');
+      toast.success(
+        isTechnical
+          ? 'Entity configuration saved'
+          : 'Company settings saved successfully',
+      );
       refetch();
     } catch (error) {
-      toast.error('Failed to save company settings');
+      toast.error(
+        isTechnical
+          ? 'Failed to persist entity configuration'
+          : 'Failed to save company settings',
+      );
     } finally {
       setIsSaving(false);
     }
@@ -135,7 +145,9 @@ export default function CompanySettingsPage() {
 
     if (
       !confirm(
-        `Are you sure you want to delete ${company.name}? This action cannot be undone.`,
+        isTechnical
+          ? `Confirm deletion of entity "${company.name}"? This operation is irreversible.`
+          : `Are you sure you want to delete ${company.name}? This action cannot be undone.`,
       )
     ) {
       return;
@@ -143,17 +155,23 @@ export default function CompanySettingsPage() {
 
     try {
       await deleteCompany.mutateAsync({ id: company.id });
-      toast.success('Company deleted successfully');
+      toast.success(
+        isTechnical ? 'Entity deleted' : 'Company deleted successfully',
+      );
       // Redirect to companies page or dashboard
       window.location.href = '/dashboard/settings/companies';
     } catch (error) {
-      toast.error('Failed to delete company');
+      toast.error(isTechnical ? 'Deletion failed' : 'Failed to delete company');
     }
   };
 
   const handleSaveWorkspace = async () => {
     if (!currentWorkspace?.workspaceId || !workspaceName.trim()) {
-      toast.error('Workspace name is required');
+      toast.error(
+        isTechnical
+          ? 'Workspace identifier required'
+          : 'Workspace name is required',
+      );
       return;
     }
 
@@ -163,10 +181,14 @@ export default function CompanySettingsPage() {
         workspaceId: currentWorkspace.workspaceId,
         name: workspaceName.trim(),
       });
-      toast.success('Workspace renamed successfully');
+      toast.success(
+        isTechnical
+          ? 'Workspace identifier updated'
+          : 'Workspace renamed successfully',
+      );
       refetchWorkspace();
     } catch (error) {
-      toast.error('Failed to rename workspace');
+      toast.error(isTechnical ? 'Update failed' : 'Failed to rename workspace');
     } finally {
       setIsSavingWorkspace(false);
     }
@@ -174,7 +196,12 @@ export default function CompanySettingsPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[#F7F7F2]">
+      <div
+        className={cn(
+          'min-h-screen',
+          isTechnical ? 'bg-[#F8F9FA]' : 'bg-[#F7F7F2]',
+        )}
+      >
         <div className="h-[60px] flex items-center px-4 sm:px-6 max-w-[1400px] mx-auto">
           <Skeleton className="h-8 w-48" />
         </div>
@@ -186,52 +213,106 @@ export default function CompanySettingsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F7F7F2]">
+    <div
+      className={cn(
+        'min-h-screen',
+        isTechnical ? 'bg-[#F8F9FA]' : 'bg-[#F7F7F2]',
+      )}
+    >
       {/* Header */}
-      <header className="sticky top-0 z-40 bg-[#F7F7F2] border-b border-[#101010]/10">
+      <header
+        className={cn(
+          'sticky top-0 z-40 border-b',
+          isTechnical
+            ? 'bg-[#F8F9FA] border-[#1B29FF]/20'
+            : 'bg-[#F7F7F2] border-[#101010]/10',
+        )}
+      >
         <div className="h-[60px] flex items-center px-4 sm:px-6 max-w-[1400px] mx-auto">
-          <p className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60 mr-3">
-            Settings
+          <p
+            className={cn(
+              'uppercase tracking-[0.14em] text-[11px] mr-3',
+              isTechnical ? 'text-[#1B29FF] font-mono' : 'text-[#101010]/60',
+            )}
+          >
+            {isTechnical ? 'CONFIG::WORKSPACE' : 'Settings'}
           </p>
-          <h1 className="font-serif text-[28px] sm:text-[32px] leading-[1] text-[#101010] tracking-[-0.02em]">
-            Company
+          <h1
+            className={cn(
+              'leading-[1] text-[#101010] tracking-[-0.02em]',
+              isTechnical
+                ? 'font-mono text-[24px] sm:text-[28px]'
+                : 'font-serif text-[28px] sm:text-[32px]',
+            )}
+          >
+            {isTechnical ? 'Entity Configuration' : 'Company'}
           </h1>
           <div className="ml-auto flex items-center gap-2 sm:gap-3">
             <Button
               onClick={() => router.push('/dashboard')}
               variant="ghost"
-              className="text-[#101010]/60 hover:text-[#101010]"
+              className={cn(
+                isTechnical
+                  ? 'text-[#1B29FF]/60 hover:text-[#1B29FF] hover:bg-[#1B29FF]/5 font-mono'
+                  : 'text-[#101010]/60 hover:text-[#101010]',
+              )}
             >
               <ArrowLeft className="h-4 w-4 mr-2" />
-              Back
+              {isTechnical ? 'Back' : 'Back'}
             </Button>
             <Button
               onClick={handleSave}
               disabled={isSaving}
-              className="bg-[#1B29FF] text-white hover:bg-[#1B29FF]/90 border-0"
+              className={cn(
+                'border-0',
+                isTechnical
+                  ? 'bg-[#1B29FF] text-white hover:bg-[#1420CC] font-mono'
+                  : 'bg-[#1B29FF] text-white hover:bg-[#1B29FF]/90',
+              )}
             >
-              {isSaving ? 'Saving...' : 'Save Changes'}
+              {isSaving
+                ? isTechnical
+                  ? 'Persisting...'
+                  : 'Saving...'
+                : isTechnical
+                  ? 'Save Config'
+                  : 'Save Changes'}
             </Button>
           </div>
         </div>
       </header>
 
       {/* Tab Navigation */}
-      <div className="sticky top-[60px] z-30 bg-[#F7F7F2]/80 backdrop-blur border-b border-[#101010]/10">
+      <div
+        className={cn(
+          'sticky top-[60px] z-30 backdrop-blur border-b',
+          isTechnical
+            ? 'bg-[#F8F9FA]/80 border-[#1B29FF]/20'
+            : 'bg-[#F7F7F2]/80 border-[#101010]/10',
+        )}
+      >
         <div className="h-[48px] flex items-center px-4 sm:px-6 max-w-[1400px] mx-auto">
           <div className="flex gap-1">
             {[
-              { value: 'info', label: 'Workspace & Company' },
-              { value: 'team', label: 'Team' },
+              {
+                value: 'info',
+                label: isTechnical ? 'WORKSPACE::INFO' : 'Workspace & Company',
+              },
+              { value: 'team', label: isTechnical ? 'TEAM::MEMBERS' : 'Team' },
             ].map((item) => (
               <button
                 key={item.value}
                 onClick={() => handleTabChange(item.value)}
                 className={cn(
-                  'px-4 py-2 text-sm font-medium rounded-md transition-colors',
+                  'px-4 py-2 text-sm font-medium transition-colors',
+                  isTechnical ? 'font-mono' : 'rounded-md',
                   tab === item.value
-                    ? 'bg-[#101010] text-white'
-                    : 'text-[#101010]/60 hover:text-[#101010] hover:bg-[#101010]/5',
+                    ? isTechnical
+                      ? 'bg-[#1B29FF] text-white'
+                      : 'bg-[#101010] text-white'
+                    : isTechnical
+                      ? 'text-[#1B29FF]/60 hover:text-[#1B29FF] hover:bg-[#1B29FF]/5'
+                      : 'text-[#101010]/60 hover:text-[#101010] hover:bg-[#101010]/5',
                 )}
               >
                 {item.label}
@@ -248,30 +329,68 @@ export default function CompanySettingsPage() {
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6">
             <div className="lg:col-span-8 space-y-5 sm:space-y-6">
               {/* Workspace Settings */}
-              <div className="bg-white border border-[#101010]/10 rounded-lg shadow-sm">
-                <div className="border-b border-[#101010]/10 px-5 sm:px-6 py-4">
-                  <h2 className="font-serif text-[20px] sm:text-[24px] text-[#101010] tracking-[-0.02em]">
-                    Workspace Settings
+              <div
+                className={cn(
+                  'bg-white shadow-sm',
+                  isTechnical
+                    ? 'border border-[#1B29FF]/20'
+                    : 'border border-[#101010]/10 rounded-lg',
+                )}
+              >
+                <div
+                  className={cn(
+                    'border-b px-5 sm:px-6 py-4',
+                    isTechnical ? 'border-[#1B29FF]/20' : 'border-[#101010]/10',
+                  )}
+                >
+                  <h2
+                    className={cn(
+                      'text-[#101010] tracking-[-0.02em]',
+                      isTechnical
+                        ? 'font-mono text-[18px] sm:text-[20px]'
+                        : 'font-serif text-[20px] sm:text-[24px]',
+                    )}
+                  >
+                    {isTechnical ? 'WORKSPACE::CONFIG' : 'Workspace Settings'}
                   </h2>
-                  <p className="text-sm text-[#666666] mt-1">
-                    Your workspace name and settings
+                  <p
+                    className={cn(
+                      'text-sm mt-1',
+                      isTechnical
+                        ? 'text-[#101010]/50 font-mono'
+                        : 'text-[#666666]',
+                    )}
+                  >
+                    {isTechnical
+                      ? 'Workspace identifier and configuration parameters'
+                      : 'Your workspace name and settings'}
                   </p>
                 </div>
                 <div className="p-5 sm:p-6 space-y-4">
                   <div>
                     <Label
                       htmlFor="workspaceName"
-                      className="text-sm font-medium text-[#101010]"
+                      className={cn(
+                        'text-sm font-medium text-[#101010]',
+                        isTechnical && 'font-mono',
+                      )}
                     >
-                      Workspace Name
+                      {isTechnical ? 'workspace.name' : 'Workspace Name'}
                     </Label>
                     <div className="flex gap-2 mt-1.5">
                       <Input
                         id="workspaceName"
                         value={workspaceName}
                         onChange={(e) => setWorkspaceName(e.target.value)}
-                        placeholder="My Workspace"
-                        className="flex-1 border-[#E5E5E5] focus:border-[#1B29FF] focus:ring-[#1B29FF]"
+                        placeholder={
+                          isTechnical ? 'workspace_id' : 'My Workspace'
+                        }
+                        className={cn(
+                          'flex-1',
+                          isTechnical
+                            ? 'border-[#1B29FF]/20 focus:border-[#1B29FF] focus:ring-[#1B29FF] font-mono'
+                            : 'border-[#E5E5E5] focus:border-[#1B29FF] focus:ring-[#1B29FF]',
+                        )}
                       />
                       <Button
                         onClick={handleSaveWorkspace}
@@ -280,28 +399,74 @@ export default function CompanySettingsPage() {
                           !workspaceName.trim() ||
                           workspaceName === workspace?.name
                         }
-                        className="bg-[#1B29FF] text-white hover:bg-[#1B29FF]/90 border-0"
+                        className={cn(
+                          'border-0',
+                          isTechnical
+                            ? 'bg-[#1B29FF] text-white hover:bg-[#1420CC] font-mono'
+                            : 'bg-[#1B29FF] text-white hover:bg-[#1B29FF]/90',
+                        )}
                       >
-                        {isSavingWorkspace ? 'Saving...' : 'Save'}
+                        {isSavingWorkspace
+                          ? isTechnical
+                            ? 'Saving...'
+                            : 'Saving...'
+                          : isTechnical
+                            ? 'Update'
+                            : 'Save'}
                       </Button>
                     </div>
-                    <p className="text-xs text-[#666666] mt-1">
-                      This is the name of your workspace, visible to you and
-                      your team members
+                    <p
+                      className={cn(
+                        'text-xs mt-1',
+                        isTechnical
+                          ? 'text-[#101010]/50 font-mono'
+                          : 'text-[#666666]',
+                      )}
+                    >
+                      {isTechnical
+                        ? 'Human-readable workspace identifier for team visibility'
+                        : 'This is the name of your workspace, visible to you and your team members'}
                     </p>
                   </div>
                 </div>
               </div>
 
               {/* Company Information */}
-              <div className="bg-white border border-[#101010]/10 rounded-lg shadow-sm">
-                <div className="border-b border-[#101010]/10 px-5 sm:px-6 py-4">
-                  <h2 className="font-serif text-[20px] sm:text-[24px] text-[#101010] tracking-[-0.02em]">
-                    Company Information
+              <div
+                className={cn(
+                  'bg-white shadow-sm',
+                  isTechnical
+                    ? 'border border-[#1B29FF]/20'
+                    : 'border border-[#101010]/10 rounded-lg',
+                )}
+              >
+                <div
+                  className={cn(
+                    'border-b px-5 sm:px-6 py-4',
+                    isTechnical ? 'border-[#1B29FF]/20' : 'border-[#101010]/10',
+                  )}
+                >
+                  <h2
+                    className={cn(
+                      'text-[#101010] tracking-[-0.02em]',
+                      isTechnical
+                        ? 'font-mono text-[18px] sm:text-[20px]'
+                        : 'font-serif text-[20px] sm:text-[24px]',
+                    )}
+                  >
+                    {isTechnical ? 'ENTITY::DETAILS' : 'Company Information'}
                   </h2>
-                  <p className="text-sm text-[#666666] mt-1">
-                    This information will be used in invoices and shared with
-                    team members
+                  <p
+                    className={cn(
+                      'text-sm mt-1',
+                      isTechnical
+                        ? 'text-[#101010]/50 font-mono'
+                        : 'text-[#666666]',
+                    )}
+                  >
+                    {isTechnical
+                      ? 'Legal entity data for invoicing and compliance'
+                      : 'This information will be used in invoices and shared with team members'}
                   </p>
                 </div>
                 <div className="p-5 sm:p-6 space-y-4">
@@ -309,9 +474,12 @@ export default function CompanySettingsPage() {
                     <div>
                       <Label
                         htmlFor="name"
-                        className="text-sm font-medium text-[#101010]"
+                        className={cn(
+                          'text-sm font-medium text-[#101010]',
+                          isTechnical && 'font-mono',
+                        )}
                       >
-                        Company Name
+                        {isTechnical ? 'entity.name' : 'Company Name'}
                       </Label>
                       <Input
                         id="name"
@@ -322,16 +490,24 @@ export default function CompanySettingsPage() {
                             name: e.target.value,
                           }))
                         }
-                        placeholder="Acme Corp"
-                        className="mt-1.5 border-[#E5E5E5] focus:border-[#1B29FF] focus:ring-[#1B29FF]"
+                        placeholder={isTechnical ? 'Entity Name' : 'Acme Corp'}
+                        className={cn(
+                          'mt-1.5',
+                          isTechnical
+                            ? 'border-[#1B29FF]/20 focus:border-[#1B29FF] focus:ring-[#1B29FF] font-mono'
+                            : 'border-[#E5E5E5] focus:border-[#1B29FF] focus:ring-[#1B29FF]',
+                        )}
                       />
                     </div>
                     <div>
                       <Label
                         htmlFor="email"
-                        className="text-sm font-medium text-[#101010]"
+                        className={cn(
+                          'text-sm font-medium text-[#101010]',
+                          isTechnical && 'font-mono',
+                        )}
                       >
-                        Company Email
+                        {isTechnical ? 'entity.email' : 'Company Email'}
                       </Label>
                       <Input
                         id="email"
@@ -343,8 +519,15 @@ export default function CompanySettingsPage() {
                             email: e.target.value,
                           }))
                         }
-                        placeholder="billing@acme.com"
-                        className="mt-1.5 border-[#E5E5E5] focus:border-[#1B29FF] focus:ring-[#1B29FF]"
+                        placeholder={
+                          isTechnical ? 'contact@entity.io' : 'billing@acme.com'
+                        }
+                        className={cn(
+                          'mt-1.5',
+                          isTechnical
+                            ? 'border-[#1B29FF]/20 focus:border-[#1B29FF] focus:ring-[#1B29FF] font-mono'
+                            : 'border-[#E5E5E5] focus:border-[#1B29FF] focus:ring-[#1B29FF]',
+                        )}
                       />
                     </div>
                   </div>
@@ -352,9 +535,12 @@ export default function CompanySettingsPage() {
                   <div>
                     <Label
                       htmlFor="address"
-                      className="text-sm font-medium text-[#101010]"
+                      className={cn(
+                        'text-sm font-medium text-[#101010]',
+                        isTechnical && 'font-mono',
+                      )}
                     >
-                      Street Address
+                      {isTechnical ? 'entity.address.street' : 'Street Address'}
                     </Label>
                     <Input
                       id="address"
@@ -366,7 +552,12 @@ export default function CompanySettingsPage() {
                         }))
                       }
                       placeholder="123 Main St, Suite 100"
-                      className="mt-1.5 border-[#E5E5E5] focus:border-[#1B29FF] focus:ring-[#1B29FF]"
+                      className={cn(
+                        'mt-1.5',
+                        isTechnical
+                          ? 'border-[#1B29FF]/20 focus:border-[#1B29FF] focus:ring-[#1B29FF] font-mono'
+                          : 'border-[#E5E5E5] focus:border-[#1B29FF] focus:ring-[#1B29FF]',
+                      )}
                     />
                   </div>
 
@@ -374,9 +565,12 @@ export default function CompanySettingsPage() {
                     <div>
                       <Label
                         htmlFor="city"
-                        className="text-sm font-medium text-[#101010]"
+                        className={cn(
+                          'text-sm font-medium text-[#101010]',
+                          isTechnical && 'font-mono',
+                        )}
                       >
-                        City
+                        {isTechnical ? 'entity.address.city' : 'City'}
                       </Label>
                       <Input
                         id="city"
@@ -388,15 +582,23 @@ export default function CompanySettingsPage() {
                           }))
                         }
                         placeholder="San Francisco"
-                        className="mt-1.5 border-[#E5E5E5] focus:border-[#1B29FF] focus:ring-[#1B29FF]"
+                        className={cn(
+                          'mt-1.5',
+                          isTechnical
+                            ? 'border-[#1B29FF]/20 focus:border-[#1B29FF] focus:ring-[#1B29FF] font-mono'
+                            : 'border-[#E5E5E5] focus:border-[#1B29FF] focus:ring-[#1B29FF]',
+                        )}
                       />
                     </div>
                     <div>
                       <Label
                         htmlFor="postalCode"
-                        className="text-sm font-medium text-[#101010]"
+                        className={cn(
+                          'text-sm font-medium text-[#101010]',
+                          isTechnical && 'font-mono',
+                        )}
                       >
-                        Postal Code
+                        {isTechnical ? 'entity.address.postal' : 'Postal Code'}
                       </Label>
                       <Input
                         id="postalCode"
@@ -408,7 +610,12 @@ export default function CompanySettingsPage() {
                           }))
                         }
                         placeholder="94105"
-                        className="mt-1.5 border-[#E5E5E5] focus:border-[#1B29FF] focus:ring-[#1B29FF]"
+                        className={cn(
+                          'mt-1.5',
+                          isTechnical
+                            ? 'border-[#1B29FF]/20 focus:border-[#1B29FF] focus:ring-[#1B29FF] font-mono'
+                            : 'border-[#E5E5E5] focus:border-[#1B29FF] focus:ring-[#1B29FF]',
+                        )}
                       />
                     </div>
                   </div>
@@ -416,9 +623,12 @@ export default function CompanySettingsPage() {
                   <div>
                     <Label
                       htmlFor="country"
-                      className="text-sm font-medium text-[#101010]"
+                      className={cn(
+                        'text-sm font-medium text-[#101010]',
+                        isTechnical && 'font-mono',
+                      )}
                     >
-                      Country
+                      {isTechnical ? 'entity.address.country' : 'Country'}
                     </Label>
                     <Input
                       id="country"
@@ -430,7 +640,12 @@ export default function CompanySettingsPage() {
                         }))
                       }
                       placeholder="United States"
-                      className="mt-1.5 border-[#E5E5E5] focus:border-[#1B29FF] focus:ring-[#1B29FF]"
+                      className={cn(
+                        'mt-1.5',
+                        isTechnical
+                          ? 'border-[#1B29FF]/20 focus:border-[#1B29FF] focus:ring-[#1B29FF] font-mono'
+                          : 'border-[#E5E5E5] focus:border-[#1B29FF] focus:ring-[#1B29FF]',
+                      )}
                     />
                   </div>
 
@@ -438,9 +653,12 @@ export default function CompanySettingsPage() {
                     <div>
                       <Label
                         htmlFor="taxId"
-                        className="text-sm font-medium text-[#101010]"
+                        className={cn(
+                          'text-sm font-medium text-[#101010]',
+                          isTechnical && 'font-mono',
+                        )}
                       >
-                        Tax ID / EIN
+                        {isTechnical ? 'entity.tax_id' : 'Tax ID / EIN'}
                       </Label>
                       <Input
                         id="taxId"
@@ -452,15 +670,25 @@ export default function CompanySettingsPage() {
                           }))
                         }
                         placeholder="12-3456789"
-                        className="mt-1.5 border-[#E5E5E5] focus:border-[#1B29FF] focus:ring-[#1B29FF]"
+                        className={cn(
+                          'mt-1.5',
+                          isTechnical
+                            ? 'border-[#1B29FF]/20 focus:border-[#1B29FF] focus:ring-[#1B29FF] font-mono'
+                            : 'border-[#E5E5E5] focus:border-[#1B29FF] focus:ring-[#1B29FF]',
+                        )}
                       />
                     </div>
                     <div>
                       <Label
                         htmlFor="paymentTerms"
-                        className="text-sm font-medium text-[#101010]"
+                        className={cn(
+                          'text-sm font-medium text-[#101010]',
+                          isTechnical && 'font-mono',
+                        )}
                       >
-                        Default Payment Terms
+                        {isTechnical
+                          ? 'invoice.payment_terms'
+                          : 'Default Payment Terms'}
                       </Label>
                       <Input
                         id="paymentTerms"
@@ -472,7 +700,12 @@ export default function CompanySettingsPage() {
                           }))
                         }
                         placeholder="Net 30"
-                        className="mt-1.5 border-[#E5E5E5] focus:border-[#1B29FF] focus:ring-[#1B29FF]"
+                        className={cn(
+                          'mt-1.5',
+                          isTechnical
+                            ? 'border-[#1B29FF]/20 focus:border-[#1B29FF] focus:ring-[#1B29FF] font-mono'
+                            : 'border-[#E5E5E5] focus:border-[#1B29FF] focus:ring-[#1B29FF]',
+                        )}
                       />
                     </div>
                   </div>
@@ -493,14 +726,18 @@ export default function CompanySettingsPage() {
             variant="ghost"
             onClick={handleDeleteCompany}
             disabled={deleteCompany.isPending}
-            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+            className={cn(
+              isTechnical
+                ? 'text-red-500 hover:text-red-600 hover:bg-red-500/5 font-mono'
+                : 'text-red-600 hover:text-red-700 hover:bg-red-50',
+            )}
           >
             {deleteCompany.isPending ? (
-              <>Deleting...</>
+              <>{isTechnical ? 'Deleting...' : 'Deleting...'}</>
             ) : (
               <>
                 <Trash2 className="h-4 w-4 mr-2" />
-                Delete Company
+                {isTechnical ? 'Delete Entity' : 'Delete Company'}
               </>
             )}
           </Button>

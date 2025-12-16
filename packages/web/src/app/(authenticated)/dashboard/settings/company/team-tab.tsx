@@ -1,13 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { api } from '@/trpc/react';
@@ -44,6 +37,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { usePrivy } from '@privy-io/react-auth';
 import { useBimodal } from '@/components/ui/bimodal';
+import { cn } from '@/lib/utils';
 
 interface TeamTabProps {
   companyId?: string; // Kept for backwards compatibility, but not used
@@ -76,14 +70,11 @@ export function TeamTab({ companyId }: TeamTabProps) {
   );
 
   // Fetch team invites
-  const {
-    data: teamInvites,
-    isLoading: isLoadingInvites,
-    refetch: refetchInvites,
-  } = api.workspace.getWorkspaceInvites.useQuery(
-    { workspaceId: workspace?.workspaceId || '' },
-    { enabled: !!workspace?.workspaceId },
-  );
+  const { data: teamInvites, refetch: refetchInvites } =
+    api.workspace.getWorkspaceInvites.useQuery(
+      { workspaceId: workspace?.workspaceId || '' },
+      { enabled: !!workspace?.workspaceId },
+    );
 
   // Fetch user's Safes to find the primary one
   const { data: userSafes, isLoading: isLoadingSafes } =
@@ -107,7 +98,11 @@ export function TeamTab({ companyId }: TeamTabProps) {
   const createInvite = api.workspace.createInvite.useMutation({
     onSuccess: (data) => {
       copyTeamInviteLink(data.token);
-      toast.success('Team invite link created and copied!');
+      toast.success(
+        isTechnical
+          ? 'Invite token generated and copied'
+          : 'Team invite link created and copied!',
+      );
       refetchInvites();
     },
     onError: (error) => {
@@ -118,7 +113,7 @@ export function TeamTab({ companyId }: TeamTabProps) {
 
   const deleteInvite = api.workspace.deleteWorkspaceInvite.useMutation({
     onSuccess: () => {
-      toast.success('Invite deleted');
+      toast.success(isTechnical ? 'Invite revoked' : 'Invite deleted');
       refetchInvites();
     },
     onError: (error) => {
@@ -128,7 +123,9 @@ export function TeamTab({ companyId }: TeamTabProps) {
 
   const removeMember = api.workspace.removeTeamMember.useMutation({
     onSuccess: () => {
-      toast.success('Team member removed');
+      toast.success(
+        isTechnical ? 'Member removed from workspace' : 'Team member removed',
+      );
       refetchMembers();
       setMemberToRemove(null);
     },
@@ -188,7 +185,9 @@ export function TeamTab({ companyId }: TeamTabProps) {
   const copyAddress = (address: string) => {
     navigator.clipboard.writeText(address);
     setCopiedAddress(address);
-    toast.success('Address copied to clipboard');
+    toast.success(
+      isTechnical ? 'Address copied' : 'Address copied to clipboard',
+    );
     setTimeout(() => setCopiedAddress(null), 2000);
   };
 
@@ -230,71 +229,131 @@ export function TeamTab({ companyId }: TeamTabProps) {
   return (
     <div className="space-y-6">
       {/* E2E Flow Guide */}
-      <Card className="border-[#1B29FF]/20 bg-[#1B29FF]/5">
-        <CardHeader className="pb-3">
-          <CardTitle className="flex items-center gap-2 text-[#1B29FF]">
-            <Users className="h-5 w-5" />
-            How to Add Team Members
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
+      <div
+        className={cn(
+          'p-5 sm:p-6',
+          isTechnical
+            ? 'bg-[#1B29FF]/5 border border-[#1B29FF]/20'
+            : 'bg-[#1B29FF]/5 border border-[#1B29FF]/20 rounded-lg',
+        )}
+      >
+        <h3
+          className={cn(
+            'flex items-center gap-2 text-[#1B29FF] mb-4',
+            isTechnical ? 'font-mono text-[16px]' : 'font-medium text-[17px]',
+          )}
+        >
+          <Users className="h-5 w-5" />
+          {isTechnical ? 'TEAM::ONBOARDING_FLOW' : 'How to Add Team Members'}
+        </h3>
+        <div className="space-y-3">
+          <div className="flex items-start gap-3">
+            <div
+              className={cn(
+                'flex-shrink-0 w-6 h-6 bg-[#1B29FF] text-white text-sm flex items-center justify-center',
+                isTechnical ? '' : 'rounded-full',
+              )}
+            >
+              1
+            </div>
+            <div>
+              <p
+                className={cn(
+                  'text-[#101010]',
+                  isTechnical ? 'font-mono font-medium' : 'font-medium',
+                )}
+              >
+                {isTechnical
+                  ? 'Generate invite token'
+                  : 'Invite someone to view the dashboard'}
+              </p>
+              <p
+                className={cn(
+                  'text-sm mt-1',
+                  isTechnical
+                    ? 'text-[#101010]/50 font-mono'
+                    : 'text-[#666666]',
+                )}
+              >
+                {isTechnical
+                  ? 'Create an invite link and distribute to team member'
+                  : 'Create an invite link below and share it with your team member'}
+              </p>
+            </div>
+          </div>
+          {isTechnical && (
             <div className="flex items-start gap-3">
-              <div className="flex-shrink-0 w-6 h-6 rounded-full bg-[#1B29FF] text-white text-sm flex items-center justify-center">
-                1
+              <div className="flex-shrink-0 w-6 h-6 bg-[#1B29FF] text-white text-sm flex items-center justify-center">
+                2
               </div>
               <div>
-                <p className="font-medium text-[#101010]">
-                  Invite someone to view the dashboard
+                <p className="font-mono font-medium text-[#101010]">
+                  Configure Safe ownership
                 </p>
-                <p className="text-sm text-[#666666]">
-                  Create an invite link below and share it with your team member
+                <p className="text-sm text-[#101010]/50 font-mono mt-1">
+                  After they join, navigate to{' '}
+                  <a
+                    href="/dashboard/settings/advanced-wallet"
+                    className="text-[#1B29FF] underline"
+                  >
+                    WALLET::ADVANCED
+                  </a>{' '}
+                  to add them as a Safe owner
                 </p>
               </div>
             </div>
-            {isTechnical && (
-              <div className="flex items-start gap-3">
-                <div className="flex-shrink-0 w-6 h-6 rounded-full bg-[#1B29FF] text-white text-sm flex items-center justify-center">
-                  2
-                </div>
-                <div>
-                  <p className="font-medium text-[#101010]">
-                    Once they join, add them as a Safe owner
-                  </p>
-                  <p className="text-sm text-[#666666]">
-                    After they appear in the team list, go to{' '}
-                    <a
-                      href="/dashboard/settings/advanced-wallet"
-                      className="text-[#1B29FF] underline"
-                    >
-                      Advanced Wallet Settings
-                    </a>{' '}
-                    to add them as a Safe owner
-                  </p>
-                </div>
-              </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+          )}
+        </div>
+      </div>
 
       {/* Create Invite Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+      <div
+        className={cn(
+          'bg-white shadow-sm',
+          isTechnical
+            ? 'border border-[#1B29FF]/20'
+            : 'border border-[#101010]/10 rounded-lg',
+        )}
+      >
+        <div
+          className={cn(
+            'border-b px-5 sm:px-6 py-4',
+            isTechnical ? 'border-[#1B29FF]/20' : 'border-[#101010]/10',
+          )}
+        >
+          <h3
+            className={cn(
+              'flex items-center gap-2 text-[#101010]',
+              isTechnical ? 'font-mono text-[16px]' : 'font-medium text-[17px]',
+            )}
+          >
             <Link className="h-5 w-5" />
-            Invite Team Members
-          </CardTitle>
-          <CardDescription>
-            Share this link to give someone access to view this dashboard
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+            {isTechnical ? 'INVITE::CREATE' : 'Invite Team Members'}
+          </h3>
+          <p
+            className={cn(
+              'text-sm mt-1',
+              isTechnical ? 'text-[#101010]/50 font-mono' : 'text-[#666666]',
+            )}
+          >
+            {isTechnical
+              ? 'Generate shareable token for workspace access'
+              : 'Share this link to give someone access to view this dashboard'}
+          </p>
+        </div>
+        <div className="p-5 sm:p-6">
           {canManageTeam && (
             <div className="space-y-4">
               {/* Safe co-owner option - Technical mode only */}
               {isTechnical && (
-                <div className="flex items-center space-x-2 p-3 border rounded-lg bg-[#F7F7F2]">
+                <div
+                  className={cn(
+                    'flex items-center space-x-2 p-3 border',
+                    isTechnical
+                      ? 'border-[#1B29FF]/20 bg-[#1B29FF]/5'
+                      : 'border-[#101010]/10 rounded-lg bg-[#F7F7F2]',
+                  )}
+                >
                   <Checkbox
                     id="add-safe-owner"
                     checked={addAsSafeOwner}
@@ -305,36 +364,56 @@ export function TeamTab({ companyId }: TeamTabProps) {
                   <div className="flex-1">
                     <Label
                       htmlFor="add-safe-owner"
-                      className="text-sm font-medium cursor-pointer"
+                      className={cn(
+                        'text-sm font-medium cursor-pointer',
+                        isTechnical && 'font-mono',
+                      )}
                     >
-                      Also add as Safe co-owner (requires confirmation)
+                      {isTechnical
+                        ? 'Queue as Safe co-owner'
+                        : 'Also add as Safe co-owner (requires confirmation)'}
                     </Label>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      The invited user will be queued to become a Safe owner
-                      after they join
+                    <p
+                      className={cn(
+                        'text-xs mt-1',
+                        isTechnical
+                          ? 'text-[#101010]/50 font-mono'
+                          : 'text-muted-foreground',
+                      )}
+                    >
+                      {isTechnical
+                        ? 'User will be queued for Safe ownership post-join'
+                        : 'The invited user will be queued to become a Safe owner after they join'}
                     </p>
                   </div>
                 </div>
               )}
               <Button
                 onClick={handleCreateTeamInvite}
-                className="w-full bg-[#1B29FF] hover:bg-[#1420CC]"
+                className={cn(
+                  'w-full',
+                  isTechnical
+                    ? 'bg-[#1B29FF] hover:bg-[#1420CC] font-mono'
+                    : 'bg-[#1B29FF] hover:bg-[#1420CC]',
+                )}
                 disabled={isLoadingWorkspace || createInvite.isPending}
               >
                 {isLoadingWorkspace ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Loading workspace...
+                    {isTechnical ? 'Loading...' : 'Loading workspace...'}
                   </>
                 ) : createInvite.isPending ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Creating invite...
+                    {isTechnical ? 'Generating...' : 'Creating invite...'}
                   </>
                 ) : (
                   <>
                     <Plus className="h-4 w-4 mr-2" />
-                    Create Invite Link
+                    {isTechnical
+                      ? 'Generate Invite Token'
+                      : 'Create Invite Link'}
                   </>
                 )}
               </Button>
@@ -344,20 +423,43 @@ export function TeamTab({ companyId }: TeamTabProps) {
           {/* Active Invite Links */}
           {teamInvites && teamInvites.length > 0 && (
             <div className="mt-4 space-y-2">
-              <p className="text-sm font-medium text-[#101010]">
-                Active Invite Links
+              <p
+                className={cn(
+                  'text-sm font-medium text-[#101010]',
+                  isTechnical && 'font-mono',
+                )}
+              >
+                {isTechnical ? 'ACTIVE_TOKENS' : 'Active Invite Links'}
               </p>
               {teamInvites.map((invite: any) => (
                 <div
                   key={invite.id}
-                  className="flex items-center justify-between p-3 border rounded-lg bg-white"
+                  className={cn(
+                    'flex items-center justify-between p-3 border bg-white',
+                    isTechnical
+                      ? 'border-[#1B29FF]/20'
+                      : 'border-[#101010]/10 rounded-lg',
+                  )}
                 >
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs font-mono truncate text-[#666666]">
+                    <p
+                      className={cn(
+                        'text-xs font-mono truncate',
+                        isTechnical ? 'text-[#1B29FF]/70' : 'text-[#666666]',
+                      )}
+                    >
                       {window.location.origin}/join-team?token={invite.token}
                     </p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Created {new Date(invite.createdAt).toLocaleDateString()}
+                    <p
+                      className={cn(
+                        'text-xs mt-1',
+                        isTechnical
+                          ? 'text-[#101010]/40 font-mono'
+                          : 'text-muted-foreground',
+                      )}
+                    >
+                      {isTechnical ? 'Created: ' : 'Created '}
+                      {new Date(invite.createdAt).toLocaleDateString()}
                     </p>
                   </div>
                   <div className="flex gap-2 ml-2">
@@ -365,6 +467,10 @@ export function TeamTab({ companyId }: TeamTabProps) {
                       variant="outline"
                       size="sm"
                       onClick={() => copyTeamInviteLink(invite.token)}
+                      className={cn(
+                        isTechnical &&
+                          'border-[#1B29FF]/30 hover:bg-[#1B29FF]/5',
+                      )}
                     >
                       {copiedLink === invite.token ? (
                         <Check className="h-4 w-4" />
@@ -389,24 +495,53 @@ export function TeamTab({ companyId }: TeamTabProps) {
               ))}
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {/* Team Members List */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <UserCheck className="h-5 w-5" />
-            Team Members
-            {teamMembers && (
-              <Badge variant="secondary">{teamMembers.length}</Badge>
+      <div
+        className={cn(
+          'bg-white shadow-sm',
+          isTechnical
+            ? 'border border-[#1B29FF]/20'
+            : 'border border-[#101010]/10 rounded-lg',
+        )}
+      >
+        <div
+          className={cn(
+            'border-b px-5 sm:px-6 py-4',
+            isTechnical ? 'border-[#1B29FF]/20' : 'border-[#101010]/10',
+          )}
+        >
+          <h3
+            className={cn(
+              'flex items-center gap-2 text-[#101010]',
+              isTechnical ? 'font-mono text-[16px]' : 'font-medium text-[17px]',
             )}
-          </CardTitle>
-          <CardDescription>
-            People with access to this workspace
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+          >
+            <UserCheck className="h-5 w-5" />
+            {isTechnical ? 'TEAM::MEMBERS' : 'Team Members'}
+            {teamMembers && (
+              <Badge
+                variant="secondary"
+                className={cn(isTechnical && 'font-mono')}
+              >
+                {teamMembers.length}
+              </Badge>
+            )}
+          </h3>
+          <p
+            className={cn(
+              'text-sm mt-1',
+              isTechnical ? 'text-[#101010]/50 font-mono' : 'text-[#666666]',
+            )}
+          >
+            {isTechnical
+              ? 'Users with workspace access permissions'
+              : 'People with access to this workspace'}
+          </p>
+        </div>
+        <div className="p-5 sm:p-6">
           {isLoadingMembers ? (
             <div className="space-y-3">
               <Skeleton className="h-16 w-full" />
@@ -417,25 +552,47 @@ export function TeamTab({ companyId }: TeamTabProps) {
               {teamMembers.map((member: any) => (
                 <div
                   key={member.id}
-                  className="flex items-center justify-between p-3 border rounded-lg"
+                  className={cn(
+                    'flex items-center justify-between p-3 border',
+                    isTechnical
+                      ? 'border-[#1B29FF]/20'
+                      : 'border-[#101010]/10 rounded-lg',
+                  )}
                 >
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
                       <div>
-                        <div className="font-medium">
+                        <div
+                          className={cn(
+                            'font-medium',
+                            isTechnical && 'font-mono',
+                          )}
+                        >
                           {member.name ||
                             member.email ||
                             member.userId ||
                             'Unknown User'}
                         </div>
                         {member.email && (
-                          <div className="text-sm text-muted-foreground">
+                          <div
+                            className={cn(
+                              'text-sm',
+                              isTechnical
+                                ? 'text-[#101010]/50 font-mono'
+                                : 'text-muted-foreground',
+                            )}
+                          >
                             {member.email}
                           </div>
                         )}
                       </div>
                       {member.role === 'owner' && (
-                        <Crown className="h-4 w-4 text-yellow-600" />
+                        <Crown
+                          className={cn(
+                            'h-4 w-4',
+                            isTechnical ? 'text-[#1B29FF]' : 'text-yellow-600',
+                          )}
+                        />
                       )}
                       <Badge
                         variant={
@@ -445,8 +602,9 @@ export function TeamTab({ companyId }: TeamTabProps) {
                               ? 'secondary'
                               : 'outline'
                         }
+                        className={cn(isTechnical && 'font-mono')}
                       >
-                        {member.role}
+                        {isTechnical ? member.role.toUpperCase() : member.role}
                       </Badge>
                       {/* Safe Owner badge - Technical mode only */}
                       {isTechnical &&
@@ -454,16 +612,24 @@ export function TeamTab({ companyId }: TeamTabProps) {
                         isSafeOwner(member.walletAddress) && (
                           <Badge
                             variant="outline"
-                            className="border-[#1B29FF] text-[#1B29FF]"
+                            className="border-[#1B29FF] text-[#1B29FF] font-mono"
                           >
                             <Shield className="h-3 w-3 mr-1" />
-                            Safe Owner
+                            SAFE_OWNER
                           </Badge>
                         )}
                     </div>
-                    <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
+                    <p
+                      className={cn(
+                        'text-xs flex items-center gap-1 mt-1',
+                        isTechnical
+                          ? 'text-[#101010]/40 font-mono'
+                          : 'text-muted-foreground',
+                      )}
+                    >
                       <Calendar className="h-3 w-3" />
-                      Joined {new Date(member.joinedAt).toLocaleDateString()}
+                      {isTechnical ? 'Joined: ' : 'Joined '}
+                      {new Date(member.joinedAt).toLocaleDateString()}
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
@@ -483,34 +649,47 @@ export function TeamTab({ companyId }: TeamTabProps) {
             </div>
           ) : (
             <div className="text-center py-8">
-              <Users className="h-12 w-12 text-[#101010]/20 mx-auto mb-4" />
-              <p className="text-muted-foreground">
-                No team members yet. Create an invite link above to add team
-                members.
+              <Users
+                className={cn(
+                  'h-12 w-12 mx-auto mb-4',
+                  isTechnical ? 'text-[#1B29FF]/20' : 'text-[#101010]/20',
+                )}
+              />
+              <p
+                className={cn(
+                  isTechnical
+                    ? 'text-[#101010]/50 font-mono'
+                    : 'text-muted-foreground',
+                )}
+              >
+                {isTechnical
+                  ? 'No team members. Generate invite token above.'
+                  : 'No team members yet. Create an invite link above to add team members.'}
               </p>
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {/* Safe Owners Section - Technical mode only */}
       {isTechnical && primarySafeAddress && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+        <div className="bg-white shadow-sm border border-[#1B29FF]/20">
+          <div className="border-b border-[#1B29FF]/20 px-5 sm:px-6 py-4">
+            <h3 className="flex items-center gap-2 text-[#101010] font-mono text-[16px]">
               <Shield className="h-5 w-5" />
-              Safe Owners
+              SAFE::OWNERS
               {safeOwners && (
-                <Badge variant="secondary">{safeOwners.owners.length}</Badge>
+                <Badge variant="secondary" className="font-mono">
+                  {safeOwners.owners.length}
+                </Badge>
               )}
-            </CardTitle>
-            <CardDescription>
-              Wallet addresses that can approve transactions on your Safe
-              (threshold: {safeOwners?.threshold || 1} of{' '}
-              {safeOwners?.owners.length || 1})
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
+            </h3>
+            <p className="text-sm text-[#101010]/50 font-mono mt-1">
+              Addresses authorized for transaction signing (threshold:{' '}
+              {safeOwners?.threshold || 1}/{safeOwners?.owners.length || 1})
+            </p>
+          </div>
+          <div className="p-5 sm:p-6">
             {isLoadingSafeOwners ? (
               <div className="space-y-3">
                 <Skeleton className="h-12 w-full" />
@@ -518,85 +697,84 @@ export function TeamTab({ companyId }: TeamTabProps) {
               </div>
             ) : safeOwners && safeOwners.owners.length > 0 ? (
               <div className="space-y-2">
-                {safeOwners.owners.map(
-                  (ownerAddress: string, index: number) => (
-                    <div
-                      key={ownerAddress}
-                      className="flex items-center justify-between p-3 border rounded-lg bg-[#F7F7F2]"
-                    >
-                      <div className="flex items-center gap-2">
-                        <code className="text-sm font-mono">
-                          {formatAddress(ownerAddress)}
-                        </code>
-                        {isCurrentUser(ownerAddress) && (
-                          <Badge variant="default">You</Badge>
-                        )}
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => copyAddress(ownerAddress)}
-                      >
-                        {copiedAddress === ownerAddress ? (
-                          <Check className="h-4 w-4" />
-                        ) : (
-                          <Copy className="h-4 w-4" />
-                        )}
-                      </Button>
+                {safeOwners.owners.map((ownerAddress: string) => (
+                  <div
+                    key={ownerAddress}
+                    className="flex items-center justify-between p-3 border border-[#1B29FF]/20 bg-[#1B29FF]/5"
+                  >
+                    <div className="flex items-center gap-2">
+                      <code className="text-sm font-mono text-[#1B29FF]">
+                        {formatAddress(ownerAddress)}
+                      </code>
+                      {isCurrentUser(ownerAddress) && (
+                        <Badge variant="default" className="font-mono">
+                          YOU
+                        </Badge>
+                      )}
                     </div>
-                  ),
-                )}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => copyAddress(ownerAddress)}
+                      className="text-[#1B29FF]/60 hover:text-[#1B29FF] hover:bg-[#1B29FF]/10"
+                    >
+                      {copiedAddress === ownerAddress ? (
+                        <Check className="h-4 w-4" />
+                      ) : (
+                        <Copy className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </div>
+                ))}
               </div>
             ) : (
-              <p className="text-center text-muted-foreground py-4">
+              <p className="text-center text-[#101010]/50 font-mono py-4">
                 No Safe owners found.
               </p>
             )}
 
             {/* Link to Advanced Wallet Settings */}
-            <div className="mt-4 pt-4 border-t">
+            <div className="mt-4 pt-4 border-t border-[#1B29FF]/20">
               <Button
                 variant="outline"
-                className="w-full"
+                className="w-full border-[#1B29FF]/30 text-[#1B29FF] hover:bg-[#1B29FF]/5 font-mono"
                 onClick={() =>
                   (window.location.href = '/dashboard/settings/advanced-wallet')
                 }
               >
                 <UserPlus className="h-4 w-4 mr-2" />
-                Manage Safe Owners in Advanced Settings
-                <ExternalLink className="h-4 w-4 ml-2" />
+                Manage Safe Owners →
               </Button>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       )}
 
       {/* No Safe Warning - Technical mode only */}
       {isTechnical && !primarySafeAddress && !isLoadingSafes && (
-        <Card className="border-orange-200 bg-orange-50">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-orange-700">
+        <div className="bg-orange-50 border border-orange-200">
+          <div className="border-b border-orange-200 px-5 sm:px-6 py-4">
+            <h3 className="flex items-center gap-2 text-orange-700 font-mono text-[16px]">
               <AlertCircle className="h-5 w-5" />
-              No Primary Safe Found
-            </CardTitle>
-            <CardDescription className="text-orange-600">
-              Set up a primary Safe to manage account owners and enable
-              multi-signature transactions.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
+              SAFE::NOT_FOUND
+            </h3>
+            <p className="text-sm text-orange-600 font-mono mt-1">
+              Configure primary Safe for multi-sig transaction support
+            </p>
+          </div>
+          <div className="p-5 sm:p-6">
             <Button
               variant="outline"
-              className="border-orange-300 text-orange-700 hover:bg-orange-100"
+              className="border-orange-300 text-orange-700 hover:bg-orange-100 font-mono"
               onClick={() =>
                 (window.location.href = '/dashboard/settings/advanced-wallet')
               }
             >
               <ExternalLink className="h-4 w-4 mr-2" />
-              Go to Advanced Wallet Settings
+              Configure in WALLET::ADVANCED →
             </Button>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       )}
 
       {/* Remove Member Confirmation Dialog */}
@@ -606,17 +784,38 @@ export function TeamTab({ companyId }: TeamTabProps) {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Remove Team Member</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to remove{' '}
-              <strong>{memberToRemove?.name || memberToRemove?.email}</strong>{' '}
-              from the team? They will lose access to all shared resources.
+            <AlertDialogTitle className={cn(isTechnical && 'font-mono')}>
+              {isTechnical ? 'CONFIRM::REMOVE_MEMBER' : 'Remove Team Member'}
+            </AlertDialogTitle>
+            <AlertDialogDescription className={cn(isTechnical && 'font-mono')}>
+              {isTechnical ? (
+                <>
+                  Remove{' '}
+                  <strong>
+                    {memberToRemove?.name || memberToRemove?.email}
+                  </strong>{' '}
+                  from workspace? Access will be revoked immediately.
+                </>
+              ) : (
+                <>
+                  Are you sure you want to remove{' '}
+                  <strong>
+                    {memberToRemove?.name || memberToRemove?.email}
+                  </strong>{' '}
+                  from the team? They will lose access to all shared resources.
+                </>
+              )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmRemoveMember}>
-              Remove Member
+            <AlertDialogCancel className={cn(isTechnical && 'font-mono')}>
+              {isTechnical ? 'Cancel' : 'Cancel'}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmRemoveMember}
+              className={cn(isTechnical && 'font-mono')}
+            >
+              {isTechnical ? 'Remove' : 'Remove Member'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
