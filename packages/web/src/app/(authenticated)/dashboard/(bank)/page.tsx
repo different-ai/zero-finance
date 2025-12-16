@@ -11,6 +11,7 @@ import { db } from '@/db';
 import { userSafes, userProfilesTable } from '@/db/schema';
 import { and, eq } from 'drizzle-orm';
 import { SavingsSection } from './components/savings-section';
+import { DashboardHeader } from './components/dashboard-header';
 
 // Create a simple log object
 const log = {
@@ -135,6 +136,8 @@ export default async function DashboardPage(props: {
         {/* Main Content */}
         <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 ">
           {/* Insurance Warning and Activation Handler */}
+
+          <DashboardHeader />
 
           <div className="space-y-6 ">
             {/* Onboarding Section */}

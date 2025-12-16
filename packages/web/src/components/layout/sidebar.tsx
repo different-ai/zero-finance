@@ -15,6 +15,7 @@ import {
   MessageSquare,
   Banknote,
   Building,
+  PiggyBank,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { usePrivy } from '@privy-io/react-auth';
@@ -65,6 +66,11 @@ export function Sidebar() {
             : 'Dashboard',
           href: '/dashboard',
           icon: Banknote,
+        },
+        {
+          name: isTechnical ? 'Vaults' : 'Savings',
+          href: '/dashboard/savings',
+          icon: PiggyBank,
         },
         {
           name: 'Invoices',
