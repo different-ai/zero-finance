@@ -10,9 +10,11 @@ import {
   CheckCircle2,
   AlertTriangle,
   Circle,
+  Banknote,
+  Cpu,
 } from 'lucide-react';
-import { GradientBackground } from '@/app/(landing)/gradient-background';
 import GeneratedComponent from '@/app/(landing)/welcome-gradient';
+import { cn } from '@/lib/utils';
 import { EnsureEmbeddedWallet } from '@/components/auth/ensure-embedded-wallet';
 import {
   StepStatus,
@@ -26,6 +28,7 @@ export default function WelcomePage() {
   const [workspaceStatus, setWorkspaceStatus] = useState<StepStatus>('pending');
   const [submissionError, setSubmissionError] = useState<string | null>(null);
   const [isSetupComplete, setIsSetupComplete] = useState(false);
+  const [fundingMode, setFundingMode] = useState<'bank' | 'crypto'>('bank');
 
   const { data: workspaceData, isLoading: workspaceLoading } =
     api.workspace.getOrCreateWorkspaceV2.useQuery(undefined, {
@@ -59,6 +62,14 @@ export default function WelcomePage() {
 
     setSubmissionError(null);
     setWorkspaceStatus('in_progress');
+
+    // Save the funding mode preference to localStorage
+    try {
+      const isTechnical = fundingMode === 'crypto';
+      localStorage.setItem('zero-finance-bimodal-mode', String(isTechnical));
+    } catch (e) {
+      // localStorage not available, continue anyway
+    }
 
     try {
       await updateCompanyMutation.mutateAsync({
@@ -188,6 +199,115 @@ export default function WelcomePage() {
                 <p className="text-[12px] text-[#101010]/50 mt-1">
                   This is your personal workspace. You can create company
                   profiles separately.
+                </p>
+              </div>
+
+              {/* Funding Mode Selection */}
+              <div className="space-y-2">
+                <label className="block text-[11px] sm:text-[12px] uppercase tracking-[0.14em] text-[#101010]/60 font-medium">
+                  How will you fund your account?
+                </label>
+                <div className="grid grid-cols-2 gap-3">
+                  {/* Bank Transfer Option */}
+                  <button
+                    type="button"
+                    onClick={() => setFundingMode('bank')}
+                    disabled={isProcessing || isSetupComplete}
+                    className={cn(
+                      'relative p-4 rounded-lg border-2 text-left transition-all disabled:opacity-50',
+                      fundingMode === 'bank'
+                        ? 'border-[#0050ff] bg-[#0050ff]/5'
+                        : 'border-[#101010]/10 hover:border-[#101010]/20 bg-white',
+                    )}
+                  >
+                    {fundingMode === 'bank' && (
+                      <div className="absolute top-2 right-2">
+                        <div className="h-4 w-4 rounded-full bg-[#0050ff] flex items-center justify-center">
+                          <svg
+                            className="h-2.5 w-2.5 text-white"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={3}
+                              d="M5 13l4 4L19 7"
+                            />
+                          </svg>
+                        </div>
+                      </div>
+                    )}
+                    <div className="flex items-center gap-2 mb-2">
+                      <Banknote
+                        className={cn(
+                          'h-5 w-5',
+                          fundingMode === 'bank'
+                            ? 'text-[#0050ff]'
+                            : 'text-[#101010]/40',
+                        )}
+                      />
+                      <span className="text-[13px] font-medium text-[#101010]">
+                        Bank Transfer
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-[#101010]/60 leading-[1.4]">
+                      ACH, wire, or SEPA transfers
+                    </p>
+                  </button>
+
+                  {/* Crypto Option */}
+                  <button
+                    type="button"
+                    onClick={() => setFundingMode('crypto')}
+                    disabled={isProcessing || isSetupComplete}
+                    className={cn(
+                      'relative p-4 rounded-lg border-2 text-left transition-all disabled:opacity-50',
+                      fundingMode === 'crypto'
+                        ? 'border-[#1B29FF] bg-[#1B29FF]/5'
+                        : 'border-[#101010]/10 hover:border-[#101010]/20 bg-white',
+                    )}
+                  >
+                    {fundingMode === 'crypto' && (
+                      <div className="absolute top-2 right-2">
+                        <div className="h-4 w-4 rounded-full bg-[#1B29FF] flex items-center justify-center">
+                          <svg
+                            className="h-2.5 w-2.5 text-white"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={3}
+                              d="M5 13l4 4L19 7"
+                            />
+                          </svg>
+                        </div>
+                      </div>
+                    )}
+                    <div className="flex items-center gap-2 mb-2">
+                      <Cpu
+                        className={cn(
+                          'h-5 w-5',
+                          fundingMode === 'crypto'
+                            ? 'text-[#1B29FF]'
+                            : 'text-[#101010]/40',
+                        )}
+                      />
+                      <span className="text-[13px] font-medium text-[#101010]">
+                        Cryptocurrency
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-[#101010]/60 leading-[1.4]">
+                      USDC on Base network
+                    </p>
+                  </button>
+                </div>
+                <p className="text-[11px] text-[#101010]/40 mt-1">
+                  You can change this anytime in Settings → Preferences
                 </p>
               </div>
 

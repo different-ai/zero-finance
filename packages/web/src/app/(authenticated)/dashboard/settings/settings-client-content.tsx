@@ -1,24 +1,21 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import {
-  Mail,
-  Shield,
-  ArrowRight,
-  Zap,
-  Link2,
-  Wallet,
-  Key,
-  Coins,
-  Building2,
-  Users,
-} from 'lucide-react';
+import { Shield, ArrowRight, Building2, Users, Settings2 } from 'lucide-react';
 import Link from 'next/link';
 
 export function SettingsClientContent() {
   const router = useRouter();
 
   const settingsOptions = [
+    {
+      id: 'preferences',
+      title: 'Preferences',
+      description: 'Customize your account view and interface settings',
+      icon: Settings2,
+      features: ['View mode', 'Display options'],
+      path: '/dashboard/settings/preferences',
+    },
     {
       id: 'advanced-wallet',
       title: 'Advanced Wallet Settings',

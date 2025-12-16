@@ -262,7 +262,7 @@ export function HeroSection() {
                 Create your account
               </h3>
               <p className="mt-1 text-[13px] sm:text-[14px] text-[#101010]/70">
-                Sign up with email or wallet in under 60 seconds. No bank
+                Sign up with email in under 60 seconds. No bank
                 connection required.
               </p>
             </div>
@@ -271,11 +271,10 @@ export function HeroSection() {
                 2
               </div>
               <h3 className="mt-2 text-[15px] sm:text-[16px] font-medium text-[#101010]">
-                Deposit USDC
+                Deposit USD
               </h3>
               <p className="mt-1 text-[13px] sm:text-[14px] text-[#101010]/70">
-                Transfer USDC from any wallet or exchange. Your funds start
-                earning immediately.
+                Transfer funds to your account. 
               </p>
             </div>
             <div className="p-4 sm:p-6">

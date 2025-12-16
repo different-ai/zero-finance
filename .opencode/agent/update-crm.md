@@ -22,7 +22,7 @@ Call this agent AFTER a message has been sent to:
 1. Update the lead's status in Notion
 2. Log the message content as a comment
 3. Update the "Last Follow up" date
-4. Create an Opener entry and link it to the lead
+4. Create an Message entry and link it to the lead
 5. **Compare draft vs sent and log learnings** (CRITICAL)
 6. Add any relevant notes
 
@@ -50,26 +50,26 @@ When calling this agent, provide:
 
 ## Workflow
 
-**CRITICAL: You MUST complete ALL 3 steps. DO NOT skip linking the Opener.**
+**CRITICAL: You MUST complete ALL 3 steps. DO NOT skip linking the Message.**
 
 ### Step 0: Get Configuration from MCP Skills
 
 **FIRST:** Search Notion for "MCP Skills" page to get database URLs from the "Database Collection URLs" section:
 
 - Outreach Tracking database URL
-- Opener database URL
+- Message database URL
 
-### Step 1: Create Opener Entry (MUST DO)
+### Step 1: Create Message Entry (MUST DO)
 
-Create a new page in the Opener database to log the message:
+Create a new page in the Message database to log the message:
 
-**Opener Database**: See "MCP Skills" → Database Collection URLs → Opener
+**Message Database**: See "MCP Skills" → Database Collection URLs → Message
 
 ````json
 {
   "parent": {
     "type": "data_source_id",
-    "data_source_id": "[Get from MCP Skills → Database Collection URLs → Opener]"
+    "data_source_id": "[Get from MCP Skills → Database Collection URLs → Message]"
   },
   "pages": [
     {
@@ -240,7 +240,7 @@ Platform: LinkedIn (Sales Navigator InMail)
 
 - **Page not found**: Search database by lead name
 - **Status not in options**: Use closest match or "Sent Message" as default
-- **Opener creation fails**: Still update lead status, report opener error
+- **Message creation fails**: Still update lead status, report message error
 - **Comment fails**: Report error but confirm status update succeeded
 
 ## Integration with Feedback Loop

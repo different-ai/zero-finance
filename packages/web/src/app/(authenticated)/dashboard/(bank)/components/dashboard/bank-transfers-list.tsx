@@ -1,6 +1,12 @@
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { trpc, RouterOutputs } from '@/utils/trpc';
-import { Loader2, AlertCircle, UploadCloud, Banknote } from 'lucide-react';
+import {
+  Loader2,
+  AlertCircle,
+  UploadCloud,
+  Banknote,
+  Building2,
+} from 'lucide-react';
 import React from 'react';
 
 type OnrampTransfer = RouterOutputs['align']['listOnrampTransfers'][number] & {
@@ -13,6 +19,16 @@ type OfframpTransfer =
 type CombinedTransfer =
   | (OnrampTransfer & { _direction: 'incoming' })
   | (OfframpTransfer & { _direction: 'outgoing' });
+
+// Helper to check if an error is a "no customer" error that should show empty state
+function isNoCustomerError(message: string | undefined): boolean {
+  if (!message) return false;
+  return (
+    message.toLowerCase().includes('no align customer') ||
+    message.toLowerCase().includes('customer id') ||
+    message.toLowerCase().includes('not found for user')
+  );
+}
 
 export function BankTransfersList() {
   const utils = trpc.useUtils();
@@ -63,7 +79,10 @@ export function BankTransfersList() {
           failure.reason instanceof Error
             ? failure.reason.message
             : 'Failed to refresh bank transfers.';
-        setSyncError(message);
+        // Don't show "no customer" errors as sync errors - treat as empty state
+        if (!isNoCustomerError(message)) {
+          setSyncError(message);
+        }
       } else {
         setSyncError(null);
       }
@@ -73,8 +92,19 @@ export function BankTransfersList() {
   }, [syncOnramp, syncOfframp]);
 
   const isLoading = loadingIncoming || loadingOutgoing;
-  const isError = errorIncoming || errorOutgoing;
-  const errorMsg = incomingError?.message || outgoingError?.message;
+
+  // Check if it's a "no customer" error - treat as empty state, not error
+  const incomingIsNoCustomer = isNoCustomerError(incomingError?.message);
+  const outgoingIsNoCustomer = isNoCustomerError(outgoingError?.message);
+  const isNoCustomerState = incomingIsNoCustomer || outgoingIsNoCustomer;
+
+  // Only show error state for real errors, not "no customer" errors
+  const isError =
+    (errorIncoming && !incomingIsNoCustomer) ||
+    (errorOutgoing && !outgoingIsNoCustomer);
+  const errorMsg =
+    (!incomingIsNoCustomer && incomingError?.message) ||
+    (!outgoingIsNoCustomer && outgoingError?.message);
 
   const transfers: CombinedTransfer[] = React.useMemo(() => {
     const inc =
@@ -121,9 +151,19 @@ export function BankTransfersList() {
                 'Could not fetch transfers. Please try again later.'}
             </p>
           </div>
-        ) : transfers.length === 0 ? (
-          <div className="px-6 py-8 text-center">
-            <p className="text-sm text-gray-500">No bank transfers found.</p>
+        ) : transfers.length === 0 || isNoCustomerState ? (
+          <div className="px-6 py-12 text-center">
+            <div className="flex justify-center mb-4">
+              <div className="h-12 w-12 rounded-full bg-[#F7F7F2] flex items-center justify-center">
+                <Building2 className="h-6 w-6 text-[#101010]/40" />
+              </div>
+            </div>
+            <p className="text-[15px] font-medium text-[#101010] mb-1">
+              No bank transfers yet
+            </p>
+            <p className="text-[13px] text-[#101010]/60 max-w-[300px] mx-auto">
+              When you receive or send bank transfers, they will appear here.
+            </p>
           </div>
         ) : (
           <div className="divide-y divide-gray-200">

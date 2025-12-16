@@ -11,9 +11,11 @@ import SavingsPanel from '@/components/savings/savings-panel';
 import { trpc } from '@/utils/trpc';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import Link from 'next/link';
+import { useBimodal } from '@/components/ui/bimodal';
 
 export default function SavingsSettingsPage() {
   const router = useRouter();
+  const { isTechnical } = useBimodal();
   const {
     data: safesData,
     isLoading: isLoadingSafes,
@@ -157,10 +159,9 @@ export default function SavingsSettingsPage() {
                     Automatic Deposits
                   </p>
                   <p className="text-[14px] text-[#101010]/70">
-                    When you receive any USDC payment,{' '}
-                    {savingsState?.allocation || 20}% will be instantly and
-                    automatically deposited into high-yield vaults on Base
-                    network.
+                    {isTechnical
+                      ? `When you receive any USDC payment, ${savingsState?.allocation || 20}% will be instantly and automatically deposited into high-yield vaults on Base network.`
+                      : `When you receive any payment, ${savingsState?.allocation || 20}% will be instantly and automatically moved to your high-yield savings account.`}
                   </p>
                 </div>
               </div>
@@ -179,9 +180,9 @@ export default function SavingsSettingsPage() {
                     <span className="font-medium text-[#1B29FF]">
                       {liveApy.toFixed(2)}% APY
                     </span>{' '}
-                    (live rate) in the Gauntlet USDC Frontier vault, a
-                    collaboration between Morpho and Gauntlet optimizing for
-                    maximum yield.
+                    {isTechnical
+                      ? '(live rate) in the Gauntlet USDC Frontier vault, a collaboration between Morpho and Gauntlet optimizing for maximum yield.'
+                      : '(live rate) through our institutional-grade savings strategy.'}
                   </p>
                 </div>
               </div>
@@ -202,17 +203,19 @@ export default function SavingsSettingsPage() {
                 </div>
               </div>
 
-              {/* Vault Link */}
-              <div className="pt-4 border-t border-[#101010]/10">
-                <Link
-                  href="https://app.morpho.org/ethereum/vault/0xc582F04d8a82795aa2Ff9c8bb4c1c889fe7b754e/gauntlet-usdc-frontier"
-                  target="_blank"
-                  className="inline-flex items-center gap-2 text-[14px] text-[#1B29FF] hover:text-[#1420CC] transition-colors"
-                >
-                  View Seamless USDC Vault on Morpho
-                  <ExternalLink className="h-3 w-3" />
-                </Link>
-              </div>
+              {/* Vault Link - Only shown in Technical mode */}
+              {isTechnical && (
+                <div className="pt-4 border-t border-[#101010]/10">
+                  <Link
+                    href="https://app.morpho.org/ethereum/vault/0xc582F04d8a82795aa2Ff9c8bb4c1c889fe7b754e/gauntlet-usdc-frontier"
+                    target="_blank"
+                    className="inline-flex items-center gap-2 text-[14px] text-[#1B29FF] hover:text-[#1420CC] transition-colors"
+                  >
+                    View Seamless USDC Vault on Morpho
+                    <ExternalLink className="h-3 w-3" />
+                  </Link>
+                </div>
+              )}
             </div>
           </div>
 
@@ -225,15 +228,9 @@ export default function SavingsSettingsPage() {
                   Important Risk Disclosure
                 </p>
                 <p className="text-[13px] text-[#101010]/70 leading-relaxed">
-                  While the Seamless vault is managed by Gauntlet (a leading
-                  DeFi risk manager) and has undergone audits, all DeFi
-                  protocols carry inherent risks including smart contract
-                  vulnerabilities, market volatility, and potential loss of
-                  funds. Past performance does not guarantee future returns. APY
-                  rates are variable and can change at any time based on market
-                  conditions. Only deposit what you can afford to lose. This is
-                  not financial advice - please do your own research before
-                  using any DeFi protocol.
+                  {isTechnical
+                    ? `While the Seamless vault is managed by Gauntlet (a leading DeFi risk manager) and has undergone audits, all DeFi protocols carry inherent risks including smart contract vulnerabilities, market volatility, and potential loss of funds. Past performance does not guarantee future returns. APY rates are variable and can change at any time based on market conditions. Only deposit what you can afford to lose. This is not financial advice - please do your own research before using any DeFi protocol.`
+                    : `While our savings accounts use institutional-grade security and undergo regular audits, all investments carry inherent risks. Past performance does not guarantee future returns. APY rates are variable and can change at any time based on market conditions. Only save what you can afford to risk. This is not financial advice.`}
                 </p>
               </div>
             </div>

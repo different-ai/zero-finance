@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import { Shield } from 'lucide-react';
+import { Shield, Lock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { VaultRowDesktop, VaultRowMobile } from './vault-row';
 import { CHAIN_CONFIG } from '@/lib/constants/chains';
@@ -235,8 +235,8 @@ function FooterStatus({
   return (
     <div className="mt-8 flex items-center justify-center">
       <p className="flex items-center gap-2 text-[13px] text-[#101010]/40">
-        <Shield className="w-4 h-4" />
-        Funds are held in non-custodial smart contracts
+        <Lock className="w-4 h-4" />
+        Your funds are held securely with instant access
       </p>
     </div>
   );

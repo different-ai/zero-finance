@@ -52,7 +52,6 @@ const SIGNIN_CONTENT: SigninContent = {
   description:
     'Earn more on your idle treasury. No minimums, no lock-ups. ',
   features: [
-    '8% target APY with daily compounding',
     'Insurance included — up to $1M coverage',
     'Instant withdrawals — no lockups',
     'ACH and wire transfers in and out',
