@@ -14,6 +14,7 @@ import {
   ChevronRight,
   BookOpen,
   AlertTriangle,
+  Shield,
 } from 'lucide-react';
 import {
   type Address,
@@ -27,13 +28,6 @@ import {
 import { usePrivy, useWallets } from '@privy-io/react-auth';
 import { useSmartWallet } from '@/hooks/use-smart-wallet';
 import { useSmartWallets } from '@privy-io/react-auth/smart-wallets';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from '@/components/ui/use-toast';
@@ -42,6 +36,7 @@ import { buildSafeTx, relaySafeTx } from '@/lib/sponsor-tx/core';
 import type { MetaTransactionData } from '@safe-global/safe-core-sdk-types';
 import { base, arbitrum, gnosis, optimism } from 'viem/chains';
 import { SUPPORTED_CHAINS, getChainDisplayName } from '@/lib/constants/chains';
+import { Badge } from '@/components/ui/badge';
 
 const SAFE_OWNER_SYNC_ABI = parseAbi([
   'function getOwners() view returns (address[])',
@@ -97,6 +92,7 @@ export function AdvancedWalletClientContent() {
   const [copiedSafe, setCopiedSafe] = useState(false);
   const [copiedSmart, setCopiedSmart] = useState(false);
   const [copiedEmbedded, setCopiedEmbedded] = useState(false);
+  const [copiedAddress, setCopiedAddress] = useState<string | null>(null);
   const [showRecoveryInfo, setShowRecoveryInfo] = useState(false);
   const [showTechnicalDetails, setShowTechnicalDetails] = useState(false);
   const [showMultiChainSync, setShowMultiChainSync] = useState(false);
@@ -130,10 +126,15 @@ export function AdvancedWalletClientContent() {
     error: errorSafes,
   } = trpc.settings.userSafes.list.useQuery();
 
-  const primarySafeAddress =
-    (userSafes?.find((safe) => safe.safeType === 'primary')?.safeAddress as
-      | Address
-      | undefined) ?? (userSafes?.[0]?.safeAddress as Address | undefined);
+  // Get Safe owners for primary Safe
+  const primarySafe = userSafes?.find((safe) => safe.safeType === 'primary');
+  const primarySafeAddress = primarySafe?.safeAddress as Address | undefined;
+
+  const { data: safeOwners, isLoading: isLoadingSafeOwners } =
+    trpc.safe.getSafeOwners.useQuery(
+      { safeAddress: primarySafeAddress || '' },
+      { enabled: !!primarySafeAddress, retry: false },
+    );
 
   const embeddedWallet = useMemo(
     () => wallets.find((w: any) => w.walletClientType === 'privy'),
@@ -149,6 +150,26 @@ export function AdvancedWalletClientContent() {
         typeof safe.safeAddress === 'string',
     );
   }, [userSafes]);
+
+  // Get user's Privy addresses to match against Safe owners
+  const userAddresses = user?.wallet?.address ? [user.wallet.address] : [];
+  if (user?.linkedAccounts) {
+    user.linkedAccounts.forEach((account) => {
+      if (account.type === 'wallet' && account.address) {
+        userAddresses.push(account.address);
+      }
+    });
+  }
+
+  const isCurrentUser = (ownerAddress: string) => {
+    return userAddresses.some(
+      (userAddr) => userAddr.toLowerCase() === ownerAddress.toLowerCase(),
+    );
+  };
+
+  const formatAddress = (address: string) => {
+    return `${address.slice(0, 6)}...${address.slice(-4)}`;
+  };
 
   const makeSafeKey = (chainId: number, safeAddress: string) =>
     `${chainId}:${safeAddress.toLowerCase()}`;
@@ -390,7 +411,7 @@ export function AdvancedWalletClientContent() {
     if (!canonicalOwnership) {
       toast({
         title: 'No canonical ownership loaded',
-        description: 'Click “Check sync” first.',
+        description: 'Click "Check sync" first.',
         variant: 'destructive',
       });
       return;
@@ -402,7 +423,7 @@ export function AdvancedWalletClientContent() {
     if (!safeInfo) {
       toast({
         title: 'Missing Safe ownership data',
-        description: 'Click “Check sync” first.',
+        description: 'Click "Check sync" first.',
         variant: 'destructive',
       });
       return;
@@ -519,7 +540,7 @@ export function AdvancedWalletClientContent() {
 
   const copyToClipboard = async (
     text: string,
-    type: 'did' | 'safe' | 'smart' | 'embedded',
+    type: 'did' | 'safe' | 'smart' | 'embedded' | 'owner',
   ) => {
     try {
       await navigator.clipboard.writeText(text);
@@ -532,6 +553,9 @@ export function AdvancedWalletClientContent() {
       } else if (type === 'smart') {
         setCopiedSmart(true);
         setTimeout(() => setCopiedSmart(false), 2000);
+      } else if (type === 'owner') {
+        setCopiedAddress(text);
+        setTimeout(() => setCopiedAddress(null), 2000);
       } else {
         setCopiedEmbedded(true);
         setTimeout(() => setCopiedEmbedded(false), 2000);
@@ -541,9 +565,10 @@ export function AdvancedWalletClientContent() {
         safe: 'Safe address',
         smart: 'Smart wallet address',
         embedded: 'Embedded wallet address',
+        owner: 'Owner address',
       }[type];
       toast({
-        title: 'Copied!',
+        title: 'Copied',
         description: `${label} copied to clipboard`,
       });
     } catch (err) {
@@ -556,14 +581,14 @@ export function AdvancedWalletClientContent() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F7F7F2]">
-      {/* Header */}
-      <header className="sticky top-0 z-40 bg-[#F7F7F2] border-b border-[#101010]/10">
+    <div className="min-h-screen bg-[#F8F9FA]">
+      {/* Header - Technical Mode */}
+      <header className="sticky top-0 z-40 bg-[#F8F9FA] border-b border-[#1B29FF]/20">
         <div className="h-[60px] flex items-center px-4 sm:px-6 max-w-[1400px] mx-auto">
-          <p className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60 mr-3">
-            Settings
+          <p className="uppercase tracking-[0.14em] text-[11px] text-[#1B29FF] font-mono mr-3">
+            CONFIG::WALLET
           </p>
-          <h1 className="font-serif text-[24px] sm:text-[28px] leading-[1] text-[#101010]">
+          <h1 className="font-mono text-[22px] sm:text-[26px] leading-[1] text-[#101010]">
             Advanced Wallet
           </h1>
         </div>
@@ -572,38 +597,104 @@ export function AdvancedWalletClientContent() {
       {/* Main Content */}
       <main className="px-4 sm:px-6 py-6 sm:py-8 max-w-[1400px] mx-auto space-y-6">
         <div>
-          <p className="text-[14px] text-[#101010]/60">
-            Manage recovery wallets and view technical details
+          <p className="text-[14px] text-[#101010]/60 font-mono">
+            Manage Safe owners, recovery wallets, and view technical details
           </p>
         </div>
 
-        {/* Recovery Wallet Manager - Moved Up */}
-        {!isLoadingSafes && !errorSafes && (
-          <RecoveryWalletManager primarySafeAddress={primarySafeAddress} />
-        )}
-
-        {isLoadingSafes && <Skeleton className="h-64 w-full rounded-card-lg" />}
+        {isLoadingSafes && <Skeleton className="h-64 w-full" />}
 
         {errorSafes && (
-          <Alert variant="destructive">
+          <Alert variant="destructive" className="border-red-500/20">
             <Terminal className="h-4 w-4" />
-            <AlertTitle>Error Loading Wallets</AlertTitle>
-            <AlertDescription>
+            <AlertTitle className="font-mono">ERROR::LOAD_WALLETS</AlertTitle>
+            <AlertDescription className="font-mono">
               Could not load your wallet details. Please try again later.
             </AlertDescription>
           </Alert>
         )}
 
-        <div className="bg-white border border-[#101010]/10 rounded-card-lg p-6 shadow-[0_2px_8px_rgba(16,16,16,0.04)]">
+        {/* Safe Owners Section */}
+        {primarySafeAddress && (
+          <div className="bg-white border border-[#1B29FF]/20 shadow-sm">
+            <div className="border-b border-[#1B29FF]/20 px-5 sm:px-6 py-4">
+              <h2 className="flex items-center gap-2 font-mono text-[16px] text-[#101010]">
+                <Shield className="h-5 w-5 text-[#1B29FF]" />
+                SAFE::OWNERS
+                {safeOwners && (
+                  <Badge variant="secondary" className="font-mono ml-2">
+                    {safeOwners.owners.length}
+                  </Badge>
+                )}
+              </h2>
+              <p className="text-[13px] text-[#101010]/50 font-mono mt-1">
+                Addresses authorized for transaction signing (threshold:{' '}
+                {safeOwners?.threshold || 1}/{safeOwners?.owners.length || 1})
+              </p>
+            </div>
+            <div className="p-5 sm:p-6">
+              {isLoadingSafeOwners ? (
+                <div className="space-y-3">
+                  <Skeleton className="h-12 w-full" />
+                  <Skeleton className="h-12 w-full" />
+                </div>
+              ) : safeOwners && safeOwners.owners.length > 0 ? (
+                <div className="space-y-2">
+                  {safeOwners.owners.map((ownerAddress: string) => (
+                    <div
+                      key={ownerAddress}
+                      className="flex items-center justify-between p-3 border border-[#1B29FF]/20 bg-[#1B29FF]/5"
+                    >
+                      <div className="flex items-center gap-2">
+                        <code className="text-sm font-mono text-[#1B29FF]">
+                          {formatAddress(ownerAddress)}
+                        </code>
+                        {isCurrentUser(ownerAddress) && (
+                          <Badge variant="default" className="font-mono">
+                            YOU
+                          </Badge>
+                        )}
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => copyToClipboard(ownerAddress, 'owner')}
+                        className="text-[#1B29FF]/60 hover:text-[#1B29FF] hover:bg-[#1B29FF]/10"
+                      >
+                        {copiedAddress === ownerAddress ? (
+                          <CheckCircle2 className="h-4 w-4" />
+                        ) : (
+                          <Copy className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-center text-[#101010]/50 font-mono py-4">
+                  No Safe owners found.
+                </p>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Recovery Wallet Manager - Now directly under Safe Owners */}
+        {!isLoadingSafes && !errorSafes && (
+          <RecoveryWalletManager primarySafeAddress={primarySafeAddress} />
+        )}
+
+        {/* About Recovery Wallets */}
+        <div className="bg-white border border-[#1B29FF]/20 p-6">
           <div className="flex items-start gap-4">
-            <div className="h-10 w-10 rounded-full bg-[#1B29FF]/10 flex items-center justify-center flex-shrink-0">
+            <div className="h-10 w-10 bg-[#1B29FF]/10 flex items-center justify-center flex-shrink-0">
               <Info className="h-5 w-5 text-[#1B29FF]" />
             </div>
             <div className="flex-1">
-              <h2 className="text-[16px] font-medium text-[#101010] mb-2">
-                About Recovery Wallets
+              <h2 className="text-[16px] font-mono text-[#101010] mb-2">
+                RECOVERY::INFO
               </h2>
-              <p className="text-[14px] leading-[1.5] text-[#101010]/70 mb-4">
+              <p className="text-[14px] leading-[1.5] text-[#101010]/70 font-mono mb-4">
                 Recovery wallets provide an additional layer of security for
                 your account. They can be used to recover access if your primary
                 authentication method is unavailable.
@@ -611,7 +702,7 @@ export function AdvancedWalletClientContent() {
 
               <button
                 onClick={() => setShowRecoveryInfo(!showRecoveryInfo)}
-                className="text-[13px] text-[#101010]/60 hover:text-[#1B29FF] transition-colors flex items-center gap-1 font-medium"
+                className="text-[13px] text-[#1B29FF] hover:text-[#1420CC] transition-colors flex items-center gap-1 font-mono"
               >
                 <ChevronRight
                   className={cn(
@@ -624,16 +715,16 @@ export function AdvancedWalletClientContent() {
 
               {showRecoveryInfo && (
                 <div className="mt-6 space-y-6">
-                  <div className="p-5 bg-[#101010]/5 border border-[#101010]/10 rounded-md">
+                  <div className="p-5 bg-[#1B29FF]/5 border border-[#1B29FF]/20">
                     <div className="flex items-center gap-2 mb-4">
-                      <div className="h-7 w-7 rounded-full bg-[#1B29FF]/10 flex items-center justify-center">
+                      <div className="h-7 w-7 bg-[#1B29FF]/10 flex items-center justify-center">
                         <BookOpen className="h-4 w-4 text-[#1B29FF]" />
                       </div>
-                      <h3 className="text-[15px] font-medium text-[#101010]">
-                        How to Use a Recovery Wallet
+                      <h3 className="text-[15px] font-mono text-[#101010]">
+                        RECOVERY::GUIDE
                       </h3>
                     </div>
-                    <ol className="space-y-3 text-[13px] text-[#101010]/70 leading-[1.5] pl-1">
+                    <ol className="space-y-3 text-[13px] text-[#101010]/70 leading-[1.5] pl-1 font-mono">
                       <li className="flex items-start gap-3">
                         <span className="font-medium text-[#1B29FF] flex-shrink-0">
                           1.
@@ -648,7 +739,7 @@ export function AdvancedWalletClientContent() {
                           2.
                         </span>
                         <span>
-                          Add the wallet address as a recovery wallet below
+                          Add the wallet address as a recovery wallet above
                         </span>
                       </li>
                       <li className="flex items-start gap-3">
@@ -680,16 +771,16 @@ export function AdvancedWalletClientContent() {
                     </ol>
                   </div>
 
-                  <div className="p-4 bg-[#f59e0b]/10 border border-[#f59e0b]/30 rounded-md">
+                  <div className="p-4 bg-[#f59e0b]/10 border border-[#f59e0b]/30">
                     <div className="flex items-start gap-3">
-                      <div className="h-6 w-6 rounded-full bg-[#f59e0b]/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <div className="h-6 w-6 bg-[#f59e0b]/20 flex items-center justify-center flex-shrink-0 mt-0.5">
                         <AlertTriangle className="h-3.5 w-3.5 text-[#f59e0b]" />
                       </div>
                       <div className="flex-1">
-                        <h4 className="text-[14px] font-medium text-[#101010] mb-1">
-                          Important: Base Network Required
+                        <h4 className="text-[14px] font-mono text-[#101010] mb-1">
+                          WARNING::BASE_NETWORK_REQUIRED
                         </h4>
-                        <p className="text-[13px] text-[#101010]/70 leading-[1.5]">
+                        <p className="text-[13px] text-[#101010]/70 leading-[1.5] font-mono">
                           Your recovery wallet must support the Base network.
                           Ensure you have secure access to your recovery wallet
                           before adding it.
@@ -699,13 +790,13 @@ export function AdvancedWalletClientContent() {
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="p-5 bg-[#10b981]/5 border border-[#10b981]/20 rounded-md">
+                    <div className="p-5 bg-[#10b981]/5 border border-[#10b981]/20">
                       <div className="flex items-center gap-2 mb-4">
-                        <div className="h-7 w-7 rounded-full bg-[#10b981]/10 flex items-center justify-center">
+                        <div className="h-7 w-7 bg-[#10b981]/10 flex items-center justify-center">
                           <ShieldCheck className="h-4 w-4 text-[#10b981]" />
                         </div>
-                        <h3 className="text-[15px] font-medium text-[#101010]">
-                          Benefits
+                        <h3 className="text-[15px] font-mono text-[#101010]">
+                          BENEFITS
                         </h3>
                       </div>
                       <ul className="space-y-3">
@@ -716,10 +807,10 @@ export function AdvancedWalletClientContent() {
                           'Peace of mind for valuable accounts',
                         ].map((item, index) => (
                           <li key={index} className="flex items-start gap-2">
-                            <div className="h-4 w-4 rounded-full bg-[#10b981]/15 flex items-center justify-center flex-shrink-0 mt-0.5">
-                              <div className="h-1.5 w-1.5 rounded-full bg-[#10b981]" />
+                            <div className="h-4 w-4 bg-[#10b981]/15 flex items-center justify-center flex-shrink-0 mt-0.5">
+                              <div className="h-1.5 w-1.5 bg-[#10b981]" />
                             </div>
-                            <span className="text-[13px] text-[#101010]/70 leading-[1.5]">
+                            <span className="text-[13px] text-[#101010]/70 leading-[1.5] font-mono">
                               {item}
                             </span>
                           </li>
@@ -727,13 +818,13 @@ export function AdvancedWalletClientContent() {
                       </ul>
                     </div>
 
-                    <div className="p-5 bg-[#ef4444]/5 border border-[#ef4444]/20 rounded-md">
+                    <div className="p-5 bg-[#ef4444]/5 border border-[#ef4444]/20">
                       <div className="flex items-center gap-2 mb-4">
-                        <div className="h-7 w-7 rounded-full bg-[#ef4444]/10 flex items-center justify-center">
+                        <div className="h-7 w-7 bg-[#ef4444]/10 flex items-center justify-center">
                           <ShieldAlert className="h-4 w-4 text-[#ef4444]" />
                         </div>
-                        <h3 className="text-[15px] font-medium text-[#101010]">
-                          Considerations
+                        <h3 className="text-[15px] font-mono text-[#101010]">
+                          CONSIDERATIONS
                         </h3>
                       </div>
                       <ul className="space-y-3">
@@ -744,10 +835,10 @@ export function AdvancedWalletClientContent() {
                           'Requires secure wallet storage',
                         ].map((item, index) => (
                           <li key={index} className="flex items-start gap-2">
-                            <div className="h-4 w-4 rounded-full bg-[#ef4444]/15 flex items-center justify-center flex-shrink-0 mt-0.5">
-                              <div className="h-1.5 w-1.5 rounded-full bg-[#ef4444]" />
+                            <div className="h-4 w-4 bg-[#ef4444]/15 flex items-center justify-center flex-shrink-0 mt-0.5">
+                              <div className="h-1.5 w-1.5 bg-[#ef4444]" />
                             </div>
-                            <span className="text-[13px] text-[#101010]/70 leading-[1.5]">
+                            <span className="text-[13px] text-[#101010]/70 leading-[1.5] font-mono">
                               {item}
                             </span>
                           </li>
@@ -762,18 +853,18 @@ export function AdvancedWalletClientContent() {
         </div>
 
         {/* Multi-chain Safe Owner Sync */}
-        <Card className="border-dashed border-[#101010]/10 shadow-[0_2px_8px_rgba(16,16,16,0.04)]">
-          <CardHeader>
+        <div className="bg-white border border-dashed border-[#1B29FF]/30">
+          <div className="border-b border-[#1B29FF]/20 px-5 sm:px-6 py-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <ShieldCheck className="h-4 w-4 text-[#101010]/60" />
-                <CardTitle className="text-[15px] font-medium">
-                  Multi-chain Safe Sync
-                </CardTitle>
+                <ShieldCheck className="h-4 w-4 text-[#1B29FF]" />
+                <h3 className="text-[15px] font-mono text-[#101010]">
+                  MULTICHAIN::SYNC
+                </h3>
               </div>
               <button
                 onClick={() => setShowMultiChainSync(!showMultiChainSync)}
-                className="text-[13px] text-[#101010]/60 hover:text-[#1B29FF] transition-colors flex items-center gap-1 font-medium"
+                className="text-[13px] text-[#1B29FF] hover:text-[#1420CC] transition-colors flex items-center gap-1 font-mono"
               >
                 <ChevronRight
                   className={cn(
@@ -784,26 +875,27 @@ export function AdvancedWalletClientContent() {
                 {showMultiChainSync ? 'Hide' : 'Show'}
               </button>
             </div>
-            <CardDescription className="text-[13px]">
+            <p className="text-[13px] text-[#101010]/50 font-mono mt-1">
               Compare every workspace Safe to the canonical Base
               owners/threshold
-            </CardDescription>
-          </CardHeader>
+            </p>
+          </div>
 
           {showMultiChainSync && (
-            <CardContent className="space-y-4 pt-0">
+            <div className="p-5 sm:p-6 space-y-4">
               <div className="flex flex-wrap items-center gap-2">
                 <Button
                   size="sm"
                   variant="outline"
                   onClick={() => void checkMultiChainSync()}
                   disabled={isCheckingMultiChainSync || isLoadingSafes}
+                  className="border-[#1B29FF]/30 text-[#1B29FF] hover:bg-[#1B29FF]/5 font-mono"
                 >
                   {isCheckingMultiChainSync ? 'Checking…' : 'Check sync'}
                 </Button>
 
                 {canonicalBasePrimarySafe?.safeAddress && (
-                  <p className="text-[12px] text-[#101010]/60">
+                  <p className="text-[12px] text-[#101010]/60 font-mono">
                     Canonical: {getChainDisplayName(SUPPORTED_CHAINS.BASE)}{' '}
                     primary ({canonicalBasePrimarySafe.safeAddress.slice(0, 6)}…
                     {canonicalBasePrimarySafe.safeAddress.slice(-4)})
@@ -812,8 +904,8 @@ export function AdvancedWalletClientContent() {
               </div>
 
               {canonicalOwnership && (
-                <div className="rounded-md border border-[#101010]/10 bg-[#101010]/5 p-3">
-                  <p className="text-[12px] text-[#101010]/70">
+                <div className="border border-[#1B29FF]/20 bg-[#1B29FF]/5 p-3">
+                  <p className="text-[12px] text-[#101010]/70 font-mono">
                     Base owners: {canonicalOwnership.owners.length} · threshold:{' '}
                     {canonicalOwnership.threshold}
                   </p>
@@ -868,38 +960,38 @@ export function AdvancedWalletClientContent() {
                   return (
                     <div
                       key={key}
-                      className="flex flex-col gap-2 rounded-md border border-[#101010]/10 bg-white p-3"
+                      className="flex flex-col gap-2 border border-[#1B29FF]/20 bg-white p-3"
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0 flex-1">
-                          <p className="text-[13px] font-medium text-[#101010]">
+                          <p className="text-[13px] font-mono text-[#101010]">
                             {getChainDisplayName(chainId as any)} ·{' '}
                             {safe.safeType}
                           </p>
-                          <p className="text-[12px] text-[#101010]/60 font-mono break-all">
+                          <p className="text-[12px] text-[#1B29FF]/70 font-mono break-all">
                             {safeAddress}
                           </p>
                         </div>
 
                         <div className="flex items-center gap-2">
                           {isCanonical ? (
-                            <span className="text-[11px] px-2 py-1 rounded-full bg-[#1B29FF]/10 text-[#1B29FF]">
-                              Canonical
+                            <span className="text-[11px] px-2 py-1 bg-[#1B29FF]/10 text-[#1B29FF] font-mono">
+                              CANONICAL
                             </span>
                           ) : isInSync ? (
-                            <span className="text-[11px] px-2 py-1 rounded-full bg-[#10b981]/10 text-[#10b981]">
-                              In sync
+                            <span className="text-[11px] px-2 py-1 bg-[#10b981]/10 text-[#10b981] font-mono">
+                              IN_SYNC
                             </span>
                           ) : (
-                            <span className="text-[11px] px-2 py-1 rounded-full bg-[#f59e0b]/10 text-[#f59e0b]">
-                              Drift
+                            <span className="text-[11px] px-2 py-1 bg-[#f59e0b]/10 text-[#f59e0b] font-mono">
+                              DRIFT
                             </span>
                           )}
                         </div>
                       </div>
 
                       <div className="flex flex-wrap items-center justify-between gap-2">
-                        <p className="text-[12px] text-[#101010]/70">
+                        <p className="text-[12px] text-[#101010]/70 font-mono">
                           {ownership ? (
                             ownership.deployed ? (
                               <>
@@ -907,10 +999,10 @@ export function AdvancedWalletClientContent() {
                                 {ownership.threshold}
                               </>
                             ) : (
-                              <>Not deployed</>
+                              <>NOT_DEPLOYED</>
                             )
                           ) : (
-                            <>Not checked</>
+                            <>NOT_CHECKED</>
                           )}
                         </p>
 
@@ -932,6 +1024,7 @@ export function AdvancedWalletClientContent() {
                                   safeAddress,
                                 })
                               }
+                              className="border-[#1B29FF]/30 text-[#1B29FF] hover:bg-[#1B29FF]/5 font-mono"
                             >
                               {syncingSafeKey === key
                                 ? 'Syncing…'
@@ -945,39 +1038,38 @@ export function AdvancedWalletClientContent() {
                         ownership.deployed &&
                         !isCanonical &&
                         !isInSync && (
-                          <p className="text-[12px] text-[#101010]/60">
-                            Add {ownersToAdd.length} · Remove{' '}
-                            {ownersToRemove.length}
-                            {thresholdMismatch ? ' · Threshold mismatch' : ''}
+                          <p className="text-[12px] text-[#101010]/60 font-mono">
+                            +{ownersToAdd.length} · -{ownersToRemove.length}
+                            {thresholdMismatch ? ' · threshold_mismatch' : ''}
                           </p>
                         )}
 
                       {ownership && !ownership.deployed && ownership.error && (
-                        <p className="text-[12px] text-[#ef4444]">
-                          {ownership.error}
+                        <p className="text-[12px] text-[#ef4444] font-mono">
+                          ERROR: {ownership.error}
                         </p>
                       )}
                     </div>
                   );
                 })}
               </div>
-            </CardContent>
+            </div>
           )}
-        </Card>
+        </div>
 
         {/* Technical Details - Progressive Disclosure */}
-        <Card className="border-dashed border-[#101010]/10 shadow-[0_2px_8px_rgba(16,16,16,0.04)]">
-          <CardHeader>
+        <div className="bg-white border border-dashed border-[#1B29FF]/30">
+          <div className="border-b border-[#1B29FF]/20 px-5 sm:px-6 py-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Terminal className="h-4 w-4 text-[#101010]/60" />
-                <CardTitle className="text-[15px] font-medium">
-                  Technical Details
-                </CardTitle>
+                <Terminal className="h-4 w-4 text-[#1B29FF]" />
+                <h3 className="text-[15px] font-mono text-[#101010]">
+                  DEBUG::TECHNICAL
+                </h3>
               </div>
               <button
                 onClick={() => setShowTechnicalDetails(!showTechnicalDetails)}
-                className="text-[13px] text-[#101010]/60 hover:text-[#1B29FF] transition-colors flex items-center gap-1 font-medium"
+                className="text-[13px] text-[#1B29FF] hover:text-[#1420CC] transition-colors flex items-center gap-1 font-mono"
               >
                 <ChevronRight
                   className={cn(
@@ -988,20 +1080,20 @@ export function AdvancedWalletClientContent() {
                 {showTechnicalDetails ? 'Hide' : 'Show'} details
               </button>
             </div>
-            <CardDescription className="text-[13px]">
+            <p className="text-[13px] text-[#101010]/50 font-mono mt-1">
               Developer wallet addresses and identifiers for advanced users
-            </CardDescription>
-          </CardHeader>
+            </p>
+          </div>
 
           {showTechnicalDetails && (
-            <CardContent className="space-y-5 pt-0">
+            <div className="p-5 sm:p-6 space-y-5">
               {/* Warning */}
               <Alert className="border-[#ef4444]/20 bg-[#ef4444]/5">
                 <AlertTriangle className="h-4 w-4 text-[#ef4444]" />
-                <AlertTitle className="text-[14px] font-medium text-[#101010]">
-                  Do Not Send Funds to Internal Addresses
+                <AlertTitle className="text-[14px] font-mono text-[#101010]">
+                  WARNING::DO_NOT_SEND_FUNDS
                 </AlertTitle>
-                <AlertDescription className="text-[13px] text-[#101010]/70">
+                <AlertDescription className="text-[13px] text-[#101010]/70 font-mono">
                   The Privy wallet addresses below are internal. Sending funds
                   directly may result in permanent loss. Use your primary Safe
                   address for receiving payments.
@@ -1010,10 +1102,10 @@ export function AdvancedWalletClientContent() {
 
               {/* Primary Safe Address */}
               <div className="space-y-2">
-                <label className="text-[12px] font-medium text-[#101010]/60 uppercase tracking-[0.14em]">
-                  Primary Safe Address
+                <label className="text-[12px] font-mono text-[#1B29FF] uppercase tracking-[0.14em]">
+                  safe.primary.address
                 </label>
-                <p className="text-[12px] text-[#101010]/60 mb-2">
+                <p className="text-[12px] text-[#101010]/60 font-mono mb-2">
                   Your main account address for receiving and managing funds
                 </p>
                 <div className="flex items-center gap-2">
@@ -1021,8 +1113,8 @@ export function AdvancedWalletClientContent() {
                     <Skeleton className="h-10 flex-1" />
                   ) : (
                     <>
-                      <code className="flex-1 px-3 py-2 bg-[#101010]/5 border border-[#101010]/10 rounded-md text-[12px] font-mono break-all text-[#101010]/80">
-                        {primarySafeAddress || 'No Safe wallet found'}
+                      <code className="flex-1 px-3 py-2 bg-[#1B29FF]/5 border border-[#1B29FF]/20 text-[12px] font-mono break-all text-[#1B29FF]">
+                        {primarySafeAddress || 'null'}
                       </code>
                       {primarySafeAddress && (
                         <Button
@@ -1031,7 +1123,7 @@ export function AdvancedWalletClientContent() {
                           onClick={() =>
                             copyToClipboard(primarySafeAddress, 'safe')
                           }
-                          className="shrink-0 h-9"
+                          className="shrink-0 h-9 border-[#1B29FF]/30 text-[#1B29FF] hover:bg-[#1B29FF]/5"
                         >
                           {copiedSafe ? (
                             <CheckCircle2 className="h-4 w-4 text-[#10b981]" />
@@ -1047,16 +1139,16 @@ export function AdvancedWalletClientContent() {
 
               {/* Privy Smart Wallet */}
               <div className="space-y-2">
-                <label className="text-[12px] font-medium text-[#101010]/60 uppercase tracking-[0.14em]">
-                  Privy Smart Wallet Address
+                <label className="text-[12px] font-mono text-[#1B29FF] uppercase tracking-[0.14em]">
+                  privy.smart_wallet.address
                 </label>
-                <p className="text-[12px] text-[#101010]/60 mb-2">
+                <p className="text-[12px] text-[#101010]/60 font-mono mb-2">
                   Internal smart wallet managed by Privy
                 </p>
                 <div className="flex items-center gap-2">
                   {smartWalletAddress ? (
                     <>
-                      <code className="flex-1 px-3 py-2 bg-[#101010]/5 border border-[#101010]/10 rounded-md text-[12px] font-mono break-all text-[#101010]/80">
+                      <code className="flex-1 px-3 py-2 bg-[#1B29FF]/5 border border-[#1B29FF]/20 text-[12px] font-mono break-all text-[#1B29FF]/70">
                         {smartWalletAddress}
                       </code>
                       <Button
@@ -1065,7 +1157,7 @@ export function AdvancedWalletClientContent() {
                         onClick={() =>
                           copyToClipboard(smartWalletAddress, 'smart')
                         }
-                        className="shrink-0 h-9"
+                        className="shrink-0 h-9 border-[#1B29FF]/30 text-[#1B29FF] hover:bg-[#1B29FF]/5"
                       >
                         {copiedSmart ? (
                           <CheckCircle2 className="h-4 w-4 text-[#10b981]" />
@@ -1075,8 +1167,8 @@ export function AdvancedWalletClientContent() {
                       </Button>
                     </>
                   ) : (
-                    <code className="flex-1 px-3 py-2 bg-[#101010]/5 border border-[#101010]/10 rounded-md text-[12px] text-[#101010]/60">
-                      No smart wallet found
+                    <code className="flex-1 px-3 py-2 bg-[#1B29FF]/5 border border-[#1B29FF]/20 text-[12px] font-mono text-[#101010]/60">
+                      null
                     </code>
                   )}
                 </div>
@@ -1084,16 +1176,16 @@ export function AdvancedWalletClientContent() {
 
               {/* Privy Embedded Wallet */}
               <div className="space-y-2">
-                <label className="text-[12px] font-medium text-[#101010]/60 uppercase tracking-[0.14em]">
-                  Privy Embedded Wallet Address
+                <label className="text-[12px] font-mono text-[#1B29FF] uppercase tracking-[0.14em]">
+                  privy.embedded_wallet.address
                 </label>
-                <p className="text-[12px] text-[#101010]/60 mb-2">
+                <p className="text-[12px] text-[#101010]/60 font-mono mb-2">
                   Internal embedded wallet managed by Privy
                 </p>
                 <div className="flex items-center gap-2">
                   {embeddedWallet?.address ? (
                     <>
-                      <code className="flex-1 px-3 py-2 bg-[#101010]/5 border border-[#101010]/10 rounded-md text-[12px] font-mono break-all text-[#101010]/80">
+                      <code className="flex-1 px-3 py-2 bg-[#1B29FF]/5 border border-[#1B29FF]/20 text-[12px] font-mono break-all text-[#1B29FF]/70">
                         {embeddedWallet.address}
                       </code>
                       <Button
@@ -1102,7 +1194,7 @@ export function AdvancedWalletClientContent() {
                         onClick={() =>
                           copyToClipboard(embeddedWallet.address, 'embedded')
                         }
-                        className="shrink-0 h-9"
+                        className="shrink-0 h-9 border-[#1B29FF]/30 text-[#1B29FF] hover:bg-[#1B29FF]/5"
                       >
                         {copiedEmbedded ? (
                           <CheckCircle2 className="h-4 w-4 text-[#10b981]" />
@@ -1112,8 +1204,8 @@ export function AdvancedWalletClientContent() {
                       </Button>
                     </>
                   ) : (
-                    <code className="flex-1 px-3 py-2 bg-[#101010]/5 border border-[#101010]/10 rounded-md text-[12px] text-[#101010]/60">
-                      Loading embedded wallet...
+                    <code className="flex-1 px-3 py-2 bg-[#1B29FF]/5 border border-[#1B29FF]/20 text-[12px] font-mono text-[#101010]/60">
+                      loading...
                     </code>
                   )}
                 </div>
@@ -1121,22 +1213,22 @@ export function AdvancedWalletClientContent() {
 
               {/* Privy User ID */}
               <div className="space-y-2">
-                <label className="text-[12px] font-medium text-[#101010]/60 uppercase tracking-[0.14em]">
-                  Privy User ID
+                <label className="text-[12px] font-mono text-[#1B29FF] uppercase tracking-[0.14em]">
+                  privy.user.did
                 </label>
-                <p className="text-[12px] text-[#101010]/60 mb-2">
+                <p className="text-[12px] text-[#101010]/60 font-mono mb-2">
                   For debugging and developer support
                 </p>
                 <div className="flex items-center gap-2">
-                  <code className="flex-1 px-3 py-2 bg-[#101010]/5 border border-[#101010]/10 rounded-md text-[12px] font-mono break-all text-[#101010]/80">
-                    {user?.id || 'Not authenticated'}
+                  <code className="flex-1 px-3 py-2 bg-[#1B29FF]/5 border border-[#1B29FF]/20 text-[12px] font-mono break-all text-[#1B29FF]/70">
+                    {user?.id || 'NOT_AUTHENTICATED'}
                   </code>
                   {user?.id && (
                     <Button
                       size="sm"
                       variant="outline"
                       onClick={() => copyToClipboard(user.id, 'did')}
-                      className="shrink-0 h-9"
+                      className="shrink-0 h-9 border-[#1B29FF]/30 text-[#1B29FF] hover:bg-[#1B29FF]/5"
                     >
                       {copiedDid ? (
                         <CheckCircle2 className="h-4 w-4 text-[#10b981]" />
@@ -1147,9 +1239,9 @@ export function AdvancedWalletClientContent() {
                   )}
                 </div>
               </div>
-            </CardContent>
+            </div>
           )}
-        </Card>
+        </div>
       </main>
     </div>
   );

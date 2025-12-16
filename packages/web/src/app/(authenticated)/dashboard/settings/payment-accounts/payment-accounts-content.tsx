@@ -1,251 +1,260 @@
-"use client";
+'use client';
 
-import { useState } from "react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { VirtualAccountsDisplaySimple } from "@/components/settings/align-integration/virtual-accounts-display-simple";
-import { VirtualAccountForm } from "@/app/(authenticated)/dashboard/tools/safeless/components/virtual-account-form";
-import { OnrampTransferForm } from "@/app/(authenticated)/dashboard/tools/safeless/components/onramp-transfer-form";
-import { OfframpTransferForm } from "@/app/(authenticated)/dashboard/tools/safeless/components/offramp-transfer-form";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { motion } from "framer-motion";
-import { 
-  Building2, 
-  Plus, 
-  ArrowUpRight, 
+import { useState } from 'react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { VirtualAccountsDisplaySimple } from '@/components/settings/align-integration/virtual-accounts-display-simple';
+import { VirtualAccountForm } from '@/app/(authenticated)/dashboard/tools/safeless/components/virtual-account-form';
+import { OnrampTransferForm } from '@/app/(authenticated)/dashboard/tools/safeless/components/onramp-transfer-form';
+import { OfframpTransferForm } from '@/app/(authenticated)/dashboard/tools/safeless/components/offramp-transfer-form';
+import {
+  Building2,
+  Plus,
+  ArrowUpRight,
   ArrowDownLeft,
   Wallet,
   Euro,
   DollarSign,
-  TrendingUp
-} from "lucide-react";
-import { api } from "@/trpc/react";
-import { cn } from "@/lib/utils";
+  TrendingUp,
+} from 'lucide-react';
+import { api } from '@/trpc/react';
 
 export function PaymentAccountsContent() {
-  const [activeTab, setActiveTab] = useState("accounts");
-  const { data: accounts, isLoading } = api.align.getAllVirtualAccounts.useQuery();
+  const [activeTab, setActiveTab] = useState('accounts');
+  const { data: accounts, isLoading } =
+    api.align.getAllVirtualAccounts.useQuery();
 
-  const eurAccounts = accounts?.filter((acc: any) => acc.deposit_instructions?.currency === 'eur') || [];
-  const usdAccounts = accounts?.filter((acc: any) => acc.deposit_instructions?.currency === 'usd') || [];
+  const eurAccounts =
+    accounts?.filter(
+      (acc: any) => acc.deposit_instructions?.currency === 'eur',
+    ) || [];
+  const usdAccounts =
+    accounts?.filter(
+      (acc: any) => acc.deposit_instructions?.currency === 'usd',
+    ) || [];
 
   return (
-    <div className="container max-w-7xl mx-auto p-6 space-y-8">
-      {/* Header */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="space-y-4"
-      >
-        <div className="flex items-center gap-3">
-          <div className="p-3 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-500 shadow-lg">
-            <Building2 className="h-6 w-6 text-white" />
-          </div>
-          <div>
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-neutral-900 to-neutral-600 dark:from-white dark:to-neutral-400 bg-clip-text text-transparent">
-              Payment & Virtual Accounts
-            </h1>
-            <p className="text-base text-muted-foreground">
-              Manage virtual bank accounts and transfer funds between fiat and crypto
-            </p>
-          </div>
+    <div className="min-h-screen bg-[#F8F9FA]">
+      {/* Header - Technical Mode */}
+      <header className="sticky top-0 z-40 bg-[#F8F9FA] border-b border-[#1B29FF]/20">
+        <div className="h-[60px] flex items-center px-4 sm:px-6 max-w-[1400px] mx-auto">
+          <p className="uppercase tracking-[0.14em] text-[11px] text-[#1B29FF] font-mono mr-3">
+            CONFIG::ACCOUNTS
+          </p>
+          <h1 className="font-mono text-[22px] sm:text-[26px] leading-[1] text-[#101010]">
+            Virtual Accounts
+          </h1>
         </div>
-      </motion.div>
+      </header>
 
-      {/* Stats Cards */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 }}
-        className="grid grid-cols-1 md:grid-cols-4 gap-4"
-      >
-        <Card>
-          <CardContent className="p-6">
+      {/* Main Content */}
+      <main className="px-4 sm:px-6 py-6 sm:py-8 max-w-[1400px] mx-auto space-y-6">
+        <div>
+          <p className="text-[14px] text-[#101010]/60 font-mono">
+            Manage virtual bank accounts and transfer funds between fiat and
+            crypto
+          </p>
+        </div>
+
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="bg-white border border-[#1B29FF]/20 p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Total Accounts</p>
-                <p className="text-2xl font-bold">{isLoading ? "-" : accounts?.length || 0}</p>
+                <p className="text-[12px] text-[#101010]/50 font-mono uppercase tracking-wider">
+                  TOTAL_ACCOUNTS
+                </p>
+                <p className="text-[28px] font-mono text-[#101010] mt-1">
+                  {isLoading ? '-' : accounts?.length || 0}
+                </p>
               </div>
-              <div className="h-12 w-12 bg-primary/10 rounded-lg flex items-center justify-center">
-                <Wallet className="h-6 w-6 text-primary" />
+              <div className="h-12 w-12 bg-[#1B29FF]/10 flex items-center justify-center">
+                <Wallet className="h-6 w-6 text-[#1B29FF]" />
               </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
 
-        <Card>
-          <CardContent className="p-6">
+          <div className="bg-white border border-[#1B29FF]/20 p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">EUR Accounts</p>
-                <p className="text-2xl font-bold">{isLoading ? "-" : eurAccounts.length}</p>
+                <p className="text-[12px] text-[#101010]/50 font-mono uppercase tracking-wider">
+                  EUR_ACCOUNTS
+                </p>
+                <p className="text-[28px] font-mono text-[#101010] mt-1">
+                  {isLoading ? '-' : eurAccounts.length}
+                </p>
               </div>
-              <div className="h-12 w-12 bg-blue-500/10 rounded-lg flex items-center justify-center">
+              <div className="h-12 w-12 bg-blue-500/10 flex items-center justify-center">
                 <Euro className="h-6 w-6 text-blue-500" />
               </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
 
-        <Card>
-          <CardContent className="p-6">
+          <div className="bg-white border border-[#1B29FF]/20 p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">USD Accounts</p>
-                <p className="text-2xl font-bold">{isLoading ? "-" : usdAccounts.length}</p>
+                <p className="text-[12px] text-[#101010]/50 font-mono uppercase tracking-wider">
+                  USD_ACCOUNTS
+                </p>
+                <p className="text-[28px] font-mono text-[#101010] mt-1">
+                  {isLoading ? '-' : usdAccounts.length}
+                </p>
               </div>
-              <div className="h-12 w-12 bg-green-500/10 rounded-lg flex items-center justify-center">
+              <div className="h-12 w-12 bg-green-500/10 flex items-center justify-center">
                 <DollarSign className="h-6 w-6 text-green-500" />
               </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
 
-        <Card>
-          <CardContent className="p-6">
+          <div className="bg-white border border-[#1B29FF]/20 p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Active Routes</p>
-                <p className="text-2xl font-bold">
-                  {isLoading ? "-" : accounts?.filter((acc: any) => acc.status === 'active').length || 0}
+                <p className="text-[12px] text-[#101010]/50 font-mono uppercase tracking-wider">
+                  ACTIVE_ROUTES
+                </p>
+                <p className="text-[28px] font-mono text-[#101010] mt-1">
+                  {isLoading
+                    ? '-'
+                    : accounts?.filter((acc: any) => acc.status === 'active')
+                        .length || 0}
                 </p>
               </div>
-              <div className="h-12 w-12 bg-emerald-500/10 rounded-lg flex items-center justify-center">
+              <div className="h-12 w-12 bg-emerald-500/10 flex items-center justify-center">
                 <TrendingUp className="h-6 w-6 text-emerald-500" />
               </div>
             </div>
-          </CardContent>
-        </Card>
-      </motion.div>
+          </div>
+        </div>
 
-      {/* Main Content Tabs */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2 }}
-        className="bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 shadow-sm overflow-hidden"
-      >
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          {/* Tab List */}
-          <div className="border-b border-neutral-200 dark:border-neutral-800 p-6">
-            <TabsList className="w-full h-auto bg-neutral-50 dark:bg-neutral-800/50 p-1.5">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-2 w-full">
-                <TabsTrigger
-                  value="accounts"
-                  className="flex items-center gap-2 p-3 h-auto data-[state=active]:bg-white dark:data-[state=active]:bg-neutral-800 data-[state=active]:shadow-md transition-all"
-                >
-                  <Building2 className="h-4 w-4" />
-                  <span className="font-medium">My Accounts</span>
-                </TabsTrigger>
+        {/* Main Content Tabs */}
+        <div className="bg-white border border-[#1B29FF]/20 overflow-hidden">
+          <Tabs
+            value={activeTab}
+            onValueChange={setActiveTab}
+            className="w-full"
+          >
+            {/* Tab List */}
+            <div className="border-b border-[#1B29FF]/20 p-5 sm:p-6">
+              <TabsList className="w-full h-auto bg-[#1B29FF]/5 p-1.5">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2 w-full">
+                  <TabsTrigger
+                    value="accounts"
+                    className="flex items-center gap-2 p-3 h-auto font-mono text-[13px] data-[state=active]:bg-[#1B29FF] data-[state=active]:text-white transition-all"
+                  >
+                    <Building2 className="h-4 w-4" />
+                    <span>ACCOUNTS</span>
+                  </TabsTrigger>
 
-                <TabsTrigger
-                  value="create"
-                  className="flex items-center gap-2 p-3 h-auto data-[state=active]:bg-white dark:data-[state=active]:bg-neutral-800 data-[state=active]:shadow-md transition-all"
-                >
-                  <Plus className="h-4 w-4" />
-                  <span className="font-medium">Create Account</span>
-                </TabsTrigger>
+                  <TabsTrigger
+                    value="create"
+                    className="flex items-center gap-2 p-3 h-auto font-mono text-[13px] data-[state=active]:bg-[#1B29FF] data-[state=active]:text-white transition-all"
+                  >
+                    <Plus className="h-4 w-4" />
+                    <span>CREATE</span>
+                  </TabsTrigger>
 
-                <TabsTrigger
-                  value="onramp"
-                  className="flex items-center gap-2 p-3 h-auto data-[state=active]:bg-white dark:data-[state=active]:bg-neutral-800 data-[state=active]:shadow-md transition-all"
-                >
-                  <ArrowUpRight className="h-4 w-4" />
-                  <span className="font-medium">Buy Crypto</span>
-                </TabsTrigger>
+                  <TabsTrigger
+                    value="onramp"
+                    className="flex items-center gap-2 p-3 h-auto font-mono text-[13px] data-[state=active]:bg-[#1B29FF] data-[state=active]:text-white transition-all"
+                  >
+                    <ArrowUpRight className="h-4 w-4" />
+                    <span>BUY_CRYPTO</span>
+                  </TabsTrigger>
 
-                <TabsTrigger
-                  value="offramp"
-                  className="flex items-center gap-2 p-3 h-auto data-[state=active]:bg-white dark:data-[state=active]:bg-neutral-800 data-[state=active]:shadow-md transition-all"
-                >
-                  <ArrowDownLeft className="h-4 w-4" />
-                  <span className="font-medium">Sell Crypto</span>
-                </TabsTrigger>
+                  <TabsTrigger
+                    value="offramp"
+                    className="flex items-center gap-2 p-3 h-auto font-mono text-[13px] data-[state=active]:bg-[#1B29FF] data-[state=active]:text-white transition-all"
+                  >
+                    <ArrowDownLeft className="h-4 w-4" />
+                    <span>SELL_CRYPTO</span>
+                  </TabsTrigger>
+                </div>
+              </TabsList>
+
+              {/* Tab Descriptions */}
+              <div className="mt-4">
+                {activeTab === 'accounts' && (
+                  <p className="text-[13px] text-[#101010]/50 font-mono">
+                    View and manage virtual bank accounts for receiving payments
+                  </p>
+                )}
+                {activeTab === 'create' && (
+                  <p className="text-[13px] text-[#101010]/50 font-mono">
+                    Create new virtual accounts for seamless fiat deposits
+                  </p>
+                )}
+                {activeTab === 'onramp' && (
+                  <p className="text-[13px] text-[#101010]/50 font-mono">
+                    Convert fiat currency to crypto instantly
+                  </p>
+                )}
+                {activeTab === 'offramp' && (
+                  <p className="text-[13px] text-[#101010]/50 font-mono">
+                    Convert crypto back to fiat currency
+                  </p>
+                )}
               </div>
-            </TabsList>
-
-            {/* Tab Descriptions */}
-            <div className="mt-4">
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: activeTab === "accounts" ? 1 : 0 }}
-                className={cn("text-sm text-muted-foreground", activeTab === "accounts" ? "block" : "hidden")}
-              >
-                View and manage your virtual bank accounts for receiving payments
-              </motion.div>
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: activeTab === "create" ? 1 : 0 }}
-                className={cn("text-sm text-muted-foreground", activeTab === "create" ? "block" : "hidden")}
-              >
-                Create new virtual accounts for seamless fiat deposits
-              </motion.div>
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: activeTab === "onramp" ? 1 : 0 }}
-                className={cn("text-sm text-muted-foreground", activeTab === "onramp" ? "block" : "hidden")}
-              >
-                Convert fiat currency to crypto instantly
-              </motion.div>
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: activeTab === "offramp" ? 1 : 0 }}
-                className={cn("text-sm text-muted-foreground", activeTab === "offramp" ? "block" : "hidden")}
-              >
-                Convert crypto back to fiat currency
-              </motion.div>
             </div>
-          </div>
 
-          {/* Tab Content */}
-          <div className="p-6">
-            <TabsContent value="accounts" className="mt-0">
-              <VirtualAccountsDisplaySimple />
-            </TabsContent>
+            {/* Tab Content */}
+            <div className="p-5 sm:p-6">
+              <TabsContent value="accounts" className="mt-0">
+                <VirtualAccountsDisplaySimple />
+              </TabsContent>
 
-            <TabsContent value="create" className="mt-0">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Create Virtual Account</CardTitle>
-                  <CardDescription>
-                    Set up a new virtual bank account to receive fiat payments that automatically convert to crypto
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <VirtualAccountForm />
-                </CardContent>
-              </Card>
-            </TabsContent>
+              <TabsContent value="create" className="mt-0">
+                <div className="border border-[#1B29FF]/20">
+                  <div className="border-b border-[#1B29FF]/20 px-5 py-4">
+                    <h3 className="font-mono text-[15px] text-[#101010]">
+                      CREATE::VIRTUAL_ACCOUNT
+                    </h3>
+                    <p className="text-[13px] text-[#101010]/50 font-mono mt-1">
+                      Set up a new virtual bank account to receive fiat payments
+                      that automatically convert to crypto
+                    </p>
+                  </div>
+                  <div className="p-5">
+                    <VirtualAccountForm />
+                  </div>
+                </div>
+              </TabsContent>
 
-            <TabsContent value="onramp" className="mt-0">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Buy Crypto (Onramp)</CardTitle>
-                  <CardDescription>
-                    Transfer funds from your bank account to purchase cryptocurrency
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <OnrampTransferForm />
-                </CardContent>
-              </Card>
-            </TabsContent>
+              <TabsContent value="onramp" className="mt-0">
+                <div className="border border-[#1B29FF]/20">
+                  <div className="border-b border-[#1B29FF]/20 px-5 py-4">
+                    <h3 className="font-mono text-[15px] text-[#101010]">
+                      ONRAMP::BUY_CRYPTO
+                    </h3>
+                    <p className="text-[13px] text-[#101010]/50 font-mono mt-1">
+                      Transfer funds from your bank account to purchase
+                      cryptocurrency
+                    </p>
+                  </div>
+                  <div className="p-5">
+                    <OnrampTransferForm />
+                  </div>
+                </div>
+              </TabsContent>
 
-            <TabsContent value="offramp" className="mt-0">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Sell Crypto (Offramp)</CardTitle>
-                  <CardDescription>
-                    Convert your cryptocurrency back to fiat and transfer to your bank account
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <OfframpTransferForm />
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </div>
-        </Tabs>
-      </motion.div>
+              <TabsContent value="offramp" className="mt-0">
+                <div className="border border-[#1B29FF]/20">
+                  <div className="border-b border-[#1B29FF]/20 px-5 py-4">
+                    <h3 className="font-mono text-[15px] text-[#101010]">
+                      OFFRAMP::SELL_CRYPTO
+                    </h3>
+                    <p className="text-[13px] text-[#101010]/50 font-mono mt-1">
+                      Convert your cryptocurrency back to fiat and transfer to
+                      your bank account
+                    </p>
+                  </div>
+                  <div className="p-5">
+                    <OfframpTransferForm />
+                  </div>
+                </div>
+              </TabsContent>
+            </div>
+          </Tabs>
+        </div>
+      </main>
     </div>
   );
 }
