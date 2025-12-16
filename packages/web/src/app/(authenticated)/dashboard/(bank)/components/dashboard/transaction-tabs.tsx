@@ -11,7 +11,7 @@ export function TransactionTabs() {
   // In Banking mode, just show bank transfers without tabs
   if (!isTechnical) {
     return (
-      <div className="w-full p-6">
+      <div className="w-full p-0">
         <BankTransfersList />
       </div>
     );
@@ -19,7 +19,7 @@ export function TransactionTabs() {
 
   // Technical mode shows both tabs
   return (
-    <Tabs defaultValue="bank" className="w-full p-6">
+    <Tabs defaultValue="bank" className="w-full p-0">
       <TabsList className="mb-4 overflow-x-auto">
         <TabsTrigger value="bank">Bank Transfers</TabsTrigger>
         <TabsTrigger value="crypto">Crypto Transfers</TabsTrigger>

@@ -147,13 +147,10 @@ export default async function DashboardPage(props: {
 
             {/* Transactions Section */}
             <div className="">
-              <div className="p-5 sm:p-6 border-b border-[#101010]/10">
+              <div className="py-5 sm:py-6 px-0 border-b border-[#101010]/10">
                 <p className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60">
                   RECENT ACTIVITY
                 </p>
-                <h2 className="mt-2 font-serif text-[24px] sm:text-[28px] leading-[1.1] tracking-[-0.01em] text-[#101010]">
-                  Transactions & Transfers
-                </h2>
               </div>
               <Suspense fallback={<LoadingCard />}>
                 <TransactionTabsDemo />

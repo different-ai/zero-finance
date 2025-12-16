@@ -157,7 +157,7 @@ export function DashboardSummary({
       </div>
 
       {/* Action Buttons - Outside the card, on the right */}
-      <div className="flex flex-col justify-center gap-2 sm:min-w-[140px]">
+      <div className="flex flex-col justify-center gap-2 items-center sm:min-w-[250px] sm:max-w-[180px]">
         {/* Deposit Button - Banking mode opens AccountInfoDialog directly, Technical mode shows options */}
         {isTechnical ? (
           <Dialog open={isDepositOpen} onOpenChange={setIsDepositOpen}>
