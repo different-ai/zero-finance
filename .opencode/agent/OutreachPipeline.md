@@ -10,9 +10,7 @@ tools:
   notion_notion-create-pages: true
   notion_notion-create-comment: true
   exa_web_search_exa: true
-  exa_linkedin_search_exa: true
   exa_crawling_exa: true
-  exa_company_research_exa: true
   read: true
   write: true
   edit: true

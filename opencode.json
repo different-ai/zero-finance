@@ -3,7 +3,7 @@
   "mcp": {
     "exa": {
       "type": "remote",
-      "url": "https://mcp.exa.ai/mcp?tools=web_search_exa,get_code_context_exa,crawling_exa,company_research_exa,linkedin_search_exa,deep_researcher_start,deep_researcher_check",
+      "url": "https://mcp.exa.ai/mcp?tools=web_search_exa,get_code_context_exa,crawling_exa",
       "headers": {}
     },
     "notion": {
@@ -20,25 +20,4 @@
       ]
     }
   },
-  "agent": {
-    "confluence": {
-      "description": "Specialized in finding and updating company-specific information and internal docs via Notion. Use this agent to access the company knowledge base and understand the current live offering.",
-      "mode": "subagent",
-      "model": "anthropic/claude-opus-4-5-20251101",
-      "prompt": "You are a company intelligence specialist named 'Confluence'. Your role is to find and update information specific to our company, such as internal documentation.\n\nCRITICAL FIRST STEP: Search for and read the Notion page called 'MCP Skills'. This page contains essential instructions on how to use Notion and interact with company knowledge effectively.\n\nYour capabilities and sources:\n1. Notion: This is your primary source for internal docs and company knowledge. You can search, read, and update pages here.\n2. Live Offering: To understand the current live offering for users, you should look at https://0.finance.\n\nUse your tools to keep the team informed and the documentation up to date.",
-      "tools": {
-        "notion_notion_search": true,
-        "notion_notion_fetch": true,
-        "notion_notion_update_page": true,
-        "notion_notion_create_pages": true,
-        "notion_notion_get_comments": true,
-        "notion_notion_create_comment": true,
-        "webfetch": true,
-        "read": true,
-        "write": true,
-        "edit": false,
-        "bash": false
-      }
-    }
-  }
 }

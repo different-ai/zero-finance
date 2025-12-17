@@ -5,9 +5,7 @@ model: anthropic/claude-opus-4-5-20251101
 temperature: 0.35
 tools:
   exa_web_search_exa: true
-  exa_linkedin_search_exa: true
   exa_crawling_exa: true
-  exa_company_research_exa: true
   notion_notion-search: true
   notion_notion-fetch: true
   read: true
@@ -87,19 +85,13 @@ Demand IS:
 
 ### 1. Verify Recency
 
-Use `exa_linkedin_search_exa` and `exa_web_search_exa`:
+Use `exa_web_search_exa`:
 
 - When did they join this role? (Don't congratulate 18-month-old moves)
 - When was the funding round? (Is it still news?)
 - Is the trigger event still relevant?
 
 ### 2. Verify Company Context
-
-Use `exa_company_research_exa`:
-
-- Current company stage and recent news
-- Funding status and investors
-- What they're actually building
 
 ### 3. Verify Person's Situation
 

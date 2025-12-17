@@ -9,9 +9,7 @@ tools:
   notion_notion-create-pages: true
   notion_notion-update-page: true
   exa_web_search_exa: true
-  exa_linkedin_search_exa: true
   exa_crawling_exa: true
-  exa_company_research_exa: true
   read: true
   write: true
   edit: false
@@ -81,8 +79,6 @@ When given a LinkedIn profile or other source, extract:
 Use Exa tools to fill gaps:
 
 ```
-exa_company_research_exa: "[Company name]"
-exa_linkedin_search_exa: "[Person name] [Company]"
 exa_web_search_exa: "[Company name] funding announcement"
 ```
 

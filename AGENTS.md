@@ -67,9 +67,6 @@ Use **Exa MCP tools** for technical implementation when:
 | `exa_web_search_exa`                                      | General web search - find documentation, articles, tutorials                  |
 | `exa_crawling_exa`                                        | Extract content from a specific URL (replaces WebFetch for scraping)          |
 | `exa_get_code_context_exa`                                | **Cutting-edge API implementations** - SDK docs, library usage, code examples |
-| `exa_company_research_exa`                                | Research companies, competitors, or partners                                  |
-| `exa_linkedin_search_exa`                                 | Find professional profiles or company pages                                   |
-| `exa_deep_researcher_start` + `exa_deep_researcher_check` | Complex multi-source research tasks                                           |
 
 **When to use each tool**:
 

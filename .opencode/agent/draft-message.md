@@ -7,9 +7,7 @@ tools:
   notion_notion-search: true
   notion_notion-fetch: true
   exa_web_search_exa: true
-  exa_linkedin_search_exa: true
   exa_crawling_exa: true
-  exa_company_research_exa: true
   read: true
   write: true
   edit: true
@@ -232,7 +230,7 @@ Match the lead to one of these ICPs and fetch the corresponding Notion page for 
 
 **Before writing ANYTHING, verify information is current:**
 
-Use `exa_linkedin_search_exa` + `exa_company_research_exa` + `exa_web_search_exa`:
+Use `exa_web_search_exa`:
 
 1. **Verify role timing** - When did they join? Don't congratulate 18-month-old moves.
 2. **Verify funding** - When was the raise? Is it still news?
