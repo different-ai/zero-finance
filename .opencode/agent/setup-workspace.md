@@ -12,7 +12,272 @@ tools:
 
 # Setup Workspace - Initialize Outreach Configuration
 
-You initialize the outreach pipeline by reading configuration from the "MCP Skills" Notion page and caching it locally for other agents to use.
+## Pre-flight Checklist
+
+Before using the outreach pipeline, ensure all MCP servers are configured:
+
+- [ ] **Exa MCP** - API key configured (get from dashboard.exa.ai)
+- [ ] **Notion MCP** - OAuth authenticated (first use prompts login)
+- [ ] **Chrome DevTools MCP** - Chrome browser installed and accessible
+- [ ] **MCP Skills page** exists in your Notion workspace
+- [ ] **Databases created** and linked in MCP Skills page
+
+Run through each section below to complete setup.
+
+---
+
+## MCP Server Setup (REQUIRED FIRST)
+
+The outreach pipeline depends on three MCP servers. **All three must be working** for the full pipeline to function.
+
+### 1. Exa MCP - Web Search & Research
+
+**What it does:**
+Exa provides AI-powered web search, code context retrieval, and web crawling. It's used to:
+
+- Research leads and their companies
+- Find relevant news and content about prospects
+- Get code examples and documentation
+- Crawl specific URLs for detailed information
+
+**Setup Steps:**
+
+1. **Get an API Key:**
+   - Go to [dashboard.exa.ai](https://dashboard.exa.ai)
+   - Sign up or log in with Google
+   - Copy your API key from the dashboard
+
+2. **Configure in opencode.json:**
+   The Exa MCP is already configured as a remote server. To add your API key, update the URL:
+
+   ```json
+   {
+     "mcp": {
+       "exa": {
+         "type": "remote",
+         "url": "https://mcp.exa.ai/mcp?exaApiKey=YOUR_API_KEY_HERE&tools=web_search_exa,get_code_context_exa,crawling_exa"
+       }
+     }
+   }
+   ```
+
+3. **Available Tools:**
+   | Tool | Purpose |
+   |------|---------|
+   | `web_search_exa` | Search the web for any topic |
+   | `get_code_context_exa` | Find code examples and documentation |
+   | `crawling_exa` | Extract content from specific URLs |
+
+**What Breaks Without It:**
+
+- ❌ Cannot research leads or their companies
+- ❌ Cannot find recent news about prospects
+- ❌ Cannot crawl LinkedIn profiles or company websites
+- ❌ Cannot get code examples for technical prospects
+- ❌ Lead research agent fails completely
+
+---
+
+### 2. Notion MCP - CRM & Knowledge Base
+
+**What it does:**
+Notion MCP connects your AI tools directly to your Notion workspace. It's used to:
+
+- Read ICP (Ideal Customer Profile) definitions
+- Access the Outreach Tracking database (your CRM)
+- Log sent messages to the Opener database
+- Read product messaging guidelines
+- Access founder bios and credibility info
+
+**Setup Steps:**
+
+1. **First-Time Authentication:**
+   - The Notion MCP uses OAuth - no API key needed
+   - On first use, you'll be prompted to authorize access
+   - Click "Allow" to grant access to your workspace
+
+2. **Configuration (already in opencode.json):**
+
+   ```json
+   {
+     "mcp": {
+       "notion": {
+         "type": "local",
+         "command": ["npx", "-y", "mcp-remote", "https://mcp.notion.com/mcp"],
+         "enabled": true
+       }
+     }
+   }
+   ```
+
+3. **Alternative: Connect via Notion App:**
+   - Open Notion → Settings → Connections → Notion MCP
+   - Choose your AI tool from the gallery
+   - Complete the OAuth flow
+
+**What Breaks Without It:**
+
+- ❌ Cannot read ICP definitions (don't know who to target)
+- ❌ Cannot access Outreach Tracking database (no lead pipeline)
+- ❌ Cannot log sent messages (no record of outreach)
+- ❌ Cannot read product messaging (messages off-brand)
+- ❌ Cannot access founder info (no credibility in messages)
+- ❌ **Entire outreach pipeline fails** - this is the central data store
+
+---
+
+### 3. Chrome DevTools MCP - Browser Automation
+
+**What it does:**
+Chrome DevTools MCP lets AI control a live Chrome browser. It's used to:
+
+- Navigate to LinkedIn profiles
+- Take screenshots of profiles and posts
+- Interact with web pages (click, fill forms)
+- Debug and inspect page content
+- Automate repetitive browser tasks
+
+**Setup Steps:**
+
+1. **Prerequisites:**
+   - Node.js v20.19+ installed
+   - Chrome browser (stable version) installed
+   - npm available in your PATH
+
+2. **Configuration (already in opencode.json):**
+
+   ```json
+   {
+     "mcp": {
+       "chrome": {
+         "type": "local",
+         "command": [
+           "bash",
+           "-c",
+           "source ~/.nvm/nvm.sh && npx -y chrome-devtools-mcp@latest"
+         ]
+       }
+     }
+   }
+   ```
+
+3. **First Run:**
+   - The MCP server will automatically start Chrome when needed
+   - A new Chrome profile is created at `~/.cache/chrome-devtools-mcp/chrome-profile-stable`
+   - This profile persists between sessions
+
+4. **Optional: Connect to Existing Chrome:**
+   If you want to use your existing Chrome session:
+   ```json
+   {
+     "mcp": {
+       "chrome": {
+         "type": "local",
+         "command": [
+           "bash",
+           "-c",
+           "source ~/.nvm/nvm.sh && npx -y chrome-devtools-mcp@latest --browser-url=http://127.0.0.1:9222"
+         ]
+       }
+     }
+   }
+   ```
+   Then start Chrome with: `chrome --remote-debugging-port=9222`
+
+**What Breaks Without It:**
+
+- ❌ Cannot view LinkedIn profiles
+- ❌ Cannot take screenshots of prospects
+- ❌ Cannot automate browser interactions
+- ❌ Cannot verify profile information visually
+- ❌ Manual copy-paste required for all web research
+
+---
+
+## Verifying MCP Connections
+
+Run these tests to confirm each MCP is working:
+
+### Test Exa MCP
+
+Ask the agent:
+
+```
+Search for "Y Combinator startups 2024" using Exa
+```
+
+**Expected:** Returns search results with startup information
+
+### Test Notion MCP
+
+Ask the agent:
+
+```
+Search Notion for "MCP Skills"
+```
+
+**Expected:** Finds your MCP Skills configuration page
+
+### Test Chrome DevTools MCP
+
+Ask the agent:
+
+```
+Navigate to https://example.com and take a screenshot
+```
+
+**Expected:** Opens Chrome, navigates to the page, returns screenshot
+
+---
+
+## Troubleshooting
+
+### Exa MCP Issues
+
+| Problem               | Solution                                        |
+| --------------------- | ----------------------------------------------- |
+| "Invalid API key"     | Verify key at dashboard.exa.ai, check for typos |
+| "Rate limit exceeded" | Wait 1 minute, or upgrade your Exa plan         |
+| Tools not available   | Check URL includes `tools=` parameter           |
+
+### Notion MCP Issues
+
+| Problem             | Solution                                          |
+| ------------------- | ------------------------------------------------- |
+| "Not authenticated" | Re-run any Notion tool to trigger OAuth           |
+| "Page not found"    | Ensure page is shared with your Notion account    |
+| "Permission denied" | Check workspace permissions in Notion settings    |
+| Connection timeout  | Restart the MCP server, check internet connection |
+
+### Chrome DevTools MCP Issues
+
+| Problem               | Solution                                        |
+| --------------------- | ----------------------------------------------- |
+| "Chrome not found"    | Install Chrome or set `--executable-path`       |
+| "Port already in use" | Close other Chrome instances or change port     |
+| "Sandbox error"       | Try `--no-sandbox` flag (less secure)           |
+| Slow startup          | First run downloads Puppeteer, wait ~30 seconds |
+| "Node not found"      | Ensure Node.js v20.19+ is installed             |
+
+### General MCP Issues
+
+| Problem               | Solution                                      |
+| --------------------- | --------------------------------------------- |
+| MCP not connecting    | Check opencode.json syntax is valid JSON      |
+| Tools not appearing   | Restart your AI tool/IDE                      |
+| Intermittent failures | Check network connection, restart MCP servers |
+
+---
+
+## What This Agent Does
+
+After MCP servers are configured, this agent initializes the outreach pipeline by:
+
+1. Searching Notion for a page titled "MCP Skills"
+2. Parsing configuration tables and sections
+3. Extracting: database URLs, ICP pages, product context, founder info, messaging framework
+4. Writing everything to `.opencode/config/workspace.json`
+5. Reporting what was loaded
 
 ## When to Run This
 
@@ -20,13 +285,7 @@ You initialize the outreach pipeline by reading configuration from the "MCP Skil
 - **After updating MCP Skills** page in Notion
 - **When switching workspaces** (different Notion account)
 
-## What This Does
-
-1. Searches Notion for a page titled "MCP Skills"
-2. Parses configuration tables and sections
-3. Extracts: database URLs, ICP pages, product context, founder info, messaging framework
-4. Writes everything to `.opencode/config/workspace.json`
-5. Reports what was loaded
+---
 
 ## Workflow
 
