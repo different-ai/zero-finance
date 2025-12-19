@@ -675,8 +675,8 @@ function SimplifiedOffRampDemo({
 
   if (isComplete) {
     return (
-      <div className="bg-white min-h-full flex flex-col">
-        <div className="flex-1 flex flex-col items-center justify-center p-6 space-y-6">
+      <div className="bg-white h-full max-h-[100dvh] flex flex-col overflow-hidden">
+        <div className="flex-1 overflow-y-auto min-h-0 flex flex-col items-center justify-center p-6 space-y-6">
           <SuccessAnimation />
           <div className="text-center space-y-2">
             <h3 className="text-[28px] font-semibold tracking-[-0.01em] text-[#101010]">
@@ -694,7 +694,7 @@ function SimplifiedOffRampDemo({
             Make Another Transfer
           </Button>
         </div>
-        <div className="p-4 text-center text-[11px] text-[#101010]/40 uppercase tracking-[0.14em]">
+        <div className="flex-shrink-0 p-4 text-center text-[11px] text-[#101010]/40 uppercase tracking-[0.14em]">
           Demo Mode
         </div>
       </div>
@@ -703,7 +703,7 @@ function SimplifiedOffRampDemo({
 
   if (isProcessing) {
     return (
-      <div className="bg-white min-h-full flex flex-col items-center justify-center p-6 space-y-6">
+      <div className="bg-white h-full max-h-[100dvh] flex flex-col items-center justify-center p-6 space-y-6 overflow-hidden">
         <div className="relative">
           <div className="absolute inset-0 bg-[#1B29FF]/20 rounded-full animate-ping" />
           <div className="relative bg-[#1B29FF]/10 rounded-full p-4">
@@ -731,9 +731,9 @@ function SimplifiedOffRampDemo({
   }
 
   return (
-    <div className="bg-white min-h-full flex flex-col">
+    <div className="bg-white h-full max-h-[100dvh] flex flex-col overflow-hidden">
       {/* Scrollable content */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto min-h-0">
         <div className="p-5 sm:p-6 space-y-6">
           {/* Header */}
           <div>
@@ -795,7 +795,7 @@ function SimplifiedOffRampDemo({
       </div>
 
       {/* Fixed bottom CTA */}
-      <div className="sticky bottom-0 bg-white border-t border-[#101010]/10 p-4 sm:p-6 safe-area-inset-bottom">
+      <div className="flex-shrink-0 bg-white border-t border-[#101010]/10 p-4 sm:p-6">
         <Button
           onClick={handleTransfer}
           disabled={!amount || Number(amount) <= 0}
@@ -1265,8 +1265,8 @@ function SimplifiedOffRampReal({
     const currencySymbol = isEur ? '€' : '$';
 
     return (
-      <div className="bg-white min-h-full flex flex-col">
-        <div className="flex-1 flex flex-col items-center justify-center p-6 space-y-8">
+      <div className="bg-white h-full max-h-[100dvh] flex flex-col overflow-hidden">
+        <div className="flex-1 overflow-y-auto min-h-0 flex flex-col items-center justify-center p-6 space-y-8">
           <SuccessAnimation />
 
           <div className="text-center space-y-3">
@@ -1356,8 +1356,8 @@ function SimplifiedOffRampReal({
     const currencyCode = isEur ? 'EUR' : 'USD';
 
     return (
-      <div className="bg-white min-h-full flex flex-col">
-        <div className="flex-1 overflow-y-auto">
+      <div className="bg-white h-full max-h-[100dvh] flex flex-col overflow-hidden">
+        <div className="flex-1 overflow-y-auto min-h-0">
           <div className="p-5 sm:p-6 space-y-6">
             {/* Header */}
             <div>
@@ -1438,7 +1438,7 @@ function SimplifiedOffRampReal({
         </div>
 
         {/* Fixed bottom actions */}
-        <div className="sticky bottom-0 bg-white border-t border-[#101010]/10 p-4 sm:p-6 space-y-3 safe-area-inset-bottom">
+        <div className="flex-shrink-0 bg-white border-t border-[#101010]/10 p-4 sm:p-6 space-y-3">
           {error && (
             <Alert className="bg-red-50 border-red-200 mb-3">
               <AlertCircle className="h-4 w-4 text-red-600" />
@@ -1482,9 +1482,9 @@ function SimplifiedOffRampReal({
   // MAIN FORM
   // ============================================================================
   return (
-    <div className="bg-white min-h-full flex flex-col">
+    <div className="bg-white h-full max-h-[100dvh] flex flex-col overflow-hidden">
       {/* Header */}
-      <div className="border-b border-[#101010]/10 px-5 sm:px-6 py-4">
+      <div className="border-b border-[#101010]/10 px-5 sm:px-6 py-4 flex-shrink-0">
         {prefillFromInvoice && (
           <div className="mb-4 bg-amber-50 border border-amber-200 rounded-xl p-3">
             <div className="flex items-start gap-3">
@@ -1526,7 +1526,7 @@ function SimplifiedOffRampReal({
       </div>
 
       {/* Scrollable form content */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto min-h-0">
         <form
           onSubmit={handleSubmit(handleInitiateSubmit)}
           className="p-5 sm:p-6"
@@ -2110,7 +2110,7 @@ function SimplifiedOffRampReal({
       </div>
 
       {/* Fixed bottom navigation */}
-      <div className="sticky bottom-0 bg-white border-t border-[#101010]/10 p-4 sm:p-6 safe-area-inset-bottom">
+      <div className="flex-shrink-0 bg-white border-t border-[#101010]/10 p-4 sm:p-6">
         {error && (
           <Alert className="bg-red-50 border-red-200 mb-3 rounded-xl">
             <AlertCircle className="h-4 w-4 text-red-600" />
