@@ -153,6 +153,100 @@ export async function POST(request: NextRequest) {
                 required: [],
               },
             },
+            {
+              name: 'create_bank_account',
+              description:
+                'Save a new bank account for future transfers. All fields are required - extract from invoice or ask user.',
+              inputSchema: {
+                type: 'object',
+                properties: {
+                  account_name: {
+                    type: 'string',
+                    description:
+                      'Nickname for the account (e.g., "Cyprien N26")',
+                  },
+                  bank_name: {
+                    type: 'string',
+                    description: 'Name of the bank (e.g., "N26", "Chase")',
+                  },
+                  account_holder_type: {
+                    type: 'string',
+                    enum: ['individual', 'business'],
+                    description: 'Type of account holder',
+                  },
+                  account_holder_first_name: {
+                    type: 'string',
+                    description:
+                      'First name (required for individual accounts)',
+                  },
+                  account_holder_last_name: {
+                    type: 'string',
+                    description: 'Last name (required for individual accounts)',
+                  },
+                  account_holder_business_name: {
+                    type: 'string',
+                    description:
+                      'Business name (required for business accounts)',
+                  },
+                  country: {
+                    type: 'string',
+                    description: 'Country code (e.g., "DE", "US")',
+                  },
+                  city: {
+                    type: 'string',
+                    description: 'City name',
+                  },
+                  street_line_1: {
+                    type: 'string',
+                    description: 'Street address line 1',
+                  },
+                  street_line_2: {
+                    type: 'string',
+                    description: 'Street address line 2 (optional)',
+                  },
+                  postal_code: {
+                    type: 'string',
+                    description: 'Postal/ZIP code',
+                  },
+                  account_type: {
+                    type: 'string',
+                    enum: ['us', 'iban'],
+                    description: 'Type of bank account',
+                  },
+                  account_number: {
+                    type: 'string',
+                    description: 'Account number (required for US accounts)',
+                  },
+                  routing_number: {
+                    type: 'string',
+                    description: 'Routing number (required for US accounts)',
+                  },
+                  iban_number: {
+                    type: 'string',
+                    description: 'IBAN (required for IBAN accounts)',
+                  },
+                  bic_swift: {
+                    type: 'string',
+                    description: 'BIC/SWIFT code (required for IBAN accounts)',
+                  },
+                  is_default: {
+                    type: 'boolean',
+                    description:
+                      'Set as default account for transfers (default: false)',
+                  },
+                },
+                required: [
+                  'account_name',
+                  'bank_name',
+                  'account_holder_type',
+                  'country',
+                  'city',
+                  'street_line_1',
+                  'postal_code',
+                  'account_type',
+                ],
+              },
+            },
           ],
         };
         break;
@@ -226,6 +320,30 @@ async function handleToolCall(
         return await listProposals(
           context,
           args as { include_completed?: boolean },
+        );
+
+      case 'create_bank_account':
+        return await createBankAccount(
+          context,
+          args as {
+            account_name: string;
+            bank_name: string;
+            account_holder_type: 'individual' | 'business';
+            account_holder_first_name?: string;
+            account_holder_last_name?: string;
+            account_holder_business_name?: string;
+            country: string;
+            city: string;
+            street_line_1: string;
+            street_line_2?: string;
+            postal_code: string;
+            account_type: 'us' | 'iban';
+            account_number?: string;
+            routing_number?: string;
+            iban_number?: string;
+            bic_swift?: string;
+            is_default?: boolean;
+          },
         );
 
       default:
@@ -532,6 +650,191 @@ async function proposeBankTransfer(
             bank_account: bankAccount.bankName,
             expires_at: transfer.quote.expires_at,
           },
+        }),
+      },
+    ],
+  };
+}
+
+async function createBankAccount(
+  context: NonNullable<Awaited<ReturnType<typeof validateApiKey>>>,
+  args: {
+    account_name: string;
+    bank_name: string;
+    account_holder_type: 'individual' | 'business';
+    account_holder_first_name?: string;
+    account_holder_last_name?: string;
+    account_holder_business_name?: string;
+    country: string;
+    city: string;
+    street_line_1: string;
+    street_line_2?: string;
+    postal_code: string;
+    account_type: 'us' | 'iban';
+    account_number?: string;
+    routing_number?: string;
+    iban_number?: string;
+    bic_swift?: string;
+    is_default?: boolean;
+  },
+) {
+  const {
+    account_name,
+    bank_name,
+    account_holder_type,
+    account_holder_first_name,
+    account_holder_last_name,
+    account_holder_business_name,
+    country,
+    city,
+    street_line_1,
+    street_line_2,
+    postal_code,
+    account_type,
+    account_number,
+    routing_number,
+    iban_number,
+    bic_swift,
+    is_default = false,
+  } = args;
+
+  // Validate required fields based on account holder type
+  if (account_holder_type === 'individual') {
+    if (!account_holder_first_name || !account_holder_last_name) {
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify({
+              error:
+                'First name and last name are required for individual accounts',
+            }),
+          },
+        ],
+      };
+    }
+  } else if (account_holder_type === 'business') {
+    if (!account_holder_business_name) {
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify({
+              error: 'Business name is required for business accounts',
+            }),
+          },
+        ],
+      };
+    }
+  }
+
+  // Validate required fields based on account type
+  if (account_type === 'us') {
+    if (!account_number || !routing_number) {
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify({
+              error:
+                'Account number and routing number are required for US accounts',
+            }),
+          },
+        ],
+      };
+    }
+  } else if (account_type === 'iban') {
+    if (!iban_number || !bic_swift) {
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify({
+              error: 'IBAN and BIC/SWIFT are required for IBAN accounts',
+            }),
+          },
+        ],
+      };
+    }
+  }
+
+  const workspace = await db.query.workspaces.findFirst({
+    where: eq(workspaces.id, context.workspaceId),
+  });
+
+  if (!workspace) {
+    return {
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify({ error: 'Workspace not found' }),
+        },
+      ],
+    };
+  }
+
+  const userId = workspace.createdBy;
+
+  // If setting this account as default, unset any existing default
+  if (is_default) {
+    await db
+      .update(userDestinationBankAccounts)
+      .set({ isDefault: false })
+      .where(eq(userDestinationBankAccounts.userId, userId));
+  }
+
+  // Insert the new bank account
+  const [newAccount] = await db
+    .insert(userDestinationBankAccounts)
+    .values({
+      userId,
+      accountName: account_name,
+      bankName: bank_name,
+      accountHolderType: account_holder_type,
+      accountHolderFirstName:
+        account_holder_type === 'individual' ? account_holder_first_name : null,
+      accountHolderLastName:
+        account_holder_type === 'individual' ? account_holder_last_name : null,
+      accountHolderBusinessName:
+        account_holder_type === 'business'
+          ? account_holder_business_name
+          : null,
+      country,
+      city,
+      streetLine1: street_line_1,
+      streetLine2: street_line_2 ?? null,
+      postalCode: postal_code,
+      accountType: account_type,
+      accountNumber: account_type === 'us' ? account_number : null,
+      routingNumber: account_type === 'us' ? routing_number : null,
+      ibanNumber: account_type === 'iban' ? iban_number : null,
+      bicSwift: account_type === 'iban' ? bic_swift : null,
+      isDefault: is_default,
+    })
+    .returning({
+      id: userDestinationBankAccounts.id,
+      accountName: userDestinationBankAccounts.accountName,
+      isDefault: userDestinationBankAccounts.isDefault,
+    });
+
+  return {
+    content: [
+      {
+        type: 'text',
+        text: JSON.stringify({
+          success: true,
+          bank_account: {
+            id: newAccount.id,
+            name: newAccount.accountName,
+            bank_name,
+            account_type,
+            is_default: newAccount.isDefault,
+            last_4:
+              account_type === 'iban'
+                ? iban_number?.slice(-4)
+                : account_number?.slice(-4),
+          },
+          message: 'Bank account saved. You can now use this ID for transfers.',
         }),
       },
     ],
