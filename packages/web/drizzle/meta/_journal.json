@@ -813,6 +813,20 @@
       "when": 1766190692756,
       "tag": "0115_add-dismissed-to-offramp-transfers",
       "breakpoints": true
+    },
+    {
+      "idx": 116,
+      "version": "7",
+      "when": 1766193971447,
+      "tag": "0116_add-mcp-agent-fields-and-api-keys",
+      "breakpoints": true
+    },
+    {
+      "idx": 117,
+      "version": "7",
+      "when": 1766194024230,
+      "tag": "0117_add-workspace-api-keys-table",
+      "breakpoints": true
     }
   ]
 }

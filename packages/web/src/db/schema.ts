@@ -40,6 +40,14 @@ export {
 } from './schema/workspaces';
 export { admins, type Admin, type NewAdmin } from './schema/admins';
 
+// Workspace API Keys - for MCP integrations
+export {
+  workspaceApiKeys,
+  workspaceApiKeysRelations,
+  type WorkspaceApiKey,
+  type NewWorkspaceApiKey,
+} from './schema/workspace-api-keys';
+
 // User Safes - modular schema with architecture documentation
 export {
   userSafes,
@@ -394,6 +402,10 @@ export const offrampTransfers = pgTable(
 
     // UI State
     dismissed: boolean('dismissed').default(false).notNull(), // Hide from UI without deleting
+
+    // MCP Agent Proposal Fields
+    proposedByAgent: boolean('proposed_by_agent').default(false).notNull(),
+    agentProposalMessage: text('agent_proposal_message'), // Context from agent
 
     // Timestamps
     createdAt: timestamp('created_at', { withTimezone: true })

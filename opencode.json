@@ -18,6 +18,14 @@
         "-c",
         "source ~/.nvm/nvm.sh && npx -y chrome-devtools-mcp@latest"
       ]
+    },
+    "zero-finance": {
+      "type": "remote",
+      "url": "http://localhost:3050/api/mcp",
+      "headers": {
+        "Authorization": "Bearer {env:ZERO_FINANCE_API_KEY}"
+      },
+      "enabled": true
     }
-  },
+  }
 }

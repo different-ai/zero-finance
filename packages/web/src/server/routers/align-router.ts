@@ -2764,6 +2764,16 @@ export const alignRouter = router({
           destination_bank_account: destinationSnapshot,
           created_at: transfer.createdAt?.toISOString(),
           updated_at: transfer.updatedAt?.toISOString(),
+          // Include deposit details for resuming pending transfers
+          deposit_amount: transfer.depositAmount,
+          deposit_address: transfer.depositAddress,
+          deposit_token: transfer.depositToken,
+          deposit_network: transfer.depositNetwork,
+          fee_amount: transfer.feeAmount,
+          quote_expires_at: transfer.quoteExpiresAt?.toISOString() ?? null,
+          // Agent proposal details
+          proposed_by_agent: transfer.proposedByAgent ?? false,
+          agent_proposal_message: transfer.agentProposalMessage ?? null,
         };
       });
     }),

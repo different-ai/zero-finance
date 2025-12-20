@@ -2,6 +2,7 @@
 export * from './users';
 export * from './workspaces';
 export * from './workspace-features';
+export * from './workspace-api-keys';
 export * from './admins';
 export * from './bridge-transactions';
 export * from './user-safes';

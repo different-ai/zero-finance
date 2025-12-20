@@ -6,7 +6,7 @@ import path from 'path';
 import fs from 'fs';
 
 // Load environment variables from .env.local if present
-dotenv.config({ path: path.resolve(__dirname, '../.env.local') });
+dotenv.config({ path: path.resolve(__dirname, '../.env.development.local.bak') });
 
 // This script will run all migrations in the drizzle folder
 async function main() {

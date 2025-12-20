@@ -1,20 +1,365 @@
 'use client';
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useState } from 'react';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Plug } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+import {
+  Plug,
+  Key,
+  Copy,
+  Check,
+  Trash2,
+  Plus,
+  Bot,
+  ExternalLink,
+} from 'lucide-react';
+import { trpc } from '@/lib/trpc';
+import { toast } from 'sonner';
+import { formatDistanceToNow } from 'date-fns';
 
 export function IntegrationsClientContent() {
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [keyName, setKeyName] = useState('');
+  const [newKey, setNewKey] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  const utils = trpc.useUtils();
+
+  const { data: apiKeys, isLoading } = trpc.settings.apiKeys.list.useQuery();
+
+  const createKeyMutation = trpc.settings.apiKeys.create.useMutation({
+    onSuccess: (data) => {
+      setNewKey(data.rawKey);
+      setKeyName('');
+      utils.settings.apiKeys.list.invalidate();
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Failed to create API key');
+    },
+  });
+
+  const revokeKeyMutation = trpc.settings.apiKeys.revoke.useMutation({
+    onSuccess: () => {
+      toast.success('API key revoked');
+      utils.settings.apiKeys.list.invalidate();
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Failed to revoke API key');
+    },
+  });
+
+  const handleCreateKey = () => {
+    if (!keyName.trim()) {
+      toast.error('Please enter a name for the API key');
+      return;
+    }
+    createKeyMutation.mutate({ name: keyName.trim() });
+  };
+
+  const handleCopyKey = async () => {
+    if (newKey) {
+      await navigator.clipboard.writeText(newKey);
+      setCopied(true);
+      toast.success('API key copied to clipboard');
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  const handleCloseCreateDialog = () => {
+    setIsCreateOpen(false);
+    setNewKey(null);
+    setKeyName('');
+  };
+
+  const activeKeys = apiKeys?.filter((k) => !k.isRevoked) ?? [];
+  const revokedKeys = apiKeys?.filter((k) => k.isRevoked) ?? [];
+
   return (
     <div className="w-full space-y-8 px-6">
       <div>
         <h1 className="text-3xl font-bold">Integrations</h1>
         <p className="mt-2 text-muted-foreground">
-          External integrations are currently disabled while we focus on shared workspace automations. Stay tuned for updates.
+          Connect AI agents and external services to your workspace.
         </p>
       </div>
 
+      {/* MCP API Keys Section */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Bot className="h-6 w-6 text-primary" />
+              <div>
+                <CardTitle>AI Agent Access (MCP)</CardTitle>
+                <CardDescription>
+                  Create API keys to allow AI agents to interact with your
+                  account via the Model Context Protocol.
+                </CardDescription>
+              </div>
+            </div>
+            <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+              <DialogTrigger asChild>
+                <Button size="sm">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Create Key
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                {newKey ? (
+                  <>
+                    <DialogHeader>
+                      <DialogTitle>API Key Created</DialogTitle>
+                      <DialogDescription>
+                        Copy this key now. It will not be shown again.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                      <div className="flex items-center gap-2">
+                        <Input
+                          value={newKey}
+                          readOnly
+                          className="font-mono text-sm"
+                        />
+                        <Button
+                          size="icon"
+                          variant="outline"
+                          onClick={handleCopyKey}
+                        >
+                          {copied ? (
+                            <Check className="h-4 w-4 text-green-500" />
+                          ) : (
+                            <Copy className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </div>
+                      <div className="rounded-lg bg-amber-50 p-3 text-sm text-amber-800 dark:bg-amber-950 dark:text-amber-200">
+                        <strong>Important:</strong> Store this key securely. You
+                        won&apos;t be able to see it again.
+                      </div>
+                    </div>
+                    <DialogFooter>
+                      <Button onClick={handleCloseCreateDialog}>Done</Button>
+                    </DialogFooter>
+                  </>
+                ) : (
+                  <>
+                    <DialogHeader>
+                      <DialogTitle>Create API Key</DialogTitle>
+                      <DialogDescription>
+                        Give your API key a descriptive name to identify it
+                        later.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="keyName">Key Name</Label>
+                        <Input
+                          id="keyName"
+                          placeholder="e.g., Claude Desktop, Cursor Agent"
+                          value={keyName}
+                          onChange={(e) => setKeyName(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') handleCreateKey();
+                          }}
+                        />
+                      </div>
+                    </div>
+                    <DialogFooter>
+                      <Button
+                        variant="outline"
+                        onClick={() => setIsCreateOpen(false)}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        onClick={handleCreateKey}
+                        disabled={createKeyMutation.isPending}
+                      >
+                        {createKeyMutation.isPending
+                          ? 'Creating...'
+                          : 'Create Key'}
+                      </Button>
+                    </DialogFooter>
+                  </>
+                )}
+              </DialogContent>
+            </Dialog>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {isLoading ? (
+            <div className="text-sm text-muted-foreground">Loading...</div>
+          ) : activeKeys.length === 0 ? (
+            <div className="rounded-lg border border-dashed p-6 text-center">
+              <Key className="mx-auto h-8 w-8 text-muted-foreground/50" />
+              <p className="mt-2 text-sm text-muted-foreground">
+                No API keys yet. Create one to enable AI agent access.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {activeKeys.map((key) => (
+                <div
+                  key={key.id}
+                  className="flex items-center justify-between rounded-lg border p-4"
+                >
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium">{key.name}</span>
+                      <code className="rounded bg-muted px-2 py-0.5 text-xs">
+                        {key.keyPrefix}...
+                      </code>
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      Created{' '}
+                      {key.createdAt
+                        ? formatDistanceToNow(new Date(key.createdAt), {
+                            addSuffix: true,
+                          })
+                        : 'recently'}
+                      {key.lastUsedAt && (
+                        <>
+                          {' '}
+                          &middot; Last used{' '}
+                          {formatDistanceToNow(new Date(key.lastUsedAt), {
+                            addSuffix: true,
+                          })}
+                        </>
+                      )}
+                    </div>
+                  </div>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="text-destructive hover:text-destructive"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Revoke API Key</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This will immediately disable the key &quot;
+                          {key.name}&quot;. Any agents using this key will lose
+                          access.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          onClick={() =>
+                            revokeKeyMutation.mutate({ keyId: key.id })
+                          }
+                        >
+                          Revoke Key
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* MCP Setup Instructions */}
+          <div className="mt-4 rounded-lg bg-muted/50 p-4">
+            <h4 className="text-sm font-medium">How to connect an AI agent</h4>
+            <ol className="mt-2 list-inside list-decimal space-y-1 text-sm text-muted-foreground">
+              <li>Create an API key above</li>
+              <li>
+                Configure your AI agent with the MCP endpoint:{' '}
+                <code className="rounded bg-muted px-1">
+                  {typeof window !== 'undefined'
+                    ? `${window.location.origin}/api/mcp`
+                    : '/api/mcp'}
+                </code>
+              </li>
+              <li>
+                Set the Authorization header:{' '}
+                <code className="rounded bg-muted px-1">
+                  Bearer your_api_key
+                </code>
+              </li>
+            </ol>
+            <a
+              href="https://modelcontextprotocol.io"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-2 inline-flex items-center gap-1 text-sm text-primary hover:underline"
+            >
+              Learn more about MCP
+              <ExternalLink className="h-3 w-3" />
+            </a>
+          </div>
+
+          {/* Revoked Keys (collapsed) */}
+          {revokedKeys.length > 0 && (
+            <details className="mt-4">
+              <summary className="cursor-pointer text-sm text-muted-foreground hover:text-foreground">
+                {revokedKeys.length} revoked key
+                {revokedKeys.length === 1 ? '' : 's'}
+              </summary>
+              <div className="mt-2 space-y-2">
+                {revokedKeys.map((key) => (
+                  <div
+                    key={key.id}
+                    className="flex items-center justify-between rounded-lg border border-dashed p-3 opacity-50"
+                  >
+                    <div className="space-y-0.5">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm line-through">{key.name}</span>
+                        <Badge variant="secondary" className="text-xs">
+                          Revoked
+                        </Badge>
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {key.revokedAt
+                          ? `Revoked ${formatDistanceToNow(new Date(key.revokedAt), { addSuffix: true })}`
+                          : 'Revoked'}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </details>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Legacy Integrations Section */}
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -23,7 +368,8 @@ export function IntegrationsClientContent() {
               <div>
                 <CardTitle>Email & Document Sync</CardTitle>
                 <CardDescription>
-                  Automatic inbox ingestion and Gmail-based processing has been retired from the product.
+                  Automatic inbox ingestion and Gmail-based processing has been
+                  retired from the product.
                 </CardDescription>
               </div>
             </div>
@@ -32,7 +378,9 @@ export function IntegrationsClientContent() {
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground">
-            Your workspace now relies on direct uploads and bank-sync automations. If you need a specific integration, drop us a note and we&apos;ll reach out as new connectors come online.
+            Your workspace now relies on direct uploads and bank-sync
+            automations. If you need a specific integration, drop us a note and
+            we&apos;ll reach out as new connectors come online.
           </p>
           <Button className="mt-4" disabled>
             Connect Service

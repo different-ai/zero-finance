@@ -4,6 +4,7 @@ import { invoiceRouter } from './invoice-router';
 import { fundingSourceRouter } from './funding-source-router';
 import { userSafesRouter } from './settings/user-safes';
 import { bankAccountsRouter } from './settings/bank-accounts-router';
+import { apiKeysRouter } from './settings/api-keys-router';
 import { safeRouter } from './safe-router';
 import { onboardingRouter } from './onboarding-router';
 import { alignRouter } from './align-router';
@@ -37,6 +38,7 @@ export const appRouter = router({
     userSafes: userSafesRouter,
     bankAccounts: bankAccountsRouter,
     classificationSettings: classificationSettingsRouter,
+    apiKeys: apiKeysRouter,
   }),
   align: alignRouter,
   admin: adminRouter,
