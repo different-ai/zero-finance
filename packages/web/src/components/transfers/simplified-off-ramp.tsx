@@ -24,6 +24,9 @@ import {
   TrendingDown,
   ExternalLink,
   CircleDollarSign,
+  BookmarkPlus,
+  CreditCard,
+  Plus,
 } from 'lucide-react';
 import {
   formatUnits,
@@ -54,6 +57,7 @@ import {
 } from '@/lib/constants';
 import { Combobox, type ComboboxOption } from '@/components/ui/combo-box';
 import { useBimodal, BlueprintGrid, Crosshairs } from '@/components/ui/bimodal';
+import { Checkbox } from '@/components/ui/checkbox';
 
 // ============================================================================
 // CONSTANTS & TYPES
@@ -173,6 +177,10 @@ interface OffRampFormValues {
   bic?: string;
   cryptoAddress?: string;
   cryptoAsset?: CryptoAsset;
+  // Saved bank account
+  savedBankAccountId?: string;
+  saveForFuture?: boolean;
+  accountNickname?: string;
 }
 
 type FundingSource = {
@@ -927,6 +935,23 @@ function SimplifiedOffRampReal({
     primarySafeAddress || undefined,
   );
 
+  // Saved bank accounts
+  const { data: savedBankAccounts, refetch: refetchBankAccounts } =
+    api.settings.bankAccounts.listBankAccounts.useQuery();
+
+  const addBankAccountMutation =
+    api.settings.bankAccounts.addBankAccount.useMutation({
+      onSuccess: () => {
+        refetchBankAccounts();
+        toast.success('Bank account saved for future transfers');
+      },
+      onError: (err: { message: string }) => {
+        toast.error('Failed to save bank account', {
+          description: err.message,
+        });
+      },
+    });
+
   const getAccountType = (source: any) =>
     source.sourceAccountType || source.accountType;
 
@@ -982,6 +1007,11 @@ function SimplifiedOffRampReal({
   const accountHolderType = watch('accountHolderType');
   const watchedAmount = watch('amount');
   const cryptoAsset = watch('cryptoAsset') || 'usdc';
+  const savedBankAccountId = watch('savedBankAccountId');
+  const saveForFuture = watch('saveForFuture');
+
+  // Track if user wants to use a new bank account vs saved
+  const [useNewAccount, setUseNewAccount] = useState(true);
 
   // Helper to get the balance for the selected crypto asset
   const getSelectedAssetBalance = useCallback((): string | null => {
@@ -1042,6 +1072,31 @@ function SimplifiedOffRampReal({
     };
     fetchBalances();
   }, [primarySafeAddress, isTechnical]);
+
+  // Effect to populate form when selecting a saved bank account
+  useEffect(() => {
+    if (!savedBankAccountId || useNewAccount) return;
+
+    const selectedAccount = savedBankAccounts?.find(
+      (acc) => acc.id === savedBankAccountId,
+    );
+    if (!selectedAccount) return;
+
+    // Populate form with saved account details
+    setValue('bankName', selectedAccount.bankName);
+    setValue(
+      'accountHolderType',
+      selectedAccount.accountHolderType as 'individual' | 'business',
+    );
+    setValue('country', selectedAccount.country);
+
+    // Set destination type based on account type
+    if (selectedAccount.accountType === 'us') {
+      setValue('destinationType', 'ach');
+    } else if (selectedAccount.accountType === 'iban') {
+      setValue('destinationType', 'iban');
+    }
+  }, [savedBankAccountId, savedBankAccounts, useNewAccount, setValue]);
 
   // Use quote-based transfer creation for accurate amounts
   const createTransferFromQuoteMutation =
@@ -1196,6 +1251,35 @@ function SimplifiedOffRampReal({
     if (!currentQuote) {
       toast.error('Please wait for the quote to load.');
       return;
+    }
+
+    // Save bank account if requested (don't block transfer on failure)
+    if (values.saveForFuture && useNewAccount) {
+      try {
+        await addBankAccountMutation.mutateAsync({
+          accountName:
+            values.accountNickname ||
+            `${values.bankName} - ${values.accountHolderType === 'individual' ? `${values.accountHolderFirstName} ${values.accountHolderLastName}` : values.accountHolderBusinessName}`,
+          bankName: values.bankName,
+          accountHolderType: values.accountHolderType,
+          accountHolderFirstName: values.accountHolderFirstName,
+          accountHolderLastName: values.accountHolderLastName,
+          accountHolderBusinessName: values.accountHolderBusinessName,
+          country: values.country,
+          city: values.city,
+          streetLine1: values.streetLine1,
+          streetLine2: values.streetLine2,
+          postalCode: values.postalCode,
+          accountType: values.destinationType === 'ach' ? 'us' : 'iban',
+          accountNumber: values.accountNumber,
+          routingNumber: values.routingNumber,
+          ibanNumber: values.iban,
+          bicSwift: values.bic,
+          isDefault: false,
+        });
+      } catch {
+        // Already handled by mutation error handler
+      }
     }
 
     // Create transfer from quote with accurate amounts
@@ -1720,226 +1804,370 @@ function SimplifiedOffRampReal({
                 />
               </div>
 
-              {/* Bank Account Details */}
-              <div className="space-y-4">
-                <p className="text-[13px] font-medium text-[#101010]">
-                  Recipient details
-                </p>
+              {/* Saved Bank Accounts Selector */}
+              {savedBankAccounts && savedBankAccounts.length > 0 && (
+                <div className="space-y-3">
+                  <p className="text-[13px] font-medium text-[#101010]">
+                    Send to
+                  </p>
 
-                {/* Account Holder Type */}
-                <Controller
-                  control={control}
-                  name="accountHolderType"
-                  render={({ field }) => (
-                    <RadioGroup
-                      onValueChange={field.onChange}
-                      value={field.value}
-                      className="flex gap-3"
+                  {/* Saved accounts */}
+                  <div className="space-y-2">
+                    {savedBankAccounts
+                      .filter((acc) =>
+                        destinationType === 'ach'
+                          ? acc.accountType === 'us'
+                          : acc.accountType === 'iban',
+                      )
+                      .map((account) => (
+                        <button
+                          key={account.id}
+                          type="button"
+                          onClick={() => {
+                            setUseNewAccount(false);
+                            setValue('savedBankAccountId', account.id);
+                            // Populate form fields from saved account
+                            setValue('bankName', account.bankName);
+                            setValue(
+                              'accountHolderType',
+                              account.accountHolderType as
+                                | 'individual'
+                                | 'business',
+                            );
+                            setValue('country', account.country);
+                          }}
+                          className={cn(
+                            'w-full flex items-center gap-3 p-4 rounded-xl border-2 transition-all text-left',
+                            savedBankAccountId === account.id && !useNewAccount
+                              ? 'border-[#1B29FF] bg-[#1B29FF]/5'
+                              : 'border-[#101010]/10 hover:border-[#101010]/20',
+                          )}
+                        >
+                          <div className="w-10 h-10 bg-[#F7F7F2] rounded-lg flex items-center justify-center">
+                            <CreditCard className="h-5 w-5 text-[#101010]/60" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[14px] font-medium text-[#101010] truncate">
+                              {account.accountName}
+                            </p>
+                            <p className="text-[12px] text-[#101010]/60">
+                              {account.bankName} •{' '}
+                              {account.maskedIbanNumber ||
+                                account.maskedAccountNumber}
+                            </p>
+                          </div>
+                          {savedBankAccountId === account.id &&
+                            !useNewAccount && (
+                              <div className="w-5 h-5 bg-[#1B29FF] rounded-full flex items-center justify-center">
+                                <Check className="h-3 w-3 text-white" />
+                              </div>
+                            )}
+                        </button>
+                      ))}
+
+                    {/* Add new account option */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setUseNewAccount(true);
+                        setValue('savedBankAccountId', undefined);
+                      }}
+                      className={cn(
+                        'w-full flex items-center gap-3 p-4 rounded-xl border-2 border-dashed transition-all text-left',
+                        useNewAccount
+                          ? 'border-[#1B29FF] bg-[#1B29FF]/5'
+                          : 'border-[#101010]/10 hover:border-[#101010]/20',
+                      )}
                     >
-                      <label className="flex items-center gap-2 px-4 py-2.5 border border-[#101010]/10 rounded-xl cursor-pointer hover:bg-[#F7F7F2]/50 transition-colors">
-                        <RadioGroupItem value="individual" id="individual" />
-                        <span className="text-[13px] text-[#101010]">
-                          Individual
-                        </span>
-                      </label>
-                      <label className="flex items-center gap-2 px-4 py-2.5 border border-[#101010]/10 rounded-xl cursor-pointer hover:bg-[#F7F7F2]/50 transition-colors">
-                        <RadioGroupItem value="business" id="business" />
-                        <span className="text-[13px] text-[#101010]">
-                          Business
-                        </span>
-                      </label>
-                    </RadioGroup>
-                  )}
-                />
-
-                {/* Name Fields */}
-                {accountHolderType === 'individual' ? (
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <Label className="text-[12px] text-[#101010]/60 mb-1.5 block">
-                        First Name
-                      </Label>
-                      <Input
-                        {...register('accountHolderFirstName', {
-                          required: 'Required',
-                        })}
-                        placeholder="John"
-                        className="h-11 rounded-xl"
-                      />
-                      {errors.accountHolderFirstName && (
-                        <p className="text-[11px] text-red-500 mt-1">
-                          {errors.accountHolderFirstName.message}
+                      <div className="w-10 h-10 bg-[#1B29FF]/10 rounded-lg flex items-center justify-center">
+                        <Plus className="h-5 w-5 text-[#1B29FF]" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-[14px] font-medium text-[#101010]">
+                          New bank account
                         </p>
-                      )}
-                    </div>
-                    <div>
-                      <Label className="text-[12px] text-[#101010]/60 mb-1.5 block">
-                        Last Name
-                      </Label>
-                      <Input
-                        {...register('accountHolderLastName', {
-                          required: 'Required',
-                        })}
-                        placeholder="Doe"
-                        className="h-11 rounded-xl"
-                      />
-                      {errors.accountHolderLastName && (
-                        <p className="text-[11px] text-red-500 mt-1">
-                          {errors.accountHolderLastName.message}
+                        <p className="text-[12px] text-[#101010]/60">
+                          Enter recipient details manually
                         </p>
+                      </div>
+                      {useNewAccount && (
+                        <div className="w-5 h-5 bg-[#1B29FF] rounded-full flex items-center justify-center">
+                          <Check className="h-3 w-3 text-white" />
+                        </div>
                       )}
-                    </div>
+                    </button>
                   </div>
-                ) : (
+                </div>
+              )}
+
+              {/* Bank Account Details - only show when adding new account */}
+              {(useNewAccount || !savedBankAccounts?.length) && (
+                <div className="space-y-4">
+                  <p className="text-[13px] font-medium text-[#101010]">
+                    Recipient details
+                  </p>
+
+                  {/* Account Holder Type */}
+                  <Controller
+                    control={control}
+                    name="accountHolderType"
+                    render={({ field }) => (
+                      <RadioGroup
+                        onValueChange={field.onChange}
+                        value={field.value}
+                        className="flex gap-3"
+                      >
+                        <label className="flex items-center gap-2 px-4 py-2.5 border border-[#101010]/10 rounded-xl cursor-pointer hover:bg-[#F7F7F2]/50 transition-colors">
+                          <RadioGroupItem value="individual" id="individual" />
+                          <span className="text-[13px] text-[#101010]">
+                            Individual
+                          </span>
+                        </label>
+                        <label className="flex items-center gap-2 px-4 py-2.5 border border-[#101010]/10 rounded-xl cursor-pointer hover:bg-[#F7F7F2]/50 transition-colors">
+                          <RadioGroupItem value="business" id="business" />
+                          <span className="text-[13px] text-[#101010]">
+                            Business
+                          </span>
+                        </label>
+                      </RadioGroup>
+                    )}
+                  />
+
+                  {/* Name Fields */}
+                  {accountHolderType === 'individual' ? (
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <Label className="text-[12px] text-[#101010]/60 mb-1.5 block">
+                          First Name
+                        </Label>
+                        <Input
+                          {...register('accountHolderFirstName', {
+                            required: 'Required',
+                          })}
+                          placeholder="John"
+                          className="h-11 rounded-xl"
+                        />
+                        {errors.accountHolderFirstName && (
+                          <p className="text-[11px] text-red-500 mt-1">
+                            {errors.accountHolderFirstName.message}
+                          </p>
+                        )}
+                      </div>
+                      <div>
+                        <Label className="text-[12px] text-[#101010]/60 mb-1.5 block">
+                          Last Name
+                        </Label>
+                        <Input
+                          {...register('accountHolderLastName', {
+                            required: 'Required',
+                          })}
+                          placeholder="Doe"
+                          className="h-11 rounded-xl"
+                        />
+                        {errors.accountHolderLastName && (
+                          <p className="text-[11px] text-red-500 mt-1">
+                            {errors.accountHolderLastName.message}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    <div>
+                      <Label className="text-[12px] text-[#101010]/60 mb-1.5 block">
+                        Business Name
+                      </Label>
+                      <Input
+                        {...register('accountHolderBusinessName', {
+                          required: 'Required',
+                        })}
+                        placeholder="Acme Corp"
+                        className="h-11 rounded-xl"
+                      />
+                      {errors.accountHolderBusinessName && (
+                        <p className="text-[11px] text-red-500 mt-1">
+                          {errors.accountHolderBusinessName.message}
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Bank Details */}
                   <div>
                     <Label className="text-[12px] text-[#101010]/60 mb-1.5 block">
-                      Business Name
+                      Bank Name
                     </Label>
                     <Input
-                      {...register('accountHolderBusinessName', {
-                        required: 'Required',
-                      })}
-                      placeholder="Acme Corp"
+                      {...register('bankName', { required: 'Required' })}
+                      placeholder="Chase Bank"
                       className="h-11 rounded-xl"
                     />
-                    {errors.accountHolderBusinessName && (
+                    {errors.bankName && (
                       <p className="text-[11px] text-red-500 mt-1">
-                        {errors.accountHolderBusinessName.message}
+                        {errors.bankName.message}
                       </p>
                     )}
                   </div>
-                )}
 
-                {/* Bank Details */}
-                <div>
-                  <Label className="text-[12px] text-[#101010]/60 mb-1.5 block">
-                    Bank Name
-                  </Label>
-                  <Input
-                    {...register('bankName', { required: 'Required' })}
-                    placeholder="Chase Bank"
-                    className="h-11 rounded-xl"
-                  />
-                  {errors.bankName && (
-                    <p className="text-[11px] text-red-500 mt-1">
-                      {errors.bankName.message}
-                    </p>
+                  {destinationType === 'ach' ? (
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <Label className="text-[12px] text-[#101010]/60 mb-1.5 block">
+                          Account Number
+                        </Label>
+                        <Input
+                          {...register('accountNumber', {
+                            required: 'Required',
+                          })}
+                          placeholder="123456789"
+                          className="h-11 rounded-xl"
+                        />
+                        {errors.accountNumber && (
+                          <p className="text-[11px] text-red-500 mt-1">
+                            {errors.accountNumber.message}
+                          </p>
+                        )}
+                      </div>
+                      <div>
+                        <Label className="text-[12px] text-[#101010]/60 mb-1.5 block">
+                          Routing Number
+                        </Label>
+                        <Input
+                          {...register('routingNumber', {
+                            required: 'Required',
+                          })}
+                          placeholder="021000021"
+                          className="h-11 rounded-xl"
+                        />
+                        {errors.routingNumber && (
+                          <p className="text-[11px] text-red-500 mt-1">
+                            {errors.routingNumber.message}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      <div>
+                        <Label className="text-[12px] text-[#101010]/60 mb-1.5 block">
+                          IBAN
+                        </Label>
+                        <Input
+                          {...register('iban', { required: 'Required' })}
+                          placeholder="DE89370400440532013000"
+                          className="h-11 rounded-xl font-mono text-[13px]"
+                        />
+                        {errors.iban && (
+                          <p className="text-[11px] text-red-500 mt-1">
+                            {errors.iban.message}
+                          </p>
+                        )}
+                      </div>
+                      <div>
+                        <Label className="text-[12px] text-[#101010]/60 mb-1.5 block">
+                          BIC/SWIFT
+                        </Label>
+                        <Input
+                          {...register('bic', { required: 'Required' })}
+                          placeholder="COBADEFFXXX"
+                          className="h-11 rounded-xl font-mono text-[13px]"
+                        />
+                        {errors.bic && (
+                          <p className="text-[11px] text-red-500 mt-1">
+                            {errors.bic.message}
+                          </p>
+                        )}
+                      </div>
+                    </div>
                   )}
-                </div>
 
-                {destinationType === 'ach' ? (
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <Label className="text-[12px] text-[#101010]/60 mb-1.5 block">
-                        Account Number
-                      </Label>
-                      <Input
-                        {...register('accountNumber', { required: 'Required' })}
-                        placeholder="123456789"
-                        className="h-11 rounded-xl"
-                      />
-                      {errors.accountNumber && (
-                        <p className="text-[11px] text-red-500 mt-1">
-                          {errors.accountNumber.message}
-                        </p>
-                      )}
-                    </div>
-                    <div>
-                      <Label className="text-[12px] text-[#101010]/60 mb-1.5 block">
-                        Routing Number
-                      </Label>
-                      <Input
-                        {...register('routingNumber', { required: 'Required' })}
-                        placeholder="021000021"
-                        className="h-11 rounded-xl"
-                      />
-                      {errors.routingNumber && (
-                        <p className="text-[11px] text-red-500 mt-1">
-                          {errors.routingNumber.message}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    <div>
-                      <Label className="text-[12px] text-[#101010]/60 mb-1.5 block">
-                        IBAN
-                      </Label>
-                      <Input
-                        {...register('iban', { required: 'Required' })}
-                        placeholder="DE89370400440532013000"
-                        className="h-11 rounded-xl font-mono text-[13px]"
-                      />
-                      {errors.iban && (
-                        <p className="text-[11px] text-red-500 mt-1">
-                          {errors.iban.message}
-                        </p>
-                      )}
-                    </div>
-                    <div>
-                      <Label className="text-[12px] text-[#101010]/60 mb-1.5 block">
-                        BIC/SWIFT
-                      </Label>
-                      <Input
-                        {...register('bic', { required: 'Required' })}
-                        placeholder="COBADEFFXXX"
-                        className="h-11 rounded-xl font-mono text-[13px]"
-                      />
-                      {errors.bic && (
-                        <p className="text-[11px] text-red-500 mt-1">
-                          {errors.bic.message}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* Address */}
-                <div className="space-y-3 pt-2">
-                  <p className="text-[12px] text-[#101010]/60">
-                    Beneficiary Address
-                  </p>
-                  <Input
-                    {...register('streetLine1', { required: 'Required' })}
-                    placeholder="Street address"
-                    className="h-11 rounded-xl"
-                  />
-                  <Input
-                    {...register('streetLine2')}
-                    placeholder="Apartment, suite, etc. (optional)"
-                    className="h-11 rounded-xl"
-                  />
-                  <div className="grid grid-cols-2 gap-3">
+                  {/* Address */}
+                  <div className="space-y-3 pt-2">
+                    <p className="text-[12px] text-[#101010]/60">
+                      Beneficiary Address
+                    </p>
                     <Input
-                      {...register('city', { required: 'Required' })}
-                      placeholder="City"
+                      {...register('streetLine1', { required: 'Required' })}
+                      placeholder="Street address"
                       className="h-11 rounded-xl"
                     />
                     <Input
-                      {...register('postalCode', { required: 'Required' })}
-                      placeholder="ZIP / Postal"
+                      {...register('streetLine2')}
+                      placeholder="Apartment, suite, etc. (optional)"
                       className="h-11 rounded-xl"
                     />
-                  </div>
-                  <Controller
-                    control={control}
-                    name="country"
-                    rules={{ required: 'Required' }}
-                    render={({ field }) => (
-                      <Combobox
-                        options={COUNTRIES}
-                        value={field.value}
-                        onChange={field.onChange}
-                        placeholder="Select country..."
-                        searchPlaceholder="Search countries..."
-                        emptyPlaceholder="No country found."
-                        triggerClassName="h-11 rounded-xl"
+                    <div className="grid grid-cols-2 gap-3">
+                      <Input
+                        {...register('city', { required: 'Required' })}
+                        placeholder="City"
+                        className="h-11 rounded-xl"
                       />
+                      <Input
+                        {...register('postalCode', { required: 'Required' })}
+                        placeholder="ZIP / Postal"
+                        className="h-11 rounded-xl"
+                      />
+                    </div>
+                    <Controller
+                      control={control}
+                      name="country"
+                      rules={{ required: 'Required' }}
+                      render={({ field }) => (
+                        <Combobox
+                          options={COUNTRIES}
+                          value={field.value}
+                          onChange={field.onChange}
+                          placeholder="Select country..."
+                          searchPlaceholder="Search countries..."
+                          emptyPlaceholder="No country found."
+                          triggerClassName="h-11 rounded-xl"
+                        />
+                      )}
+                    />
+                  </div>
+
+                  {/* Save for future transfers */}
+                  <div className="pt-3 border-t border-[#101010]/10">
+                    <label className="flex items-start gap-3 cursor-pointer group">
+                      <Controller
+                        control={control}
+                        name="saveForFuture"
+                        render={({ field }) => (
+                          <Checkbox
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                            className="mt-0.5"
+                          />
+                        )}
+                      />
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <BookmarkPlus className="h-4 w-4 text-[#1B29FF]" />
+                          <span className="text-[13px] font-medium text-[#101010] group-hover:text-[#1B29FF] transition-colors">
+                            Save for future transfers
+                          </span>
+                        </div>
+                        <p className="text-[12px] text-[#101010]/60 mt-0.5">
+                          Quickly select this account for your next transfer
+                        </p>
+                      </div>
+                    </label>
+
+                    {/* Account nickname input - show when saving */}
+                    {saveForFuture && (
+                      <div className="mt-3 pl-7">
+                        <Label className="text-[12px] text-[#101010]/60 mb-1.5 block">
+                          Account nickname (optional)
+                        </Label>
+                        <Input
+                          {...register('accountNickname')}
+                          placeholder={`e.g., ${watch('bankName') || 'Bank'} - ${watch('accountHolderFirstName') || 'Name'}`}
+                          className="h-10 rounded-lg text-[13px]"
+                        />
+                      </div>
                     )}
-                  />
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           )}
 
