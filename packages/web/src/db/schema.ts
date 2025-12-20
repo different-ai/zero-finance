@@ -392,6 +392,9 @@ export const offrampTransfers = pgTable(
     transactionHash: text('transaction_hash'), // Hash of the user's deposit tx
     userOpHash: text('user_op_hash'), // Hash if sent via AA/Relayer
 
+    // UI State
+    dismissed: boolean('dismissed').default(false).notNull(), // Hide from UI without deleting
+
     // Timestamps
     createdAt: timestamp('created_at', { withTimezone: true })
       .defaultNow()

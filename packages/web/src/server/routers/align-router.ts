@@ -2718,9 +2718,12 @@ export const alignRouter = router({
         });
       }
 
-      // Read from database - workspace-scoped only
+      // Read from database - workspace-scoped only, exclude dismissed
       const transfers = await db.query.offrampTransfers.findMany({
-        where: eq(offrampTransfers.workspaceId, userRecord.primaryWorkspaceId),
+        where: and(
+          eq(offrampTransfers.workspaceId, userRecord.primaryWorkspaceId),
+          eq(offrampTransfers.dismissed, false),
+        ),
         orderBy: (transfers, { desc }) => [desc(transfers.createdAt)],
         limit,
         offset: skip,
@@ -2763,6 +2766,65 @@ export const alignRouter = router({
           updated_at: transfer.updatedAt?.toISOString(),
         };
       });
+    }),
+
+  /**
+   * Dismiss an offramp transfer from the UI.
+   * Only allows dismissing transfers that are in 'pending' status.
+   * This hides the transfer from the list without deleting it.
+   */
+  dismissOfframpTransfer: protectedProcedure
+    .input(z.object({ alignTransferId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.user.id;
+
+      // Get user's workspace
+      const userRecord = await db.query.users.findFirst({
+        where: eq(users.privyDid, userId),
+        columns: { primaryWorkspaceId: true },
+      });
+
+      if (!userRecord?.primaryWorkspaceId) {
+        throw new TRPCError({
+          code: 'PRECONDITION_FAILED',
+          message: 'User has no primary workspace',
+        });
+      }
+
+      // Find the transfer and verify ownership
+      const transfer = await db.query.offrampTransfers.findFirst({
+        where: and(
+          eq(offrampTransfers.alignTransferId, input.alignTransferId),
+          eq(offrampTransfers.workspaceId, userRecord.primaryWorkspaceId),
+        ),
+      });
+
+      if (!transfer) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Transfer not found or does not belong to this workspace',
+        });
+      }
+
+      // Only allow dismissing pending transfers
+      if (transfer.status !== 'pending') {
+        throw new TRPCError({
+          code: 'PRECONDITION_FAILED',
+          message: `Can only dismiss pending transfers. Current status: ${transfer.status}`,
+        });
+      }
+
+      // Mark as dismissed
+      await db
+        .update(offrampTransfers)
+        .set({ dismissed: true })
+        .where(eq(offrampTransfers.id, transfer.id));
+
+      console.log(
+        `[dismissOfframpTransfer] Dismissed transfer ${input.alignTransferId} for workspace ${userRecord.primaryWorkspaceId}`,
+      );
+
+      return { success: true };
     }),
 
   listOnrampTransfers: protectedProcedure
