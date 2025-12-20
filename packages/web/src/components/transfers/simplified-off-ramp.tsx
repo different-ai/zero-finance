@@ -149,6 +149,9 @@ interface AlignTransferCreatedResponse {
   fee: string;
   depositNetwork: string;
   status: string;
+  // Added for quote-based flow
+  sourceAmount?: string;
+  destinationAmount?: string;
 }
 
 interface OffRampFormValues {
@@ -341,27 +344,88 @@ const ProgressStepper = ({
 // QUOTE PREVIEW COMPONENT
 // ============================================================================
 
+// Quote data type
+interface QuoteData {
+  quoteId: string;
+  sourceAmount: string;
+  destinationAmount: string;
+  feeAmount: string;
+  exchangeRate: string;
+  destinationCurrency: 'usd' | 'eur' | 'aed';
+  destinationPaymentRails: string;
+}
+
 interface QuotePreviewProps {
-  amountUsdc: number;
+  amountUsdc: number; // User enters USDC amount to send
   destinationType: 'ach' | 'iban' | 'crypto';
-  isLoading?: boolean;
+  onQuoteChange?: (quote: QuoteData | null) => void; // Callback when quote changes
 }
 
 const QuotePreview = ({
   amountUsdc,
   destinationType,
-  isLoading,
+  onQuoteChange,
 }: QuotePreviewProps) => {
+  const [debouncedAmount, setDebouncedAmount] = useState<number>(0);
+
   const isEur = destinationType === 'iban';
-  const rate = isEur ? APPROX_RATES.USDC_TO_EUR : APPROX_RATES.USDC_TO_USD;
-  const fee = amountUsdc * APPROX_RATES.FEE_PERCENTAGE;
-  const netAmount = (amountUsdc - fee) * rate;
   const currencySymbol = isEur ? '€' : '$';
   const currencyCode = isEur ? 'EUR' : 'USD';
+
+  // Debounce the amount to avoid too many API calls
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedAmount(amountUsdc);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [amountUsdc]);
+
+  // Fetch real quote from Align API
+  const {
+    mutate: fetchQuote,
+    data: quote,
+    isPending: isLoading,
+    error,
+  } = api.align.getOfframpQuote.useMutation();
+
+  // Notify parent when quote changes
+  useEffect(() => {
+    if (quote && onQuoteChange) {
+      onQuoteChange({
+        quoteId: quote.quoteId,
+        sourceAmount: quote.sourceAmount,
+        destinationAmount: quote.destinationAmount,
+        feeAmount: quote.feeAmount,
+        exchangeRate: quote.exchangeRate,
+        destinationCurrency: quote.destinationCurrency as 'usd' | 'eur' | 'aed',
+        destinationPaymentRails: isEur ? 'sepa' : 'ach',
+      });
+    } else if (!quote && onQuoteChange) {
+      onQuoteChange(null);
+    }
+  }, [quote, onQuoteChange, isEur]);
+
+  // Fetch quote when debounced amount changes - query by SOURCE amount (USDC)
+  useEffect(() => {
+    if (debouncedAmount > 0) {
+      fetchQuote({
+        sourceAmount: debouncedAmount.toString(),
+        destinationCurrency: isEur ? 'eur' : 'usd',
+        destinationPaymentRails: isEur ? 'sepa' : 'ach',
+        sourceToken: 'usdc',
+        sourceNetwork: 'base',
+      });
+    }
+  }, [debouncedAmount, isEur, fetchQuote]);
 
   if (amountUsdc <= 0) {
     return null;
   }
+
+  // Parse quote data
+  const destinationAmount = quote ? parseFloat(quote.destinationAmount) : 0;
+  const feeAmount = quote ? parseFloat(quote.feeAmount) : 0;
+  const exchangeRate = quote ? parseFloat(quote.exchangeRate) : 0;
 
   return (
     <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#F7F7F2] to-white border border-[#101010]/10 p-5">
@@ -374,86 +438,87 @@ const QuotePreview = ({
           <div className="flex items-center gap-2">
             <Sparkles className="h-4 w-4 text-[#1B29FF]" />
             <span className="text-[12px] font-medium text-[#1B29FF] uppercase tracking-wider">
-              Live Quote
+              {quote ? 'Live Quote' : 'Getting Quote...'}
             </span>
           </div>
-          <div className="flex items-center gap-1.5 text-[11px] text-[#101010]/50">
-            <Clock className="h-3 w-3" />
-            Updates in real-time
-          </div>
+          {quote && (
+            <div className="flex items-center gap-1.5 text-[11px] text-[#101010]/50">
+              <Clock className="h-3 w-3" />
+              Expires in 60s
+            </div>
+          )}
         </div>
+
+        {/* Error state */}
+        {error && (
+          <div className="text-[12px] text-red-600 bg-red-50 p-2 rounded-lg">
+            Failed to get quote. Please try again.
+          </div>
+        )}
 
         {/* Conversion visualization */}
         <div className="space-y-3">
-          {/* You send */}
-          <div className="flex items-center justify-between bg-white rounded-xl p-4 border border-[#101010]/5 shadow-sm">
+          {/* You send - emphasized as primary */}
+          <div className="flex items-center justify-between bg-gradient-to-r from-[#1B29FF]/5 to-[#1B29FF]/10 rounded-xl p-4 border border-[#1B29FF]/20">
             <div>
-              <p className="text-[11px] text-[#101010]/50 uppercase tracking-wider mb-1">
+              <p className="text-[11px] text-[#1B29FF]/70 uppercase tracking-wider mb-1">
                 You send
               </p>
-              <p className="text-[24px] font-semibold tabular-nums text-[#101010]">
-                {isLoading ? (
-                  <span className="animate-pulse">—</span>
-                ) : (
-                  amountUsdc.toLocaleString('en-US', {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })
-                )}
+              <p className="text-[28px] font-bold tabular-nums text-[#101010]">
+                {amountUsdc.toLocaleString('en-US', {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}
               </p>
+              {quote && feeAmount > 0 && (
+                <p className="text-[11px] text-[#101010]/40 mt-0.5">
+                  {feeAmount.toFixed(2)} USDC fee included
+                </p>
+              )}
             </div>
-            <CurrencyPill currency="USDC" />
+            <CurrencyPill currency="USDC" variant="highlight" />
           </div>
 
           <ConversionArrow />
 
-          {/* They receive */}
-          <div className="flex items-center justify-between bg-gradient-to-r from-[#1B29FF]/5 to-[#1B29FF]/10 rounded-xl p-4 border border-[#1B29FF]/20">
+          {/* Bank receives - secondary */}
+          <div className="flex items-center justify-between bg-white rounded-xl p-4 border border-[#101010]/5 shadow-sm">
             <div>
-              <p className="text-[11px] text-[#1B29FF]/70 uppercase tracking-wider mb-1">
-                They receive
+              <p className="text-[11px] text-[#101010]/50 uppercase tracking-wider mb-1">
+                Bank receives
               </p>
-              <p className="text-[28px] font-bold tabular-nums text-[#101010]">
+              <p className="text-[24px] font-semibold tabular-nums text-[#101010]">
                 {isLoading ? (
                   <span className="animate-pulse">—</span>
+                ) : quote ? (
+                  `${currencySymbol}${destinationAmount.toLocaleString(
+                    'en-US',
+                    {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    },
+                  )}`
                 ) : (
-                  `${currencySymbol}${netAmount.toLocaleString('en-US', {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}`
+                  '—'
                 )}
               </p>
             </div>
-            <CurrencyPill
-              currency={currencyCode as 'EUR' | 'USD'}
-              variant="highlight"
-            />
+            <CurrencyPill currency={currencyCode as 'EUR' | 'USD'} />
           </div>
         </div>
 
         {/* Fee breakdown */}
-        <div className="pt-3 border-t border-[#101010]/10 space-y-2">
-          <div className="flex justify-between items-center text-[13px]">
-            <span className="text-[#101010]/60 flex items-center gap-1.5">
-              <TrendingDown className="h-3.5 w-3.5" />
-              Processing fee (0.5%)
-            </span>
-            <span className="tabular-nums text-[#101010]">
-              {fee.toLocaleString('en-US', {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2,
-              })}{' '}
-              USDC
-            </span>
+        {quote && exchangeRate > 0 && (
+          <div className="pt-3 border-t border-[#101010]/10 space-y-2">
+            <div className="flex justify-between items-center text-[13px]">
+              <span className="text-[#101010]/60">Exchange rate</span>
+              <span className="tabular-nums text-[#101010]">
+                1 USDC = {currencySymbol}
+                {exchangeRate.toFixed(4)} {currencyCode}
+              </span>
+            </div>
           </div>
-          <div className="flex justify-between items-center text-[13px]">
-            <span className="text-[#101010]/60">Exchange rate</span>
-            <span className="tabular-nums text-[#101010]">
-              1 USDC ≈ {currencySymbol}
-              {rate.toFixed(4)} {currencyCode}
-            </span>
-          </div>
-        </div>
+        )}
 
         {/* Trust indicators */}
         <div className="flex items-center gap-4 pt-2">
@@ -844,6 +909,8 @@ function SimplifiedOffRampReal({
   const [isLoadingBalance, setIsLoadingBalance] = useState(false);
   const [transferDetails, setTransferDetails] =
     useState<AlignTransferCreatedResponse | null>(null);
+  // Track the current quote for creating transfer
+  const [currentQuote, setCurrentQuote] = useState<QuoteData | null>(null);
   const [userOpHash, setUserOpHash] = useState<string | null>(null);
   const [primarySafeAddress, setPrimarySafeAddress] = useState<Address | null>(
     null,
@@ -976,14 +1043,16 @@ function SimplifiedOffRampReal({
     fetchBalances();
   }, [primarySafeAddress, isTechnical]);
 
-  const createTransferMutation = api.align.createOfframpTransfer.useMutation({
-    onSuccess: (data) => {
-      setTransferDetails(data);
-      setCurrentStep(1);
-      toast.success('Transfer initiated. Ready to send funds.');
-    },
-    onError: (err) => setError(`Failed to initiate transfer: ${err.message}`),
-  });
+  // Use quote-based transfer creation for accurate amounts
+  const createTransferFromQuoteMutation =
+    api.align.createOfframpTransferFromQuote.useMutation({
+      onSuccess: (data) => {
+        setTransferDetails(data);
+        setCurrentStep(1);
+        toast.success('Transfer initiated. Ready to send funds.');
+      },
+      onError: (err) => setError(`Failed to initiate transfer: ${err.message}`),
+    });
 
   const prepareTxMutation = api.align.prepareOfframpTokenTransfer.useMutation({
     onError: (err) =>
@@ -1000,7 +1069,8 @@ function SimplifiedOffRampReal({
       onSettled: () => setIsLoading(false),
     });
 
-  const isSubmittingTransfer = isLoading || createTransferMutation.isPending;
+  const isSubmittingTransfer =
+    isLoading || createTransferFromQuoteMutation.isPending;
 
   const handleNextStep = async () => {
     let fieldsToValidate: (keyof OffRampFormValues)[] = [];
@@ -1122,15 +1192,15 @@ function SimplifiedOffRampReal({
       return;
     }
 
-    const submissionPayload: CreateOfframpTransferInput = {
-      type: 'manual',
-      amount: values.amount,
-      sourceToken: 'usdc',
-      sourceNetwork: 'base',
-      destinationCurrency: values.destinationType === 'ach' ? 'usd' : 'eur',
-      destinationPaymentRails:
-        values.destinationType === 'ach' ? 'ach' : 'sepa',
-      destinationSelection: '--manual--',
+    // Validate that we have a quote
+    if (!currentQuote) {
+      toast.error('Please wait for the quote to load.');
+      return;
+    }
+
+    // Create transfer from quote with accurate amounts
+    await createTransferFromQuoteMutation.mutateAsync({
+      quoteId: currentQuote.quoteId,
       bankName: values.bankName,
       accountHolderType: values.accountHolderType,
       accountHolderFirstName: values.accountHolderFirstName,
@@ -1146,9 +1216,14 @@ function SimplifiedOffRampReal({
       routingNumber: values.routingNumber,
       ibanNumber: values.iban,
       bicSwift: values.bic,
-    };
-
-    await createTransferMutation.mutateAsync(submissionPayload);
+      // Pass quote data for DB storage
+      sourceAmount: currentQuote.sourceAmount,
+      destinationAmount: currentQuote.destinationAmount,
+      destinationCurrency: currentQuote.destinationCurrency,
+      destinationPaymentRails:
+        values.destinationType === 'ach' ? 'ach' : 'sepa',
+      feeAmount: currentQuote.feeAmount,
+    });
   };
 
   const handleSendFunds = async () => {
@@ -1348,10 +1423,14 @@ function SimplifiedOffRampReal({
   // ============================================================================
   if (currentStep === 1 && transferDetails) {
     const isEur = destinationType === 'iban';
-    const depositAmount = Number(transferDetails.depositAmount || 0);
+    // Use data from the quote-based transfer
+    // sourceAmount = USDC user will send, destinationAmount = fiat bank receives
+    const sourceAmount = Number(
+      transferDetails.sourceAmount || transferDetails.depositAmount || 0,
+    );
+    const destinationAmount = Number(transferDetails.destinationAmount || 0);
     const feeAmount = Number(transferDetails.fee || 0);
-    const rate = isEur ? APPROX_RATES.USDC_TO_EUR : APPROX_RATES.USDC_TO_USD;
-    const netReceive = (depositAmount - feeAmount) * rate;
+
     const currencySymbol = isEur ? '€' : '$';
     const currencyCode = isEur ? 'EUR' : 'USD';
 
@@ -1380,7 +1459,7 @@ function SimplifiedOffRampReal({
                   <CurrencyPill currency="USDC" />
                 </div>
                 <p className="text-[32px] font-bold tabular-nums text-[#101010]">
-                  {depositAmount.toLocaleString('en-US', {
+                  {sourceAmount.toLocaleString('en-US', {
                     minimumFractionDigits: 2,
                   })}
                 </p>
@@ -1408,7 +1487,7 @@ function SimplifiedOffRampReal({
                 </div>
                 <p className="text-[36px] font-bold tabular-nums text-green-700">
                   {currencySymbol}
-                  {netReceive.toLocaleString('en-US', {
+                  {destinationAmount.toLocaleString('en-US', {
                     minimumFractionDigits: 2,
                   })}
                 </p>
@@ -1427,10 +1506,10 @@ function SimplifiedOffRampReal({
                 </span>
               </div>
               <div className="flex justify-between text-[13px]">
-                <span className="text-[#101010]/60">Exchange rate</span>
+                <span className="text-[#101010]/60">Effective rate</span>
                 <span className="font-medium tabular-nums text-[#101010]">
-                  1 USDC = {currencySymbol}
-                  {rate.toFixed(4)} {currencyCode}
+                  {sourceAmount.toFixed(2)} USDC → {currencySymbol}
+                  {destinationAmount.toFixed(2)}
                 </span>
               </div>
             </div>
@@ -1581,17 +1660,10 @@ function SimplifiedOffRampReal({
                           const num = parseFloat(value);
                           if (isNaN(num) || num <= 0)
                             return 'Please enter a valid positive amount.';
-                          const availableBalance =
-                            maxBalance !== undefined
-                              ? maxBalance
-                              : usdcBalance
-                                ? parseFloat(usdcBalance)
-                                : null;
-                          if (
-                            availableBalance !== null &&
-                            num > availableBalance
-                          )
-                            return 'Amount exceeds your available balance.';
+                          // Validate against USDC balance
+                          const balance = parseFloat(usdcBalance || '0');
+                          if (num > balance)
+                            return `Insufficient balance. You have ${balance.toFixed(2)} USDC.`;
                           return true;
                         },
                       })}
@@ -1643,8 +1715,8 @@ function SimplifiedOffRampReal({
                 {/* Live Quote Preview */}
                 <QuotePreview
                   amountUsdc={Number(watchedAmount || 0)}
-                  destinationType={destinationType}
-                  isLoading={false}
+                  destinationType={destinationType as 'ach' | 'iban' | 'crypto'}
+                  onQuoteChange={setCurrentQuote}
                 />
               </div>
 
@@ -2046,13 +2118,12 @@ function SimplifiedOffRampReal({
                       </div>
                       <div className="flex justify-between items-center">
                         <span className="text-[13px] text-[#101010]/60">
-                          Amount
+                          You send
                         </span>
                         <span className="text-[18px] font-semibold tabular-nums text-[#101010]">
-                          {watchedAmount}{' '}
                           {destinationType === 'crypto'
-                            ? selectedAssetConfig.symbol
-                            : 'USDC'}
+                            ? `${watchedAmount} ${selectedAssetConfig.symbol}`
+                            : `${watchedAmount} USDC`}
                         </span>
                       </div>
 

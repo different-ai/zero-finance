@@ -328,6 +328,30 @@ export type AlignOnrampTransferList = z.infer<
   typeof alignOnrampTransferListSchema
 >;
 
+// --- OFFRAMP QUOTE SCHEMA ---------------------------------------------------
+const alignOfframpQuoteSchema = z.object({
+  quote_id: z.string().uuid(),
+  source_amount: z.string(),
+  source_token: z.enum(['usdc', 'usdt', 'eurc']),
+  source_network: z.enum([
+    'polygon',
+    'ethereum',
+    'base',
+    'tron',
+    'solana',
+    'avalanche',
+    'arbitrum',
+  ]),
+  destination_currency: z.enum(['usd', 'eur', 'aed']),
+  destination_payment_rails: z.string(),
+  destination_amount: z.string(),
+  fee_amount: z.string(),
+  exchange_rate: z.string(),
+  expire_at: z.string().datetime().optional(), // API doesn't always return this
+});
+
+export type AlignOfframpQuote = z.infer<typeof alignOfframpQuoteSchema>;
+
 /**
  * Client for interacting with the Align API
  */
@@ -879,6 +903,92 @@ class AlignApiClient {
   // --- METHODS FOR OFFRAMP TRANSFERS ---
 
   /**
+   * Get a quote for an offramp transfer
+   * Can quote by source_amount (USDC) OR destination_amount (fiat)
+   */
+  async getOfframpQuote(
+    customerId: string,
+    params: {
+      source_token: 'usdc' | 'usdt' | 'eurc';
+      source_network:
+        | 'polygon'
+        | 'ethereum'
+        | 'base'
+        | 'tron'
+        | 'solana'
+        | 'avalanche'
+        | 'arbitrum';
+      destination_currency: 'usd' | 'eur' | 'aed';
+      destination_payment_rails: 'ach' | 'wire' | 'sepa' | 'swift' | 'uaefts';
+      developer_fee_percent?: string;
+    } & (
+      | { source_amount: string; destination_amount?: never }
+      | { destination_amount: string; source_amount?: never }
+    ),
+  ): Promise<AlignOfframpQuote> {
+    console.log('[getOfframpQuote] params:', JSON.stringify(params, null, 2));
+
+    const response = await this.fetchWithAuth(
+      `/v0/customers/${customerId}/offramp-transfer/quote`,
+      {
+        method: 'POST',
+        body: JSON.stringify(params),
+      },
+    );
+
+    console.log(
+      '[getOfframpQuote] response:',
+      JSON.stringify(response, null, 2),
+    );
+    return alignOfframpQuoteSchema.parse(response);
+  }
+
+  /**
+   * Create an offramp transfer from a quote
+   * This locks in the exchange rate from the quote
+   */
+  async createTransferFromQuote(
+    customerId: string,
+    quoteId: string,
+    destinationBankAccount: AlignDestinationBankAccount,
+  ): Promise<AlignOfframpTransfer> {
+    console.log(
+      '[createTransferFromQuote] quoteId:',
+      quoteId,
+      'bankAccount:',
+      JSON.stringify(destinationBankAccount, null, 2),
+    );
+
+    // Generate a unique idempotency key for this request
+    const idempotencyKey = crypto.randomUUID();
+    console.log(
+      '[createTransferFromQuote] Using Idempotency-Key:',
+      idempotencyKey,
+    );
+
+    const response = await this.fetchWithAuth(
+      `/v0/customers/${customerId}/offramp-transfer/quote/${quoteId}`,
+      {
+        method: 'POST',
+        headers: {
+          'Idempotency-Key': idempotencyKey,
+        },
+        body: JSON.stringify({
+          destination_bank_account: destinationBankAccount,
+        }),
+      },
+    );
+
+    console.log(
+      '[createTransferFromQuote] response:',
+      JSON.stringify(response, null, 2),
+    );
+    response.created_at = response.created_at || new Date().toISOString();
+    response.updated_at = response.updated_at || new Date().toISOString();
+    return alignOfframpTransferSchema.parse(response);
+  }
+
+  /**
    * Create an offramp transfer request
    */
   async createOfframpTransfer(
@@ -911,11 +1021,23 @@ class AlignApiClient {
       destination_bank_account: AlignDestinationBankAccount; // Use defined type
     },
   ): Promise<AlignOfframpTransfer> {
-    console.log('params createOfframpTransfer', params);
+    console.log(
+      '[createOfframpTransfer] params:',
+      JSON.stringify(params, null, 2),
+    );
+    // Generate a unique idempotency key for this request (required by Align API)
+    const idempotencyKey = crypto.randomUUID();
+    console.log(
+      '[createOfframpTransfer] Using Idempotency-Key:',
+      idempotencyKey,
+    );
     const response = await this.fetchWithAuth(
       `/v0/customers/${customerId}/offramp-transfer`,
       {
         method: 'POST',
+        headers: {
+          'Idempotency-Key': idempotencyKey,
+        },
         body: JSON.stringify({
           amount: params.amount,
           source_token: params.source_token,

@@ -26,6 +26,128 @@ import type { Address } from 'viem';
 import { featureConfig } from '@/lib/feature-config';
 
 /**
+ * Helper function to map country names to ISO 3166-1 alpha-2 codes
+ */
+function mapCountryToISO(countryName: string | null | undefined): string {
+  if (!countryName) {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: 'Bank account holder country is required.',
+    });
+  }
+
+  const lowerCaseCountry = countryName.toLowerCase().trim();
+
+  const mapping: { [key: string]: string } = {
+    // Common variations for United States
+    'united states': 'US',
+    'united states of america': 'US',
+    usa: 'US',
+    us: 'US',
+    'u.s.': 'US',
+    'u.s.a.': 'US',
+    america: 'US',
+    // Common variations for United Kingdom
+    'united kingdom': 'GB',
+    uk: 'GB',
+    'u.k.': 'GB',
+    'great britain': 'GB',
+    britain: 'GB',
+    england: 'GB',
+    scotland: 'GB',
+    wales: 'GB',
+    'northern ireland': 'GB',
+    // Canada
+    canada: 'CA',
+    ca: 'CA',
+    // European countries
+    germany: 'DE',
+    de: 'DE',
+    deutschland: 'DE',
+    france: 'FR',
+    fr: 'FR',
+    spain: 'ES',
+    es: 'ES',
+    españa: 'ES',
+    italy: 'IT',
+    it: 'IT',
+    italia: 'IT',
+    netherlands: 'NL',
+    nl: 'NL',
+    holland: 'NL',
+    belgium: 'BE',
+    be: 'BE',
+    switzerland: 'CH',
+    ch: 'CH',
+    austria: 'AT',
+    at: 'AT',
+    portugal: 'PT',
+    pt: 'PT',
+    ireland: 'IE',
+    ie: 'IE',
+    poland: 'PL',
+    pl: 'PL',
+    sweden: 'SE',
+    se: 'SE',
+    norway: 'NO',
+    no: 'NO',
+    denmark: 'DK',
+    dk: 'DK',
+    finland: 'FI',
+    fi: 'FI',
+    // Other major countries
+    australia: 'AU',
+    au: 'AU',
+    'new zealand': 'NZ',
+    nz: 'NZ',
+    japan: 'JP',
+    jp: 'JP',
+    china: 'CN',
+    cn: 'CN',
+    india: 'IN',
+    in: 'IN',
+    brazil: 'BR',
+    br: 'BR',
+    mexico: 'MX',
+    mx: 'MX',
+    argentina: 'AR',
+    ar: 'AR',
+    'south africa': 'ZA',
+    za: 'ZA',
+    singapore: 'SG',
+    sg: 'SG',
+    'hong kong': 'HK',
+    hk: 'HK',
+    'south korea': 'KR',
+    korea: 'KR',
+    kr: 'KR',
+    israel: 'IL',
+    il: 'IL',
+    'united arab emirates': 'AE',
+    uae: 'AE',
+    ae: 'AE',
+    'saudi arabia': 'SA',
+    sa: 'SA',
+  };
+
+  // First check if it's already a 2-letter ISO code
+  if (countryName.length === 2 && countryName === countryName.toUpperCase()) {
+    return countryName;
+  }
+
+  const isoCode = mapping[lowerCaseCountry];
+
+  if (!isoCode) {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: `Invalid country "${countryName}". Please use a valid country name or ISO code (e.g., "United States" or "US").`,
+    });
+  }
+
+  return isoCode;
+}
+
+/**
  * Helper function to fetch fresh KYC status from Align API and update user DB
  * DEPRECATED: Use fetchAndUpdateWorkspaceKycStatus for new code
  * @param alignCustomerId - The Align customer ID
@@ -1364,6 +1486,278 @@ export const alignRouter = router({
   // --- OFFRAMP TRANSFER PROCEDURES ---
 
   /**
+   * Get a quote for an offramp transfer.
+   * Returns real-time exchange rates and fee information from Align.
+   */
+  getOfframpQuote: protectedProcedure
+    .input(
+      z.object({
+        // Either source_amount (USDC to send) or destination_amount (fiat to receive)
+        sourceAmount: z.string().optional(),
+        destinationAmount: z.string().optional(),
+        sourceToken: z.enum(['usdc', 'usdt', 'eurc']).default('usdc'),
+        sourceNetwork: z
+          .enum([
+            'polygon',
+            'ethereum',
+            'base',
+            'tron',
+            'solana',
+            'avalanche',
+            'arbitrum',
+          ])
+          .default('base'),
+        destinationCurrency: z.enum(['usd', 'eur', 'aed']),
+        destinationPaymentRails: z.enum([
+          'ach',
+          'wire',
+          'sepa',
+          'swift',
+          'uaefts',
+        ]),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.user.id;
+
+      // Validate that exactly one of sourceAmount or destinationAmount is provided
+      if (!input.sourceAmount && !input.destinationAmount) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Either sourceAmount or destinationAmount must be provided',
+        });
+      }
+      if (input.sourceAmount && input.destinationAmount) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message:
+            'Only one of sourceAmount or destinationAmount should be provided',
+        });
+      }
+
+      // Get user to find primary workspace
+      const user = await db.query.users.findFirst({
+        where: eq(users.privyDid, userId),
+      });
+
+      if (!user?.primaryWorkspaceId) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'No primary workspace found for user',
+        });
+      }
+
+      // Get workspace with Align customer ID
+      const workspace = await db.query.workspaces.findFirst({
+        where: eq(workspaces.id, user.primaryWorkspaceId),
+      });
+
+      if (!workspace?.alignCustomerId) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'No Align customer found for this workspace',
+        });
+      }
+
+      try {
+        const quoteParams = {
+          source_token: input.sourceToken,
+          source_network: input.sourceNetwork,
+          destination_currency: input.destinationCurrency,
+          destination_payment_rails: input.destinationPaymentRails,
+          ...(input.sourceAmount
+            ? { source_amount: input.sourceAmount }
+            : { destination_amount: input.destinationAmount! }),
+        };
+
+        const quote = await alignApi.getOfframpQuote(
+          workspace.alignCustomerId,
+          quoteParams as any,
+        );
+
+        return {
+          quoteId: quote.quote_id,
+          sourceAmount: quote.source_amount,
+          sourceToken: quote.source_token,
+          sourceNetwork: quote.source_network,
+          destinationAmount: quote.destination_amount,
+          destinationCurrency: quote.destination_currency,
+          feeAmount: quote.fee_amount,
+          exchangeRate: quote.exchange_rate,
+          expiresAt: quote.expire_at,
+        };
+      } catch (error) {
+        console.error('[getOfframpQuote] Error:', error);
+        const message =
+          error instanceof Error ? error.message : 'Unknown error';
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: `Failed to get quote: ${message}`,
+          cause: error,
+        });
+      }
+    }),
+
+  /**
+   * Create an offramp transfer from a quote.
+   * This locks in the exchange rate from the quote.
+   */
+  createOfframpTransferFromQuote: protectedProcedure
+    .input(
+      z.object({
+        quoteId: z.string().uuid(),
+        // Bank account details
+        bankName: z.string().min(1),
+        accountHolderType: z.enum(['individual', 'business']),
+        accountHolderFirstName: z.string().optional(),
+        accountHolderLastName: z.string().optional(),
+        accountHolderBusinessName: z.string().optional(),
+        country: z.string().min(1),
+        city: z.string().min(1),
+        streetLine1: z.string().min(1),
+        streetLine2: z.string().optional(),
+        postalCode: z.string().min(1),
+        accountType: z.enum(['us', 'iban']),
+        // US account
+        accountNumber: z.string().optional(),
+        routingNumber: z.string().optional(),
+        // IBAN account
+        ibanNumber: z.string().optional(),
+        bicSwift: z.string().optional(),
+        // Quote details for DB storage
+        sourceAmount: z.string(),
+        destinationAmount: z.string(),
+        destinationCurrency: z.enum(['usd', 'eur', 'aed']),
+        destinationPaymentRails: z.enum([
+          'ach',
+          'wire',
+          'sepa',
+          'swift',
+          'uaefts',
+        ]),
+        feeAmount: z.string(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.user.id;
+
+      // Get user and workspace
+      const user = await db.query.users.findFirst({
+        where: eq(users.privyDid, userId),
+      });
+
+      if (!user?.primaryWorkspaceId) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'No primary workspace found for user',
+        });
+      }
+
+      const workspace = await db.query.workspaces.findFirst({
+        where: eq(workspaces.id, user.primaryWorkspaceId),
+      });
+
+      if (!workspace?.alignCustomerId) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'No Align customer found for this workspace',
+        });
+      }
+
+      try {
+        // Build bank account payload
+        const bankAccount: AlignDestinationBankAccount = {
+          bank_name: input.bankName.trim(),
+          account_holder_type: input.accountHolderType,
+          account_holder_address: {
+            country: mapCountryToISO(input.country.trim()),
+            city: input.city.trim(),
+            street_line_1: input.streetLine1.trim(),
+            postal_code: input.postalCode.trim(),
+            ...(input.streetLine2 && {
+              street_line_2: input.streetLine2.trim(),
+            }),
+          },
+          account_type: input.accountType,
+          ...(input.accountHolderType === 'individual' && {
+            account_holder_first_name: input.accountHolderFirstName?.trim(),
+            account_holder_last_name: input.accountHolderLastName?.trim(),
+          }),
+          ...(input.accountHolderType === 'business' && {
+            account_holder_business_name:
+              input.accountHolderBusinessName?.trim(),
+          }),
+          ...(input.accountType === 'us' && {
+            us: {
+              account_number: input.accountNumber!.trim(),
+              routing_number: input.routingNumber!.trim(),
+            },
+          }),
+          ...(input.accountType === 'iban' && {
+            iban: {
+              iban_number: input.ibanNumber!.replace(/\s/g, ''),
+              bic: input.bicSwift!.replace(/\s/g, ''),
+            },
+          }),
+        };
+
+        // Create transfer from quote
+        const alignTransfer = await alignApi.createTransferFromQuote(
+          workspace.alignCustomerId,
+          input.quoteId,
+          bankAccount,
+        );
+
+        // Save transfer details to our database
+        await db.insert(offrampTransfers).values({
+          userId: userId,
+          workspaceId: workspace.id,
+          alignTransferId: alignTransfer.id,
+          status: alignTransfer.status as any,
+          amountToSend: input.sourceAmount,
+          destinationCurrency: input.destinationCurrency,
+          destinationPaymentRails: input.destinationPaymentRails,
+          destinationBankAccountSnapshot: JSON.stringify(bankAccount),
+          depositAmount: alignTransfer.quote.deposit_amount,
+          depositToken: alignTransfer.quote.deposit_token,
+          depositNetwork: alignTransfer.quote.deposit_network,
+          depositAddress: alignTransfer.quote.deposit_blockchain_address,
+          feeAmount: input.feeAmount,
+          quoteExpiresAt: alignTransfer.quote.expires_at
+            ? new Date(alignTransfer.quote.expires_at)
+            : null,
+        });
+
+        console.log(
+          `[createOfframpTransferFromQuote] Saved transfer ${alignTransfer.id} to DB for user ${userId}`,
+        );
+
+        return {
+          alignTransferId: alignTransfer.id,
+          status: alignTransfer.status,
+          depositAddress: alignTransfer.quote.deposit_blockchain_address,
+          depositAmount: alignTransfer.quote.deposit_amount,
+          depositNetwork: alignTransfer.quote.deposit_network,
+          depositToken: alignTransfer.quote.deposit_token,
+          fee: alignTransfer.quote.fee_amount,
+          expiresAt: alignTransfer.quote.expires_at,
+          // Include the amounts for the confirmation screen
+          sourceAmount: input.sourceAmount,
+          destinationAmount: input.destinationAmount,
+        };
+      } catch (error) {
+        console.error('[createOfframpTransferFromQuote] Error:', error);
+        const message =
+          error instanceof Error ? error.message : 'Unknown error';
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: `Failed to create transfer from quote: ${message}`,
+          cause: error,
+        });
+      }
+    }),
+
+  /**
    * Create an offramp transfer request in Align.
    * Accepts either a saved bank account ID or manual details from the frontend.
    * Performs validation and constructs the payload for Align API.
@@ -1538,148 +1932,6 @@ export const alignRouter = router({
       } = input;
 
       try {
-        // Helper function for country code mapping (defined within the mutation scope)
-        function mapCountryToISO(
-          countryName: string | null | undefined,
-        ): string {
-          if (!countryName) {
-            throw new TRPCError({
-              code: 'BAD_REQUEST',
-              message: 'Bank account holder country is required.',
-            });
-          }
-
-          const lowerCaseCountry = countryName.toLowerCase().trim();
-          console.log(
-            '[mapCountryToISO] Input country:',
-            countryName,
-            '-> lowercase:',
-            lowerCaseCountry,
-          );
-
-          const mapping: { [key: string]: string } = {
-            // Common variations for United States
-            'united states': 'US',
-            'united states of america': 'US',
-            usa: 'US',
-            us: 'US',
-            'u.s.': 'US',
-            'u.s.a.': 'US',
-            america: 'US',
-
-            // Common variations for United Kingdom
-            'united kingdom': 'GB',
-            uk: 'GB',
-            'u.k.': 'GB',
-            'great britain': 'GB',
-            britain: 'GB',
-            england: 'GB',
-            scotland: 'GB',
-            wales: 'GB',
-            'northern ireland': 'GB',
-
-            // Canada
-            canada: 'CA',
-            ca: 'CA',
-
-            // European countries
-            germany: 'DE',
-            de: 'DE',
-            deutschland: 'DE',
-            france: 'FR',
-            fr: 'FR',
-            spain: 'ES',
-            es: 'ES',
-            españa: 'ES',
-            italy: 'IT',
-            it: 'IT',
-            italia: 'IT',
-            netherlands: 'NL',
-            nl: 'NL',
-            holland: 'NL',
-            belgium: 'BE',
-            be: 'BE',
-            switzerland: 'CH',
-            ch: 'CH',
-            austria: 'AT',
-            at: 'AT',
-            portugal: 'PT',
-            pt: 'PT',
-            ireland: 'IE',
-            ie: 'IE',
-            poland: 'PL',
-            pl: 'PL',
-            sweden: 'SE',
-            se: 'SE',
-            norway: 'NO',
-            no: 'NO',
-            denmark: 'DK',
-            dk: 'DK',
-            finland: 'FI',
-            fi: 'FI',
-
-            // Other major countries
-            australia: 'AU',
-            au: 'AU',
-            'new zealand': 'NZ',
-            nz: 'NZ',
-            japan: 'JP',
-            jp: 'JP',
-            china: 'CN',
-            cn: 'CN',
-            india: 'IN',
-            in: 'IN',
-            brazil: 'BR',
-            br: 'BR',
-            mexico: 'MX',
-            mx: 'MX',
-            argentina: 'AR',
-            ar: 'AR',
-            'south africa': 'ZA',
-            za: 'ZA',
-            singapore: 'SG',
-            sg: 'SG',
-            'hong kong': 'HK',
-            hk: 'HK',
-            'south korea': 'KR',
-            korea: 'KR',
-            kr: 'KR',
-            israel: 'IL',
-            il: 'IL',
-            'united arab emirates': 'AE',
-            uae: 'AE',
-            ae: 'AE',
-            'saudi arabia': 'SA',
-            sa: 'SA',
-          };
-
-          // First check if it's already a 2-letter ISO code
-          if (
-            countryName.length === 2 &&
-            countryName === countryName.toUpperCase()
-          ) {
-            console.log('[mapCountryToISO] Already ISO code:', countryName);
-            return countryName;
-          }
-
-          const isoCode = mapping[lowerCaseCountry];
-
-          if (!isoCode) {
-            console.error(
-              '[mapCountryToISO] No mapping found for country:',
-              countryName,
-            );
-            // If no mapping found and it's not a 2-letter code, throw an error
-            throw new TRPCError({
-              code: 'BAD_REQUEST',
-              message: `Invalid country "${countryName}". Please use a valid country name or ISO code (e.g., "United States" or "US").`,
-            });
-          }
-
-          console.log('[mapCountryToISO] Mapped to ISO code:', isoCode);
-          return isoCode;
-        }
-
         let validatedAlignPayloadBankAccount: AlignDestinationBankAccount;
         let originalBankAccountSnapshot: any; // For DB logging
 
@@ -1756,8 +2008,8 @@ export const alignRouter = router({
             }),
             ...(dbBankAccount.accountType === 'iban' && {
               iban: {
-                iban_number: dbBankAccount.ibanNumber!, // Assert non-null
-                bic: dbBankAccount.bicSwift!, // Map bicSwift from DB to bic
+                iban_number: dbBankAccount.ibanNumber!.replace(/\s/g, ''), // Remove all whitespace
+                bic: dbBankAccount.bicSwift!.replace(/\s/g, ''), // Remove all whitespace
               },
             }),
           };
@@ -1784,34 +2036,38 @@ export const alignRouter = router({
           };
 
           // Construct and VALIDATE the Align payload from manual input
+          // Trim all string fields to avoid whitespace issues
           validatedAlignPayloadBankAccount = {
-            bank_name: input.bankName!, // Use non-null assertion, validated by schema below
+            bank_name: input.bankName!.trim(),
             account_holder_type: input.accountHolderType!,
             account_holder_address: {
-              country: input.country!, // Use non-null assertion
-              city: input.city!,
-              street_line_1: input.streetLine1!,
-              postal_code: input.postalCode!,
-              ...(input.streetLine2 && { street_line_2: input.streetLine2 }),
+              country: input.country!.trim(),
+              city: input.city!.trim(),
+              street_line_1: input.streetLine1!.trim(),
+              postal_code: input.postalCode!.trim(),
+              ...(input.streetLine2 && {
+                street_line_2: input.streetLine2.trim(),
+              }),
             },
             account_type: input.accountType!,
             ...(input.accountHolderType === 'individual' && {
-              account_holder_first_name: input.accountHolderFirstName,
-              account_holder_last_name: input.accountHolderLastName,
+              account_holder_first_name: input.accountHolderFirstName?.trim(),
+              account_holder_last_name: input.accountHolderLastName?.trim(),
             }),
             ...(input.accountHolderType === 'business' && {
-              account_holder_business_name: input.accountHolderBusinessName,
+              account_holder_business_name:
+                input.accountHolderBusinessName?.trim(),
             }),
             ...(input.accountType === 'us' && {
               us: {
-                account_number: input.accountNumber!,
-                routing_number: input.routingNumber!,
+                account_number: input.accountNumber!.trim(),
+                routing_number: input.routingNumber!.trim(),
               },
             }),
             ...(input.accountType === 'iban' && {
               iban: {
-                iban_number: input.ibanNumber!,
-                bic: input.bicSwift!, // Map bicSwift from input to bic
+                iban_number: input.ibanNumber!.replace(/\s/g, ''), // Remove all whitespace
+                bic: input.bicSwift!.replace(/\s/g, ''), // Remove all whitespace
               },
             }),
           };
