@@ -16,7 +16,7 @@ import {
   /* alignOfframpTransferSchema, */ AlignDestinationBankAccount,
 } from '../services/align-api';
 import { loopsApi, LoopsEvent } from '../services/loops-service';
-import { eq, and, desc } from 'drizzle-orm';
+import { eq, and, desc, or } from 'drizzle-orm';
 import { getUser } from '@/lib/auth';
 import {
   prepareTokenTransferData,
@@ -2209,6 +2209,8 @@ export const alignRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.user.id;
+      const workspaceId = ctx.workspaceId;
+
       const user = await db.query.users.findFirst({
         where: eq(users.privyDid, userId),
       });
@@ -2231,18 +2233,24 @@ export const alignRouter = router({
         });
       }
 
-      // Fetch our internal record first to verify ownership & status
+      // Fetch our internal record - check both direct user ownership OR workspace membership
       const internalTransfer = await db.query.offrampTransfers.findFirst({
         where: and(
           eq(offrampTransfers.alignTransferId, input.alignTransferId),
-          eq(offrampTransfers.userId, userId),
+          or(
+            eq(offrampTransfers.userId, userId),
+            workspaceId
+              ? eq(offrampTransfers.workspaceId, workspaceId)
+              : undefined,
+          ),
         ),
       });
 
       if (!internalTransfer) {
         throw new TRPCError({
           code: 'NOT_FOUND',
-          message: 'Off-ramp transfer not found or does not belong to user.',
+          message:
+            'Off-ramp transfer not found or does not belong to your workspace.',
         });
       }
 
@@ -2296,6 +2304,8 @@ export const alignRouter = router({
     .input(z.object({ alignTransferId: z.string() }))
     .query(async ({ ctx, input }) => {
       const userId = ctx.user.id;
+      const workspaceId = ctx.workspaceId;
+
       const user = await db.query.users.findFirst({
         where: eq(users.privyDid, userId),
       });
@@ -2318,11 +2328,16 @@ export const alignRouter = router({
         });
       }
 
-      // 1. Verify ownership by checking our DB first
+      // 1. Verify ownership - check both direct user ownership OR workspace membership
       const internalTransfer = await db.query.offrampTransfers.findFirst({
         where: and(
           eq(offrampTransfers.alignTransferId, input.alignTransferId),
-          eq(offrampTransfers.userId, userId),
+          or(
+            eq(offrampTransfers.userId, userId),
+            workspaceId
+              ? eq(offrampTransfers.workspaceId, workspaceId)
+              : undefined,
+          ),
         ),
         columns: { id: true, status: true }, // Only fetch needed columns
       });
@@ -2330,7 +2345,8 @@ export const alignRouter = router({
       if (!internalTransfer) {
         throw new TRPCError({
           code: 'NOT_FOUND',
-          message: 'Off-ramp transfer not found or does not belong to user.',
+          message:
+            'Off-ramp transfer not found or does not belong to your workspace.',
         });
       }
 
@@ -2388,22 +2404,27 @@ export const alignRouter = router({
     .input(z.object({ alignTransferId: z.string() }))
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.user.id;
-      // No need to fetch userCustomerId separately if only checking internal DB
+      const workspaceId = ctx.workspaceId;
 
       // 1. Fetch internal transfer record for verification & details
+      // Check both direct user ownership OR workspace membership
       const internalTransfer = await db.query.offrampTransfers.findFirst({
         where: and(
           eq(offrampTransfers.alignTransferId, input.alignTransferId),
-          eq(offrampTransfers.userId, userId),
+          or(
+            eq(offrampTransfers.userId, userId),
+            workspaceId
+              ? eq(offrampTransfers.workspaceId, workspaceId)
+              : undefined,
+          ),
         ),
-        // Select fields needed for prepareTokenTransferData
-        // columns: { status: true, depositToken: true, depositNetwork: true, depositAddress: true, depositAmount: true }
       });
 
       if (!internalTransfer) {
         throw new TRPCError({
           code: 'NOT_FOUND',
-          message: 'Off-ramp transfer not found or does not belong to user.',
+          message:
+            'Off-ramp transfer not found or does not belong to your workspace.',
         });
       }
 
