@@ -607,9 +607,127 @@ export function BankingInstructionsDisplay({
   const hasStarter = starterAccounts.length > 0;
   const hasFull = fullAccounts.length > 0;
 
+  // When user has full accounts (KYC approved), hide starter accounts
+  // Full accounts have higher limits and are named after the user's company
+  const showStarter = hasStarter && !hasFull;
+
   return (
     <div className="space-y-6 py-6">
-      {hasStarter && (
+      {/* Show full accounts first when available (they're the upgrade) */}
+      {hasFull && (
+        <div>
+          <div className="mb-4">
+            <div className="flex items-center gap-2 mb-2">
+              <h3
+                className={cn(
+                  'text-[15px] font-semibold tracking-[-0.01em]',
+                  isTechnical
+                    ? 'font-mono text-[#1B29FF] uppercase'
+                    : 'text-[#101010]',
+                )}
+              >
+                {isTechnical ? 'ACCESS::FULL_TIER' : 'Your personal accounts'}
+              </h3>
+              <span
+                className={cn(
+                  'inline-flex items-center px-2.5 py-0.5 text-[10px] font-medium uppercase tracking-[0.12em]',
+                  isTechnical
+                    ? 'bg-[#1B29FF]/10 text-[#1B29FF] font-mono rounded-sm border border-[#1B29FF]/20'
+                    : 'bg-green-500/10 text-green-700 rounded-full',
+                )}
+              >
+                {isTechnical ? 'CAP::UNLIMITED' : 'Unlimited'}
+              </span>
+            </div>
+            <p
+              className={cn(
+                'text-[12px]',
+                isTechnical
+                  ? 'font-mono text-[#1B29FF]/60'
+                  : 'text-[#101010]/60',
+              )}
+            >
+              {isTechnical
+                ? 'VERIFIED::BUSINESS_ENTITY // LIMITS::REMOVED'
+                : 'No deposit limits. Backed by your verified business.'}
+            </p>
+          </div>
+
+          <div className="space-y-4">
+            {fullAchAccount && (
+              <>
+                <AccountCard account={fullAchAccount} userData={userData} />
+                {/* Provider clarification for US ACH */}
+                <div
+                  className={cn(
+                    'flex items-start gap-2 px-3 py-2.5',
+                    isTechnical
+                      ? 'rounded-sm border border-[#1B29FF]/10 bg-[#1B29FF]/5'
+                      : 'rounded-[10px] border border-[#1B29FF]/10 bg-[#1B29FF]/5',
+                  )}
+                >
+                  <Info className="h-4 w-4 text-[#1B29FF] mt-0.5 flex-shrink-0" />
+                  <p
+                    className={cn(
+                      'text-[12px] leading-relaxed',
+                      isTechnical
+                        ? 'font-mono text-[#1B29FF]/80'
+                        : 'text-[#101010]/70',
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        'font-semibold',
+                        isTechnical ? 'text-[#1B29FF]' : 'text-[#101010]',
+                      )}
+                    >
+                      DifferentAI Inc.
+                    </span>{' '}
+                    is the company name of Zero Finance
+                  </p>
+                </div>
+              </>
+            )}
+            {fullIbanAccount && (
+              <>
+                <AccountCard account={fullIbanAccount} userData={userData} />
+                {/* Provider clarification for EUR IBAN */}
+                <div
+                  className={cn(
+                    'flex items-start gap-2 px-3 py-2.5',
+                    isTechnical
+                      ? 'rounded-sm border border-[#1B29FF]/10 bg-[#1B29FF]/5'
+                      : 'rounded-[10px] border border-[#1B29FF]/10 bg-[#1B29FF]/5',
+                  )}
+                >
+                  <Info className="h-4 w-4 text-[#1B29FF] mt-0.5 flex-shrink-0" />
+                  <p
+                    className={cn(
+                      'text-[12px] leading-relaxed',
+                      isTechnical
+                        ? 'font-mono text-[#1B29FF]/80'
+                        : 'text-[#101010]/70',
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        'font-semibold',
+                        isTechnical ? 'text-[#1B29FF]' : 'text-[#101010]',
+                      )}
+                    >
+                      Bridge
+                    </span>{' '}
+                    is our banking partner for EUR transfers
+                  </p>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Only show starter accounts if user doesn't have full accounts */}
+      {showStarter && (
         <div>
           <div className="mb-4">
             <div className="flex items-center gap-2 mb-2">
@@ -705,7 +823,10 @@ export function BankingInstructionsDisplay({
                     >
                       DifferentAI Inc.
                     </span>{' '}
-                    is the company name of Zero Finance. You will own the underlying funds and Zero Finance cannot move or access them. If you do the KYB process, you get a full account named after your company.
+                    is the company name of Zero Finance. You will own the
+                    underlying funds and Zero Finance cannot move or access
+                    them. If you do the KYB process, you get a full account
+                    named after your company.
                   </p>
                 </div>
               </>
@@ -713,118 +834,6 @@ export function BankingInstructionsDisplay({
             {starterIbanAccount && (
               <>
                 <AccountCard account={starterIbanAccount} userData={userData} />
-                {/* Provider clarification for EUR IBAN */}
-                <div
-                  className={cn(
-                    'flex items-start gap-2 px-3 py-2.5',
-                    isTechnical
-                      ? 'rounded-sm border border-[#1B29FF]/10 bg-[#1B29FF]/5'
-                      : 'rounded-[10px] border border-[#1B29FF]/10 bg-[#1B29FF]/5',
-                  )}
-                >
-                  <Info className="h-4 w-4 text-[#1B29FF] mt-0.5 flex-shrink-0" />
-                  <p
-                    className={cn(
-                      'text-[12px] leading-relaxed',
-                      isTechnical
-                        ? 'font-mono text-[#1B29FF]/80'
-                        : 'text-[#101010]/70',
-                    )}
-                  >
-                    <span
-                      className={cn(
-                        'font-semibold',
-                        isTechnical ? 'text-[#1B29FF]' : 'text-[#101010]',
-                      )}
-                    >
-                      Bridge
-                    </span>{' '}
-                    is our banking partner for EUR transfers
-                  </p>
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-      )}
-
-      {hasFull && (
-        <div>
-          <div className="mb-4">
-            <div className="flex items-center gap-2 mb-2">
-              <h3
-                className={cn(
-                  'text-[15px] font-semibold tracking-[-0.01em]',
-                  isTechnical
-                    ? 'font-mono text-[#1B29FF] uppercase'
-                    : 'text-[#101010]',
-                )}
-              >
-                {isTechnical ? 'ACCESS::FULL_TIER' : 'Your personal accounts'}
-              </h3>
-              <span
-                className={cn(
-                  'inline-flex items-center px-2.5 py-0.5 text-[10px] font-medium uppercase tracking-[0.12em]',
-                  isTechnical
-                    ? 'bg-[#1B29FF]/10 text-[#1B29FF] font-mono rounded-sm border border-[#1B29FF]/20'
-                    : 'bg-green-500/10 text-green-700 rounded-full',
-                )}
-              >
-                {isTechnical ? 'CAP::UNLIMITED' : 'Unlimited'}
-              </span>
-            </div>
-            <p
-              className={cn(
-                'text-[12px]',
-                isTechnical
-                  ? 'font-mono text-[#1B29FF]/60'
-                  : 'text-[#101010]/60',
-              )}
-            >
-              {isTechnical
-                ? 'VERIFIED::BUSINESS_ENTITY // LIMITS::REMOVED'
-                : 'No deposit limits. Backed by your verified business.'}
-            </p>
-          </div>
-
-          <div className="space-y-4">
-            {fullAchAccount && (
-              <>
-                <AccountCard account={fullAchAccount} userData={userData} />
-                {/* Provider clarification for US ACH */}
-                <div
-                  className={cn(
-                    'flex items-start gap-2 px-3 py-2.5',
-                    isTechnical
-                      ? 'rounded-sm border border-[#1B29FF]/10 bg-[#1B29FF]/5'
-                      : 'rounded-[10px] border border-[#1B29FF]/10 bg-[#1B29FF]/5',
-                  )}
-                >
-                  <Info className="h-4 w-4 text-[#1B29FF] mt-0.5 flex-shrink-0" />
-                  <p
-                    className={cn(
-                      'text-[12px] leading-relaxed',
-                      isTechnical
-                        ? 'font-mono text-[#1B29FF]/80'
-                        : 'text-[#101010]/70',
-                    )}
-                  >
-                    <span
-                      className={cn(
-                        'font-semibold',
-                        isTechnical ? 'text-[#1B29FF]' : 'text-[#101010]',
-                      )}
-                    >
-                      DifferentAI Inc.
-                    </span>{' '}
-                    is the company name of Zero Finance
-                  </p>
-                </div>
-              </>
-            )}
-            {fullIbanAccount && (
-              <>
-                <AccountCard account={fullIbanAccount} userData={userData} />
                 {/* Provider clarification for EUR IBAN */}
                 <div
                   className={cn(
