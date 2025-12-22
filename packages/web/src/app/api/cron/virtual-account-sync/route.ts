@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/db';
-import { workspaces, userFundingSources, userSafes } from '@/db/schema';
+import { workspaces, userFundingSources, userSafes, users } from '@/db/schema';
 import { eq, and, isNull, or } from 'drizzle-orm';
 import { alignApi } from '@/server/services/align-api';
 import type { Address } from 'viem';
@@ -21,6 +21,10 @@ export const maxDuration = 300; // 5 minutes
 
 /**
  * Create virtual accounts for a workspace
+ * More robust version that:
+ * - Checks by workspace ID only (not user ID) for existing accounts
+ * - Falls back to finding any primary safe for the workspace
+ * - Syncs user KYC status with workspace
  */
 async function createVirtualAccountsForWorkspace(
   workspaceId: string,
@@ -34,10 +38,9 @@ async function createVirtualAccountsForWorkspace(
     );
 
     // Check if workspace already has FULL-tier funding sources
-    // Ignore starter accounts since they should coexist with full accounts
+    // Important: Only filter by workspace ID to catch ALL full-tier accounts
     const existingFullAccounts = await db.query.userFundingSources.findMany({
       where: and(
-        eq(userFundingSources.userPrivyDid, userId),
         eq(userFundingSources.workspaceId, workspaceId),
         eq(userFundingSources.accountTier, 'full'),
       ),
@@ -53,8 +56,8 @@ async function createVirtualAccountsForWorkspace(
       };
     }
 
-    const results = [];
-    const errors = [];
+    const results: { currency: string; id: string }[] = [];
+    const errors: { currency: string; error: string }[] = [];
 
     // Create USD (ACH) account
     try {
@@ -174,6 +177,14 @@ async function createVirtualAccountsForWorkspace(
           alignVirtualAccountId: results[0].id,
         })
         .where(eq(workspaces.id, workspaceId));
+
+      // Also sync to user record for legacy compatibility
+      await db
+        .update(users)
+        .set({
+          alignVirtualAccountId: results[0].id,
+        })
+        .where(eq(users.privyDid, userId));
     }
 
     if (results.length === 2) {
@@ -272,35 +283,47 @@ export async function GET(request: Request) {
         continue;
       }
 
-      // Check if workspace already has funding sources
-      const existingAccounts = await db.query.userFundingSources.findMany({
+      // Check if workspace already has FULL-tier funding sources
+      // Important: Only filter by workspace ID to catch ALL full-tier accounts
+      const existingFullAccounts = await db.query.userFundingSources.findMany({
         where: and(
-          eq(userFundingSources.userPrivyDid, workspace.createdBy),
           eq(userFundingSources.workspaceId, workspace.id),
+          eq(userFundingSources.accountTier, 'full'),
         ),
       });
 
-      if (existingAccounts.length > 0) {
+      if (existingFullAccounts.length > 0) {
         console.log(
-          `[virtual-account-sync] Workspace ${workspace.id} already has ${existingAccounts.length} account(s)`,
+          `[virtual-account-sync] Workspace ${workspace.id} already has ${existingFullAccounts.length} full-tier account(s)`,
         );
         results.skipped++;
         results.details.push({
           workspaceId: workspace.id,
           status: 'skipped',
-          details: `Already has ${existingAccounts.length} account(s)`,
+          details: `Already has ${existingFullAccounts.length} full-tier account(s)`,
         });
         continue;
       }
 
-      // Get workspace's primary safe address (workspace-scoped only)
-      const primarySafe = await db.query.userSafes.findFirst({
+      // Get workspace's primary safe address
+      // First try the workspace creator's safe
+      let primarySafe = await db.query.userSafes.findFirst({
         where: and(
           eq(userSafes.userDid, workspace.createdBy),
           eq(userSafes.safeType, 'primary'),
           eq(userSafes.workspaceId, workspace.id),
         ),
       });
+
+      // Fallback: find ANY primary safe for this workspace
+      if (!primarySafe?.safeAddress) {
+        primarySafe = await db.query.userSafes.findFirst({
+          where: and(
+            eq(userSafes.safeType, 'primary'),
+            eq(userSafes.workspaceId, workspace.id),
+          ),
+        });
+      }
 
       if (!primarySafe?.safeAddress) {
         console.log(

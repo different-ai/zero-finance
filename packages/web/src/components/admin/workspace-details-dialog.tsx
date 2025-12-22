@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { api } from '@/trpc/react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -11,8 +12,10 @@ import {
 } from '@/components/ui/dialog';
 import { formatUnits } from 'viem';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { CopyButton } from '@/components/ui/copy-button';
 import { Separator } from '@/components/ui/separator';
+import { AlertCircle, Loader2, Plus } from 'lucide-react';
 
 interface WorkspaceDetailsDialogProps {
   workspace: any;
@@ -25,6 +28,10 @@ export default function WorkspaceDetailsDialog({
   isOpen,
   onClose,
 }: WorkspaceDetailsDialogProps) {
+  const [createVAError, setCreateVAError] = useState<string | null>(null);
+
+  const utils = api.useUtils();
+
   const { data: workspaceDetails, isLoading: isLoadingDetails } =
     api.admin.getWorkspaceDetails.useQuery(
       {
@@ -35,6 +42,37 @@ export default function WorkspaceDetailsDialog({
         retry: false,
       },
     );
+
+  const createVirtualAccountsMutation =
+    api.admin.createVirtualAccountsForWorkspace.useMutation({
+      onSuccess: () => {
+        setCreateVAError(null);
+        // Refetch workspace details to show the new virtual accounts
+        utils.admin.getWorkspaceDetails.invalidate({
+          workspaceId: workspace?.id || '',
+        });
+        utils.admin.listWorkspacesWithMembers.invalidate();
+      },
+      onError: (error) => {
+        setCreateVAError(error.message);
+      },
+    });
+
+  const handleCreateVirtualAccounts = () => {
+    if (!workspace?.id) return;
+    setCreateVAError(null);
+    createVirtualAccountsMutation.mutate({ workspaceId: workspace.id });
+  };
+
+  // Check if we can create virtual accounts
+  const canCreateVirtualAccounts =
+    workspaceDetails &&
+    workspaceDetails.workspace.kycStatus === 'approved' &&
+    workspaceDetails.workspace.alignCustomerId &&
+    !workspaceDetails.virtualAccount &&
+    workspaceDetails.fundingSources.filter((fs) => fs.accountTier === 'full')
+      .length === 0 &&
+    workspaceDetails.safes.some((s) => s.safeType === 'primary');
 
   const getKycStatusColor = (status: string) => {
     switch (status) {
@@ -246,183 +284,348 @@ export default function WorkspaceDetailsDialog({
               </CardContent>
             </Card>
 
-            {workspaceDetails.virtualAccount && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">
-                    Virtual Account Configuration
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <div className="text-xs text-muted-foreground mb-1">
-                        Account ID
-                      </div>
-                      <div className="font-mono text-xs flex items-center gap-2">
-                        {workspaceDetails.virtualAccount.id}
-                        <CopyButton
-                          value={workspaceDetails.virtualAccount.id}
-                        />
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-xs text-muted-foreground mb-1">
-                        Status
-                      </div>
-                      <Badge
-                        variant={
-                          workspaceDetails.virtualAccount.status === 'active'
-                            ? 'default'
-                            : 'secondary'
-                        }
-                      >
-                        {workspaceDetails.virtualAccount.status}
-                      </Badge>
-                    </div>
-                    <div>
-                      <div className="text-xs text-muted-foreground mb-1">
-                        Source Currency
-                      </div>
-                      <div className="font-medium uppercase">
-                        {workspaceDetails.virtualAccount.source_currency ||
-                          'USD'}
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-xs text-muted-foreground mb-1">
-                        Destination
-                      </div>
-                      <div className="font-medium">
-                        {workspaceDetails.virtualAccount.destination_token?.toUpperCase()}{' '}
-                        on {workspaceDetails.virtualAccount.destination_network}
-                      </div>
-                    </div>
-                    <div className="col-span-2">
-                      <div className="text-xs text-muted-foreground mb-1">
-                        Destination Address
-                      </div>
-                      <div className="font-mono text-xs flex items-center gap-2">
-                        {workspaceDetails.virtualAccount.destination_address}
-                        <CopyButton
-                          value={
-                            workspaceDetails.virtualAccount.destination_address
-                          }
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  <Separator />
-
-                  <div>
-                    <div className="text-sm font-semibold mb-3">
-                      Deposit Instructions
-                    </div>
+            {/* Virtual Account Configuration - Show existing or offer to create */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">
+                  Virtual Account Configuration
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {workspaceDetails.virtualAccount ? (
+                  <>
                     <div className="grid grid-cols-2 gap-4 text-sm">
                       <div>
                         <div className="text-xs text-muted-foreground mb-1">
-                          Bank Name
+                          Account ID
                         </div>
-                        <div className="font-medium">
-                          {workspaceDetails.virtualAccount.deposit_instructions
-                            ?.bank_name || 'N/A'}
+                        <div className="font-mono text-xs flex items-center gap-2">
+                          {workspaceDetails.virtualAccount.id}
+                          <CopyButton
+                            value={workspaceDetails.virtualAccount.id}
+                          />
                         </div>
                       </div>
                       <div>
                         <div className="text-xs text-muted-foreground mb-1">
-                          Beneficiary Name
+                          Status
                         </div>
-                        <div className="font-medium">
-                          {workspaceDetails.virtualAccount.deposit_instructions
-                            ?.beneficiary_name ||
-                            workspaceDetails.virtualAccount.deposit_instructions
-                              ?.account_beneficiary_name ||
-                            'N/A'}
+                        <Badge
+                          variant={
+                            workspaceDetails.virtualAccount.status === 'active'
+                              ? 'default'
+                              : 'secondary'
+                          }
+                        >
+                          {workspaceDetails.virtualAccount.status}
+                        </Badge>
+                      </div>
+                      <div>
+                        <div className="text-xs text-muted-foreground mb-1">
+                          Source Currency
+                        </div>
+                        <div className="font-medium uppercase">
+                          {workspaceDetails.virtualAccount.source_currency ||
+                            'USD'}
                         </div>
                       </div>
+                      <div>
+                        <div className="text-xs text-muted-foreground mb-1">
+                          Destination
+                        </div>
+                        <div className="font-medium">
+                          {workspaceDetails.virtualAccount.destination_token?.toUpperCase()}{' '}
+                          on{' '}
+                          {workspaceDetails.virtualAccount.destination_network}
+                        </div>
+                      </div>
+                      <div className="col-span-2">
+                        <div className="text-xs text-muted-foreground mb-1">
+                          Destination Address
+                        </div>
+                        <div className="font-mono text-xs flex items-center gap-2">
+                          {workspaceDetails.virtualAccount.destination_address}
+                          <CopyButton
+                            value={
+                              workspaceDetails.virtualAccount
+                                .destination_address
+                            }
+                          />
+                        </div>
+                      </div>
+                    </div>
 
-                      {workspaceDetails.virtualAccount.deposit_instructions?.us
-                        ?.account_number && (
-                        <>
-                          <div>
-                            <div className="text-xs text-muted-foreground mb-1">
-                              Account Number
-                            </div>
-                            <div className="font-mono text-xs flex items-center gap-2">
-                              {
-                                workspaceDetails.virtualAccount
-                                  .deposit_instructions.us.account_number
-                              }
-                              <CopyButton
-                                value={
+                    <Separator />
+
+                    <div>
+                      <div className="text-sm font-semibold mb-3">
+                        Deposit Instructions
+                      </div>
+                      <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <div className="text-xs text-muted-foreground mb-1">
+                            Bank Name
+                          </div>
+                          <div className="font-medium">
+                            {workspaceDetails.virtualAccount
+                              .deposit_instructions?.bank_name || 'N/A'}
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-xs text-muted-foreground mb-1">
+                            Beneficiary Name
+                          </div>
+                          <div className="font-medium">
+                            {workspaceDetails.virtualAccount
+                              .deposit_instructions?.beneficiary_name ||
+                              workspaceDetails.virtualAccount
+                                .deposit_instructions
+                                ?.account_beneficiary_name ||
+                              'N/A'}
+                          </div>
+                        </div>
+
+                        {workspaceDetails.virtualAccount.deposit_instructions
+                          ?.us?.account_number && (
+                          <>
+                            <div>
+                              <div className="text-xs text-muted-foreground mb-1">
+                                Account Number
+                              </div>
+                              <div className="font-mono text-xs flex items-center gap-2">
+                                {
                                   workspaceDetails.virtualAccount
                                     .deposit_instructions.us.account_number
                                 }
-                              />
+                                <CopyButton
+                                  value={
+                                    workspaceDetails.virtualAccount
+                                      .deposit_instructions.us.account_number
+                                  }
+                                />
+                              </div>
                             </div>
-                          </div>
-                          <div>
-                            <div className="text-xs text-muted-foreground mb-1">
-                              Routing Number
-                            </div>
-                            <div className="font-mono text-xs flex items-center gap-2">
-                              {
-                                workspaceDetails.virtualAccount
-                                  .deposit_instructions.us.routing_number
-                              }
-                              <CopyButton
-                                value={
+                            <div>
+                              <div className="text-xs text-muted-foreground mb-1">
+                                Routing Number
+                              </div>
+                              <div className="font-mono text-xs flex items-center gap-2">
+                                {
                                   workspaceDetails.virtualAccount
                                     .deposit_instructions.us.routing_number
                                 }
-                              />
+                                <CopyButton
+                                  value={
+                                    workspaceDetails.virtualAccount
+                                      .deposit_instructions.us.routing_number
+                                  }
+                                />
+                              </div>
                             </div>
-                          </div>
-                        </>
-                      )}
+                          </>
+                        )}
 
-                      {workspaceDetails.virtualAccount.deposit_instructions
-                        ?.iban?.iban_number && (
-                        <>
-                          <div className="col-span-2">
-                            <div className="text-xs text-muted-foreground mb-1">
-                              IBAN
-                            </div>
-                            <div className="font-mono text-xs flex items-center gap-2">
-                              {
-                                workspaceDetails.virtualAccount
-                                  .deposit_instructions.iban.iban_number
-                              }
-                              <CopyButton
-                                value={
+                        {workspaceDetails.virtualAccount.deposit_instructions
+                          ?.iban?.iban_number && (
+                          <>
+                            <div className="col-span-2">
+                              <div className="text-xs text-muted-foreground mb-1">
+                                IBAN
+                              </div>
+                              <div className="font-mono text-xs flex items-center gap-2">
+                                {
                                   workspaceDetails.virtualAccount
                                     .deposit_instructions.iban.iban_number
                                 }
-                              />
-                            </div>
-                          </div>
-                          {workspaceDetails.virtualAccount.deposit_instructions
-                            .iban.bic && (
-                            <div>
-                              <div className="text-xs text-muted-foreground mb-1">
-                                BIC
-                              </div>
-                              <div className="font-mono text-xs">
-                                {
-                                  workspaceDetails.virtualAccount
-                                    .deposit_instructions.iban.bic
-                                }
+                                <CopyButton
+                                  value={
+                                    workspaceDetails.virtualAccount
+                                      .deposit_instructions.iban.iban_number
+                                  }
+                                />
                               </div>
                             </div>
-                          )}
-                        </>
-                      )}
+                            {workspaceDetails.virtualAccount
+                              .deposit_instructions.iban.bic && (
+                              <div>
+                                <div className="text-xs text-muted-foreground mb-1">
+                                  BIC
+                                </div>
+                                <div className="font-mono text-xs">
+                                  {
+                                    workspaceDetails.virtualAccount
+                                      .deposit_instructions.iban.bic
+                                  }
+                                </div>
+                              </div>
+                            )}
+                          </>
+                        )}
+                      </div>
                     </div>
+                  </>
+                ) : (
+                  <div className="space-y-4">
+                    {/* No virtual account - show status and creation option */}
+                    <div className="flex items-start gap-3 p-3 bg-muted/50 rounded-md">
+                      <AlertCircle className="h-5 w-5 text-amber-500 mt-0.5 flex-shrink-0" />
+                      <div className="text-sm">
+                        <div className="font-medium">No Virtual Account</div>
+                        <div className="text-muted-foreground mt-1">
+                          This workspace does not have virtual bank accounts
+                          configured.
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Prerequisites check */}
+                    <div className="space-y-2 text-sm">
+                      <div className="font-medium">Prerequisites:</div>
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={
+                              workspaceDetails.workspace.kycStatus ===
+                              'approved'
+                                ? 'text-green-600'
+                                : 'text-red-500'
+                            }
+                          >
+                            {workspaceDetails.workspace.kycStatus === 'approved'
+                              ? '✓'
+                              : '✗'}
+                          </span>
+                          <span>
+                            KYC Status:{' '}
+                            {workspaceDetails.workspace.kycStatus || 'none'}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={
+                              workspaceDetails.workspace.alignCustomerId
+                                ? 'text-green-600'
+                                : 'text-red-500'
+                            }
+                          >
+                            {workspaceDetails.workspace.alignCustomerId
+                              ? '✓'
+                              : '✗'}
+                          </span>
+                          <span>
+                            Align Customer ID:{' '}
+                            {workspaceDetails.workspace.alignCustomerId
+                              ? 'Present'
+                              : 'Missing'}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={
+                              workspaceDetails.safes.some(
+                                (s) => s.safeType === 'primary',
+                              )
+                                ? 'text-green-600'
+                                : 'text-red-500'
+                            }
+                          >
+                            {workspaceDetails.safes.some(
+                              (s) => s.safeType === 'primary',
+                            )
+                              ? '✓'
+                              : '✗'}
+                          </span>
+                          <span>
+                            Primary Safe:{' '}
+                            {workspaceDetails.safes.some(
+                              (s) => s.safeType === 'primary',
+                            )
+                              ? 'Present'
+                              : 'Missing'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Create button */}
+                    {canCreateVirtualAccounts && (
+                      <div className="pt-2">
+                        <Button
+                          onClick={handleCreateVirtualAccounts}
+                          disabled={createVirtualAccountsMutation.isPending}
+                          className="w-full"
+                        >
+                          {createVirtualAccountsMutation.isPending ? (
+                            <>
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              Creating Virtual Accounts...
+                            </>
+                          ) : (
+                            <>
+                              <Plus className="h-4 w-4 mr-2" />
+                              Create Virtual Accounts (USD & EUR)
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                    )}
+
+                    {/* Error display */}
+                    {createVAError && (
+                      <div className="p-3 bg-red-50 border border-red-200 rounded-md text-red-700 text-sm">
+                        <div className="font-medium">
+                          Error creating virtual accounts:
+                        </div>
+                        <div className="mt-1">{createVAError}</div>
+                      </div>
+                    )}
+
+                    {/* Success message */}
+                    {createVirtualAccountsMutation.isSuccess && (
+                      <div className="p-3 bg-green-50 border border-green-200 rounded-md text-green-700 text-sm">
+                        <div className="font-medium">
+                          Virtual accounts created successfully!
+                        </div>
+                        <div className="mt-1">
+                          Created:{' '}
+                          {createVirtualAccountsMutation.data.accounts
+                            .map((a) => a.currency)
+                            .join(', ')}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Why can't create */}
+                    {!canCreateVirtualAccounts &&
+                      workspaceDetails.workspace.kycStatus === 'approved' && (
+                        <div className="text-sm text-muted-foreground">
+                          {!workspaceDetails.workspace.alignCustomerId && (
+                            <p>
+                              Cannot create virtual accounts: Missing Align
+                              Customer ID
+                            </p>
+                          )}
+                          {!workspaceDetails.safes.some(
+                            (s) => s.safeType === 'primary',
+                          ) && (
+                            <p>
+                              Cannot create virtual accounts: No primary safe
+                              configured
+                            </p>
+                          )}
+                          {workspaceDetails.fundingSources.filter(
+                            (fs) => fs.accountTier === 'full',
+                          ).length > 0 && (
+                            <p>
+                              Virtual accounts already exist in funding sources
+                            </p>
+                          )}
+                        </div>
+                      )}
                   </div>
-                </CardContent>
-              </Card>
-            )}
+                )}
+              </CardContent>
+            </Card>
 
             <Card>
               <CardHeader>

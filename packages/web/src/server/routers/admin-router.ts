@@ -2304,6 +2304,263 @@ export const adminRouter = router({
     }),
 
   /**
+   * Create virtual accounts (USD/EUR) for an approved workspace
+   * This is for admin use when a workspace has KYC approved but no virtual accounts
+   */
+  createVirtualAccountsForWorkspace: protectedProcedure
+    .input(
+      z.object({
+        workspaceId: z.string().uuid('Invalid workspace ID'),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      if (!ctx.userId) {
+        throw new TRPCError({
+          code: 'UNAUTHORIZED',
+          message: 'User ID not found',
+        });
+      }
+      await requireAdmin(ctx.userId);
+
+      const { workspaceId } = input;
+      const logPayload = {
+        procedure: 'createVirtualAccountsForWorkspace',
+        workspaceId,
+        adminUserDid: ctx.userId,
+      };
+      ctx.log.info(logPayload, 'Admin triggering virtual account creation...');
+
+      try {
+        // Get workspace
+        const workspace = await db.query.workspaces.findFirst({
+          where: eq(workspaces.id, workspaceId),
+        });
+
+        if (!workspace) {
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'Workspace not found.',
+          });
+        }
+
+        // Check KYC status
+        if (workspace.kycStatus !== 'approved') {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: `Workspace KYC status is '${workspace.kycStatus}'. Must be 'approved' to create virtual accounts.`,
+          });
+        }
+
+        // Check for alignCustomerId
+        if (!workspace.alignCustomerId) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message:
+              'Workspace does not have an Align Customer ID. Cannot create virtual accounts.',
+          });
+        }
+
+        // Get workspace's primary safe address
+        const primarySafe = await db.query.userSafes.findFirst({
+          where: and(
+            eq(userSafes.userDid, workspace.createdBy),
+            eq(userSafes.safeType, 'primary'),
+            eq(userSafes.workspaceId, workspace.id),
+          ),
+        });
+
+        if (!primarySafe?.safeAddress) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message:
+              'No primary safe found for this workspace. Cannot create virtual accounts without a destination address.',
+          });
+        }
+
+        // Check if workspace already has full-tier funding sources
+        const existingFullAccounts = await db.query.userFundingSources.findMany(
+          {
+            where: and(
+              eq(userFundingSources.userPrivyDid, workspace.createdBy),
+              eq(userFundingSources.workspaceId, workspaceId),
+              eq(userFundingSources.accountTier, 'full'),
+            ),
+          },
+        );
+
+        if (existingFullAccounts.length > 0) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: `Workspace already has ${existingFullAccounts.length} full-tier virtual account(s).`,
+          });
+        }
+
+        const destinationAddress = primarySafe.safeAddress as `0x${string}`;
+        const results: { currency: string; id: string }[] = [];
+        const errors: { currency: string; error: string }[] = [];
+
+        // Create USD (ACH) account
+        try {
+          ctx.log.info({ ...logPayload }, 'Creating USD account...');
+          const usdAccount = await alignApi.createVirtualAccount(
+            workspace.alignCustomerId,
+            {
+              source_currency: 'usd',
+              destination_token: 'usdc',
+              destination_network: 'base',
+              destination_address: destinationAddress,
+            },
+          );
+
+          await db.insert(userFundingSources).values({
+            userPrivyDid: workspace.createdBy,
+            workspaceId: workspaceId,
+            sourceProvider: 'align',
+            accountTier: 'full',
+            ownerAlignCustomerId: workspace.alignCustomerId,
+            alignVirtualAccountIdRef: usdAccount.id,
+            sourceAccountType: 'us_ach',
+            sourceCurrency: 'usd',
+            sourceBankName: usdAccount.deposit_instructions.bank_name,
+            sourceBankAddress: usdAccount.deposit_instructions.bank_address,
+            sourceBankBeneficiaryName:
+              usdAccount.deposit_instructions.beneficiary_name ||
+              usdAccount.deposit_instructions.account_beneficiary_name,
+            sourceBankBeneficiaryAddress:
+              usdAccount.deposit_instructions.beneficiary_address ||
+              usdAccount.deposit_instructions.account_beneficiary_address,
+            sourceAccountNumber:
+              usdAccount.deposit_instructions.us?.account_number ||
+              usdAccount.deposit_instructions.account_number,
+            sourceRoutingNumber:
+              usdAccount.deposit_instructions.us?.routing_number ||
+              usdAccount.deposit_instructions.routing_number,
+            sourcePaymentRails: usdAccount.deposit_instructions.payment_rails,
+            destinationCurrency: 'usdc',
+            destinationPaymentRail: 'base',
+            destinationAddress: destinationAddress,
+          });
+
+          results.push({ currency: 'USD', id: usdAccount.id });
+          ctx.log.info(
+            { ...logPayload, usdAccountId: usdAccount.id },
+            'USD account created',
+          );
+        } catch (error) {
+          ctx.log.error(
+            { ...logPayload, error: (error as Error).message },
+            'Failed to create USD account',
+          );
+          errors.push({
+            currency: 'USD',
+            error: error instanceof Error ? error.message : String(error),
+          });
+        }
+
+        // Create EUR (IBAN) account
+        try {
+          ctx.log.info({ ...logPayload }, 'Creating EUR account...');
+          const eurAccount = await alignApi.createVirtualAccount(
+            workspace.alignCustomerId,
+            {
+              source_currency: 'eur',
+              destination_token: 'usdc',
+              destination_network: 'base',
+              destination_address: destinationAddress,
+            },
+          );
+
+          await db.insert(userFundingSources).values({
+            userPrivyDid: workspace.createdBy,
+            workspaceId: workspaceId,
+            sourceProvider: 'align',
+            accountTier: 'full',
+            ownerAlignCustomerId: workspace.alignCustomerId,
+            alignVirtualAccountIdRef: eurAccount.id,
+            sourceAccountType: 'iban',
+            sourceCurrency: 'eur',
+            sourceBankName: eurAccount.deposit_instructions.bank_name,
+            sourceBankAddress: eurAccount.deposit_instructions.bank_address,
+            sourceBankBeneficiaryName:
+              eurAccount.deposit_instructions.beneficiary_name ||
+              eurAccount.deposit_instructions.account_beneficiary_name,
+            sourceBankBeneficiaryAddress:
+              eurAccount.deposit_instructions.beneficiary_address ||
+              eurAccount.deposit_instructions.account_beneficiary_address,
+            sourceIban: eurAccount.deposit_instructions.iban?.iban_number,
+            sourceBicSwift:
+              eurAccount.deposit_instructions.iban?.bic ||
+              eurAccount.deposit_instructions.bic?.bic_code,
+            sourcePaymentRails: eurAccount.deposit_instructions.payment_rails,
+            destinationCurrency: 'usdc',
+            destinationPaymentRail: 'base',
+            destinationAddress: destinationAddress,
+          });
+
+          results.push({ currency: 'EUR', id: eurAccount.id });
+          ctx.log.info(
+            { ...logPayload, eurAccountId: eurAccount.id },
+            'EUR account created',
+          );
+        } catch (error) {
+          ctx.log.error(
+            { ...logPayload, error: (error as Error).message },
+            'Failed to create EUR account',
+          );
+          errors.push({
+            currency: 'EUR',
+            error: error instanceof Error ? error.message : String(error),
+          });
+        }
+
+        // Update workspace with first account ID if any were created
+        if (results.length > 0) {
+          await db
+            .update(workspaces)
+            .set({
+              alignVirtualAccountId: results[0].id,
+            })
+            .where(eq(workspaces.id, workspaceId));
+        }
+
+        if (results.length === 0) {
+          throw new TRPCError({
+            code: 'INTERNAL_SERVER_ERROR',
+            message: `Failed to create any virtual accounts: ${errors.map((e) => `${e.currency}: ${e.error}`).join('; ')}`,
+          });
+        }
+
+        ctx.log.info(
+          {
+            ...logPayload,
+            results,
+            errors,
+          },
+          'Virtual account creation completed',
+        );
+
+        return {
+          success: true,
+          message: `Created ${results.length} virtual account(s)`,
+          accounts: results,
+          errors: errors.length > 0 ? errors : undefined,
+        };
+      } catch (error) {
+        ctx.log.error(
+          { ...logPayload, error: (error as Error).message },
+          'Failed to create virtual accounts',
+        );
+        if (error instanceof TRPCError) {
+          throw error;
+        }
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: `Failed to create virtual accounts: ${(error as Error).message}`,
+        });
+      }
+    }),
+
+  /**
    * Check if a workspace has a specific feature
    */
   checkWorkspaceFeature: protectedProcedure

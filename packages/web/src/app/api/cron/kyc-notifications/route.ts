@@ -224,68 +224,76 @@ async function sendKycNotification(
 }
 
 /**
- * Create virtual accounts for an approved user
+ * Create virtual accounts for an approved WORKSPACE
+ * This is the correct approach - workspaces own KYC, not users
  * Returns success status and details about created accounts
  */
-async function createVirtualAccountsForUser(
+async function createVirtualAccountsForWorkspace(
+  workspaceId: string,
   userId: string,
   alignCustomerId: string,
 ): Promise<{ success: boolean; details: string; error?: string }> {
   try {
-    console.log(`[kyc-processor] Creating virtual accounts for user ${userId}`);
+    console.log(
+      `[kyc-processor] Creating virtual accounts for workspace ${workspaceId} (user: ${userId})`,
+    );
 
-    // Check if user already has virtual accounts
-    const existingAccounts = await db.query.userFundingSources.findMany({
-      where: eq(userFundingSources.userPrivyDid, userId),
+    // Check if workspace already has FULL-tier virtual accounts
+    // Important: Filter by BOTH workspace AND account tier to avoid false positives
+    const existingFullAccounts = await db.query.userFundingSources.findMany({
+      where: and(
+        eq(userFundingSources.workspaceId, workspaceId),
+        eq(userFundingSources.accountTier, 'full'),
+      ),
     });
 
-    if (existingAccounts.length > 0) {
+    if (existingFullAccounts.length > 0) {
       console.log(
-        `[kyc-processor] User ${userId} already has ${existingAccounts.length} funding source(s)`,
+        `[kyc-processor] Workspace ${workspaceId} already has ${existingFullAccounts.length} full-tier funding source(s)`,
       );
       return {
         success: true,
-        details: `Already has ${existingAccounts.length} funding source(s)`,
-      };
-    }
-
-    // Get user's primary workspace
-    const user = await db.query.users.findFirst({
-      where: eq(users.privyDid, userId),
-    });
-
-    if (!user?.primaryWorkspaceId) {
-      return {
-        success: false,
-        details: 'No primary workspace found',
-        error: 'User has no primary workspace',
+        details: `Already has ${existingFullAccounts.length} full-tier funding source(s)`,
       };
     }
 
     // Get primary safe address for the workspace
-    const primarySafe = await db.query.userSafes.findFirst({
+    // Try workspace creator first, then any user with a primary safe for this workspace
+    let primarySafe = await db.query.userSafes.findFirst({
       where: and(
         eq(userSafes.userDid, userId),
         eq(userSafes.safeType, 'primary'),
-        eq(userSafes.workspaceId, user.primaryWorkspaceId),
+        eq(userSafes.workspaceId, workspaceId),
       ),
     });
+
+    // Fallback: find any primary safe for this workspace
+    if (!primarySafe?.safeAddress) {
+      primarySafe = await db.query.userSafes.findFirst({
+        where: and(
+          eq(userSafes.safeType, 'primary'),
+          eq(userSafes.workspaceId, workspaceId),
+        ),
+      });
+    }
 
     if (!primarySafe?.safeAddress) {
       return {
         success: false,
-        details: 'No primary safe address found',
-        error: 'User has no primary safe address',
+        details: 'No primary safe address found for workspace',
+        error: `Workspace ${workspaceId} has no primary safe`,
       };
     }
 
     const destinationAddress = primarySafe.safeAddress as Address;
-    const results = [];
-    const errors = [];
+    const results: { currency: string; id: string }[] = [];
+    const errors: { currency: string; error: string }[] = [];
 
     // Create USD (ACH) account
     try {
-      console.log(`[kyc-processor] Creating USD account for ${userId}`);
+      console.log(
+        `[kyc-processor] Creating USD account for workspace ${workspaceId}`,
+      );
       const usdAccount = await alignApi.createVirtualAccount(alignCustomerId, {
         source_currency: 'usd',
         destination_token: 'usdc',
@@ -295,8 +303,10 @@ async function createVirtualAccountsForUser(
 
       await db.insert(userFundingSources).values({
         userPrivyDid: userId,
-        workspaceId: user.primaryWorkspaceId,
+        workspaceId: workspaceId,
         sourceProvider: 'align',
+        accountTier: 'full',
+        ownerAlignCustomerId: alignCustomerId,
         alignVirtualAccountIdRef: usdAccount.id,
         sourceAccountType: 'us_ach',
         sourceCurrency: 'usd',
@@ -332,7 +342,9 @@ async function createVirtualAccountsForUser(
 
     // Create EUR (IBAN) account
     try {
-      console.log(`[kyc-processor] Creating EUR account for ${userId}`);
+      console.log(
+        `[kyc-processor] Creating EUR account for workspace ${workspaceId}`,
+      );
       const eurAccount = await alignApi.createVirtualAccount(alignCustomerId, {
         source_currency: 'eur',
         destination_token: 'usdc',
@@ -342,8 +354,10 @@ async function createVirtualAccountsForUser(
 
       await db.insert(userFundingSources).values({
         userPrivyDid: userId,
-        workspaceId: user.primaryWorkspaceId,
+        workspaceId: workspaceId,
         sourceProvider: 'align',
+        accountTier: 'full',
+        ownerAlignCustomerId: alignCustomerId,
         alignVirtualAccountIdRef: eurAccount.id,
         sourceAccountType: 'iban',
         sourceCurrency: 'eur',
@@ -376,15 +390,15 @@ async function createVirtualAccountsForUser(
     }
 
     // Update workspace with first account ID if any were created
-    if (results.length > 0 && user.primaryWorkspaceId) {
+    if (results.length > 0) {
       await db
         .update(workspaces)
         .set({
           alignVirtualAccountId: results[0].id,
         })
-        .where(eq(workspaces.id, user.primaryWorkspaceId));
+        .where(eq(workspaces.id, workspaceId));
 
-      // Optional: keep legacy user column in sync while it still exists
+      // Keep legacy user column in sync
       await db
         .update(users)
         .set({
@@ -413,7 +427,7 @@ async function createVirtualAccountsForUser(
     }
   } catch (error) {
     console.error(
-      `[kyc-processor] Error in createVirtualAccountsForUser for ${userId}:`,
+      `[kyc-processor] Error in createVirtualAccountsForWorkspace for ${workspaceId}:`,
       error,
     );
     return {
@@ -657,83 +671,139 @@ async function processKycUpdatesAndNotifications(): Promise<
       }
     }
 
-    // PHASE 3: Create virtual accounts for approved users who don't have them
+    // PHASE 3: Create virtual accounts for approved WORKSPACES that don't have them
+    // This is the correct approach - workspaces own KYC status, not users
     console.log(
-      '[kyc-processor] Phase 3: Creating virtual accounts for approved users...',
+      '[kyc-processor] Phase 3: Creating virtual accounts for approved workspaces...',
     );
 
-    const approvedUsersWithoutAccounts = await db.query.users.findMany({
-      where: and(
-        eq(users.kycStatus, 'approved' as const),
-        isNotNull(users.alignCustomerId),
-        ne(users.alignCustomerId, ''),
-      ),
-      limit: 10, // Process up to 10 account creations per run
-    });
+    // Query workspaces directly - this is the source of truth for KYC status
+    const approvedWorkspacesWithoutAccounts =
+      await db.query.workspaces.findMany({
+        where: and(
+          eq(workspaces.kycStatus, 'approved' as const),
+          isNotNull(workspaces.alignCustomerId),
+          ne(workspaces.alignCustomerId, ''),
+        ),
+        limit: 20, // Process up to 20 workspaces per run
+      });
 
     console.log(
-      `[kyc-processor] Found ${approvedUsersWithoutAccounts.length} approved users to check for virtual accounts`,
+      `[kyc-processor] Found ${approvedWorkspacesWithoutAccounts.length} approved workspaces to check for virtual accounts`,
     );
 
-    for (const user of approvedUsersWithoutAccounts) {
-      if (!user.alignCustomerId) continue;
+    for (const workspace of approvedWorkspacesWithoutAccounts) {
+      if (!workspace.alignCustomerId) continue;
 
       try {
-        // Check if they already have funding sources
-        const existingAccounts = await db.query.userFundingSources.findMany({
-          where: eq(userFundingSources.userPrivyDid, user.privyDid),
-        });
+        // Check if workspace already has FULL-tier funding sources
+        // Important: Filter by workspace ID AND account tier
+        const existingFullAccounts = await db.query.userFundingSources.findMany(
+          {
+            where: and(
+              eq(userFundingSources.workspaceId, workspace.id),
+              eq(userFundingSources.accountTier, 'full'),
+            ),
+          },
+        );
 
-        if (existingAccounts.length > 0) {
-          // Already has accounts, skip
+        if (existingFullAccounts.length > 0) {
+          // Already has full-tier accounts, skip
+          console.log(
+            `[kyc-processor] Workspace ${workspace.id} already has ${existingFullAccounts.length} full-tier account(s), skipping`,
+          );
           continue;
         }
 
-        const email = await getUserEmail(user.privyDid);
-        if (!email) {
-          results.push({
-            userId: user.privyDid,
-            email: 'no-email',
-            action: 'error',
-            success: false,
-            error: 'No email address found for virtual account creation',
-          });
-          continue;
-        }
+        const email = await getUserEmail(workspace.createdBy);
 
-        // Create virtual accounts
-        const accountResult = await createVirtualAccountsForUser(
-          user.privyDid,
-          user.alignCustomerId,
+        // Create virtual accounts for the workspace
+        const accountResult = await createVirtualAccountsForWorkspace(
+          workspace.id,
+          workspace.createdBy,
+          workspace.alignCustomerId,
         );
 
         results.push({
-          userId: user.privyDid,
-          email,
+          userId: workspace.createdBy,
+          email: email || 'unknown',
           action: accountResult.success ? 'virtual_accounts_created' : 'error',
           success: accountResult.success,
-          details: accountResult.details,
+          details: `Workspace ${workspace.id}: ${accountResult.details}`,
           error: accountResult.error,
         });
 
         console.log(
-          `[kyc-processor] ${accountResult.success ? '✅' : '❌'} Virtual accounts for ${email}: ${accountResult.details}`,
+          `[kyc-processor] ${accountResult.success ? '✅' : '❌'} Virtual accounts for workspace ${workspace.id}: ${accountResult.details}`,
         );
 
         // Rate limiting delay (virtual account creation is API-intensive)
         await new Promise((resolve) => setTimeout(resolve, 500));
       } catch (error) {
         console.error(
-          `[kyc-processor] Error creating virtual accounts for user ${user.privyDid}:`,
+          `[kyc-processor] Error creating virtual accounts for workspace ${workspace.id}:`,
           error,
         );
         results.push({
-          userId: user.privyDid,
+          userId: workspace.createdBy,
           email: 'unknown',
           action: 'error',
           success: false,
           error: error instanceof Error ? error.message : String(error),
         });
+      }
+    }
+
+    // PHASE 4: Sync user KYC status from their primary workspace
+    // This ensures legacy user.kycStatus stays in sync with workspace.kycStatus
+    console.log(
+      '[kyc-processor] Phase 4: Syncing user KYC status from workspaces...',
+    );
+
+    const usersToSync = await db.query.users.findMany({
+      where: and(
+        isNotNull(users.primaryWorkspaceId),
+        // Only sync users whose status might be out of sync
+      ),
+      limit: 50,
+    });
+
+    for (const user of usersToSync) {
+      if (!user.primaryWorkspaceId) continue;
+
+      try {
+        const primaryWorkspace = await db.query.workspaces.findFirst({
+          where: eq(workspaces.id, user.primaryWorkspaceId),
+        });
+
+        if (!primaryWorkspace) continue;
+
+        // Check if user's KYC status is out of sync with their primary workspace
+        if (
+          user.kycStatus !== primaryWorkspace.kycStatus ||
+          user.alignCustomerId !== primaryWorkspace.alignCustomerId
+        ) {
+          await db
+            .update(users)
+            .set({
+              kycStatus: primaryWorkspace.kycStatus,
+              kycSubStatus: primaryWorkspace.kycSubStatus,
+              kycFlowLink: primaryWorkspace.kycFlowLink,
+              kycProvider: primaryWorkspace.kycProvider,
+              alignCustomerId: primaryWorkspace.alignCustomerId,
+              alignVirtualAccountId: primaryWorkspace.alignVirtualAccountId,
+            })
+            .where(eq(users.privyDid, user.privyDid));
+
+          console.log(
+            `[kyc-processor] Synced user ${user.privyDid} KYC status: ${user.kycStatus} -> ${primaryWorkspace.kycStatus}`,
+          );
+        }
+      } catch (error) {
+        console.error(
+          `[kyc-processor] Error syncing KYC status for user ${user.privyDid}:`,
+          error,
+        );
       }
     }
   } catch (error) {
