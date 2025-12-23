@@ -1,8 +1,8 @@
-import { INSURED_VAULT_IDS } from '../demo-data';
 import {
   type SupportedChainId,
   SUPPORTED_CHAINS,
 } from '@/lib/constants/chains';
+import { isVaultInsured } from '@/server/earn/tracked-vaults-config';
 
 export type VaultStat = {
   vaultAddress: string;
@@ -243,7 +243,7 @@ export function calculateVaultViewModels(
       isAuto: v.id === 'morphoGauntlet',
       instantApy,
       isInsured:
-        INSURED_VAULT_IDS.has(v.id) ||
+        isVaultInsured(v.address, vaultChainId) ||
         (userIsInsured && v.id === 'morphoGauntlet'),
       isContactOnly: false,
       chainId: vaultChainId,
