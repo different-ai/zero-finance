@@ -470,12 +470,6 @@ export default function SavingsPageWrapper({
 
           <PortfolioOverview
             totalSaved={totalSaved}
-            isDemoMode={isDemoMode}
-            safeAddress={safeAddress}
-            fallbackApyPercent={fallbackApyPercent}
-            averageInstantApy={averageInstantApy}
-            animatedBalance={animatedBalance}
-            animatedInitialEarned={animatedInitialEarned}
             vaultCount={vaultsVM.length}
             isTechnical={isTechnical}
           />
