@@ -56,7 +56,7 @@ export type BaseVault = {
 export const PRIMARY_VAULT: BaseVault = {
   id: 'morphoUsdcPrime',
   name: 'USDC Prime',
-  displayName: 'High-Yield Savings',
+  displayName: '0 Finance Recommended Savings',
   address: '0x050cE30b927Da55177A4914EC73480238BAD56f0',
   risk: 'Optimized',
   curator: 'Morpho',
