@@ -23,6 +23,17 @@ export const ARBITRUM_USDC_VAULTS: CrossChainVault[] = [
     appUrl:
       'https://app.morpho.org/arbitrum/vault/0x7e97fa6893871A2751B5fE961978DCCb2c201E65/gauntlet-usdc-core',
   },
+  {
+    id: 'hyperithmArbitrum',
+    name: 'Hyperithm USDC',
+    displayName: 'Arbitrum Balanced',
+    address: '0x4B6F1C9E5d470b97181786b26da0d0945A7cf027' as Address,
+    chainId: SUPPORTED_CHAINS.ARBITRUM,
+    risk: 'Balanced',
+    curator: 'Hyperithm',
+    appUrl:
+      'https://app.morpho.org/arbitrum/vault/0x4B6F1C9E5d470b97181786b26da0d0945A7cf027/hyperithm-usdc',
+  },
   // {
   //   id: 'steakhouseArbitrum',
   //   name: 'Steakhouse USDC',
