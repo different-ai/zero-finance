@@ -56,10 +56,10 @@ export type BaseVault = {
 export const PRIMARY_VAULT: BaseVault = {
   id: 'morphoUsdcPrime',
   name: 'USDC Prime',
-  displayName: '0 Finance Recommended Savings',
+  displayName: 'Stable Savings',
   address: '0x050cE30b927Da55177A4914EC73480238BAD56f0',
-  risk: 'Optimized',
-  curator: 'Morpho',
+  risk: 'Balanced',
+  curator: '0 Finance',
   appUrl:
     'https://app.morpho.org/base/vault/0x050cE30b927Da55177A4914EC73480238BAD56f0/usdc-prime',
   chainId: BASE_CHAIN_ID,
