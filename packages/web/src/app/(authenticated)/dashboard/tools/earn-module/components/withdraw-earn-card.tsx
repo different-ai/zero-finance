@@ -5,6 +5,7 @@ import {
   Loader2,
   AlertCircle,
   ArrowUpFromLine,
+  ArrowDown,
   CheckCircle,
   ExternalLink,
   Rocket,
@@ -2160,9 +2161,11 @@ export function WithdrawEarnCard({
       undefined,
       { minimumFractionDigits: 2, maximumFractionDigits: 6 },
     );
+    const hasVaultBalance = vaultInfo && vaultInfo.assets > 0n;
+    const hasXdaiBalance = gnosisXdaiBalance.totalAvailable > 0n;
 
     return (
-      <div className="space-y-6 p-4 bg-[#fafafa] border border-[#1B29FF]/20 relative">
+      <div className="space-y-4 p-4 bg-[#fafafa] border border-[#1B29FF]/20 relative">
         {/* Blueprint grid overlay */}
         <div
           className="absolute inset-0 pointer-events-none opacity-[0.03]"
@@ -2181,53 +2184,47 @@ export function WithdrawEarnCard({
         {/* Processing Banner */}
         <ProcessingBanner />
 
-        {/* TOP CARD: sDAI Vault Balance - Withdraw to xDAI */}
+        {/* STEP 1: Withdraw sDAI to xDAI */}
         <div className="bg-white border border-[#1B29FF]/30 p-4 relative">
-          <div className="flex justify-between items-start mb-3">
+          <div className="flex items-center gap-2 mb-3">
+            <div className="flex items-center justify-center w-6 h-6 rounded-full bg-[#1B29FF]/10 border border-[#1B29FF]/30">
+              <span className="font-mono text-[11px] font-bold text-[#1B29FF]">
+                1
+              </span>
+            </div>
+            <p className="font-mono uppercase tracking-[0.14em] text-[11px] text-[#1B29FF]">
+              WITHDRAW FROM VAULT
+            </p>
+          </div>
+
+          <div className="flex justify-between items-center mb-3">
             <div>
-              <p className="font-mono uppercase tracking-[0.14em] text-[11px] text-[#1B29FF] mb-1">
-                VAULT::sDAI_BALANCE
+              <p className="font-mono text-[10px] text-[#101010]/60 mb-1">
+                Vault balance
               </p>
-              <p className="font-mono text-[24px] tabular-nums text-[#101010]">
+              <p className="font-mono text-[16px] tabular-nums text-[#101010]">
                 {displayBalance}{' '}
-                <span className="text-[12px] text-[#1B29FF]">sDAI</span>
+                <span className="text-[11px] text-[#1B29FF]">sDAI</span>
               </p>
-              <p className="text-[12px] font-mono text-[#101010]/50">
-                ≈ ${displayBalance} USD
-              </p>
-              {/* Show Safe address in technical mode */}
-              <p className="font-mono text-[10px] text-[#1B29FF]/60 mt-1">
-                SAFE::
-                {effectiveSafeAddress
-                  ? `${effectiveSafeAddress.slice(0, 6)}...${effectiveSafeAddress.slice(-4)}`
-                  : 'NOT_SET'}
-              </p>
-              {targetSafeAddress &&
-                targetSafeAddress !== effectiveSafeAddress && (
-                  <p className="font-mono text-[10px] text-orange-500 mt-0.5">
-                    TARGET_SAFE::{targetSafeAddress.slice(0, 6)}...
-                    {targetSafeAddress.slice(-4)} (MISMATCH)
-                  </p>
-                )}
             </div>
           </div>
 
           {/* Withdraw sDAI to xDAI */}
           <div className="space-y-2">
             <label className="font-mono text-[10px] text-[#1B29FF]/70 uppercase">
-              INPUT::WITHDRAW_AMOUNT (sDAI → xDAI)
+              Amount to withdraw
             </label>
             <div className="relative">
               <input
                 type="number"
-                placeholder="0.0"
+                placeholder={hasVaultBalance ? '0.0' : 'No balance in vault'}
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
-                className="w-full h-10 px-3 font-mono bg-white border border-[#1B29FF]/30 focus:border-[#1B29FF] focus:outline-none text-[14px] transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                className="w-full h-10 px-3 font-mono bg-white border border-[#1B29FF]/30 focus:border-[#1B29FF] focus:outline-none text-[14px] transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none disabled:bg-[#F7F7F2]"
                 step="0.000001"
                 min="0"
                 max={availableBalance}
-                disabled={isProcessing}
+                disabled={isProcessing || !hasVaultBalance}
               />
               <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-2">
                 <span className="font-mono text-[10px] text-[#1B29FF]/70">
@@ -2236,8 +2233,8 @@ export function WithdrawEarnCard({
                 <button
                   type="button"
                   onClick={handleMax}
-                  className="font-mono px-2 py-1 text-[10px] text-[#1B29FF] border border-[#1B29FF]/30 hover:border-[#1B29FF] transition-colors bg-white hover:bg-[#1B29FF]/5"
-                  disabled={isProcessing}
+                  className="font-mono px-2 py-1 text-[10px] text-[#1B29FF] border border-[#1B29FF]/30 hover:border-[#1B29FF] transition-colors bg-white hover:bg-[#1B29FF]/5 disabled:opacity-50"
+                  disabled={isProcessing || !hasVaultBalance}
                 >
                   MAX
                 </button>
@@ -2253,52 +2250,98 @@ export function WithdrawEarnCard({
               ) : (
                 <ArrowUpFromLine className="h-4 w-4" />
               )}
-              <span className="leading-none">[ WITHDRAW TO xDAI ]</span>
+              <span className="leading-none">[ WITHDRAW ]</span>
             </button>
           </div>
-
-          <p className="font-mono text-[10px] text-center text-[#1B29FF]/60 mt-3">
-            Redeems sDAI shares for xDAI on Gnosis
-          </p>
         </div>
 
-        {/* BOTTOM CARD: xDAI Balance - Bridge to Base */}
-        <div className="bg-white border border-[#1B29FF]/30 p-4 relative">
-          <div className="flex justify-between items-start mb-3">
+        {/* Arrow between steps */}
+        <div className="flex justify-center">
+          <div className="flex flex-col items-center">
+            <div className="w-px h-4 bg-[#1B29FF]/20" />
+            <ArrowDown className="h-4 w-4 text-[#1B29FF]/40" />
+            <div className="w-px h-4 bg-[#1B29FF]/20" />
+          </div>
+        </div>
+
+        {/* STEP 2: Bridge xDAI to Base */}
+        <div
+          className={cn(
+            'bg-white border border-[#1B29FF]/30 p-4 relative transition-opacity',
+            !hasXdaiBalance && 'opacity-60',
+          )}
+        >
+          <div className="flex items-center gap-2 mb-3">
+            <div
+              className={cn(
+                'flex items-center justify-center w-6 h-6 rounded-full border',
+                hasXdaiBalance
+                  ? 'bg-[#1B29FF]/10 border-[#1B29FF]/30'
+                  : 'bg-[#101010]/5 border-[#101010]/20',
+              )}
+            >
+              <span
+                className={cn(
+                  'font-mono text-[11px] font-bold',
+                  hasXdaiBalance ? 'text-[#1B29FF]' : 'text-[#101010]/40',
+                )}
+              >
+                2
+              </span>
+            </div>
+            <p
+              className={cn(
+                'font-mono uppercase tracking-[0.14em] text-[11px]',
+                hasXdaiBalance ? 'text-[#1B29FF]' : 'text-[#101010]/40',
+              )}
+            >
+              BRIDGE TO BASE
+            </p>
+            {hasXdaiBalance && (
+              <span className="font-mono text-[9px] text-[#10B981] bg-[#10B981]/10 px-2 py-0.5 rounded">
+                READY
+              </span>
+            )}
+          </div>
+
+          <div className="flex justify-between items-center mb-3">
             <div>
-              <p className="font-mono uppercase tracking-[0.14em] text-[11px] text-[#1B29FF] mb-1">
-                BALANCE::GNO_xDAI
+              <p
+                className={cn(
+                  'font-mono text-[10px] mb-1',
+                  hasXdaiBalance ? 'text-[#101010]/60' : 'text-[#101010]/40',
+                )}
+              >
+                Gnosis xDAI balance
               </p>
-              <p className="font-mono text-[24px] tabular-nums text-[#101010]">
+              <p className="font-mono text-[16px] tabular-nums text-[#101010]">
                 {displayXdaiBalance}{' '}
-                <span className="text-[12px] text-[#1B29FF]">xDAI</span>
-              </p>
-              {/* Debug: Show query address in technical mode */}
-              <p className="font-mono text-[10px] text-[#1B29FF]/60 mt-1">
-                QUERY_ADDR::
-                {gnosisQueryAddress
-                  ? `${gnosisQueryAddress.slice(0, 6)}...${gnosisQueryAddress.slice(-4)}`
-                  : 'NOT_SET'}
+                <span className="text-[11px] text-[#1B29FF]">xDAI</span>
               </p>
             </div>
           </div>
 
           {/* Bridge to Base Input & Button */}
           <div className="space-y-2">
-            <label className="font-mono text-[10px] text-[#1B29FF]/70 uppercase">
-              INPUT::BRIDGE_AMOUNT (xDAI → Base USDC)
+            <label
+              className={cn(
+                'font-mono text-[10px] uppercase',
+                hasXdaiBalance ? 'text-[#1B29FF]/70' : 'text-[#101010]/40',
+              )}
+            >
+              Amount to bridge
             </label>
             <div className="relative">
               <input
                 type="number"
-                placeholder="0.0"
+                placeholder={hasXdaiBalance ? '0.0' : 'Withdraw first'}
                 value={bridgeAmount}
                 onChange={(e) => setBridgeAmount(e.target.value)}
-                className="w-full h-10 px-3 font-mono bg-white border border-[#1B29FF]/30 focus:border-[#1B29FF] focus:outline-none text-[14px] transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                className="w-full h-10 px-3 font-mono bg-white border border-[#1B29FF]/30 focus:border-[#1B29FF] focus:outline-none text-[14px] transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none disabled:bg-[#F7F7F2] disabled:cursor-not-allowed"
                 step="0.000001"
                 min="0"
                 max={availableXdai}
-                disabled={gnosisXdaiBalance.totalAvailable === 0n || isBridging}
+                disabled={!hasXdaiBalance || isBridging}
               />
               <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-2">
                 <span className="font-mono text-[10px] text-[#1B29FF]/70">
@@ -2307,10 +2350,8 @@ export function WithdrawEarnCard({
                 <button
                   type="button"
                   onClick={handleMaxBridge}
-                  className="font-mono px-2 py-1 text-[10px] text-[#1B29FF] border border-[#1B29FF]/30 hover:border-[#1B29FF] transition-colors bg-white hover:bg-[#1B29FF]/5"
-                  disabled={
-                    gnosisXdaiBalance.totalAvailable === 0n || isBridging
-                  }
+                  className="font-mono px-2 py-1 text-[10px] text-[#1B29FF] border border-[#1B29FF]/30 hover:border-[#1B29FF] transition-colors bg-white hover:bg-[#1B29FF]/5 disabled:opacity-50"
+                  disabled={!hasXdaiBalance || isBridging}
                 >
                   MAX
                 </button>
@@ -2349,7 +2390,7 @@ export function WithdrawEarnCard({
               disabled={
                 !bridgeAmount ||
                 parseFloat(bridgeAmount) <= 0 ||
-                gnosisXdaiBalance.totalAvailable === 0n ||
+                !hasXdaiBalance ||
                 !bridgeQuote ||
                 isLoadingBridgeQuote ||
                 isBridging
@@ -2365,15 +2406,12 @@ export function WithdrawEarnCard({
             </button>
           </div>
 
-          <p className="font-mono text-[10px] text-center text-[#1B29FF]/60 mt-3">
-            Bridge via LI.FI • Funds arrive on Base in ~5-15 min
-          </p>
+          {!hasXdaiBalance && (
+            <p className="font-mono text-[10px] text-[#101010]/50 mt-2 text-center">
+              Complete Step 1 to withdraw, then bridge here
+            </p>
+          )}
         </div>
-
-        {/* Help text */}
-        <p className="font-mono text-[10px] text-center text-[#101010]/40">
-          2-STEP WITHDRAWAL: sDAI → xDAI → Base USDC
-        </p>
       </div>
     );
   }
@@ -2382,8 +2420,11 @@ export function WithdrawEarnCard({
   // Step 1: Withdraw from vault (get USDC on Arbitrum)
   // Step 2: Bridge USDC -> Base (via Across Protocol)
   if (isArbitrumVault && targetSafeAddress) {
+    const hasVaultBalance = vaultInfo && vaultInfo.assets > 0n;
+    const hasArbUsdcBalance = targetSafeUsdcBigInt > 0n;
+
     return (
-      <div className="space-y-6 p-4 bg-[#fafafa] border border-[#1B29FF]/20 relative">
+      <div className="space-y-4 p-4 bg-[#fafafa] border border-[#1B29FF]/20 relative">
         {/* Blueprint grid overlay */}
         <div
           className="absolute inset-0 pointer-events-none opacity-[0.03]"
@@ -2402,19 +2443,27 @@ export function WithdrawEarnCard({
         {/* Processing Banner */}
         <ProcessingBanner />
 
-        {/* TOP CARD: Vault Balance - Withdraw USDC */}
+        {/* STEP 1: Withdraw from Vault */}
         <div className="bg-white border border-[#1B29FF]/30 p-4 relative">
-          <div className="flex justify-between items-start mb-3">
+          <div className="flex items-center gap-2 mb-3">
+            <div className="flex items-center justify-center w-6 h-6 rounded-full bg-[#1B29FF]/10 border border-[#1B29FF]/30">
+              <span className="font-mono text-[11px] font-bold text-[#1B29FF]">
+                1
+              </span>
+            </div>
+            <p className="font-mono uppercase tracking-[0.14em] text-[11px] text-[#1B29FF]">
+              WITHDRAW FROM VAULT
+            </p>
+          </div>
+
+          <div className="flex justify-between items-center mb-3">
             <div>
-              <p className="font-mono uppercase tracking-[0.14em] text-[11px] text-[#1B29FF] mb-1">
-                VAULT::ARB_USDC_BALANCE
+              <p className="font-mono text-[10px] text-[#101010]/60 mb-1">
+                Vault balance
               </p>
-              <p className="font-mono text-[24px] tabular-nums text-[#101010]">
+              <p className="font-mono text-[16px] tabular-nums text-[#101010]">
                 {displayBalance}{' '}
-                <span className="text-[12px] text-[#1B29FF]">USDC</span>
-              </p>
-              <p className="text-[12px] font-mono text-[#101010]/50">
-                ≈ ${displayBalance} USD
+                <span className="text-[11px] text-[#1B29FF]">USDC</span>
               </p>
             </div>
           </div>
@@ -2422,19 +2471,19 @@ export function WithdrawEarnCard({
           {/* Withdraw from vault */}
           <div className="space-y-2">
             <label className="font-mono text-[10px] text-[#1B29FF]/70 uppercase">
-              INPUT::WITHDRAW_AMOUNT (Vault → Arbitrum USDC)
+              Amount to withdraw
             </label>
             <div className="relative">
               <input
                 type="number"
-                placeholder="0.0"
+                placeholder={hasVaultBalance ? '0.0' : 'No balance in vault'}
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
-                className="w-full h-10 px-3 font-mono bg-white border border-[#1B29FF]/30 focus:border-[#1B29FF] focus:outline-none text-[14px] transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                className="w-full h-10 px-3 font-mono bg-white border border-[#1B29FF]/30 focus:border-[#1B29FF] focus:outline-none text-[14px] transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none disabled:bg-[#F7F7F2]"
                 step="0.000001"
                 min="0"
                 max={availableBalance}
-                disabled={isProcessing}
+                disabled={isProcessing || !hasVaultBalance}
               />
               <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-2">
                 <span className="font-mono text-[10px] text-[#1B29FF]/70">
@@ -2443,8 +2492,8 @@ export function WithdrawEarnCard({
                 <button
                   type="button"
                   onClick={handleMax}
-                  className="font-mono px-2 py-1 text-[10px] text-[#1B29FF] border border-[#1B29FF]/30 hover:border-[#1B29FF] transition-colors bg-white hover:bg-[#1B29FF]/5"
-                  disabled={isProcessing}
+                  className="font-mono px-2 py-1 text-[10px] text-[#1B29FF] border border-[#1B29FF]/30 hover:border-[#1B29FF] transition-colors bg-white hover:bg-[#1B29FF]/5 disabled:opacity-50"
+                  disabled={isProcessing || !hasVaultBalance}
                 >
                   MAX
                 </button>
@@ -2460,55 +2509,102 @@ export function WithdrawEarnCard({
               ) : (
                 <ArrowUpFromLine className="h-4 w-4" />
               )}
-              <span className="leading-none">[ WITHDRAW FROM VAULT ]</span>
+              <span className="leading-none">[ WITHDRAW ]</span>
             </button>
           </div>
-
-          <p className="font-mono text-[10px] text-center text-[#1B29FF]/60 mt-3">
-            Redeems vault shares for USDC on Arbitrum
-          </p>
         </div>
 
-        {/* BOTTOM CARD: Arbitrum USDC Balance - Bridge to Base */}
-        <div className="bg-white border border-[#1B29FF]/30 p-4 relative">
-          <div className="flex justify-between items-start mb-3">
+        {/* Arrow between steps */}
+        <div className="flex justify-center">
+          <div className="flex flex-col items-center">
+            <div className="w-px h-4 bg-[#1B29FF]/20" />
+            <ArrowDown className="h-4 w-4 text-[#1B29FF]/40" />
+            <div className="w-px h-4 bg-[#1B29FF]/20" />
+          </div>
+        </div>
+
+        {/* STEP 2: Bridge to Base */}
+        <div
+          className={cn(
+            'bg-white border border-[#1B29FF]/30 p-4 relative transition-opacity',
+            !hasArbUsdcBalance && 'opacity-60',
+          )}
+        >
+          <div className="flex items-center gap-2 mb-3">
+            <div
+              className={cn(
+                'flex items-center justify-center w-6 h-6 rounded-full border',
+                hasArbUsdcBalance
+                  ? 'bg-[#1B29FF]/10 border-[#1B29FF]/30'
+                  : 'bg-[#101010]/5 border-[#101010]/20',
+              )}
+            >
+              <span
+                className={cn(
+                  'font-mono text-[11px] font-bold',
+                  hasArbUsdcBalance ? 'text-[#1B29FF]' : 'text-[#101010]/40',
+                )}
+              >
+                2
+              </span>
+            </div>
+            <p
+              className={cn(
+                'font-mono uppercase tracking-[0.14em] text-[11px]',
+                hasArbUsdcBalance ? 'text-[#1B29FF]' : 'text-[#101010]/40',
+              )}
+            >
+              BRIDGE TO BASE
+            </p>
+            {hasArbUsdcBalance && (
+              <span className="font-mono text-[9px] text-[#10B981] bg-[#10B981]/10 px-2 py-0.5 rounded">
+                READY
+              </span>
+            )}
+          </div>
+
+          <div className="flex justify-between items-center mb-3">
             <div>
-              <p className="font-mono uppercase tracking-[0.14em] text-[11px] text-[#1B29FF] mb-1">
-                BALANCE::ARB_USDC (Spendable)
+              <p
+                className={cn(
+                  'font-mono text-[10px] mb-1',
+                  hasArbUsdcBalance ? 'text-[#101010]/60' : 'text-[#101010]/40',
+                )}
+              >
+                Arbitrum balance
               </p>
-              <p className="font-mono text-[24px] tabular-nums text-[#101010]">
+              <p className="font-mono text-[16px] tabular-nums text-[#101010]">
                 {targetSafeUsdcBalance?.formatted
                   ? parseFloat(targetSafeUsdcBalance.formatted).toLocaleString(
                       undefined,
-                      {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 6,
-                      },
+                      { minimumFractionDigits: 2, maximumFractionDigits: 6 },
                     )
                   : '0.00'}{' '}
-                <span className="text-[12px] text-[#1B29FF]">USDC</span>
-              </p>
-              <p className="text-[12px] font-mono text-[#101010]/50">
-                ≈ ${targetSafeUsdcBalance?.formatted || '0.00'} USD
+                <span className="text-[11px] text-[#1B29FF]">USDC</span>
               </p>
             </div>
           </div>
 
           {/* Bridge to Base Input & Button */}
           <div className="space-y-2">
-            <label className="font-mono text-[10px] text-[#1B29FF]/70 uppercase">
-              INPUT::BRIDGE_AMOUNT (Arb USDC → Base USDC)
+            <label
+              className={cn(
+                'font-mono text-[10px] uppercase',
+                hasArbUsdcBalance ? 'text-[#1B29FF]/70' : 'text-[#101010]/40',
+              )}
+            >
+              Amount to bridge
             </label>
             <div className="relative">
               <input
                 type="number"
-                placeholder="0.0"
+                placeholder={hasArbUsdcBalance ? '0.0' : 'Withdraw first'}
                 value={arbBridgeAmount}
                 onChange={(e) => setArbBridgeAmount(e.target.value)}
-                className="w-full h-10 px-3 font-mono bg-white border border-[#1B29FF]/30 focus:border-[#1B29FF] focus:outline-none text-[14px] transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                className="w-full h-10 px-3 font-mono bg-white border border-[#1B29FF]/30 focus:border-[#1B29FF] focus:outline-none text-[14px] transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none disabled:bg-[#F7F7F2] disabled:cursor-not-allowed"
                 step="0.000001"
                 min="0"
-                disabled={isBridging}
+                disabled={isBridging || !hasArbUsdcBalance}
               />
               <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-2">
                 <span className="font-mono text-[10px] text-[#1B29FF]/70">
@@ -2517,8 +2613,8 @@ export function WithdrawEarnCard({
                 <button
                   type="button"
                   onClick={handleMaxArbBridge}
-                  className="font-mono px-2 py-1 text-[10px] text-[#1B29FF] border border-[#1B29FF]/30 hover:border-[#1B29FF] transition-colors bg-white hover:bg-[#1B29FF]/5"
-                  disabled={isBridging}
+                  className="font-mono px-2 py-1 text-[10px] text-[#1B29FF] border border-[#1B29FF]/30 hover:border-[#1B29FF] transition-colors bg-white hover:bg-[#1B29FF]/5 disabled:opacity-50"
+                  disabled={isBridging || !hasArbUsdcBalance}
                 >
                   MAX
                 </button>
@@ -2552,7 +2648,8 @@ export function WithdrawEarnCard({
                 parseFloat(arbBridgeAmount) <= 0 ||
                 !arbBridgeQuote ||
                 isLoadingArbBridgeQuote ||
-                isBridging
+                isBridging ||
+                !hasArbUsdcBalance
               }
               className="w-full h-10 font-mono uppercase bg-white border-2 border-[#1B29FF] text-[#1B29FF] hover:bg-[#1B29FF] hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
@@ -2565,15 +2662,12 @@ export function WithdrawEarnCard({
             </button>
           </div>
 
-          <p className="font-mono text-[10px] text-center text-[#1B29FF]/60 mt-3">
-            Bridge via Across Protocol • Funds arrive on Base in ~2-10 min
-          </p>
+          {!hasArbUsdcBalance && (
+            <p className="font-mono text-[10px] text-[#101010]/50 mt-2 text-center">
+              Complete Step 1 to withdraw, then bridge here
+            </p>
+          )}
         </div>
-
-        {/* Help text */}
-        <p className="font-mono text-[10px] text-center text-[#101010]/40">
-          2-STEP WITHDRAWAL: Vault → Arb USDC → Base USDC
-        </p>
       </div>
     );
   }
@@ -2582,8 +2676,11 @@ export function WithdrawEarnCard({
   // Step 1: Withdraw from vault (get USDC on Optimism)
   // Step 2: Bridge USDC -> Base (via Across Protocol)
   if (isOptimismVault && targetSafeAddress) {
+    const hasVaultBalance = vaultInfo && vaultInfo.assets > 0n;
+    const hasOpUsdcBalance = targetSafeUsdcBigInt > 0n;
+
     return (
-      <div className="space-y-6 p-4 bg-[#fafafa] border border-[#1B29FF]/20 relative">
+      <div className="space-y-4 p-4 bg-[#fafafa] border border-[#1B29FF]/20 relative">
         {/* Blueprint grid overlay */}
         <div
           className="absolute inset-0 pointer-events-none opacity-[0.03]"
@@ -2602,19 +2699,27 @@ export function WithdrawEarnCard({
         {/* Processing Banner */}
         <ProcessingBanner />
 
-        {/* TOP CARD: Vault Balance - Withdraw USDC */}
+        {/* STEP 1: Withdraw from Vault */}
         <div className="bg-white border border-[#1B29FF]/30 p-4 relative">
-          <div className="flex justify-between items-start mb-3">
+          <div className="flex items-center gap-2 mb-3">
+            <div className="flex items-center justify-center w-6 h-6 rounded-full bg-[#1B29FF]/10 border border-[#1B29FF]/30">
+              <span className="font-mono text-[11px] font-bold text-[#1B29FF]">
+                1
+              </span>
+            </div>
+            <p className="font-mono uppercase tracking-[0.14em] text-[11px] text-[#1B29FF]">
+              WITHDRAW FROM VAULT
+            </p>
+          </div>
+
+          <div className="flex justify-between items-center mb-3">
             <div>
-              <p className="font-mono uppercase tracking-[0.14em] text-[11px] text-[#1B29FF] mb-1">
-                VAULT::OP_USDC_BALANCE
+              <p className="font-mono text-[10px] text-[#101010]/60 mb-1">
+                Vault balance
               </p>
-              <p className="font-mono text-[24px] tabular-nums text-[#101010]">
+              <p className="font-mono text-[16px] tabular-nums text-[#101010]">
                 {displayBalance}{' '}
-                <span className="text-[12px] text-[#1B29FF]">USDC</span>
-              </p>
-              <p className="text-[12px] font-mono text-[#101010]/50">
-                ≈ ${displayBalance} USD
+                <span className="text-[11px] text-[#1B29FF]">USDC</span>
               </p>
             </div>
           </div>
@@ -2622,19 +2727,19 @@ export function WithdrawEarnCard({
           {/* Withdraw from vault */}
           <div className="space-y-2">
             <label className="font-mono text-[10px] text-[#1B29FF]/70 uppercase">
-              INPUT::WITHDRAW_AMOUNT (Vault → Optimism USDC)
+              Amount to withdraw
             </label>
             <div className="relative">
               <input
                 type="number"
-                placeholder="0.0"
+                placeholder={hasVaultBalance ? '0.0' : 'No balance in vault'}
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
-                className="w-full h-10 px-3 font-mono bg-white border border-[#1B29FF]/30 focus:border-[#1B29FF] focus:outline-none text-[14px] transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                className="w-full h-10 px-3 font-mono bg-white border border-[#1B29FF]/30 focus:border-[#1B29FF] focus:outline-none text-[14px] transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none disabled:bg-[#F7F7F2]"
                 step="0.000001"
                 min="0"
                 max={availableBalance}
-                disabled={isProcessing}
+                disabled={isProcessing || !hasVaultBalance}
               />
               <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-2">
                 <span className="font-mono text-[10px] text-[#1B29FF]/70">
@@ -2643,8 +2748,8 @@ export function WithdrawEarnCard({
                 <button
                   type="button"
                   onClick={handleMax}
-                  className="font-mono px-2 py-1 text-[10px] text-[#1B29FF] border border-[#1B29FF]/30 hover:border-[#1B29FF] transition-colors bg-white hover:bg-[#1B29FF]/5"
-                  disabled={isProcessing}
+                  className="font-mono px-2 py-1 text-[10px] text-[#1B29FF] border border-[#1B29FF]/30 hover:border-[#1B29FF] transition-colors bg-white hover:bg-[#1B29FF]/5 disabled:opacity-50"
+                  disabled={isProcessing || !hasVaultBalance}
                 >
                   MAX
                 </button>
@@ -2660,55 +2765,102 @@ export function WithdrawEarnCard({
               ) : (
                 <ArrowUpFromLine className="h-4 w-4" />
               )}
-              <span className="leading-none">[ WITHDRAW FROM VAULT ]</span>
+              <span className="leading-none">[ WITHDRAW ]</span>
             </button>
           </div>
-
-          <p className="font-mono text-[10px] text-center text-[#1B29FF]/60 mt-3">
-            Redeems vault shares for USDC on Optimism
-          </p>
         </div>
 
-        {/* BOTTOM CARD: Optimism USDC Balance - Bridge to Base */}
-        <div className="bg-white border border-[#1B29FF]/30 p-4 relative">
-          <div className="flex justify-between items-start mb-3">
+        {/* Arrow between steps */}
+        <div className="flex justify-center">
+          <div className="flex flex-col items-center">
+            <div className="w-px h-4 bg-[#1B29FF]/20" />
+            <ArrowDown className="h-4 w-4 text-[#1B29FF]/40" />
+            <div className="w-px h-4 bg-[#1B29FF]/20" />
+          </div>
+        </div>
+
+        {/* STEP 2: Bridge to Base */}
+        <div
+          className={cn(
+            'bg-white border border-[#1B29FF]/30 p-4 relative transition-opacity',
+            !hasOpUsdcBalance && 'opacity-60',
+          )}
+        >
+          <div className="flex items-center gap-2 mb-3">
+            <div
+              className={cn(
+                'flex items-center justify-center w-6 h-6 rounded-full border',
+                hasOpUsdcBalance
+                  ? 'bg-[#1B29FF]/10 border-[#1B29FF]/30'
+                  : 'bg-[#101010]/5 border-[#101010]/20',
+              )}
+            >
+              <span
+                className={cn(
+                  'font-mono text-[11px] font-bold',
+                  hasOpUsdcBalance ? 'text-[#1B29FF]' : 'text-[#101010]/40',
+                )}
+              >
+                2
+              </span>
+            </div>
+            <p
+              className={cn(
+                'font-mono uppercase tracking-[0.14em] text-[11px]',
+                hasOpUsdcBalance ? 'text-[#1B29FF]' : 'text-[#101010]/40',
+              )}
+            >
+              BRIDGE TO BASE
+            </p>
+            {hasOpUsdcBalance && (
+              <span className="font-mono text-[9px] text-[#10B981] bg-[#10B981]/10 px-2 py-0.5 rounded">
+                READY
+              </span>
+            )}
+          </div>
+
+          <div className="flex justify-between items-center mb-3">
             <div>
-              <p className="font-mono uppercase tracking-[0.14em] text-[11px] text-[#1B29FF] mb-1">
-                BALANCE::OP_USDC (Spendable)
+              <p
+                className={cn(
+                  'font-mono text-[10px] mb-1',
+                  hasOpUsdcBalance ? 'text-[#101010]/60' : 'text-[#101010]/40',
+                )}
+              >
+                Optimism balance
               </p>
-              <p className="font-mono text-[24px] tabular-nums text-[#101010]">
+              <p className="font-mono text-[16px] tabular-nums text-[#101010]">
                 {targetSafeUsdcBalance?.formatted
                   ? parseFloat(targetSafeUsdcBalance.formatted).toLocaleString(
                       undefined,
-                      {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 6,
-                      },
+                      { minimumFractionDigits: 2, maximumFractionDigits: 6 },
                     )
                   : '0.00'}{' '}
-                <span className="text-[12px] text-[#1B29FF]">USDC</span>
-              </p>
-              <p className="text-[12px] font-mono text-[#101010]/50">
-                ≈ ${targetSafeUsdcBalance?.formatted || '0.00'} USD
+                <span className="text-[11px] text-[#1B29FF]">USDC</span>
               </p>
             </div>
           </div>
 
           {/* Bridge to Base Input & Button */}
           <div className="space-y-2">
-            <label className="font-mono text-[10px] text-[#1B29FF]/70 uppercase">
-              INPUT::BRIDGE_AMOUNT (Op USDC → Base USDC)
+            <label
+              className={cn(
+                'font-mono text-[10px] uppercase',
+                hasOpUsdcBalance ? 'text-[#1B29FF]/70' : 'text-[#101010]/40',
+              )}
+            >
+              Amount to bridge
             </label>
             <div className="relative">
               <input
                 type="number"
-                placeholder="0.0"
+                placeholder={hasOpUsdcBalance ? '0.0' : 'Withdraw first'}
                 value={opBridgeAmount}
                 onChange={(e) => setOpBridgeAmount(e.target.value)}
-                className="w-full h-10 px-3 font-mono bg-white border border-[#1B29FF]/30 focus:border-[#1B29FF] focus:outline-none text-[14px] transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                className="w-full h-10 px-3 font-mono bg-white border border-[#1B29FF]/30 focus:border-[#1B29FF] focus:outline-none text-[14px] transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none disabled:bg-[#F7F7F2] disabled:cursor-not-allowed"
                 step="0.000001"
                 min="0"
-                disabled={isBridging}
+                disabled={isBridging || !hasOpUsdcBalance}
               />
               <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-2">
                 <span className="font-mono text-[10px] text-[#1B29FF]/70">
@@ -2717,8 +2869,8 @@ export function WithdrawEarnCard({
                 <button
                   type="button"
                   onClick={handleMaxOpBridge}
-                  className="font-mono px-2 py-1 text-[10px] text-[#1B29FF] border border-[#1B29FF]/30 hover:border-[#1B29FF] transition-colors bg-white hover:bg-[#1B29FF]/5"
-                  disabled={isBridging}
+                  className="font-mono px-2 py-1 text-[10px] text-[#1B29FF] border border-[#1B29FF]/30 hover:border-[#1B29FF] transition-colors bg-white hover:bg-[#1B29FF]/5 disabled:opacity-50"
+                  disabled={isBridging || !hasOpUsdcBalance}
                 >
                   MAX
                 </button>
@@ -2752,7 +2904,8 @@ export function WithdrawEarnCard({
                 parseFloat(opBridgeAmount) <= 0 ||
                 !opBridgeQuote ||
                 isLoadingOpBridgeQuote ||
-                isBridging
+                isBridging ||
+                !hasOpUsdcBalance
               }
               className="w-full h-10 font-mono uppercase bg-white border-2 border-[#1B29FF] text-[#1B29FF] hover:bg-[#1B29FF] hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
@@ -2765,15 +2918,12 @@ export function WithdrawEarnCard({
             </button>
           </div>
 
-          <p className="font-mono text-[10px] text-center text-[#1B29FF]/60 mt-3">
-            Bridge via Across Protocol • Funds arrive on Base in ~2-10 min
-          </p>
+          {!hasOpUsdcBalance && (
+            <p className="font-mono text-[10px] text-[#101010]/50 mt-2 text-center">
+              Complete Step 1 to withdraw, then bridge here
+            </p>
+          )}
         </div>
-
-        {/* Help text */}
-        <p className="font-mono text-[10px] text-center text-[#101010]/40">
-          2-STEP WITHDRAWAL: Vault → Op USDC → Base USDC
-        </p>
       </div>
     );
   }

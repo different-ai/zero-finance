@@ -604,23 +604,20 @@ const DestinationSelector = ({
     },
   ];
 
-  // Add crypto option for technical mode
-  if (isTechnical) {
-    options.push({
-      id: 'crypto',
-      title: 'Crypto Wallet',
-      subtitle: 'Send to any EVM address',
-      icon: (
-        <div className="w-10 h-10 bg-gradient-to-br from-[#1B29FF] to-[#1420CC] rounded-xl flex items-center justify-center shadow-lg shadow-[#1B29FF]/20">
-          <Coins className="h-5 w-5 text-white" />
-        </div>
-      ),
-      badge: 'INSTANT',
-      timing: '~30 seconds',
-      currency: 'CRYPTO',
-      isTechnical: true,
-    });
-  }
+  // Crypto wallet option - always available regardless of mode
+  options.push({
+    id: 'crypto',
+    title: 'Crypto Wallet',
+    subtitle: 'Send to any EVM address',
+    icon: (
+      <div className="w-10 h-10 bg-gradient-to-br from-[#1B29FF] to-[#1420CC] rounded-xl flex items-center justify-center shadow-lg shadow-[#1B29FF]/20">
+        <Coins className="h-5 w-5 text-white" />
+      </div>
+    ),
+    badge: 'INSTANT',
+    timing: '~30 seconds',
+    currency: 'CRYPTO',
+  });
 
   return (
     <div className="grid grid-cols-1 gap-3">
