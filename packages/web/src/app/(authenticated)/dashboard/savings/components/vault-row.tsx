@@ -1,6 +1,6 @@
 'use client';
 
-import { ExternalLink } from 'lucide-react';
+import { ExternalLink, Shield } from 'lucide-react';
 import { cn, formatUsd } from '@/lib/utils';
 import { DepositEarnCard } from '@/app/(authenticated)/dashboard/tools/earn-module/components/deposit-earn-card';
 import { WithdrawEarnCard } from '@/app/(authenticated)/dashboard/tools/earn-module/components/withdraw-earn-card';
@@ -238,6 +238,26 @@ export function VaultRowDesktop({
 
                 {/* Chain Badge (Technical mode only) */}
                 {isTechnical && <ChainBadge chainId={vault.chainId} />}
+
+                {/* Insurance Badge (Technical mode only) */}
+                {isTechnical && (
+                  <span
+                    className={cn(
+                      'inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-mono uppercase tracking-wide',
+                      vault.isInsured
+                        ? 'bg-[#10B981]/10 text-[#10B981]'
+                        : 'bg-[#EF4444]/10 text-[#EF4444]',
+                    )}
+                    title={
+                      vault.isInsured
+                        ? 'Covered by Lockton/Chainproof insurance'
+                        : 'Not covered by insurance'
+                    }
+                  >
+                    <Shield className="h-3 w-3" />
+                    {vault.isInsured ? 'INSURED' : 'UNINSURED'}
+                  </span>
+                )}
               </div>
 
               {/* Curator info */}
@@ -489,6 +509,26 @@ export function VaultRowMobile({
 
                 {/* Chain Badge (Technical mode only) */}
                 {isTechnical && <ChainBadge chainId={vault.chainId} />}
+
+                {/* Insurance Badge (Technical mode only - mobile) */}
+                {isTechnical && (
+                  <span
+                    className={cn(
+                      'inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-mono uppercase tracking-wide',
+                      vault.isInsured
+                        ? 'bg-[#10B981]/10 text-[#10B981]'
+                        : 'bg-[#EF4444]/10 text-[#EF4444]',
+                    )}
+                    title={
+                      vault.isInsured
+                        ? 'Covered by Lockton/Chainproof insurance'
+                        : 'Not covered by insurance'
+                    }
+                  >
+                    <Shield className="h-3 w-3" />
+                    {vault.isInsured ? 'INSURED' : 'UNINSURED'}
+                  </span>
+                )}
               </div>
               {isTechnical ? (
                 <p className="text-[11px] font-mono text-[#101010]/70">
