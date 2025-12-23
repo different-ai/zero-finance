@@ -756,52 +756,63 @@ async function processKycUpdatesAndNotifications(): Promise<
 
     // PHASE 4: Sync user KYC status from their primary workspace
     // This ensures legacy user.kycStatus stays in sync with workspace.kycStatus
+    // NOTE: Phase 1 already syncs most users, so this phase only handles edge cases
+    // where workspace was updated outside of this cron (e.g., via webhook or manual update)
     console.log(
-      '[kyc-processor] Phase 4: Syncing user KYC status from workspaces...',
+      '[kyc-processor] Phase 4: Syncing out-of-sync user KYC status from workspaces...',
     );
 
-    const usersToSync = await db.query.users.findMany({
-      where: and(
-        isNotNull(users.primaryWorkspaceId),
-        // Only sync users whose status might be out of sync
-      ),
-      limit: 50,
-    });
+    // Use a single optimized query with JOIN to find users whose status differs from their workspace
+    // This avoids N+1 queries by doing the comparison in SQL
+    const outOfSyncUsers = await db
+      .select({
+        userPrivyDid: users.privyDid,
+        userKycStatus: users.kycStatus,
+        userAlignCustomerId: users.alignCustomerId,
+        workspaceId: workspaces.id,
+        workspaceKycStatus: workspaces.kycStatus,
+        workspaceKycSubStatus: workspaces.kycSubStatus,
+        workspaceKycFlowLink: workspaces.kycFlowLink,
+        workspaceKycProvider: workspaces.kycProvider,
+        workspaceAlignCustomerId: workspaces.alignCustomerId,
+        workspaceAlignVirtualAccountId: workspaces.alignVirtualAccountId,
+      })
+      .from(users)
+      .innerJoin(workspaces, eq(users.primaryWorkspaceId, workspaces.id))
+      .where(
+        and(
+          isNotNull(users.primaryWorkspaceId),
+          // Only get users where status is actually different
+          // This dramatically reduces the number of updates needed
+          ne(users.kycStatus, workspaces.kycStatus),
+        ),
+      )
+      .limit(20); // Reduced limit since we're only getting actual mismatches
 
-    for (const user of usersToSync) {
-      if (!user.primaryWorkspaceId) continue;
+    console.log(
+      `[kyc-processor] Found ${outOfSyncUsers.length} users with mismatched KYC status`,
+    );
 
+    for (const row of outOfSyncUsers) {
       try {
-        const primaryWorkspace = await db.query.workspaces.findFirst({
-          where: eq(workspaces.id, user.primaryWorkspaceId),
-        });
+        await db
+          .update(users)
+          .set({
+            kycStatus: row.workspaceKycStatus,
+            kycSubStatus: row.workspaceKycSubStatus,
+            kycFlowLink: row.workspaceKycFlowLink,
+            kycProvider: row.workspaceKycProvider,
+            alignCustomerId: row.workspaceAlignCustomerId,
+            alignVirtualAccountId: row.workspaceAlignVirtualAccountId,
+          })
+          .where(eq(users.privyDid, row.userPrivyDid));
 
-        if (!primaryWorkspace) continue;
-
-        // Check if user's KYC status is out of sync with their primary workspace
-        if (
-          user.kycStatus !== primaryWorkspace.kycStatus ||
-          user.alignCustomerId !== primaryWorkspace.alignCustomerId
-        ) {
-          await db
-            .update(users)
-            .set({
-              kycStatus: primaryWorkspace.kycStatus,
-              kycSubStatus: primaryWorkspace.kycSubStatus,
-              kycFlowLink: primaryWorkspace.kycFlowLink,
-              kycProvider: primaryWorkspace.kycProvider,
-              alignCustomerId: primaryWorkspace.alignCustomerId,
-              alignVirtualAccountId: primaryWorkspace.alignVirtualAccountId,
-            })
-            .where(eq(users.privyDid, user.privyDid));
-
-          console.log(
-            `[kyc-processor] Synced user ${user.privyDid} KYC status: ${user.kycStatus} -> ${primaryWorkspace.kycStatus}`,
-          );
-        }
+        console.log(
+          `[kyc-processor] Synced user ${row.userPrivyDid} KYC status: ${row.userKycStatus} -> ${row.workspaceKycStatus}`,
+        );
       } catch (error) {
         console.error(
-          `[kyc-processor] Error syncing KYC status for user ${user.privyDid}:`,
+          `[kyc-processor] Error syncing KYC status for user ${row.userPrivyDid}:`,
           error,
         );
       }
