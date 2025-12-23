@@ -257,19 +257,20 @@ const USDC_BASE_ADDRESS = USDC_ADDRESS as Address;
 // UTILITY COMPONENTS
 // ============================================================================
 
-// Animated conversion arrow
+// Clean conversion arrow (no animations per design language)
 const ConversionArrow = ({ className }: { className?: string }) => (
-  <div className={cn('flex items-center justify-center py-3', className)}>
-    <div className="relative">
-      <div className="absolute inset-0 bg-gradient-to-b from-[#1B29FF]/20 to-transparent rounded-full blur-xl animate-pulse" />
-      <div className="relative bg-white border-2 border-[#1B29FF]/20 rounded-full p-2 shadow-lg">
-        <ArrowDown className="h-5 w-5 text-[#1B29FF] animate-bounce" />
+  <div className={cn('flex items-center justify-center py-2', className)}>
+    <div className="flex flex-col items-center">
+      <div className="w-px h-3 bg-[#101010]/10" />
+      <div className="bg-white border border-[#101010]/10 rounded-full p-1.5">
+        <ArrowDown className="h-4 w-4 text-[#101010]/40" />
       </div>
+      <div className="w-px h-3 bg-[#101010]/10" />
     </div>
   </div>
 );
 
-// Currency pill with icon
+// Currency pill - clean, minimal per design language
 const CurrencyPill = ({
   currency,
   variant = 'default',
@@ -277,44 +278,28 @@ const CurrencyPill = ({
   currency: 'USDC' | 'EUR' | 'USD';
   variant?: 'default' | 'highlight';
 }) => {
-  const icons = {
-    USDC: <Coins className="h-3.5 w-3.5" />,
-    EUR: <Euro className="h-3.5 w-3.5" />,
-    USD: <CircleDollarSign className="h-3.5 w-3.5" />,
-  };
-
-  const colors = {
-    USDC: 'bg-blue-50 text-blue-700 border-blue-200',
-    EUR: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-    USD: 'bg-green-50 text-green-700 border-green-200',
-  };
-
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[12px] font-medium border transition-all',
-        colors[currency],
-        variant === 'highlight' && 'ring-2 ring-offset-1 ring-[#1B29FF]/20',
+        'inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium uppercase tracking-wider',
+        variant === 'highlight'
+          ? 'bg-[#1B29FF]/10 text-[#1B29FF]'
+          : 'bg-[#101010]/5 text-[#101010]/60',
       )}
     >
-      {icons[currency]}
       {currency}
     </span>
   );
 };
 
-// Animated success checkmark
+// Success checkmark - clean, no excessive animation
 const SuccessAnimation = () => (
-  <div className="relative">
-    <div className="absolute inset-0 bg-green-500/20 rounded-full animate-ping" />
-    <div className="absolute inset-0 bg-green-500/10 rounded-full animate-pulse scale-150" />
-    <div className="relative bg-gradient-to-br from-green-400 to-green-600 rounded-full p-4 shadow-xl">
-      <CheckCircle2 className="h-10 w-10 text-white" />
-    </div>
+  <div className="w-16 h-16 bg-[#10B981]/10 rounded-full flex items-center justify-center">
+    <CheckCircle2 className="h-8 w-8 text-[#10B981]" />
   </div>
 );
 
-// Progress stepper
+// Progress stepper - minimal design
 const ProgressStepper = ({
   currentStep,
   totalSteps,
@@ -322,28 +307,15 @@ const ProgressStepper = ({
   currentStep: number;
   totalSteps: number;
 }) => (
-  <div className="flex items-center gap-2">
+  <div className="flex items-center gap-1">
     {Array.from({ length: totalSteps }).map((_, i) => (
-      <div key={i} className="flex items-center">
-        <div
-          className={cn(
-            'h-2 w-2 rounded-full transition-all duration-300',
-            i < currentStep
-              ? 'bg-[#1B29FF] scale-100'
-              : i === currentStep
-                ? 'bg-[#1B29FF] scale-125 ring-4 ring-[#1B29FF]/20'
-                : 'bg-[#101010]/10',
-          )}
-        />
-        {i < totalSteps - 1 && (
-          <div
-            className={cn(
-              'h-0.5 w-8 transition-all duration-300',
-              i < currentStep ? 'bg-[#1B29FF]' : 'bg-[#101010]/10',
-            )}
-          />
+      <div
+        key={i}
+        className={cn(
+          'h-1.5 rounded-full transition-all',
+          i <= currentStep ? 'bg-[#1B29FF] w-6' : 'bg-[#101010]/10 w-4',
         )}
-      </div>
+      />
     ))}
   </div>
 );
@@ -436,68 +408,54 @@ const QuotePreview = ({
   const exchangeRate = quote ? parseFloat(quote.exchangeRate) : 0;
 
   return (
-    <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#F7F7F2] to-white border border-[#101010]/10 p-5">
-      {/* Decorative background */}
-      <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-[#1B29FF]/5 to-transparent rounded-bl-full" />
-
-      <div className="relative space-y-4">
+    <div className="bg-white border border-[#101010]/10 rounded-md p-4">
+      <div className="space-y-4">
         {/* Header */}
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Sparkles className="h-4 w-4 text-[#1B29FF]" />
-            <span className="text-[12px] font-medium text-[#1B29FF] uppercase tracking-wider">
-              {quote ? 'Live Quote' : 'Getting Quote...'}
-            </span>
-          </div>
+          <p className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60">
+            {quote ? 'Quote' : 'Getting quote...'}
+          </p>
           {quote && (
-            <div className="flex items-center gap-1.5 text-[11px] text-[#101010]/50">
-              <Clock className="h-3 w-3" />
-              Expires in 60s
-            </div>
+            <p className="text-[11px] text-[#101010]/40">Expires in 60s</p>
           )}
         </div>
 
         {/* Error state */}
         {error && (
-          <div className="text-[12px] text-red-600 bg-red-50 p-2 rounded-lg">
+          <div className="text-[12px] text-[#EF4444] bg-[#EF4444]/5 border border-[#EF4444]/20 p-3 rounded-md">
             Failed to get quote. Please try again.
           </div>
         )}
 
         {/* Conversion visualization */}
-        <div className="space-y-3">
-          {/* You send - emphasized as primary */}
-          <div className="flex items-center justify-between bg-gradient-to-r from-[#1B29FF]/5 to-[#1B29FF]/10 rounded-xl p-4 border border-[#1B29FF]/20">
+        <div className="space-y-2">
+          {/* You send */}
+          <div className="flex items-center justify-between p-3 bg-[#F7F7F2] rounded-md">
             <div>
-              <p className="text-[11px] text-[#1B29FF]/70 uppercase tracking-wider mb-1">
+              <p className="text-[11px] text-[#101010]/60 uppercase tracking-wider mb-1">
                 You send
               </p>
-              <p className="text-[28px] font-bold tabular-nums text-[#101010]">
+              <p className="text-[24px] font-semibold tabular-nums text-[#101010]">
                 {amountUsdc.toLocaleString('en-US', {
                   minimumFractionDigits: 2,
                   maximumFractionDigits: 2,
                 })}
               </p>
-              {quote && feeAmount > 0 && (
-                <p className="text-[11px] text-[#101010]/40 mt-0.5">
-                  {feeAmount.toFixed(2)} USDC fee included
-                </p>
-              )}
             </div>
             <CurrencyPill currency="USDC" variant="highlight" />
           </div>
 
           <ConversionArrow />
 
-          {/* Bank receives - secondary */}
-          <div className="flex items-center justify-between bg-white rounded-xl p-4 border border-[#101010]/5 shadow-sm">
+          {/* Bank receives */}
+          <div className="flex items-center justify-between p-3 bg-[#10B981]/5 border border-[#10B981]/20 rounded-md">
             <div>
-              <p className="text-[11px] text-[#101010]/50 uppercase tracking-wider mb-1">
+              <p className="text-[11px] text-[#10B981]/70 uppercase tracking-wider mb-1">
                 Bank receives
               </p>
-              <p className="text-[24px] font-semibold tabular-nums text-[#101010]">
+              <p className="text-[24px] font-semibold tabular-nums text-[#10B981]">
                 {isLoading ? (
-                  <span className="animate-pulse">—</span>
+                  <Loader2 className="h-5 w-5 animate-spin inline" />
                 ) : quote ? (
                   `${currencySymbol}${destinationAmount.toLocaleString(
                     'en-US',
@@ -516,29 +474,31 @@ const QuotePreview = ({
         </div>
 
         {/* Fee breakdown */}
-        {quote && exchangeRate > 0 && (
-          <div className="pt-3 border-t border-[#101010]/10 space-y-2">
-            <div className="flex justify-between items-center text-[13px]">
-              <span className="text-[#101010]/60">Exchange rate</span>
-              <span className="tabular-nums text-[#101010]">
-                1 USDC = {currencySymbol}
-                {exchangeRate.toFixed(4)} {currencyCode}
-              </span>
+        {quote && (
+          <div className="pt-3 border-t border-[#101010]/10 space-y-1.5">
+            {feeAmount > 0 && (
+              <div className="flex justify-between items-center text-[12px]">
+                <span className="text-[#101010]/60">Fee</span>
+                <span className="tabular-nums text-[#101010]">
+                  {feeAmount.toFixed(2)} USDC
+                </span>
+              </div>
+            )}
+            {exchangeRate > 0 && (
+              <div className="flex justify-between items-center text-[12px]">
+                <span className="text-[#101010]/60">Rate</span>
+                <span className="tabular-nums text-[#101010]">
+                  1 USDC = {currencySymbol}
+                  {exchangeRate.toFixed(4)}
+                </span>
+              </div>
+            )}
+            <div className="flex justify-between items-center text-[12px]">
+              <span className="text-[#101010]/60">Arrival</span>
+              <span className="text-[#101010]">1-2 business days</span>
             </div>
           </div>
         )}
-
-        {/* Trust indicators */}
-        <div className="flex items-center gap-4 pt-2">
-          <div className="flex items-center gap-1.5 text-[11px] text-[#101010]/50">
-            <Shield className="h-3.5 w-3.5 text-green-600" />
-            <span>Bank-grade security</span>
-          </div>
-          <div className="flex items-center gap-1.5 text-[11px] text-[#101010]/50">
-            <Clock className="h-3.5 w-3.5 text-blue-600" />
-            <span>1-2 business days</span>
-          </div>
-        </div>
       </div>
     </div>
   );
@@ -577,10 +537,10 @@ const DestinationSelector = ({
     {
       id: 'ach',
       title: 'US Bank',
-      subtitle: 'Receive dollars to your US account',
+      subtitle: 'Receive dollars via ACH transfer',
       icon: (
-        <div className="w-10 h-10 bg-gradient-to-br from-green-400 to-green-600 rounded-xl flex items-center justify-center shadow-lg shadow-green-500/20">
-          <CircleDollarSign className="h-5 w-5 text-white" />
+        <div className="w-10 h-10 bg-[#101010]/5 rounded-md flex items-center justify-center">
+          <CircleDollarSign className="h-5 w-5 text-[#101010]/70" />
         </div>
       ),
       badge: 'ACH',
@@ -591,10 +551,10 @@ const DestinationSelector = ({
     {
       id: 'iban',
       title: 'EU Bank',
-      subtitle: 'Receive euros to your SEPA account',
+      subtitle: 'Receive euros via SEPA transfer',
       icon: (
-        <div className="w-10 h-10 bg-gradient-to-br from-blue-400 to-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/20">
-          <Euro className="h-5 w-5 text-white" />
+        <div className="w-10 h-10 bg-[#101010]/5 rounded-md flex items-center justify-center">
+          <Euro className="h-5 w-5 text-[#101010]/70" />
         </div>
       ),
       badge: 'SEPA',
@@ -610,8 +570,8 @@ const DestinationSelector = ({
     title: 'Crypto Wallet',
     subtitle: 'Send to any EVM address',
     icon: (
-      <div className="w-10 h-10 bg-gradient-to-br from-[#1B29FF] to-[#1420CC] rounded-xl flex items-center justify-center shadow-lg shadow-[#1B29FF]/20">
-        <Coins className="h-5 w-5 text-white" />
+      <div className="w-10 h-10 bg-[#1B29FF]/10 rounded-md flex items-center justify-center">
+        <Coins className="h-5 w-5 text-[#1B29FF]" />
       </div>
     ),
     badge: 'INSTANT',
@@ -620,7 +580,7 @@ const DestinationSelector = ({
   });
 
   return (
-    <div className="grid grid-cols-1 gap-3">
+    <div className="grid grid-cols-1 gap-2">
       {options.map((option) => (
         <button
           key={option.id}
@@ -628,33 +588,25 @@ const DestinationSelector = ({
           onClick={() => !option.disabled && onChange(option.id)}
           disabled={option.disabled}
           className={cn(
-            'relative flex items-center gap-4 p-4 rounded-2xl border-2 transition-all duration-200 text-left',
+            'relative flex items-center gap-4 p-4 rounded-md border transition-colors text-left',
             value === option.id
-              ? 'border-[#1B29FF] bg-[#1B29FF]/5 shadow-lg shadow-[#1B29FF]/10'
-              : 'border-[#101010]/10 bg-white hover:border-[#101010]/20 hover:bg-[#F7F7F2]/50',
+              ? 'border-[#1B29FF] bg-[#1B29FF]/5'
+              : 'border-[#101010]/10 bg-white hover:border-[#101010]/20',
             option.disabled && 'opacity-40 cursor-not-allowed',
-            option.isTechnical && 'border-dashed',
           )}
         >
           {option.icon}
 
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
-              <span className="font-semibold text-[15px] text-[#101010]">
+              <span className="font-medium text-[14px] text-[#101010]">
                 {option.title}
               </span>
-              <span
-                className={cn(
-                  'px-2 py-0.5 rounded-md text-[10px] font-medium uppercase tracking-wider',
-                  option.isTechnical
-                    ? 'bg-[#1B29FF]/10 text-[#1B29FF]'
-                    : 'bg-[#101010]/5 text-[#101010]/60',
-                )}
-              >
+              <span className="px-1.5 py-0.5 rounded text-[10px] font-medium uppercase tracking-wider bg-[#101010]/5 text-[#101010]/60">
                 {option.badge}
               </span>
             </div>
-            <p className="text-[13px] text-[#101010]/60 mt-0.5">
+            <p className="text-[12px] text-[#101010]/60 mt-0.5">
               {option.subtitle}
             </p>
           </div>
@@ -667,8 +619,8 @@ const DestinationSelector = ({
 
           {value === option.id && (
             <div className="absolute top-3 right-3">
-              <div className="w-5 h-5 bg-[#1B29FF] rounded-full flex items-center justify-center">
-                <Check className="h-3 w-3 text-white" />
+              <div className="w-4 h-4 bg-[#1B29FF] rounded-full flex items-center justify-center">
+                <Check className="h-2.5 w-2.5 text-white" />
               </div>
             </div>
           )}
