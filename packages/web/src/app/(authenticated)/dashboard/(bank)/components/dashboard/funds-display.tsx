@@ -259,7 +259,7 @@ export function FundsDisplay({
                               : 'text-[#101010]',
                           )}
                         >
-                          {isTechnical ? 'WIRE::TRANSFER' : 'Bank Transfer'}
+                          {isTechnical ? 'BANK::TRANSFER' : 'Bank Transfer'}
                         </p>
                         <p
                           className={cn(
@@ -271,7 +271,7 @@ export function FundsDisplay({
                         >
                           {isTechnical
                             ? 'ACH / SEPA / Wire → USDC'
-                            : 'Send from your bank account'}
+                            : 'Receive via ACH or wire transfer'}
                         </p>
                       </div>
                       <ArrowRightCircle
@@ -382,7 +382,7 @@ export function FundsDisplay({
                               : 'text-[#101010]/60',
                           )}
                         />
-                        {isTechnical ? 'WIRE::TRANSFER' : 'Wire Transfer'}
+                        {isTechnical ? 'ACH::WIRE' : 'ACH / Wire Transfer'}
                       </DialogTitle>
                     </div>
                   </DialogHeader>

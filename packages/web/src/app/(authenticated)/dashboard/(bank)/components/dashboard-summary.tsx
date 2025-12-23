@@ -260,7 +260,7 @@ export function DashboardSummary({
                             : 'text-[#101010]',
                         )}
                       >
-                        {isTechnical ? 'WIRE::TRANSFER' : 'Wire Transfer'}
+                        {isTechnical ? 'ACH::WIRE' : 'ACH / Wire'}
                       </p>
                       <p
                         className={cn(
@@ -272,7 +272,7 @@ export function DashboardSummary({
                       >
                         {isTechnical
                           ? 'ACH / SEPA / Wire → USDC'
-                          : 'Send from your bank account'}
+                          : 'Receive via ACH or wire transfer'}
                       </p>
                     </div>
                     <ArrowRightCircle
@@ -381,7 +381,7 @@ export function DashboardSummary({
                           isTechnical ? 'text-[#1B29FF]' : 'text-[#101010]/60',
                         )}
                       />
-                      {isTechnical ? 'WIRE::TRANSFER' : 'Wire Transfer'}
+                      {isTechnical ? 'ACH::WIRE' : 'ACH / Wire Transfer'}
                     </DialogTitle>
                   </div>
                 </DialogHeader>

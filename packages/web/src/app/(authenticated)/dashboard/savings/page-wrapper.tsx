@@ -24,7 +24,6 @@ import { USDC_ADDRESS } from '@/lib/constants';
 // Import extracted components
 import {
   InsuranceBanner,
-  LiveYieldCard,
   VaultsSection,
   CheckingActionsCard,
   PortfolioOverview,
@@ -37,7 +36,6 @@ import {
   calculateVaultViewModels,
   calculateTotalSaved,
   calculateTotalEarned,
-  calculateAverageApy,
   calculateWeightedInstantApy,
 } from './utils/vault-calculations';
 
@@ -329,17 +327,38 @@ export default function SavingsPageWrapper({
     [BASE_VAULTS, vaultStatsMany, userPositions, userIsInsured],
   );
 
-  // Display vaults without the mock insured vault - protection is now shown as a separate banner
+  // Filter vaults based on mode:
+  // - Banking mode: Only show recommended vault (highest APY) + vaults with balance
+  // - Technical mode: Show all vaults
   const displayVaults = useMemo(() => {
-    // Just return the actual vaults, sorted by balance/category
-    const stableVaults = vaultsVM.filter((v) => v.category === 'stable');
-    const growthVaults = vaultsVM.filter((v) => v.category === 'growth');
-    return [...stableVaults, ...growthVaults];
-  }, [vaultsVM]);
+    if (isTechnical) {
+      // Technical mode: Show all vaults sorted by category
+      const stableVaults = vaultsVM.filter((v) => v.category === 'stable');
+      const growthVaults = vaultsVM.filter((v) => v.category === 'growth');
+      return [...stableVaults, ...growthVaults];
+    }
+
+    // Banking mode: Only show recommended vault + vaults with user balance
+    // Find the recommended vault (USDC Prime is the new primary vault)
+    const recommendedVault = vaultsVM.find((v) => v.id === 'morphoUsdcPrime');
+
+    // Get vaults where user has a balance (excluding the recommended one to avoid duplicates)
+    const vaultsWithBalance = vaultsVM.filter(
+      (v) => v.balanceUsd > 0 && v.id !== 'morphoUsdcPrime',
+    );
+
+    // Combine: recommended first, then vaults with balance
+    const result: typeof vaultsVM = [];
+    if (recommendedVault) {
+      result.push(recommendedVault);
+    }
+    result.push(...vaultsWithBalance);
+
+    return result;
+  }, [vaultsVM, isTechnical]);
 
   const totalSaved = calculateTotalSaved(vaultsVM);
   const totalEarned = calculateTotalEarned(vaultsVM);
-  const averageApy = calculateAverageApy(vaultsVM);
   const averageInstantApy = calculateWeightedInstantApy(vaultsVM, totalSaved);
 
   const animatedInitialEarned = isDemoMode ? 0 : totalEarned;
@@ -462,12 +481,7 @@ export default function SavingsPageWrapper({
           />
         </div>
 
-        {/* Live Yield Counter - Premium Card */}
-        <LiveYieldCard
-          totalSaved={totalSaved}
-          averageApy={averageApy}
-          isTechnical={isTechnical}
-        />
+        {/* Live Yield Counter removed - projections were confusing users */}
 
         {/* Vaults Section - Bimodal Design */}
         <VaultsSection

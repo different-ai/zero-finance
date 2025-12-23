@@ -33,6 +33,7 @@ export const WETH_ASSET: VaultAsset = {
 export type BaseVault = {
   id:
     | 'morphoGauntlet'
+    | 'morphoUsdcPrime'
     | 'seamless'
     | 'gauntletCore'
     | 'steakhouse'
@@ -47,13 +48,31 @@ export type BaseVault = {
   asset: VaultAsset; // Underlying asset configuration
   zapper?: `0x${string}`; // Optional zapper contract for native ETH deposits
   category: 'stable' | 'growth'; // For UI grouping
+  isPrimary?: boolean; // Mark as the default vault for banking mode
 };
 
-// Primary vault - Morpho Gauntlet USDC Frontier on Base
+// Primary vault for banking mode - Morpho USDC Prime on Base
+// This is the recommended vault shown to non-technical users
 export const PRIMARY_VAULT: BaseVault = {
+  id: 'morphoUsdcPrime',
+  name: 'USDC Prime',
+  displayName: 'High-Yield Savings',
+  address: '0x050cE30b927Da55177A4914EC73480238BAD56f0',
+  risk: 'Optimized',
+  curator: 'Morpho',
+  appUrl:
+    'https://app.morpho.org/base/vault/0x050cE30b927Da55177A4914EC73480238BAD56f0/usdc-prime',
+  chainId: BASE_CHAIN_ID,
+  asset: USDC_ASSET,
+  category: 'stable',
+  isPrimary: true,
+};
+
+// Alternative high-yield vault - Gauntlet USDC Frontier (for technical users)
+export const GAUNTLET_FRONTIER_VAULT: BaseVault = {
   id: 'morphoGauntlet',
   name: 'Gauntlet USDC Frontier',
-  displayName: 'High-Yield Savings',
+  displayName: 'Frontier Yield',
   address: '0x236919F11ff9eA9550A4287696C2FC9e18E6e890',
   risk: 'Optimized',
   curator: 'Morpho × Gauntlet',
@@ -81,9 +100,11 @@ export const ORIGIN_SUPER_OETH_VAULT: BaseVault = {
 
 // Stable vaults (USDC-based)
 export const BASE_USDC_VAULTS: BaseVault[] = [
-  // Primary vault first
+  // Primary vault first (shown to banking users)
   PRIMARY_VAULT,
-  // Base chain vaults
+  // Gauntlet Frontier (alternative for technical users)
+  GAUNTLET_FRONTIER_VAULT,
+  // Other Base chain vaults
   {
     id: 'seamless',
     name: 'Seamless USDC',

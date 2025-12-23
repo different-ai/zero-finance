@@ -172,7 +172,7 @@ export function HeroSection() {
                 <div className="mt-2 space-y-3">
                   <div className="border-b border-[#101010]/10 pb-3">
                     <div className="text-[13px] font-medium text-[#101010]">
-                      Wire Transfer
+                      ACH / Wire Transfer
                     </div>
                     <dl className="mt-1 text-[12px] space-y-1">
                       <div className="flex justify-between">
@@ -262,8 +262,8 @@ export function HeroSection() {
                 Create your account
               </h3>
               <p className="mt-1 text-[13px] sm:text-[14px] text-[#101010]/70">
-                Sign up with email in under 60 seconds. No bank
-                connection required.
+                Sign up with email in under 60 seconds. No bank connection
+                required.
               </p>
             </div>
             <div className="p-4 sm:p-6">
@@ -274,7 +274,7 @@ export function HeroSection() {
                 Deposit USD
               </h3>
               <p className="mt-1 text-[13px] sm:text-[14px] text-[#101010]/70">
-                Transfer funds to your account. 
+                Transfer funds to your account.
               </p>
             </div>
             <div className="p-4 sm:p-6">
