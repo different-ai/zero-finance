@@ -57,11 +57,11 @@ export const PRIMARY_VAULT: BaseVault = {
   id: 'morphoUsdcPrime',
   name: 'USDC Prime',
   displayName: 'Stable Savings',
-  address: '0x050cE30b927Da55177A4914EC73480238BAD56f0',
+  address: '0xeE8F4eC5672F09119b96Ab6fB59C27E1b7e44b61',
   risk: 'Balanced',
   curator: '0 Finance',
   appUrl:
-    'https://app.morpho.org/base/vault/0x050cE30b927Da55177A4914EC73480238BAD56f0/usdc-prime',
+    'https://app.morpho.org/base/vault/0xeE8F4eC5672F09119b96Ab6fB59C27E1b7e44b61/gauntlet-usdc-prime',
   chainId: BASE_CHAIN_ID,
   asset: USDC_ASSET,
   category: 'stable',
