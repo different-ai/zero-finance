@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { ArrowRight, Users, Settings2, Wallet } from 'lucide-react';
+import { ArrowRight, Users, Settings2, Wallet, Bot } from 'lucide-react';
 import Link from 'next/link';
 import { useBimodal } from '@/components/ui/bimodal';
 import { cn } from '@/lib/utils';
@@ -62,6 +62,19 @@ export function SettingsClientContent() {
         ? ['Workspace params', 'Permissions', 'Entity config']
         : ['Workspace name', 'Team members', 'Company profile', 'Contractors'],
       path: '/dashboard/settings/company',
+      technicalOnly: false,
+    },
+    {
+      id: 'integrations',
+      title: isTechnical ? 'API::INTEGRATIONS' : 'Workspace API Keys',
+      description: isTechnical
+        ? 'Create and manage MCP API keys for AI agent access (Claude, Cursor, etc.)'
+        : 'Connect AI agents to your workspace via the Model Context Protocol',
+      icon: Bot,
+      features: isTechnical
+        ? ['MCP endpoint', 'API keys', 'Agent access']
+        : ['AI agents', 'API keys', 'Automations'],
+      path: '/dashboard/settings/integrations',
       technicalOnly: false,
     },
   ];

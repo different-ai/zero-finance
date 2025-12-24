@@ -21,9 +21,9 @@
     },
     "zero-finance": {
       "type": "remote",
-      "url": "http://localhost:3050/api/mcp",
+      "url": "https://www.0.finance/api/mcp",
       "headers": {
-        "Authorization": "Bearer {env:ZERO_FINANCE_API_KEY}"
+        "Authorization": "Bearer zf_live_357e009e96e45af715083fc602e74fd14b7cfe694426728b2f8e52f666eedd93"
       },
       "enabled": true
     }
