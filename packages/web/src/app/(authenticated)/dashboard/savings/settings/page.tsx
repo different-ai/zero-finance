@@ -6,7 +6,15 @@ import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import LoadingSpinner from '@/components/ui/loading-spinner';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, ExternalLink, AlertCircle, Info } from 'lucide-react';
+import {
+  ChevronLeft,
+  ExternalLink,
+  AlertCircle,
+  Info,
+  Bot,
+  Key,
+  ChevronRight,
+} from 'lucide-react';
 import SavingsPanel from '@/components/savings/savings-panel';
 import { trpc } from '@/utils/trpc';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -235,6 +243,51 @@ export default function SavingsSettingsPage() {
               </div>
             </div>
           </div>
+
+          {/* Workspace API Keys - Technical Mode Only */}
+          {isTechnical && (
+            <div className="border border-[#1B29FF]/20 bg-white rounded-md">
+              <div className="p-6 border-b border-[#1B29FF]/10">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 bg-[#1B29FF]/10 rounded-sm flex items-center justify-center">
+                    <Bot className="h-5 w-5 text-[#1B29FF]" />
+                  </div>
+                  <div>
+                    <h2 className="text-[20px] font-medium text-[#101010] font-mono">
+                      WORKSPACE::API_KEYS
+                    </h2>
+                    <p className="text-[14px] text-[#101010]/70 font-mono">
+                      MCP access for AI agents (Claude, Cursor, etc.)
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div className="p-6 space-y-4">
+                <p className="text-[14px] text-[#101010]/70 font-mono">
+                  Create API keys to allow AI agents to interact with your
+                  account via the Model Context Protocol. Enable automated
+                  transactions, balance queries, and more.
+                </p>
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <Link href="/dashboard/settings/integrations">
+                    <Button className="w-full sm:w-auto font-mono bg-[#1B29FF] hover:bg-[#1420CC] text-white">
+                      <Key className="mr-2 h-4 w-4" />
+                      MANAGE_API_KEYS
+                      <ChevronRight className="ml-2 h-4 w-4" />
+                    </Button>
+                  </Link>
+                </div>
+                <div className="pt-4 border-t border-[#1B29FF]/10">
+                  <p className="text-[12px] text-[#101010]/50 font-mono">
+                    MCP_ENDPOINT:{' '}
+                    {typeof window !== 'undefined'
+                      ? `${window.location.origin}/api/mcp`
+                      : '/api/mcp'}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
