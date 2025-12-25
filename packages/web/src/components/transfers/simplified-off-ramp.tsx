@@ -58,6 +58,7 @@ import {
 import { Combobox, type ComboboxOption } from '@/components/ui/combo-box';
 import { useBimodal, BlueprintGrid, Crosshairs } from '@/components/ui/bimodal';
 import { Checkbox } from '@/components/ui/checkbox';
+import { type VaultPosition } from '@/app/(authenticated)/dashboard/(bank)/components/dashboard-summary-wrapper';
 
 // ============================================================================
 // CONSTANTS & TYPES
@@ -216,7 +217,11 @@ interface SimplifiedOffRampProps {
     description?: string | null;
   };
   mode?: SimplifiedOffRampMode;
-  maxBalance?: number;
+  // Balance props for auto-withdraw from earning
+  idleBalance?: number; // USDC in Safe, ready to spend
+  earningBalance?: number; // USDC in vaults, earning yield
+  spendableBalance?: number; // Total (idle + earning)
+  vaultPositions?: VaultPosition[]; // For vault withdrawal execution
 }
 
 type SimplifiedOffRampInnerProps = Omit<SimplifiedOffRampProps, 'mode'>;
@@ -319,6 +324,198 @@ const ProgressStepper = ({
     ))}
   </div>
 );
+
+// Transfer step states for multi-step transfers
+type TransferStepStatus = 'pending' | 'in_progress' | 'completed' | 'error';
+
+interface TransferStep {
+  id: string;
+  label: string;
+  status: TransferStepStatus;
+  subtitle?: string;
+}
+
+// Multi-step transfer progress component
+const TransferProgress = ({
+  steps,
+  currentStepIndex,
+  error,
+}: {
+  steps: TransferStep[];
+  currentStepIndex: number;
+  error?: string;
+}) => (
+  <div className="space-y-3 py-4">
+    {steps.map((step, index) => {
+      const isActive = index === currentStepIndex;
+      const isCompleted = step.status === 'completed';
+      const isError = step.status === 'error';
+
+      return (
+        <div
+          key={step.id}
+          className={cn(
+            'flex items-start gap-3 p-3 rounded-lg transition-all',
+            isActive && 'bg-[#1B29FF]/5',
+            isError && 'bg-red-50',
+          )}
+        >
+          {/* Step indicator */}
+          <div className="flex-shrink-0 mt-0.5">
+            {isCompleted ? (
+              <div className="w-5 h-5 rounded-full bg-[#10B981] flex items-center justify-center">
+                <Check className="h-3 w-3 text-white" />
+              </div>
+            ) : isError ? (
+              <div className="w-5 h-5 rounded-full bg-red-500 flex items-center justify-center">
+                <AlertCircle className="h-3 w-3 text-white" />
+              </div>
+            ) : isActive ? (
+              <div className="w-5 h-5 rounded-full bg-[#1B29FF] flex items-center justify-center">
+                <Loader2 className="h-3 w-3 text-white animate-spin" />
+              </div>
+            ) : (
+              <div className="w-5 h-5 rounded-full border-2 border-[#101010]/20" />
+            )}
+          </div>
+
+          {/* Step content */}
+          <div className="flex-1 min-w-0">
+            <p
+              className={cn(
+                'text-[13px] font-medium',
+                isCompleted && 'text-[#10B981]',
+                isError && 'text-red-600',
+                isActive && 'text-[#1B29FF]',
+                !isCompleted && !isError && !isActive && 'text-[#101010]/50',
+              )}
+            >
+              {step.label}
+            </p>
+            {step.subtitle && (
+              <p className="text-[11px] text-[#101010]/50 mt-0.5">
+                {step.subtitle}
+              </p>
+            )}
+          </div>
+        </div>
+      );
+    })}
+
+    {error && (
+      <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+        <p className="text-[12px] text-red-700">{error}</p>
+      </div>
+    )}
+  </div>
+);
+
+// ============================================================================
+// VAULT WITHDRAWAL UTILITIES
+// ============================================================================
+
+// ERC4626 Vault ABI for withdrawal
+const VAULT_ABI = [
+  {
+    inputs: [
+      { name: 'shares', type: 'uint256' },
+      { name: 'receiver', type: 'address' },
+      { name: 'owner', type: 'address' },
+    ],
+    name: 'redeem',
+    outputs: [{ name: 'assets', type: 'uint256' }],
+    stateMutability: 'nonpayable',
+    type: 'function',
+  },
+  {
+    inputs: [{ name: 'assets', type: 'uint256' }],
+    name: 'convertToShares',
+    outputs: [{ name: 'shares', type: 'uint256' }],
+    stateMutability: 'view',
+    type: 'function',
+  },
+] as const;
+
+interface VaultWithdrawalTransaction {
+  to: Address;
+  value: string;
+  data: `0x${string}`;
+}
+
+/**
+ * Build vault withdrawal transactions for a given USDC amount.
+ * Sorts vaults by APY (lowest first) to preserve highest-earning positions.
+ * Returns an array of redeem transactions to be batched.
+ */
+async function buildVaultWithdrawalTransactions({
+  amountUsdc,
+  vaultPositions,
+  safeAddress,
+  publicClient,
+}: {
+  amountUsdc: number;
+  vaultPositions: VaultPosition[];
+  safeAddress: Address;
+  publicClient: any; // Using any to avoid viem version type conflicts
+}): Promise<{
+  transactions: VaultWithdrawalTransaction[];
+  totalWithdrawn: number;
+}> {
+  const transactions: VaultWithdrawalTransaction[] = [];
+  let remainingAmount = amountUsdc;
+  let totalWithdrawn = 0;
+
+  // Sort by APY ascending (lowest first) to preserve highest-earning positions
+  const sortedVaults = [...vaultPositions].sort(
+    (a, b) => (a.apy || 0) - (b.apy || 0),
+  );
+
+  for (const vault of sortedVaults) {
+    if (remainingAmount <= 0) break;
+
+    const vaultAssets = vault.assetsUsd;
+    if (vaultAssets <= 0) continue;
+
+    // Calculate how much to withdraw from this vault
+    const withdrawAmount = Math.min(remainingAmount, vaultAssets);
+
+    // Convert USDC amount to shares (need to query the vault)
+    const amountInSmallestUnit = parseUnits(withdrawAmount.toFixed(6), 6); // USDC has 6 decimals
+
+    try {
+      const sharesToRedeem = await publicClient.readContract({
+        address: vault.vaultAddress as Address,
+        abi: VAULT_ABI,
+        functionName: 'convertToShares',
+        args: [amountInSmallestUnit],
+      });
+
+      // Build redeem transaction
+      const redeemData = encodeFunctionData({
+        abi: VAULT_ABI,
+        functionName: 'redeem',
+        args: [sharesToRedeem, safeAddress, safeAddress],
+      });
+
+      transactions.push({
+        to: vault.vaultAddress as Address,
+        value: '0',
+        data: redeemData,
+      });
+
+      totalWithdrawn += withdrawAmount;
+      remainingAmount -= withdrawAmount;
+    } catch (error) {
+      console.error(
+        `Failed to build withdrawal for vault ${vault.vaultAddress}:`,
+        error,
+      );
+      // Continue to next vault
+    }
+  }
+
+  return { transactions, totalWithdrawn };
+}
 
 // ============================================================================
 // QUOTE PREVIEW COMPONENT
@@ -517,7 +714,10 @@ interface UnifiedAmountQuoteProps {
   onQuoteChange?: (quote: QuoteData | null) => void;
   usdcBalance: string | null | undefined;
   isLoadingBalance: boolean;
-  maxBalance: number | undefined;
+  // Balance props for auto-withdraw from earning
+  idleBalance?: number;
+  earningBalance?: number;
+  spendableBalance?: number;
   error?: string;
 }
 
@@ -528,7 +728,9 @@ const UnifiedAmountQuote = ({
   onQuoteChange,
   usdcBalance,
   isLoadingBalance,
-  maxBalance,
+  idleBalance,
+  earningBalance,
+  spendableBalance,
   error: formError,
 }: UnifiedAmountQuoteProps) => {
   const [debouncedAmount, setDebouncedAmount] = useState<number>(0);
@@ -589,11 +791,22 @@ const UnifiedAmountQuote = ({
   const feeAmount = quote ? parseFloat(quote.feeAmount) : 0;
   const exchangeRate = quote ? parseFloat(quote.exchangeRate) : 0;
 
+  // Calculate deficit for auto-withdraw from earning
+  const idle = idleBalance || 0;
+  const earning = earningBalance || 0;
+  const total = spendableBalance || idle + earning;
+  const deficit = Math.max(0, amountNum - idle);
+  const needsEarningWithdraw = deficit > 0 && deficit <= earning;
+  const insufficientFunds = amountNum > total;
+
   const handleMaxClick = () => {
+    // Use spendable (total) as max
     const balance =
-      maxBalance !== undefined ? maxBalance.toString() : usdcBalance;
+      spendableBalance !== undefined
+        ? spendableBalance.toString()
+        : usdcBalance;
     if (balance) {
-      onAmountChange(balance);
+      onAmountChange(balance.toString());
     }
   };
 
@@ -616,23 +829,24 @@ const UnifiedAmountQuote = ({
             placeholder="0.00"
             className="text-[24px] font-semibold tabular-nums h-10 border-0 bg-transparent p-0 focus-visible:ring-0 pr-16"
           />
-          {!isLoadingBalance && (maxBalance !== undefined || usdcBalance) && (
-            <button
-              type="button"
-              onClick={handleMaxClick}
-              className="absolute right-0 top-1/2 -translate-y-1/2 px-2.5 py-1 text-[11px] font-medium text-[#1B29FF] bg-[#1B29FF]/10 rounded-md hover:bg-[#1B29FF]/20 transition-colors"
-            >
-              MAX
-            </button>
-          )}
+          {!isLoadingBalance &&
+            (spendableBalance !== undefined || usdcBalance) && (
+              <button
+                type="button"
+                onClick={handleMaxClick}
+                className="absolute right-0 top-1/2 -translate-y-1/2 px-2.5 py-1 text-[11px] font-medium text-[#1B29FF] bg-[#1B29FF]/10 rounded-md hover:bg-[#1B29FF]/20 transition-colors"
+              >
+                MAX
+              </button>
+            )}
         </div>
         <div className="mt-2 flex justify-between text-[11px]">
-          <span className="text-[#101010]/50">Available</span>
+          <span className="text-[#101010]/50">Spendable</span>
           <span className="font-medium tabular-nums text-[#101010]/70">
             {isLoadingBalance ? (
               <Loader2 className="h-3 w-3 animate-spin inline" />
-            ) : maxBalance !== undefined ? (
-              `${maxBalance.toLocaleString('en-US', { minimumFractionDigits: 2 })} USDC`
+            ) : spendableBalance !== undefined ? (
+              `${spendableBalance.toLocaleString('en-US', { minimumFractionDigits: 2 })} USDC`
             ) : usdcBalance ? (
               `${parseFloat(usdcBalance).toLocaleString('en-US', { minimumFractionDigits: 2 })} USDC`
             ) : (
@@ -640,6 +854,55 @@ const UnifiedAmountQuote = ({
             )}
           </span>
         </div>
+        {/* Show breakdown: earning + idle */}
+        {spendableBalance !== undefined &&
+          earningBalance !== undefined &&
+          idleBalance !== undefined && (
+            <div className="mt-1 text-[10px] text-[#101010]/40">
+              {earningBalance.toLocaleString('en-US', {
+                minimumFractionDigits: 2,
+              })}{' '}
+              earning ·{' '}
+              {idleBalance.toLocaleString('en-US', {
+                minimumFractionDigits: 2,
+              })}{' '}
+              idle
+            </div>
+          )}
+        {/* Warning: will use earning balance */}
+        {needsEarningWithdraw && !insufficientFunds && (
+          <div className="mt-3 flex items-center gap-2 text-[12px] text-amber-700 bg-amber-50 border border-amber-200 px-3 py-2 rounded-lg">
+            <TrendingDown className="h-4 w-4 flex-shrink-0" />
+            <span>
+              This will use{' '}
+              <span className="font-medium">
+                {deficit.toLocaleString('en-US', {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}{' '}
+                USDC
+              </span>{' '}
+              from your earning balance
+            </span>
+          </div>
+        )}
+        {/* Error: insufficient funds */}
+        {insufficientFunds && amountNum > 0 && (
+          <div className="mt-3 flex items-center gap-2 text-[12px] text-red-700 bg-red-50 border border-red-200 px-3 py-2 rounded-lg">
+            <AlertCircle className="h-4 w-4 flex-shrink-0" />
+            <span>
+              Insufficient balance. You need{' '}
+              <span className="font-medium">
+                {(amountNum - total).toLocaleString('en-US', {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}{' '}
+                USDC
+              </span>{' '}
+              more.
+            </span>
+          </div>
+        )}
         {formError && (
           <p className="text-[11px] text-red-500 mt-1.5">{formError}</p>
         )}
@@ -1088,7 +1351,10 @@ function SimplifiedOffRampReal({
   fundingSources,
   prefillFromInvoice,
   defaultValues,
-  maxBalance,
+  idleBalance,
+  earningBalance,
+  spendableBalance,
+  vaultPositions,
 }: SimplifiedOffRampInnerProps) {
   const [currentStep, setCurrentStep] = useState(0);
   const [formStep, setFormStep] = useState(1);
@@ -1108,6 +1374,11 @@ function SimplifiedOffRampReal({
     null,
   );
   const [cryptoTxHash, setCryptoTxHash] = useState<string | null>(null);
+
+  // Multi-step transfer state (for auto-withdraw from earning)
+  const [transferSteps, setTransferSteps] = useState<TransferStep[]>([]);
+  const [currentTransferStepIndex, setCurrentTransferStepIndex] = useState(0);
+  const [isMultiStepTransfer, setIsMultiStepTransfer] = useState(false);
 
   const { client: smartClient } = useSmartWallets();
   const { isTechnical } = useBimodal();
@@ -1213,6 +1484,18 @@ function SimplifiedOffRampReal({
 
   const selectedAssetConfig = CRYPTO_ASSETS[cryptoAsset];
 
+  // Calculate deficit for auto-withdraw from earning balance
+  const amountNum = parseFloat(watchedAmount || '0');
+  const idle = idleBalance || 0;
+  const earning = earningBalance || 0;
+  const total = spendableBalance || idle + earning;
+  const deficit = Math.max(0, amountNum - idle);
+  const needsEarningWithdraw =
+    deficit > 0 &&
+    deficit <= earning &&
+    vaultPositions &&
+    vaultPositions.length > 0;
+
   useEffect(() => {
     const fetchBalances = async () => {
       if (!primarySafeAddress) return;
@@ -1256,6 +1539,20 @@ function SimplifiedOffRampReal({
     };
     fetchBalances();
   }, [primarySafeAddress, isTechnical]);
+
+  // Browser navigation warning when transfer is in progress
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (isLoading || isMultiStepTransfer) {
+        e.preventDefault();
+        e.returnValue = 'Transfer in progress. Are you sure you want to leave?';
+        return e.returnValue;
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [isLoading, isMultiStepTransfer]);
 
   // Effect to populate form when selecting a saved bank account
   useEffect(() => {
@@ -1542,6 +1839,58 @@ function SimplifiedOffRampReal({
     });
   };
 
+  // Handle vault withdrawal step for multi-step transfers
+  const handleVaultWithdrawal = async (): Promise<boolean> => {
+    if (!primarySafeAddress || !vaultPositions || !sendWithRelay) {
+      return false;
+    }
+
+    try {
+      const publicClient = createPublicClient({
+        chain: base,
+        transport: http(process.env.NEXT_PUBLIC_BASE_RPC_URL),
+      });
+
+      const { transactions, totalWithdrawn } =
+        await buildVaultWithdrawalTransactions({
+          amountUsdc: deficit,
+          vaultPositions,
+          safeAddress: primarySafeAddress,
+          publicClient: publicClient as any, // Cast to avoid viem version type conflicts
+        });
+
+      if (transactions.length === 0) {
+        throw new Error('No vault withdrawal transactions could be built');
+      }
+
+      console.log('[SimplifiedOffRamp] Executing vault withdrawal:', {
+        deficit,
+        totalWithdrawn,
+        transactionCount: transactions.length,
+      });
+
+      // Execute withdrawal via Safe relay
+      const txHash = await sendWithRelay(
+        transactions.map((tx) => ({
+          to: tx.to,
+          value: tx.value,
+          data: tx.data,
+        })),
+        1_500_000n, // Gas limit for multiple vault redemptions
+      );
+
+      console.log('[SimplifiedOffRamp] Vault withdrawal tx hash:', txHash);
+
+      // Wait a bit for the transaction to be confirmed
+      await new Promise((resolve) => setTimeout(resolve, 5000));
+
+      return true;
+    } catch (error) {
+      console.error('[SimplifiedOffRamp] Vault withdrawal failed:', error);
+      throw error;
+    }
+  };
+
   const handleSendFunds = async () => {
     if (!transferDetails || !primarySafeAddress || !smartClient?.account) {
       toast.error('Required information is missing.');
@@ -1551,6 +1900,57 @@ function SimplifiedOffRampReal({
     setIsLoading(true);
     setError(null);
     const { alignTransferId } = transferDetails;
+
+    // Check if we need multi-step transfer (withdraw from earning first)
+    if (needsEarningWithdraw && !isMultiStepTransfer) {
+      // Initialize multi-step transfer
+      setIsMultiStepTransfer(true);
+      setTransferSteps([
+        {
+          id: 'withdraw',
+          label: 'Withdrawing from earning balance',
+          status: 'pending',
+          subtitle: `${deficit.toFixed(2)} USDC from vaults`,
+        },
+        {
+          id: 'transfer',
+          label: 'Transferring to bank',
+          status: 'pending',
+        },
+        {
+          id: 'complete',
+          label: 'Transfer complete',
+          status: 'pending',
+        },
+      ]);
+      setCurrentTransferStepIndex(0);
+
+      try {
+        // Step 1: Withdraw from vaults
+        setTransferSteps((prev) =>
+          prev.map((s, i) => (i === 0 ? { ...s, status: 'in_progress' } : s)),
+        );
+
+        await handleVaultWithdrawal();
+
+        setTransferSteps((prev) =>
+          prev.map((s, i) => (i === 0 ? { ...s, status: 'completed' } : s)),
+        );
+        setCurrentTransferStepIndex(1);
+
+        // Step 2: Continue with bank transfer (falls through to normal flow)
+        setTransferSteps((prev) =>
+          prev.map((s, i) => (i === 1 ? { ...s, status: 'in_progress' } : s)),
+        );
+      } catch (error: any) {
+        setTransferSteps((prev) =>
+          prev.map((s, i) => (i === 0 ? { ...s, status: 'error' } : s)),
+        );
+        setError(`Vault withdrawal failed: ${error.message}`);
+        setIsLoading(false);
+        return;
+      }
+    }
 
     try {
       setLoadingMessage('Preparing transaction...');
@@ -1606,6 +2006,19 @@ function SimplifiedOffRampReal({
 
       setUserOpHash(txResponse);
       setLoadingMessage('Finalizing...');
+
+      // Update multi-step transfer progress
+      if (isMultiStepTransfer) {
+        setTransferSteps((prev) =>
+          prev.map((s, i) => {
+            if (i === 1) return { ...s, status: 'completed' };
+            if (i === 2) return { ...s, status: 'in_progress' };
+            return s;
+          }),
+        );
+        setCurrentTransferStepIndex(2);
+      }
+
       completeTransferMutation.mutate({
         alignTransferId,
         depositTransactionHash: txResponse,
@@ -1613,6 +2026,14 @@ function SimplifiedOffRampReal({
     } catch (err: any) {
       const errMsg = err.message || 'An unknown error occurred.';
       setError(`Failed to send funds: ${errMsg}`);
+
+      // Update multi-step transfer on error
+      if (isMultiStepTransfer) {
+        setTransferSteps((prev) =>
+          prev.map((s, i) => (i === 1 ? { ...s, status: 'error' } : s)),
+        );
+      }
+
       setIsLoading(false);
     }
   };
@@ -1853,6 +2274,17 @@ function SimplifiedOffRampReal({
             </Alert>
           )}
 
+          {/* Multi-step transfer progress */}
+          {isMultiStepTransfer && isLoading && transferSteps.length > 0 && (
+            <div className="mb-4">
+              <TransferProgress
+                steps={transferSteps}
+                currentStepIndex={currentTransferStepIndex}
+                error={error || undefined}
+              />
+            </div>
+          )}
+
           <Button
             onClick={handleSendFunds}
             disabled={isLoading}
@@ -1861,7 +2293,7 @@ function SimplifiedOffRampReal({
             {isLoading ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                {loadingMessage}
+                {isMultiStepTransfer ? 'Processing...' : loadingMessage}
               </>
             ) : (
               <>
@@ -1997,7 +2429,9 @@ function SimplifiedOffRampReal({
                     onQuoteChange={setCurrentQuote}
                     usdcBalance={usdcBalance}
                     isLoadingBalance={isLoadingBalance}
-                    maxBalance={maxBalance}
+                    idleBalance={idleBalance}
+                    earningBalance={earningBalance}
+                    spendableBalance={spendableBalance}
                     error={errors.amount?.message}
                   />
                 )}
@@ -2614,6 +3048,28 @@ function SimplifiedOffRampReal({
                       )}
                     </div>
                   </div>
+
+                  {/* Multi-step transfer warning */}
+                  {needsEarningWithdraw && destinationType !== 'crypto' && (
+                    <Alert className="bg-blue-50 border-blue-200 rounded-xl">
+                      <Clock className="h-4 w-4 text-blue-600" />
+                      <AlertDescription className="text-[12px] text-blue-800">
+                        <span className="font-medium">
+                          Multi-step transfer:
+                        </span>{' '}
+                        This will first withdraw{' '}
+                        <span className="font-medium tabular-nums">
+                          {deficit.toLocaleString('en-US', {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          })}{' '}
+                          USDC
+                        </span>{' '}
+                        from your earning balance. Please stay on this page
+                        until complete (~30 seconds).
+                      </AlertDescription>
+                    </Alert>
+                  )}
 
                   {/* Warning */}
                   <Alert className="bg-amber-50 border-amber-200 rounded-xl">

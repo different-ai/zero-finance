@@ -7,6 +7,17 @@ import { trpc } from '@/utils/trpc';
 import { USDC_ADDRESS } from '@/lib/constants';
 import { BASE_USDC_VAULTS } from '@/server/earn/base-vaults';
 import { Skeleton } from '@/components/ui/skeleton';
+import { SUPPORTED_CHAINS } from '@/lib/constants/chains';
+
+// Vault position type for transfer flow
+export type VaultPosition = {
+  vaultAddress: string;
+  shares: string;
+  assets: string;
+  assetsUsd: number;
+  chainId: number;
+  apy?: number;
+};
 
 type DashboardSummaryWrapperProps = {
   initialSafeAddress?: string | null;
@@ -67,8 +78,8 @@ export function DashboardSummaryWrapper({
     },
   );
 
-  // Calculate total savings balance from vault positions
-  const savingsBalance = useMemo(() => {
+  // Calculate total savings balance from vault positions (earning balance)
+  const earningBalance = useMemo(() => {
     if (isDemoMode) return 901323.0;
     if (!userPositions) return 0;
 
@@ -76,6 +87,32 @@ export function DashboardSummaryWrapper({
       return total + (position.assetsUsd || 0);
     }, 0);
   }, [userPositions, isDemoMode]);
+
+  // Idle balance = USDC in Safe (not earning)
+  const idleBalance = checkingBalanceUsd;
+
+  // Spendable = Total (Earning + Idle)
+  const spendableBalance = earningBalance + idleBalance;
+
+  // Build vault positions with APY for transfer flow (Base chain only)
+  const vaultPositions: VaultPosition[] = useMemo(() => {
+    if (isDemoMode || !userPositions || !vaultStats) return [];
+
+    // Only include Base chain vaults with non-zero balance
+    return userPositions
+      .filter((p) => p.chainId === SUPPORTED_CHAINS.BASE && p.assetsUsd > 0)
+      .map((position) => {
+        const stat = vaultStats.find(
+          (s) =>
+            s.vaultAddress.toLowerCase() ===
+            position.vaultAddress.toLowerCase(),
+        );
+        return {
+          ...position,
+          apy: stat?.apy ? stat.apy * 100 : 0, // Convert to percentage
+        };
+      });
+  }, [userPositions, vaultStats, isDemoMode]);
 
   // Calculate average APY from vaults
   const savingsApy = useMemo(() => {
@@ -130,8 +167,10 @@ export function DashboardSummaryWrapper({
 
   return (
     <DashboardSummary
-      availableBalance={checkingBalanceUsd}
-      savingsBalance={savingsBalance}
+      spendableBalance={spendableBalance}
+      earningBalance={earningBalance}
+      idleBalance={idleBalance}
+      vaultPositions={vaultPositions}
       savingsApy={savingsApy}
       safeAddress={safeAddress}
       isDemoMode={isDemoMode}

@@ -27,20 +27,25 @@ import { CryptoDepositDisplay } from '@/components/virtual-accounts/crypto-depos
 import { useIsMobile } from '@/hooks/use-mobile';
 import { api } from '@/trpc/react';
 import { usePrivy } from '@privy-io/react-auth';
+import { type VaultPosition } from './dashboard-summary-wrapper';
 
 type DepositView = 'select' | 'bank' | 'crypto';
 
 type DashboardSummaryProps = {
-  availableBalance: number;
-  savingsBalance: number;
+  spendableBalance: number; // Total (Earning + Idle)
+  earningBalance: number; // In vaults, generating yield
+  idleBalance: number; // In Safe, not earning
+  vaultPositions: VaultPosition[]; // For transfer flow (vault withdrawal)
   savingsApy: number;
   safeAddress: string | null;
   isDemoMode?: boolean;
 };
 
 export function DashboardSummary({
-  availableBalance,
-  savingsBalance,
+  spendableBalance,
+  earningBalance,
+  idleBalance,
+  vaultPositions,
   savingsApy,
   safeAddress,
   isDemoMode = false,
@@ -96,7 +101,7 @@ export function DashboardSummary({
             : 'bg-white border border-[#101010]/10 rounded-[12px] shadow-[0_2px_8px_rgba(16,16,16,0.04)]',
         )}
       >
-        {/* Left Column - Spendable Balance */}
+        {/* Left Column - Spendable Balance (Total) */}
         <div className="flex flex-col justify-center">
           <p
             className={cn(
@@ -116,13 +121,21 @@ export function DashboardSummary({
                 : 'text-[32px] font-semibold text-[#101010]',
             )}
           >
-            {formatUsd(availableBalance)}
+            {formatUsd(spendableBalance)}
           </p>
-          {isTechnical && (
-            <p className="mt-1 font-mono text-[11px] text-[#101010]/50">
-              USDC in Safe :: Ready for transfer
-            </p>
-          )}
+          {/* Breakdown: earning + idle */}
+          <p
+            className={cn(
+              'mt-1',
+              isTechnical
+                ? 'font-mono text-[11px] text-[#101010]/50'
+                : 'text-[11px] text-[#101010]/50',
+            )}
+          >
+            {isTechnical
+              ? `${formatUsd(earningBalance)} EARNING :: ${formatUsd(idleBalance)} IDLE`
+              : `${formatUsd(earningBalance)} earning · ${formatUsd(idleBalance)} idle`}
+          </p>
         </div>
 
         {/* Right Column - Earning Balance (Clickable) */}
@@ -155,7 +168,7 @@ export function DashboardSummary({
                     : 'text-[32px] font-semibold text-[#101010]',
                 )}
               >
-                {formatUsd(savingsBalance)}
+                {formatUsd(earningBalance)}
               </p>
               <div className="flex items-center gap-2 mt-1">
                 <TrendingUp
@@ -532,7 +545,10 @@ export function DashboardSummary({
           >
             <SimplifiedOffRamp
               fundingSources={fundingSources}
-              maxBalance={availableBalance}
+              idleBalance={idleBalance}
+              earningBalance={earningBalance}
+              spendableBalance={spendableBalance}
+              vaultPositions={vaultPositions}
             />
           </DialogContent>
         </Dialog>

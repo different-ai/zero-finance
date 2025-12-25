@@ -23,7 +23,7 @@
       "type": "remote",
       "url": "https://www.0.finance/api/mcp",
       "headers": {
-        "Authorization": "Bearer zf_live_357e009e96e45af715083fc602e74fd14b7cfe694426728b2f8e52f666eedd93"
+        "Authorization": "Bearer "
       },
       "enabled": true
     }

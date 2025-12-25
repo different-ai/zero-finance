@@ -44,103 +44,30 @@ Hide complexity. Show clarity.
 - **Visuals**: Fine hairlines, measuring guides, coordinate annotations
 - **Role**: Reveals structure via "Architectural" overlays without breaking the elegant banking atmosphere
 
-### 3. **Bimodal Content Strategy**
+### 3. **Bimodal Component Design**
 
-**Philosophy:** Progressive disclosure for different audience types. Allow users to toggle between business-first and technical-first experiences while maintaining consistent visual design.
+**Philosophy:** All components should support two visual modes - a banking-first default and a technical/developer mode. The mode is controlled via user settings (not a visible toggle), so components must gracefully adapt.
 
 **Implementation:**
 
-The bimodal system uses a React context provider (`BimodalProvider`) and hook (`useBimodal`) to manage content switching across the application.
-
 ```typescript
-// Content structure
-interface BimodalContent<T> {
-  company: T;
-  technical: T;
-}
+// Access current mode via hook
+const { isTechnical } = useBimodal();
 
-// Usage in components
-const { isTechnical, toggle } = useBimodal();
-const content = CONTENT[isTechnical ? 'technical' : 'company'];
+// Conditionally render based on mode
+const label = isTechnical ? 'BALANCE::AVAILABLE' : 'Available Balance';
 ```
-
-**Key Components:**
-
-- **BimodalProvider**: Wraps the app, manages state in `localStorage` (`zero-finance-bimodal-mode`)
-- **useBimodal**: Hook to access current mode and toggle function
-- **BimodalToggle**: UI component for switching modes (labeled "Experience")
 
 **Content Guidelines:**
 
-**Company Mode:**
+| Aspect       | Banking Mode (Default)                    | Technical Mode                           |
+| ------------ | ----------------------------------------- | ---------------------------------------- |
+| Language     | "Available Balance", "High-Yield Savings" | "BALANCE::AVAILABLE", "PROTOCOL::MORPHO" |
+| Typography   | Serif headlines, sans-serif body          | Monospace throughout                     |
+| Data display | USD primary, rounded values               | Token amounts, precise decimals          |
+| Actions      | "Transfer", "Deposit"                     | "EXECUTE::TRANSFER", "[ DEPOSIT ]"       |
 
-- Banking-first language ("Business Savings Account", "High-Yield")
-- Serif headlines for warmth and approachability
-- Feature bullets emphasize safety, insurance, ease of use
-- Example: "Insurance included — 100% coverage on all deposits"
-
-**Technical Mode:**
-
-- Protocol-first language ("PROTOCOL::TREASURY_AUTOMATION")
-- Monospace typography for precision and technical feel
-- Feature bullets emphasize architecture, audits, on-chain details
-- Example: "Direct protocol interaction • Non-custodial architecture"
-
-**Styling Patterns:**
-
-```jsx
-// Badge
-<p className={`uppercase tracking-[0.14em] text-[12px] mb-3 ${
-  isTechnical
-    ? 'font-mono text-[#1B29FF]'
-    : 'text-[#101010]/60'
-}`}>
-  {content.badge}
-</p>
-
-// Headline
-<h1 className={`leading-[0.96] tracking-[-0.015em] text-[#101010] mb-6 ${
-  isTechnical
-    ? 'font-mono text-[48px] sm:text-[56px] lg:text-[64px]'
-    : 'font-serif text-[56px] sm:text-[64px] lg:text-[72px]'
-}`}>
-  <span className="text-[#1B29FF]">{content.headline.highlight}</span>
-  {content.headline.suffix}
-</h1>
-
-// Feature text
-<span className={`text-[14px] text-[#101010]/70 ${
-  isTechnical ? 'font-mono text-[13px]' : ''
-}`}>
-  {feature}
-</span>
-```
-
-**Where to Use:**
-
-- ✅ Landing page hero sections
-- ✅ Signin/signup pages
-- ✅ Feature comparison sections
-- ✅ Marketing content with technical depth
-- ❌ Dashboard/app (always functional, no toggle)
-- ❌ Transactional flows (consistency required)
-
-**Toggle Placement:**
-
-Place the `BimodalToggle` in the header with the label "Experience":
-
-```jsx
-<div className="hidden md:flex items-center gap-3">
-  <span className="text-[11px] text-[#101010]/60 uppercase tracking-wider">
-    Experience
-  </span>
-  <BimodalToggle
-    isTechnical={isTechnical}
-    onToggle={toggle}
-    showLabels={true}
-  />
-</div>
-```
+**All dashboard components must support both modes.** Use `isTechnical` to conditionally apply styles and content.
 
 ---
 
@@ -1320,191 +1247,15 @@ rounded - full; // Pills, avatars
 
 ---
 
-## Bimodal Interface Pattern (The "DeFi Mullet")
+## Bimodal Styling Reference
 
-### Philosophy
+All dashboard components must support both banking and technical modes. The mode is set in user settings, not via a visible toggle.
 
-Most apps try to find a middle ground between "Simple" and "Technical" and end up pleasing no one. The Bimodal Interface accepts that there are two distinct user modes and serves them both fully, rather than compromising on either.
-
-**Core Insight**: The biggest problem in crypto UX is the tension between Simplicity and Transparency. Our solution: serve both modes completely, with an instant toggle.
-
-### The Two Modes
-
-#### Mode A: Banking View (Default)
-
-Designed to look like a modern neobank or fintech app. Emphasizes trust, clarity, and ease of use.
-
-**Visual Language:**
-
-- **Background**: Warm, premium off-white canvas (`bg-[#F7F7F2]`)
-- **Typography**:
-  - Headlines: Serif fonts (`font-serif`) for high-end, editorial feel
-  - Body: Clean sans-serif (`font-sans`) for readability
-  - Labels: Uppercase, tracked-out (`tracking-[0.14em]`) in muted ink (`#101010/60`)
-- **Cards**: Friendly rounded corners (`rounded-[12px]`), soft ambient shadows
-- **Depth**: Subtle shadows that lift on hover
-
-**UX Characteristics:**
-
-- Focuses on _Outcomes_: "How much money do I have? What is the APY? Is it safe?"
-- Uses friendly names: "High-Yield Savings" instead of "Morpho Blue"
-- Shows USD values primarily
-- High-contrast action buttons (Solid Brand Blue `#1B29FF`)
-
-```jsx
-// Banking Mode Card
-<div className="bg-white border border-[#101010]/10 rounded-[12px] p-6 shadow-[0_2px_8px_rgba(16,16,16,0.04)] hover:shadow-[0_6px_16px_rgba(16,16,16,0.08)] transition-all duration-300">
-  <p className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60 mb-2">
-    Available Balance
-  </p>
-  <p className="text-[32px] font-semibold tabular-nums text-[#101010]">
-    $2,500,000.00
-  </p>
-  <p className="mt-2 text-[13px] text-[#101010]/60">
-    Ready to transfer or invest
-  </p>
-</div>
-```
-
-#### Mode B: Technical View (Developer)
-
-Designed for developers and power users. Emphasizes precision, raw data, and protocol visibility.
-
-**Visual Language:**
-
-- **Background**: Light gray (`bg-[#fafafa]`) with subtle accent borders
-- **Typography**:
-  - Global: Monospace (`font-mono`, IBM Plex Mono)
-  - Color: Brand Blue (`#1B29FF`) for labels and accents
-  - Data: `tabular-nums` for aligned numbers
-- **Cards**: Minimal corners, thin blue borders (`border-[#1B29FF]/30`)
-- **Decorations**: Corner crosshairs, `NAMESPACE::IDENTIFIER` labels
-
-**UX Characteristics:**
-
-- Focuses on _Architecture_: "Which protocol? Which contract? What's the utilization rate?"
-- Reveals underlying protocol ("Morpho Blue") and risk provider ("Gauntlet")
-- Shows raw token amounts first (`1.00 USDC`), USD as secondary
-- Ghost buttons (outlined or text-only) to reduce visual noise
-
-```jsx
-// Technical Mode Card
-<div className="bg-white border border-[#1B29FF]/30 p-4 relative">
-  <div className="flex justify-between items-start mb-3">
-    <div>
-      <p className="font-mono uppercase tracking-[0.14em] text-[11px] text-[#1B29FF] mb-1">
-        BALANCE::PRIMARY
-      </p>
-      <p className="font-mono text-[24px] tabular-nums text-[#101010]">
-        2,500,000.00
-        <span className="ml-1 text-[12px] text-[#1B29FF]">USDC</span>
-      </p>
-      <p className="font-mono text-[12px] text-[#101010]/50 mt-1">
-        ≈ $2,500,000.00 USD
-      </p>
-    </div>
-    {/* Crosshair Decoration */}
-    <div className="h-3 w-3 relative">
-      <div className="absolute top-1/2 w-full h-px bg-[#1B29FF]/40" />
-      <div className="absolute left-1/2 h-full w-px bg-[#1B29FF]/40" />
-    </div>
-  </div>
-</div>
-```
-
-### Semantic Typography
-
-The font itself changes the user's expectations:
-
-| Font              | Signal                                  | Use Case                         |
-| ----------------- | --------------------------------------- | -------------------------------- |
-| **Inter (Sans)**  | "This is a finished product. Trust us." | Banking mode, default UI         |
-| **IBM Plex Mono** | "This is raw data. Verify this."        | Technical mode, contract details |
-
-By switching typography instantly, we signal to the user's brain that they have entered a different level of granularity without needing a warning label.
-
-### Abstraction as a Feature, Not a Lie
-
-**Bad Abstraction**: Hiding the protocol entirely so the user doesn't know risks exist.
-
-**Good Abstraction (Our Approach)**: Giving it a friendly name for scanning, but allowing the user to hit the toggle and instantly see the contract address and protocol name to verify the underlying tech.
-
-| Banking Mode       | Technical Mode          |
-| ------------------ | ----------------------- |
-| High-Yield Savings | Morpho Blue (Gauntlet)  |
-| Your Balance       | 1,234,567.89 USDC       |
-| 8% APY             | 7.89% instantaneous APY |
-| Transfer           | Execute Transaction     |
-| Account Info       | Contract: 0x742d...     |
-
-### Mode Toggle Component
-
-```jsx
-// Bimodal Toggle Switch
-<button
-  onClick={() => setIsTechnical(!isTechnical)}
-  className={cn(
-    "relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-300",
-    isTechnical ? "bg-[#1B29FF]" : "bg-[#101010]/10"
-  )}
->
-  <span
-    className={cn(
-      "inline-block h-4 w-4 rounded-full bg-white transition-transform duration-300 shadow-sm",
-      isTechnical ? "translate-x-6" : "translate-x-1"
-    )}
-  />
-</button>
-
-// Toggle Label
-<div className="flex items-center gap-2">
-  <span className={cn(
-    "text-[12px] transition-colors",
-    isTechnical ? "text-[#101010]/50" : "text-[#101010]"
-  )}>
-    Banking
-  </span>
-  {/* Toggle here */}
-  <span className={cn(
-    "text-[12px] transition-colors font-mono",
-    isTechnical ? "text-[#1B29FF]" : "text-[#101010]/50"
-  )}>
-    Technical
-  </span>
-</div>
-```
-
-### Technical Mode Helper Components
-
-```jsx
-// Crosshair decoration for technical cards
-const Crosshair = () => (
-  <div className="h-3 w-3 relative">
-    <div className="absolute top-1/2 w-full h-px bg-[#1B29FF]/40" />
-    <div className="absolute left-1/2 h-full w-px bg-[#1B29FF]/40" />
-  </div>
-);
-
-// Technical mode wrapper container
-const TechnicalContainer = ({ children }: { children: React.ReactNode }) => (
-  <div className="space-y-6 p-4 bg-[#fafafa] border border-[#1B29FF]/20 relative">
-    {children}
-  </div>
-);
-
-// Technical mode card
-const TechnicalCard = ({ children }: { children: React.ReactNode }) => (
-  <div className="bg-white border border-[#1B29FF]/30 p-4 relative">
-    {children}
-  </div>
-);
-```
-
-### Styling Reference Tables
+### Quick Reference Tables
 
 **Card Styling by Mode:**
 
-| Property      | Banking Mode                             | Technical Mode        |
+| Property      | Banking Mode (Default)                   | Technical Mode        |
 | ------------- | ---------------------------------------- | --------------------- |
 | Background    | `bg-white`                               | `bg-white`            |
 | Border        | `border-[#101010]/10`                    | `border-[#1B29FF]/30` |
@@ -1527,80 +1278,81 @@ const TechnicalCard = ({ children }: { children: React.ReactNode }) => (
 | Primary     | `bg-[#1B29FF] text-white px-6 py-3 rounded-md` | `border border-[#1B29FF] text-[#1B29FF] font-mono px-4 py-2 rounded-sm` |
 | Secondary   | `border border-[#101010]/10 text-[#101010]`    | `text-[#1B29FF]/70 font-mono underline`                                 |
 
+**Content Translation:**
+
+| Banking Mode       | Technical Mode          |
+| ------------------ | ----------------------- |
+| Available Balance  | BALANCE::AVAILABLE      |
+| High-Yield Savings | PROTOCOL::MORPHO        |
+| 8% APY             | 7.89% instantaneous APY |
+| Transfer           | EXECUTE::TRANSFER       |
+| Deposit            | [ DEPOSIT ]             |
+
 ### Implementation Pattern
 
 ```jsx
-function BimodalCard({ isTechnical, title, value, unit, children }) {
+function BimodalCard({ title, value, unit, children }) {
+  const { isTechnical } = useBimodal();
+
   return (
     <div
       className={cn(
-        'p-4 relative transition-all duration-300',
+        'p-4 relative',
         isTechnical
           ? 'bg-white border border-[#1B29FF]/30'
           : 'bg-white border border-[#101010]/10 rounded-[12px] shadow-[0_2px_8px_rgba(16,16,16,0.04)]',
       )}
     >
-      <div className="flex justify-between items-start mb-3">
-        <div>
-          <p
+      <p
+        className={cn(
+          'uppercase tracking-[0.14em] text-[11px] mb-1',
+          isTechnical ? 'font-mono text-[#1B29FF]' : 'text-[#101010]/60',
+        )}
+      >
+        {title}
+      </p>
+      <p
+        className={cn(
+          'text-[24px] tabular-nums text-[#101010]',
+          isTechnical && 'font-mono',
+        )}
+      >
+        {value}
+        {unit && (
+          <span
             className={cn(
-              'uppercase tracking-[0.14em] text-[11px] mb-1',
-              isTechnical ? 'font-mono text-[#1B29FF]' : 'text-[#101010]/60',
+              'text-[12px] ml-1',
+              isTechnical ? 'text-[#1B29FF]' : 'text-[#101010]/60',
             )}
           >
-            {title}
-          </p>
-          <p
-            className={cn(
-              'text-[24px] tabular-nums text-[#101010]',
-              isTechnical && 'font-mono',
-            )}
-          >
-            {value}{' '}
-            {unit && (
-              <span
-                className={cn(
-                  'text-[12px]',
-                  isTechnical ? 'text-[#1B29FF]' : 'text-[#101010]/60',
-                )}
-              >
-                {unit}
-              </span>
-            )}
-          </p>
-        </div>
-        {/* Crosshair (Technical only) */}
-        {isTechnical && <Crosshair />}
-      </div>
+            {unit}
+          </span>
+        )}
+      </p>
+      {/* Crosshair decoration (Technical only) */}
+      {isTechnical && <Crosshair />}
       {children}
     </div>
   );
 }
 ```
 
-### When to Use Bimodal
+### Helper Components
 
-Use the Bimodal Interface pattern when:
+```jsx
+// Crosshair decoration for technical mode cards
+const Crosshair = () => (
+  <div className="absolute top-4 right-4 h-3 w-3">
+    <div className="absolute top-1/2 w-full h-px bg-[#1B29FF]/40" />
+    <div className="absolute left-1/2 h-full w-px bg-[#1B29FF]/40" />
+  </div>
+);
 
-- The component deals with financial data that has underlying technical complexity
-- Users may need to verify contract addresses or protocol details
-- There's a clear distinction between "outcome" and "architecture" views
-- The feature involves blockchain transactions or smart contracts
-
-Don't use for:
-
-- Simple informational content
-- Marketing pages
-- Settings that don't have technical depth
-
-### Transition Guidelines
-
-- Use `transition-all duration-300` for smooth morphing between modes
-- Content should reflow gracefully - never jump
-- Crosshairs should fade in/out with the transition
-- Typography changes should feel clean and intentional
+// Reusable bimodal card wrapper
+import { BimodalCard } from '@/components/ui/bimodal';
+```
 
 ---
 
-**Last Updated**: January 2025  
+**Last Updated**: December 2025  
 **Maintained by**: Zero Finance Design Team

@@ -38,6 +38,11 @@ import {
 import { usePrivy } from '@privy-io/react-auth';
 import { useBimodal } from '@/components/ui/bimodal';
 import { cn } from '@/lib/utils';
+import {
+  AddSpendingOwner,
+  MemberNeedsLogin,
+} from '@/components/settings/add-spending-owner';
+import type { Address } from 'viem';
 
 interface TeamTabProps {
   companyId?: string; // Kept for backwards compatibility, but not used
@@ -606,16 +611,19 @@ export function TeamTab({ companyId }: TeamTabProps) {
                       >
                         {isTechnical ? member.role.toUpperCase() : member.role}
                       </Badge>
-                      {/* Safe Owner badge - Technical mode only */}
-                      {isTechnical &&
-                        member.walletAddress &&
-                        isSafeOwner(member.walletAddress) && (
+                      {/* Safe Owner / Spending Owner badge */}
+                      {member.smartWalletAddress &&
+                        isSafeOwner(member.smartWalletAddress) && (
                           <Badge
                             variant="outline"
-                            className="border-[#1B29FF] text-[#1B29FF] font-mono"
+                            className={cn(
+                              isTechnical
+                                ? 'border-[#1B29FF] text-[#1B29FF] font-mono'
+                                : 'border-[#10B981] text-[#10B981]',
+                            )}
                           >
                             <Shield className="h-3 w-3 mr-1" />
-                            SAFE_OWNER
+                            {isTechnical ? 'SAFE_OWNER' : 'Spending Owner'}
                           </Badge>
                         )}
                     </div>
@@ -633,6 +641,39 @@ export function TeamTab({ companyId }: TeamTabProps) {
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
+                    {/* Make Spending Owner button - show for non-owners who don't have Safe ownership yet */}
+                    {canManageTeam &&
+                      primarySafeAddress &&
+                      member.smartWalletAddress &&
+                      !isSafeOwner(member.smartWalletAddress) &&
+                      member.userId !== user?.id && (
+                        <AddSpendingOwner
+                          safeAddress={primarySafeAddress as Address}
+                          memberSmartWalletAddress={
+                            member.smartWalletAddress as Address
+                          }
+                          memberName={
+                            member.name || member.email || 'Team Member'
+                          }
+                          isTechnical={isTechnical}
+                          onSuccess={() => {
+                            // Refetch Safe owners to update the UI
+                            refetchMembers();
+                          }}
+                        />
+                      )}
+                    {/* Show "needs login" message if member has no smart wallet */}
+                    {canManageTeam &&
+                      primarySafeAddress &&
+                      !member.smartWalletAddress &&
+                      member.userId !== user?.id && (
+                        <MemberNeedsLogin
+                          memberName={
+                            member.name || member.email || 'This member'
+                          }
+                          isTechnical={isTechnical}
+                        />
+                      )}
                     {member.role !== 'owner' && canManageTeam && (
                       <Button
                         variant="destructive"

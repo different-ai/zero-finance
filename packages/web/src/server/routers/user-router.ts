@@ -280,4 +280,45 @@ export const userRouter = router({
 
     return { success: true, message: 'Insurance activated successfully' };
   }),
+
+  // Update smart wallet address (called on login to store Privy smart wallet)
+  updateSmartWalletAddress: protectedProcedure
+    .input(
+      z.object({
+        smartWalletAddress: z
+          .string()
+          .regex(/^0x[a-fA-F0-9]{40}$/, 'Invalid Ethereum address'),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const privyDid = ctx.userId;
+      if (!privyDid) {
+        throw new TRPCError({ code: 'UNAUTHORIZED' });
+      }
+
+      // Update the user's smart wallet address
+      await db
+        .update(users)
+        .set({ smartWalletAddress: input.smartWalletAddress })
+        .where(eq(users.privyDid, privyDid));
+
+      return { success: true };
+    }),
+
+  // Get current user's smart wallet address
+  getSmartWalletAddress: protectedProcedure.query(async ({ ctx }) => {
+    const privyDid = ctx.userId;
+    if (!privyDid) {
+      throw new TRPCError({ code: 'UNAUTHORIZED' });
+    }
+
+    const user = await db.query.users.findFirst({
+      where: eq(users.privyDid, privyDid),
+      columns: {
+        smartWalletAddress: true,
+      },
+    });
+
+    return { smartWalletAddress: user?.smartWalletAddress || null };
+  }),
 });

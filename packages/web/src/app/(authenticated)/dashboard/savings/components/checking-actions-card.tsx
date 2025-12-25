@@ -34,6 +34,8 @@ import { formatUnits } from 'viem';
 import { USDC_DECIMALS } from '@/lib/constants';
 import type { Address } from 'viem';
 import { BlueprintGrid, Crosshairs } from '@/components/ui/bimodal';
+import { type VaultPosition } from '@/app/(authenticated)/dashboard/(bank)/components/dashboard-summary-wrapper';
+import { BASE_USDC_VAULTS } from '@/server/earn/base-vaults';
 
 type DepositView = 'select' | 'bank' | 'crypto';
 
@@ -171,6 +173,31 @@ export function CheckingActionsCard({
       },
     );
 
+  // Fetch vault positions for earning balance (USDC in vaults)
+  const baseVaultAddresses = BASE_USDC_VAULTS.map((v) => v.address);
+
+  const { data: userVaultPositions } = api.earn.userPositions.useQuery(
+    { vaultAddresses: baseVaultAddresses },
+    {
+      enabled: !isDemoMode,
+      staleTime: 30000,
+      refetchInterval: 60000,
+    },
+  );
+
+  // Fetch vault stats for APY data
+  const { data: vaultStats } = api.earn.statsByVault.useQuery(
+    {
+      safeAddress: baseSafe?.address || '',
+      vaultAddresses: baseVaultAddresses,
+    },
+    {
+      enabled: !!baseSafe?.address && !isDemoMode,
+      staleTime: 30000,
+      refetchInterval: 60000,
+    },
+  );
+
   // Calculate total balance across all chains
   const baseUsdcBalance = baseBalanceData
     ? parseFloat(formatUnits(BigInt(baseBalanceData.balance), USDC_DECIMALS))
@@ -210,10 +237,42 @@ export function CheckingActionsCard({
   const arbitrumTotalUsd = arbitrumUsdcBalance + arbitrumEthUsd;
   const gnosisTotalUsd = gnosisXdaiBalanceNum; // xDAI is ~1:1 with USD
 
-  // Total available balance (not in vaults)
+  // Total available balance (not in vaults) - this is the "idle" balance
   const totalAvailableBalance =
     baseTotalUsd + arbitrumTotalUsd + gnosisTotalUsd;
-  const hasAnyBalance = totalAvailableBalance > 0 || balanceUsd > 0;
+
+  // Calculate earning balance from vault positions (USDC earning yield)
+  const earningBalance =
+    userVaultPositions?.reduce((total, position) => {
+      return total + (position.assetsUsd || 0);
+    }, 0) || 0;
+
+  // Idle balance = USDC in Safe (not earning) - using Base USDC for off-ramp
+  const idleBalance = baseUsdcBalance;
+
+  // Spendable = Total (Earning + Idle)
+  const spendableBalance = earningBalance + idleBalance;
+
+  // Build vault positions with APY for transfer flow (Base chain only)
+  const vaultPositions: VaultPosition[] =
+    userVaultPositions && vaultStats
+      ? userVaultPositions
+          .filter((p) => p.chainId === SUPPORTED_CHAINS.BASE && p.assetsUsd > 0)
+          .map((position) => {
+            const stat = vaultStats.find(
+              (s) =>
+                s.vaultAddress.toLowerCase() ===
+                position.vaultAddress.toLowerCase(),
+            );
+            return {
+              ...position,
+              apy: stat?.apy ? stat.apy * 100 : 0, // Convert to percentage
+            };
+          })
+      : [];
+
+  const hasAnyBalance =
+    totalAvailableBalance > 0 || balanceUsd > 0 || earningBalance > 0;
 
   const fundingSources = isDemoMode
     ? demoFundingSources
@@ -665,7 +724,10 @@ export function CheckingActionsCard({
           >
             <SimplifiedOffRamp
               fundingSources={fundingSources}
-              maxBalance={totalAvailableBalance}
+              idleBalance={idleBalance}
+              earningBalance={earningBalance}
+              spendableBalance={spendableBalance}
+              vaultPositions={vaultPositions}
             />
           </DialogContent>
         </Dialog>

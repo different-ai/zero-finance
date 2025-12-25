@@ -390,7 +390,7 @@ export const workspaceRouter = router({
         });
       }
 
-      // Get all members with user details from profiles table
+      // Get all members with user details from profiles table and users table (for smartWalletAddress)
       const members = await ctx.db
         .select({
           id: workspaceMembers.id,
@@ -399,12 +399,14 @@ export const workspaceRouter = router({
           joinedAt: workspaceMembers.joinedAt,
           email: userProfilesTable.email,
           name: userProfilesTable.businessName,
+          smartWalletAddress: users.smartWalletAddress,
         })
         .from(workspaceMembers)
         .leftJoin(
           userProfilesTable,
           eq(workspaceMembers.userId, userProfilesTable.privyDid),
         )
+        .leftJoin(users, eq(workspaceMembers.userId, users.privyDid))
         .where(eq(workspaceMembers.workspaceId, input.workspaceId));
 
       return members;

@@ -6,6 +6,7 @@ import {
   UserProfile,
   UserWallet,
   userSafes,
+  users,
 } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
 
@@ -66,6 +67,26 @@ export class UserProfileService {
 
         if (updated.length > 0) {
           return updated[0];
+        }
+      }
+
+      // Update users table with smart wallet address if provided
+      // This is separate from userProfiles and used for Safe ownership
+      if (smartWalletAddress) {
+        const existingUser = await db
+          .select({ smartWalletAddress: users.smartWalletAddress })
+          .from(users)
+          .where(eq(users.privyDid, privyDid))
+          .limit(1);
+
+        if (
+          existingUser.length > 0 &&
+          existingUser[0].smartWalletAddress !== smartWalletAddress
+        ) {
+          await db
+            .update(users)
+            .set({ smartWalletAddress })
+            .where(eq(users.privyDid, privyDid));
         }
       }
 

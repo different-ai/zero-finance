@@ -46,6 +46,9 @@ export const users = pgTable(
       .notNull(),
     contractorInviteCode: text('contractor_invite_code'),
     primaryWorkspaceId: uuid('primary_workspace_id').notNull(),
+    // Privy smart wallet address (ERC-4337) - used for Safe ownership
+    // Populated on first login, null if user hasn't logged in yet
+    smartWalletAddress: text('smart_wallet_address'),
   },
   (table) => ({
     primaryWorkspaceIdx: index('users_primary_workspace_idx').on(
