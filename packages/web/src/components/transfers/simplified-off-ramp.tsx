@@ -1679,9 +1679,14 @@ function SimplifiedOffRampReal({
               <div className="space-y-4">
                 <div className="bg-[#F7F7F2] border border-[#101010]/10 rounded-2xl p-5">
                   <div className="flex items-center justify-between mb-3">
-                    <Label className="text-[13px] font-medium text-[#101010]">
-                      Amount to send
-                    </Label>
+                    <div>
+                      <Label className="text-[13px] font-medium text-[#101010]">
+                        Amount to send
+                      </Label>
+                      <p className="text-[11px] text-[#101010]/50 mt-0.5">
+                        From your Safe on Base
+                      </p>
+                    </div>
                     <CurrencyPill currency="USDC" />
                   </div>
                   <div className="relative">
@@ -2193,9 +2198,14 @@ function SimplifiedOffRampReal({
                 <BlueprintGrid className="opacity-30" />
 
                 <div className="relative z-10 p-4">
-                  <p className="font-mono text-[10px] text-[#1B29FF] tracking-wider uppercase mb-3">
-                    AMOUNT::{selectedAssetConfig.symbol}
-                  </p>
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="font-mono text-[10px] text-[#1B29FF] tracking-wider uppercase">
+                      AMOUNT::{selectedAssetConfig.symbol}
+                    </p>
+                    <span className="font-mono text-[9px] text-[#101010]/50 bg-[#101010]/5 px-2 py-0.5 rounded">
+                      on Base
+                    </span>
+                  </div>
                   <div className="relative">
                     <Input
                       {...register('amount', {
@@ -2295,13 +2305,26 @@ function SimplifiedOffRampReal({
                       </div>
                       <div className="flex justify-between items-center">
                         <span className="text-[13px] text-[#101010]/60">
+                          Network
+                        </span>
+                        <span className="text-[13px] font-medium text-[#101010]">
+                          Base
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-[13px] text-[#101010]/60">
                           You send
                         </span>
-                        <span className="text-[18px] font-semibold tabular-nums text-[#101010]">
-                          {destinationType === 'crypto'
-                            ? `${watchedAmount} ${selectedAssetConfig.symbol}`
-                            : `${watchedAmount} USDC`}
-                        </span>
+                        <div className="text-right">
+                          <span className="text-[18px] font-semibold tabular-nums text-[#101010]">
+                            {destinationType === 'crypto'
+                              ? `${watchedAmount} ${selectedAssetConfig.symbol}`
+                              : `${watchedAmount} USDC`}
+                          </span>
+                          <p className="text-[11px] text-[#101010]/50">
+                            on Base
+                          </p>
+                        </div>
                       </div>
 
                       {destinationType !== 'crypto' && (
