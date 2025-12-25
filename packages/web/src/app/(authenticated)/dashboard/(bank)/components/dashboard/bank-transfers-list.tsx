@@ -13,8 +13,8 @@ import { trpc, RouterOutputs } from '@/utils/trpc';
 import {
   Loader2,
   AlertCircle,
-  UploadCloud,
-  Banknote,
+  ArrowDownLeft,
+  ArrowUpRight,
   Building2,
   X,
   ChevronDown,
@@ -40,16 +40,15 @@ import Safe from '@safe-global/protocol-kit';
 import { encodeFunctionData, type Address } from 'viem';
 import { SAFE_ABI } from '@/lib/sponsor-tx/core';
 
-type OnrampTransfer = RouterOutputs['align']['listOnrampTransfers'][number] & {
-  created_at?: string | null;
-};
+// Type for unified transaction from getBankingHistory
+type UnifiedTransaction =
+  RouterOutputs['align']['getBankingHistory']['transactions'][number];
+
+// Legacy types for ResumeTransferModal (still needs old format for now)
 type OfframpTransfer =
   RouterOutputs['align']['listOfframpTransfers'][number] & {
     created_at?: string | null;
   };
-type CombinedTransfer =
-  | (OnrampTransfer & { _direction: 'incoming' })
-  | (OfframpTransfer & { _direction: 'outgoing' });
 
 // Helper to check if an error is a "no customer" error that should show empty state
 function isNoCustomerError(message: string | undefined): boolean {
@@ -69,61 +68,73 @@ function buildPrevalidatedSig(ownerAddress: string): `0x${string}` {
   return `0x${r}${s}${v}` as `0x${string}`;
 }
 
-// Transfer row component for reuse
+// Helper to format currency with symbol
+function formatCurrencyWithSymbol(
+  amount: string | number,
+  currency: string,
+): string {
+  const numAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
+  const formatted = numAmount.toLocaleString('en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+
+  const upperCurrency = currency.toUpperCase();
+  if (upperCurrency === 'EUR') return `€${formatted}`;
+  if (upperCurrency === 'USD') return `$${formatted}`;
+  if (upperCurrency === 'AED') return `AED ${formatted}`;
+  return `${formatted} ${upperCurrency}`;
+}
+
+// Transfer row component using unified transaction format
 function TransferRow({
   tx,
   onDismiss,
   onResume,
   isDismissing,
 }: {
-  tx: CombinedTransfer;
+  tx: UnifiedTransaction;
   onDismiss?: () => void;
   onResume?: () => void;
   isDismissing?: boolean;
 }) {
-  const amountValue = Number(tx.amount ?? 0);
-  const currencyCode =
-    ('source_currency' in tx ? tx.source_currency : undefined) ??
-    ('destination_currency' in tx ? tx.destination_currency : undefined) ??
-    ('quote' in tx ? tx.quote?.deposit_currency : undefined);
+  const isIncoming = tx.type === 'incoming';
+  const isAgentProposal = tx.proposedByAgent;
 
-  // Check if this is an agent-proposed transfer
-  const isAgentProposal =
-    tx._direction === 'outgoing' &&
-    'proposed_by_agent' in tx &&
-    tx.proposed_by_agent;
-  const agentMessage =
-    tx._direction === 'outgoing' && 'agent_proposal_message' in tx
-      ? tx.agent_proposal_message
-      : null;
+  // Primary amount is always what the user sent/received in their wallet
+  const primaryAmount = parseFloat(tx.primaryAmount || '0');
 
   return (
     <div className="w-full px-6 py-4 flex items-center gap-4">
+      {/* Icon */}
       <div
         className={`h-10 w-10 flex items-center justify-center rounded-full ${
           isAgentProposal
             ? 'bg-violet-600/10 text-violet-600'
-            : tx._direction === 'incoming'
+            : isIncoming
               ? 'bg-emerald-600/10 text-emerald-600'
               : 'bg-sky-600/10 text-sky-600'
         }`}
       >
         {isAgentProposal ? (
           <Bot className="h-5 w-5" />
-        ) : tx._direction === 'incoming' ? (
-          <UploadCloud className="h-5 w-5" />
+        ) : isIncoming ? (
+          <ArrowDownLeft className="h-5 w-5" />
         ) : (
-          <Banknote className="h-5 w-5" />
+          <ArrowUpRight className="h-5 w-5" />
         )}
       </div>
+
+      {/* Content */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
+          {/* Primary amount - what user sent/received */}
           <p className="text-gray-800 font-medium truncate">
-            {amountValue.toLocaleString('en-US', {
+            {primaryAmount.toLocaleString('en-US', {
               minimumFractionDigits: 2,
               maximumFractionDigits: 2,
             })}{' '}
-            {currencyCode ? currencyCode.toUpperCase() : ''}
+            {tx.primaryCurrency}
           </p>
           {isAgentProposal && (
             <TooltipProvider>
@@ -139,18 +150,36 @@ function TransferRow({
                 </TooltipTrigger>
                 <TooltipContent>
                   <p className="max-w-[200px]">
-                    {agentMessage || 'Proposed by AI agent'}
+                    {tx.agentProposalMessage || 'Proposed by AI agent'}
                   </p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
           )}
         </div>
-        <p className="text-gray-500 text-sm truncate">
-          {tx._direction === 'incoming' ? 'Incoming' : 'Outgoing'} ·{' '}
-          {tx.status.charAt(0).toUpperCase() + tx.status.slice(1)}
-        </p>
+
+        {/* Secondary line - status and bank amount */}
+        <div className="flex items-center gap-1 text-gray-500 text-sm">
+          <span>{isIncoming ? 'Received' : 'Sent'}</span>
+          <span>·</span>
+          <span>{tx.status.charAt(0).toUpperCase() + tx.status.slice(1)}</span>
+          {/* Show bank amount for context */}
+          {tx.secondaryAmount && tx.secondaryCurrency && (
+            <>
+              <span>·</span>
+              <span className="text-gray-400">
+                {isIncoming ? 'from' : '→'}{' '}
+                {formatCurrencyWithSymbol(
+                  tx.secondaryAmount,
+                  tx.secondaryCurrency,
+                )}
+              </span>
+            </>
+          )}
+        </div>
       </div>
+
+      {/* Actions */}
       <div className="flex items-center gap-2">
         {onResume && (
           <Button
@@ -184,14 +213,14 @@ function TransferRow({
   );
 }
 
-// Resume Transfer Modal
+// Resume Transfer Modal - still uses legacy offramp transfer format
 function ResumeTransferModal({
-  transfer,
+  transferId,
   isOpen,
   onClose,
   onSuccess,
 }: {
-  transfer: OfframpTransfer & { _direction: 'outgoing' };
+  transferId: string;
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
@@ -202,6 +231,12 @@ function ResumeTransferModal({
   const [txHash, setTxHash] = useState<string | null>(null);
 
   const { client: smartClient } = useSmartWallets();
+
+  // Fetch full transfer details for the modal
+  const { data: transfers } = trpc.align.listOfframpTransfers.useQuery({
+    limit: 100,
+  });
+  const transfer = transfers?.find((t) => t.id === transferId);
 
   const { data: primarySafeAddress } =
     api.settings.userSafes.getPrimarySafeAddress.useQuery();
@@ -222,19 +257,18 @@ function ResumeTransferModal({
     });
 
   const handleSendFunds = async () => {
-    if (!primarySafeAddress || !smartClient?.account) {
+    if (!primarySafeAddress || !smartClient?.account || !transfer) {
       toast.error('Required information is missing.');
       return;
     }
 
     setIsLoading(true);
     setError(null);
-    const alignTransferId = transfer.id;
 
     try {
       setLoadingMessage('Preparing transaction...');
       const preparedData = await prepareTxMutation.mutateAsync({
-        alignTransferId,
+        alignTransferId: transferId,
       });
 
       if (!preparedData?.to || !preparedData.data) {
@@ -286,7 +320,7 @@ function ResumeTransferModal({
       setTxHash(txResponse);
       setLoadingMessage('Finalizing...');
       completeTransferMutation.mutate({
-        alignTransferId,
+        alignTransferId: transferId,
         depositTransactionHash: txResponse,
       });
     } catch (err: any) {
@@ -295,6 +329,18 @@ function ResumeTransferModal({
       setIsLoading(false);
     }
   };
+
+  if (!transfer) {
+    return (
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent className="sm:max-w-md">
+          <div className="flex justify-center items-center py-12">
+            <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   // Check if quote has expired
   const isExpired =
@@ -496,56 +542,45 @@ function ResumeTransferModal({
 
 export function BankTransfersList() {
   const utils = trpc.useUtils();
-  const [syncError, setSyncError] = React.useState<string | null>(null);
   const [pendingExpanded, setPendingExpanded] = React.useState(true);
   const [dismissingIds, setDismissingIds] = React.useState<Set<string>>(
     new Set(),
   );
-  const [resumeTransfer, setResumeTransfer] = React.useState<
-    (OfframpTransfer & { _direction: 'outgoing' }) | null
-  >(null);
+  const [resumeTransferId, setResumeTransferId] = React.useState<string | null>(
+    null,
+  );
+  const [syncError, setSyncError] = React.useState<string | null>(null);
   const hasSyncedRef = React.useRef(false);
 
+  // Use the new unified banking history endpoint
   const {
-    data: incoming,
-    isLoading: loadingIncoming,
-    isError: errorIncoming,
-    error: incomingError,
-  } = trpc.align.listOnrampTransfers.useQuery({ limit: 10 });
+    data: bankingHistory,
+    isLoading,
+    isError,
+    error,
+  } = trpc.align.getBankingHistory.useQuery({ limit: 50 });
 
-  const {
-    data: outgoing,
-    isLoading: loadingOutgoing,
-    isError: errorOutgoing,
-    error: outgoingError,
-  } = trpc.align.listOfframpTransfers.useQuery({ limit: 10 });
-
-  const syncOnramp = trpc.align.syncOnrampTransfers.useMutation({
+  // Sync mutations to refresh data from Align API
+  const syncVAHistory = trpc.align.syncVirtualAccountHistory.useMutation({
     onSettled: () => {
-      utils.align.listOnrampTransfers.invalidate();
+      utils.align.getBankingHistory.invalidate();
     },
   });
 
   const syncOfframp = trpc.align.syncOfframpTransfers.useMutation({
     onSettled: () => {
-      utils.align.listOfframpTransfers.invalidate();
+      utils.align.getBankingHistory.invalidate();
     },
   });
 
-  const dismissTransfer = trpc.align.dismissOfframpTransfer.useMutation({
-    onSuccess: () => {
-      utils.align.listOfframpTransfers.invalidate();
-    },
-  });
-
-  // Sync data on mount and surface failures so we do not silently show stale data
+  // Sync data on mount (background refresh)
   React.useEffect(() => {
     if (hasSyncedRef.current) return;
     hasSyncedRef.current = true;
 
     const runInitialSync = async () => {
       const results = await Promise.allSettled([
-        syncOnramp.mutateAsync(),
+        syncVAHistory.mutateAsync(),
         syncOfframp.mutateAsync(),
       ]);
 
@@ -556,7 +591,7 @@ export function BankTransfersList() {
           failure.reason instanceof Error
             ? failure.reason.message
             : 'Failed to refresh bank transfers.';
-        // Don't show "no customer" errors as sync errors - treat as empty state
+        // Don't show "no customer" errors as sync errors
         if (!isNoCustomerError(message)) {
           setSyncError(message);
         }
@@ -566,15 +601,21 @@ export function BankTransfersList() {
     };
 
     void runInitialSync();
-  }, [syncOnramp, syncOfframp]);
+  }, [syncVAHistory, syncOfframp]);
+
+  const dismissTransfer = trpc.align.dismissOfframpTransfer.useMutation({
+    onSuccess: () => {
+      utils.align.getBankingHistory.invalidate();
+    },
+  });
 
   const handleDismiss = async (alignTransferId: string) => {
     setDismissingIds((prev) => new Set(prev).add(alignTransferId));
     try {
       await dismissTransfer.mutateAsync({ alignTransferId });
       toast.success('Transfer dismissed');
-    } catch (error) {
-      console.error('Failed to dismiss transfer:', error);
+    } catch (err) {
+      console.error('Failed to dismiss transfer:', err);
       toast.error('Failed to dismiss transfer');
     } finally {
       setDismissingIds((prev) => {
@@ -586,48 +627,31 @@ export function BankTransfersList() {
   };
 
   const handleResumeSuccess = () => {
-    setResumeTransfer(null);
-    utils.align.listOfframpTransfers.invalidate();
+    setResumeTransferId(null);
+    utils.align.getBankingHistory.invalidate();
   };
 
-  const isLoading = loadingIncoming || loadingOutgoing;
+  // Check for "no customer" errors - treat as empty state
+  const isNoCustomerState = isNoCustomerError(error?.message);
 
-  // Check if it's a "no customer" error - treat as empty state, not error
-  const incomingIsNoCustomer = isNoCustomerError(incomingError?.message);
-  const outgoingIsNoCustomer = isNoCustomerError(outgoingError?.message);
-  const isNoCustomerState = incomingIsNoCustomer || outgoingIsNoCustomer;
+  // Categorize transactions
+  const { pendingTransactions, completedTransactions } = React.useMemo(() => {
+    const transactions = bankingHistory?.transactions ?? [];
 
-  // Only show error state for real errors, not "no customer" errors
-  const isError =
-    (errorIncoming && !incomingIsNoCustomer) ||
-    (errorOutgoing && !outgoingIsNoCustomer);
-  const errorMsg =
-    (!incomingIsNoCustomer && incomingError?.message) ||
-    (!outgoingIsNoCustomer && outgoingError?.message);
+    // Pending = status is 'pending' (outgoing transfers that need crypto deposit)
+    const pending = transactions.filter(
+      (tx) => tx.status === 'pending' && tx.type === 'outgoing',
+    );
+    // Completed/Active = everything else
+    const completed = transactions.filter(
+      (tx) => tx.status !== 'pending' || tx.type === 'incoming',
+    );
 
-  // Combine and categorize transfers
-  const { pendingTransfers, activeTransfers } = React.useMemo(() => {
-    const inc =
-      incoming?.map((t) => ({ ...t, _direction: 'incoming' as const })) ?? [];
-    const out =
-      outgoing?.map((t) => ({ ...t, _direction: 'outgoing' as const })) ?? [];
-    const all = [...inc, ...out].sort((a, b) => {
-      const aTime = a.created_at ? new Date(a.created_at).getTime() : 0;
-      const bTime = b.created_at ? new Date(b.created_at).getTime() : 0;
-      return bTime - aTime;
-    });
+    return { pendingTransactions: pending, completedTransactions: completed };
+  }, [bankingHistory?.transactions]);
 
-    // Pending = status is 'pending' (these require action like crypto deposit)
-    // Active = everything else (processing, completed, failed, canceled)
-    const pending = all.filter((t) => t.status === 'pending');
-    const active = all.filter((t) => t.status !== 'pending');
-
-    return { pendingTransfers: pending, activeTransfers: active };
-  }, [incoming, outgoing]);
-
-  const displaySyncError = syncError && !isError;
-  const hasTransfers =
-    pendingTransfers.length > 0 || activeTransfers.length > 0;
+  const hasTransactions =
+    pendingTransactions.length > 0 || completedTransactions.length > 0;
 
   return (
     <>
@@ -641,29 +665,29 @@ export function BankTransfersList() {
           </p>
         </CardHeader>
         <CardContent className="p-0">
-          {displaySyncError ? (
+          {/* Show sync error banner if background sync failed */}
+          {syncError && !isError && (
             <div className="flex items-center gap-2 px-6 py-3 text-sm text-amber-700 bg-amber-50 border-b border-amber-100">
               <AlertCircle className="h-4 w-4" />
               <span>{syncError}</span>
             </div>
-          ) : null}
+          )}
           {isLoading ? (
             <div className="flex justify-center items-center py-12">
               <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
             </div>
-          ) : isError ? (
+          ) : isError && !isNoCustomerState ? (
             <div className="px-6 py-8">
               <div className="flex items-center gap-2 text-red-600">
                 <AlertCircle className="h-5 w-5" />
                 <p className="text-sm font-medium">Error loading transfers</p>
               </div>
               <p className="text-sm text-gray-500 mt-1">
-                {errorMsg ||
-                  syncError ||
+                {error?.message ||
                   'Could not fetch transfers. Please try again later.'}
               </p>
             </div>
-          ) : !hasTransfers || isNoCustomerState ? (
+          ) : !hasTransactions || isNoCustomerState ? (
             <div className="px-6 py-12 text-center">
               <div className="flex justify-center mb-4">
                 <div className="h-12 w-12 rounded-full bg-[#F7F7F2] flex items-center justify-center">
@@ -680,7 +704,7 @@ export function BankTransfersList() {
           ) : (
             <div>
               {/* Pending Action Required Section */}
-              {pendingTransfers.length > 0 && (
+              {pendingTransactions.length > 0 && (
                 <div className="border-b border-gray-200">
                   <button
                     onClick={() => setPendingExpanded(!pendingExpanded)}
@@ -689,7 +713,7 @@ export function BankTransfersList() {
                     <div className="flex items-center gap-2">
                       <Clock className="h-4 w-4 text-amber-600" />
                       <span className="text-sm font-medium text-amber-800">
-                        Pending Action ({pendingTransfers.length})
+                        Pending Action ({pendingTransactions.length})
                       </span>
                     </div>
                     {pendingExpanded ? (
@@ -700,23 +724,17 @@ export function BankTransfersList() {
                   </button>
                   {pendingExpanded && (
                     <div className="divide-y divide-gray-200 bg-amber-50/30">
-                      {pendingTransfers.map((tx) => (
+                      {pendingTransactions.map((tx) => (
                         <TransferRow
                           key={tx.id}
                           tx={tx}
-                          // Only allow resume/dismiss for outgoing (offramp) transfers
                           onResume={
-                            tx._direction === 'outgoing'
-                              ? () =>
-                                  setResumeTransfer(
-                                    tx as OfframpTransfer & {
-                                      _direction: 'outgoing';
-                                    },
-                                  )
+                            tx.source === 'offramp_transfer'
+                              ? () => setResumeTransferId(tx.id)
                               : undefined
                           }
                           onDismiss={
-                            tx._direction === 'outgoing'
+                            tx.source === 'offramp_transfer'
                               ? () => handleDismiss(tx.id)
                               : undefined
                           }
@@ -728,35 +746,36 @@ export function BankTransfersList() {
                 </div>
               )}
 
-              {/* Active Transfers Section */}
-              {activeTransfers.length > 0 && (
+              {/* Completed Transfers Section */}
+              {completedTransactions.length > 0 && (
                 <div className="divide-y divide-gray-200">
-                  {activeTransfers.map((tx) => (
+                  {completedTransactions.map((tx) => (
                     <TransferRow key={tx.id} tx={tx} />
                   ))}
                 </div>
               )}
 
               {/* Show message if only pending transfers exist */}
-              {activeTransfers.length === 0 && pendingTransfers.length > 0 && (
-                <div className="px-6 py-8 text-center">
-                  <p className="text-sm text-gray-500">
-                    No completed transfers yet. Complete a pending transfer to
-                    see it here.
-                  </p>
-                </div>
-              )}
+              {completedTransactions.length === 0 &&
+                pendingTransactions.length > 0 && (
+                  <div className="px-6 py-8 text-center">
+                    <p className="text-sm text-gray-500">
+                      No completed transfers yet. Complete a pending transfer to
+                      see it here.
+                    </p>
+                  </div>
+                )}
             </div>
           )}
         </CardContent>
       </Card>
 
       {/* Resume Transfer Modal */}
-      {resumeTransfer && (
+      {resumeTransferId && (
         <ResumeTransferModal
-          transfer={resumeTransfer}
-          isOpen={!!resumeTransfer}
-          onClose={() => setResumeTransfer(null)}
+          transferId={resumeTransferId}
+          isOpen={!!resumeTransferId}
+          onClose={() => setResumeTransferId(null)}
           onSuccess={handleResumeSuccess}
         />
       )}

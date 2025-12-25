@@ -10,6 +10,7 @@ import {
   userDestinationBankAccounts,
   offrampTransfers,
   onrampTransfers,
+  virtualAccountHistory,
 } from '@/db/schema';
 import {
   alignApi,
@@ -3120,6 +3121,115 @@ export const alignRouter = router({
   }),
 
   /**
+   * Sync virtual account history from Align API
+   * Fetches deposit events for all virtual accounts and caches them locally
+   */
+  syncVirtualAccountHistory: protectedProcedure.mutation(async ({ ctx }) => {
+    const userId = ctx.user.id;
+
+    const userRecord = await db.query.users.findFirst({
+      where: eq(users.privyDid, userId),
+      columns: { primaryWorkspaceId: true, alignCustomerId: true },
+    });
+
+    if (!userRecord?.primaryWorkspaceId) {
+      throw new TRPCError({
+        code: 'PRECONDITION_FAILED',
+        message: 'User has no primary workspace',
+      });
+    }
+
+    const workspace = await db.query.workspaces.findFirst({
+      where: eq(workspaces.id, userRecord.primaryWorkspaceId),
+      columns: { alignCustomerId: true },
+    });
+
+    const alignCustomerId =
+      workspace?.alignCustomerId ?? userRecord.alignCustomerId;
+
+    if (!alignCustomerId) {
+      // No customer yet - just return empty, not an error
+      return { synced: 0, virtualAccounts: 0 };
+    }
+
+    try {
+      // Fetch all virtual accounts for this customer
+      const vaResponse = await alignApi.listVirtualAccounts(
+        alignCustomerId as string,
+      );
+      const virtualAccounts = vaResponse.items || [];
+
+      if (virtualAccounts.length === 0) {
+        return { synced: 0, virtualAccounts: 0 };
+      }
+
+      let totalSynced = 0;
+
+      // Fetch history for each virtual account
+      for (const va of virtualAccounts) {
+        try {
+          const history = await alignApi.getVirtualAccountHistory(
+            alignCustomerId as string,
+            va.id,
+          );
+
+          // Upsert each event into the database
+          for (const event of history.items || []) {
+            // Create a unique event timestamp - use created_at or generate one
+            const eventTimestamp = event.created_at
+              ? new Date(event.created_at)
+              : null;
+
+            try {
+              await db
+                .insert(virtualAccountHistory)
+                .values({
+                  userId,
+                  workspaceId: userRecord.primaryWorkspaceId,
+                  alignVirtualAccountId: va.id,
+                  eventType: event.event_type as any,
+                  eventTimestamp,
+                  sourceAmount: event.source?.amount || null,
+                  sourceCurrency: event.source?.currency || null,
+                  sourcePaymentRails: event.source?.payment_rails || null,
+                  destinationAmount: event.destination?.amount || null,
+                  destinationToken: event.destination?.token || null,
+                  destinationNetwork: event.destination?.network || null,
+                  destinationAddress: event.destination?.address || null,
+                  transactionHash: event.destination?.transaction_hash || null,
+                  rawEventData: event as any,
+                })
+                .onConflictDoNothing(); // Skip duplicates based on unique index
+
+              totalSynced++;
+            } catch (insertError) {
+              // Log but continue - might be duplicate
+              console.warn(
+                '[syncVirtualAccountHistory] Insert error (likely duplicate):',
+                insertError,
+              );
+            }
+          }
+        } catch (historyError) {
+          console.warn(
+            `[syncVirtualAccountHistory] Failed to fetch history for VA ${va.id}:`,
+            historyError,
+          );
+          // Continue with other accounts
+        }
+      }
+
+      return { synced: totalSynced, virtualAccounts: virtualAccounts.length };
+    } catch (error) {
+      console.error('Error syncing virtual account history:', error);
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Failed to sync virtual account history',
+      });
+    }
+  }),
+
+  /**
    * Create a virtual account for experiments (simplified version)
    */
   createVirtualAccount: protectedProcedure
@@ -3263,5 +3373,190 @@ export const alignRouter = router({
           message: `Failed to create onramp transfer: ${(error as Error).message}`,
         });
       }
+    }),
+
+  /**
+   * Get unified banking history from cached database
+   * Reads from local tables instead of making live API calls
+   * Call syncVirtualAccountHistory to refresh the cache
+   */
+  getBankingHistory: protectedProcedure
+    .input(
+      z
+        .object({
+          limit: z.number().min(1).max(100).optional(),
+        })
+        .optional(),
+    )
+    .query(async ({ ctx, input }) => {
+      const userId = ctx.user.id;
+      const limit = input?.limit ?? 50;
+
+      // Get user's workspace
+      const userRecord = await db.query.users.findFirst({
+        where: eq(users.privyDid, userId),
+        columns: { primaryWorkspaceId: true, alignCustomerId: true },
+      });
+
+      if (!userRecord?.primaryWorkspaceId) {
+        throw new TRPCError({
+          code: 'PRECONDITION_FAILED',
+          message: 'User has no primary workspace',
+        });
+      }
+
+      const workspace = await db.query.workspaces.findFirst({
+        where: eq(workspaces.id, userRecord.primaryWorkspaceId),
+        columns: {
+          alignCustomerId: true,
+          alignVirtualAccountId: true,
+        },
+      });
+
+      const alignCustomerId =
+        workspace?.alignCustomerId ?? userRecord.alignCustomerId;
+
+      if (!alignCustomerId) {
+        // No Align customer - return empty state (user hasn't completed KYC)
+        return {
+          transactions: [],
+          hasVirtualAccount: false,
+        };
+      }
+
+      // Unified transaction type for the response
+      type UnifiedTransaction = {
+        id: string;
+        type: 'incoming' | 'outgoing';
+        status: string;
+        // Primary amount (what user sent/received in their wallet)
+        primaryAmount: string;
+        primaryCurrency: string;
+        // Secondary amount (what bank sent/received - for context)
+        secondaryAmount: string | null;
+        secondaryCurrency: string | null;
+        // Fee info
+        feeAmount: string | null;
+        // Timestamps
+        createdAt: string | null;
+        // Source of the transaction
+        source: 'virtual_account' | 'offramp_transfer' | 'onramp_transfer';
+        // Additional metadata for UI
+        paymentRails: string | null;
+        transactionHash: string | null;
+        // For agent proposals
+        proposedByAgent?: boolean;
+        agentProposalMessage?: string | null;
+      };
+
+      const transactions: UnifiedTransaction[] = [];
+
+      // 1. Fetch Virtual Account History from DATABASE (cached)
+      try {
+        const vaHistory = await db.query.virtualAccountHistory.findMany({
+          where: eq(
+            virtualAccountHistory.workspaceId,
+            userRecord.primaryWorkspaceId,
+          ),
+          orderBy: (history, { desc: descFn }) => [
+            descFn(history.eventTimestamp),
+          ],
+          limit: limit * 2, // Fetch more since we'll filter
+        });
+
+        for (const event of vaHistory) {
+          // Only include deposit events (incoming money)
+          if (
+            event.eventType === 'deposit_completed' ||
+            event.eventType === 'deposit_pending'
+          ) {
+            const sourceAmount = event.sourceAmount || '0';
+            const sourceCurrency = event.sourceCurrency || 'usd';
+            const destAmount = event.destinationAmount || sourceAmount;
+            const destToken = event.destinationToken || 'usdc';
+
+            transactions.push({
+              id: event.id,
+              type: 'incoming',
+              status:
+                event.eventType === 'deposit_completed'
+                  ? 'completed'
+                  : 'pending',
+              // For incoming: primary is what lands in wallet (USDC)
+              primaryAmount: destAmount,
+              primaryCurrency: destToken.toUpperCase(),
+              // Secondary is what was sent from bank
+              secondaryAmount: sourceAmount,
+              secondaryCurrency: sourceCurrency.toUpperCase(),
+              feeAmount: null, // VA deposits typically don't show fees
+              createdAt: event.eventTimestamp?.toISOString() || null,
+              source: 'virtual_account',
+              paymentRails: event.sourcePaymentRails,
+              transactionHash: event.transactionHash,
+            });
+          }
+        }
+      } catch (vaError) {
+        console.warn(
+          '[getBankingHistory] Failed to fetch VA history from DB:',
+          vaError,
+        );
+        // Continue - will still show offramp transfers
+      }
+
+      // 2. Fetch Offramp Transfers from our database (outgoing)
+      try {
+        const offrampTxs = await db.query.offrampTransfers.findMany({
+          where: and(
+            eq(offrampTransfers.workspaceId, userRecord.primaryWorkspaceId),
+            eq(offrampTransfers.dismissed, false),
+          ),
+          orderBy: (transfers, { desc: descFn }) => [
+            descFn(transfers.createdAt),
+          ],
+          limit,
+        });
+
+        for (const tx of offrampTxs) {
+          transactions.push({
+            id: tx.alignTransferId,
+            type: 'outgoing',
+            status: tx.status,
+            // For outgoing: primary is what user sent (USDC)
+            primaryAmount: tx.depositAmount,
+            primaryCurrency: (tx.depositToken || 'USDC').toUpperCase(),
+            // Secondary is what bank receives (fiat)
+            secondaryAmount: tx.amountToSend,
+            secondaryCurrency: (tx.destinationCurrency || 'USD').toUpperCase(),
+            feeAmount: tx.feeAmount,
+            createdAt: tx.createdAt?.toISOString() || null,
+            source: 'offramp_transfer',
+            paymentRails: tx.destinationPaymentRails,
+            transactionHash: tx.transactionHash,
+            proposedByAgent: tx.proposedByAgent ?? false,
+            agentProposalMessage: tx.agentProposalMessage ?? null,
+          });
+        }
+      } catch (offrampError) {
+        console.error(
+          '[getBankingHistory] Failed to fetch offramp transfers:',
+          offrampError,
+        );
+      }
+
+      // 3. Sort all transactions by date (newest first)
+      transactions.sort((a, b) => {
+        const aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const bTime = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return bTime - aTime;
+      });
+
+      // Limit results
+      const limitedTransactions = transactions.slice(0, limit);
+
+      return {
+        transactions: limitedTransactions,
+        hasVirtualAccount: !!workspace?.alignVirtualAccountId,
+      };
     }),
 });

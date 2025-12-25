@@ -484,6 +484,75 @@ export const onrampTransfers = pgTable(
   },
 );
 
+// --- VIRTUAL ACCOUNT HISTORY ------------------------------------------------
+// Caches deposit events from Align Virtual Account History API
+// This is the source of truth for incoming bank transfers (deposits to virtual IBAN)
+export const virtualAccountHistory = pgTable(
+  'virtual_account_history',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.privyDid, { onDelete: 'cascade' }),
+    workspaceId: uuid('workspace_id'),
+
+    // Virtual account reference
+    alignVirtualAccountId: text('align_virtual_account_id').notNull(),
+
+    // Event identification - composite unique key to prevent duplicates
+    eventType: text('event_type', {
+      enum: [
+        'deposit_pending',
+        'deposit_completed',
+        'deposit_failed',
+        'deposit_returned',
+        'payout_pending',
+        'payout_completed',
+        'payout_failed',
+      ],
+    }).notNull(),
+    eventTimestamp: timestamp('event_timestamp', { withTimezone: true }), // From Align API
+
+    // Source (fiat side)
+    sourceAmount: text('source_amount'),
+    sourceCurrency: text('source_currency'), // usd, eur, aed
+    sourcePaymentRails: text('source_payment_rails'), // ach, sepa, wire, swift
+
+    // Destination (crypto side)
+    destinationAmount: text('destination_amount'),
+    destinationToken: text('destination_token'), // usdc, usdt
+    destinationNetwork: text('destination_network'),
+    destinationAddress: text('destination_address'),
+    transactionHash: text('transaction_hash'),
+
+    // Raw event data for debugging
+    rawEventData: jsonb('raw_event_data'),
+
+    // Timestamps
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => {
+    return {
+      userIdx: index('va_history_user_id_idx').on(table.userId),
+      workspaceIdx: index('va_history_workspace_idx').on(table.workspaceId),
+      vaIdIdx: index('va_history_va_id_idx').on(table.alignVirtualAccountId),
+      // Composite unique to prevent duplicate events
+      uniqueEvent: uniqueIndex('va_history_unique_event_idx').on(
+        table.alignVirtualAccountId,
+        table.eventType,
+        table.eventTimestamp,
+        table.sourceAmount,
+      ),
+    };
+  },
+);
+
 // --- RELATIONS ---
 
 // userSafesRelations - imported from schema/user-safes.ts (see top of file)
@@ -547,6 +616,17 @@ export const onrampTransfersRelations = relations(
   }),
 );
 
+// Added relations for virtualAccountHistory
+export const virtualAccountHistoryRelations = relations(
+  virtualAccountHistory,
+  ({ one }) => ({
+    user: one(users, {
+      fields: [virtualAccountHistory.userId],
+      references: [users.privyDid],
+    }),
+  }),
+);
+
 // --- TYPE INFERENCE ---
 
 // Type inference for bank tables
@@ -569,6 +649,12 @@ export type NewOfframpTransfer = typeof offrampTransfers.$inferInsert;
 // Added type inference for allocation strategies
 export type AllocationStrategy = typeof allocationStrategies.$inferSelect;
 export type NewAllocationStrategy = typeof allocationStrategies.$inferInsert;
+
+// Added type inference for virtual account history
+export type VirtualAccountHistoryEvent =
+  typeof virtualAccountHistory.$inferSelect;
+export type NewVirtualAccountHistoryEvent =
+  typeof virtualAccountHistory.$inferInsert;
 
 export const earnDeposits = pgTable(
   'earn_deposits',

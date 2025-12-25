@@ -328,6 +328,52 @@ export type AlignOnrampTransferList = z.infer<
   typeof alignOnrampTransferListSchema
 >;
 
+// --- VIRTUAL ACCOUNT HISTORY SCHEMA -----------------------------------------
+// Schema for virtual account history events (deposits to the virtual IBAN)
+const alignVirtualAccountHistoryEventSchema = z.object({
+  event_type: z.enum([
+    'deposit_pending',
+    'deposit_completed',
+    'deposit_failed',
+    'deposit_returned',
+    'payout_pending',
+    'payout_completed',
+    'payout_failed',
+  ]),
+  source: z
+    .object({
+      amount: z.string(),
+      currency: z.enum(['usd', 'eur', 'aed']),
+      payment_rails: z
+        .enum(['ach', 'sepa', 'wire', 'swift', 'uaefts'])
+        .optional(),
+    })
+    .optional(),
+  destination: z
+    .object({
+      amount: z.string().optional(),
+      token: z.enum(['usdc', 'usdt']).optional(),
+      network: z.string().optional(),
+      address: z.string().optional(),
+      transaction_hash: z.string().optional(),
+    })
+    .optional(),
+  created_at: z.string().datetime().optional(),
+  // Some events may have additional metadata
+  metadata: z.record(z.string(), z.unknown()).optional(),
+});
+
+const alignVirtualAccountHistorySchema = z.object({
+  items: z.array(alignVirtualAccountHistoryEventSchema),
+});
+
+export type AlignVirtualAccountHistoryEvent = z.infer<
+  typeof alignVirtualAccountHistoryEventSchema
+>;
+export type AlignVirtualAccountHistory = z.infer<
+  typeof alignVirtualAccountHistorySchema
+>;
+
 // --- OFFRAMP QUOTE SCHEMA ---------------------------------------------------
 const alignOfframpQuoteSchema = z.object({
   quote_id: z.string().uuid(),
@@ -898,6 +944,33 @@ class AlignApiClient {
     );
 
     return response;
+  }
+
+  /**
+   * Get virtual account transaction history
+   * Returns all deposit and payout events for a virtual account
+   * This is the source of truth for all banking activity on the account
+   */
+  async getVirtualAccountHistory(
+    customerId: string,
+    virtualAccountId: string,
+  ): Promise<AlignVirtualAccountHistory> {
+    const response = await this.fetchWithAuth(
+      `/v0/customers/${customerId}/virtual-account/${virtualAccountId}/history`,
+    );
+
+    console.log(
+      'Raw Align API response for getVirtualAccountHistory:',
+      JSON.stringify(response, null, 2),
+    );
+
+    try {
+      return alignVirtualAccountHistorySchema.parse(response);
+    } catch (error) {
+      console.error('Error parsing virtual account history response:', error);
+      // Return the raw response if parsing fails - may have additional fields
+      return response as AlignVirtualAccountHistory;
+    }
   }
 
   // --- METHODS FOR OFFRAMP TRANSFERS ---
