@@ -1369,7 +1369,9 @@ export const earnRouter = router({
         where: and(
           eq(userSafes.workspaceId, workspaceId),
           eq(userSafes.chainId, chainId),
+          eq(userSafes.safeType, 'primary'),
         ),
+        orderBy: (safes, { asc }) => [asc(safes.createdAt)],
       });
 
       if (!userSafe) {
@@ -2273,8 +2275,12 @@ export const earnRouter = router({
       const privyDid = requirePrivyDid(ctx);
       const workspaceId = requireWorkspaceId(ctx.workspaceId);
 
-      // Get all safes for this user within the workspace
-      const userSafesList = await getMultiChainUserSafes(privyDid, workspaceId);
+      // Get primary safes for this user within the workspace
+      const userSafesList = await getMultiChainUserSafes(
+        privyDid,
+        workspaceId,
+        'primary',
+      );
 
       // Create a map of chainId -> safeAddress for quick lookup
       const safesByChain = new Map<number, string>();
