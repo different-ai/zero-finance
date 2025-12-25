@@ -2548,14 +2548,17 @@ function SimplifiedOffRampReal({
                               : `${selectedAssetConfig.symbol} Transfer`}
                         </span>
                       </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-[13px] text-[#101010]/60">
-                          Network
-                        </span>
-                        <span className="text-[13px] font-medium text-[#101010]">
-                          Base
-                        </span>
-                      </div>
+                      {/* Only show network for crypto transfers, or in technical mode */}
+                      {(destinationType === 'crypto' || isTechnical) && (
+                        <div className="flex justify-between items-center">
+                          <span className="text-[13px] text-[#101010]/60">
+                            Network
+                          </span>
+                          <span className="text-[13px] font-medium text-[#101010]">
+                            Base
+                          </span>
+                        </div>
+                      )}
                       <div className="flex justify-between items-center">
                         <span className="text-[13px] text-[#101010]/60">
                           You send
@@ -2566,9 +2569,12 @@ function SimplifiedOffRampReal({
                               ? `${watchedAmount} ${selectedAssetConfig.symbol}`
                               : `${watchedAmount} USDC`}
                           </span>
-                          <p className="text-[11px] text-[#101010]/50">
-                            on Base
-                          </p>
+                          {/* Only show "on Base" for crypto transfers, or in technical mode */}
+                          {(destinationType === 'crypto' || isTechnical) && (
+                            <p className="text-[11px] text-[#101010]/50">
+                              on Base
+                            </p>
+                          )}
                         </div>
                       </div>
 
