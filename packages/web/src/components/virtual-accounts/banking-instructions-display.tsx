@@ -613,6 +613,33 @@ export function BankingInstructionsDisplay({
 
   return (
     <div className="space-y-6 py-6">
+      {/* Fee Reimbursement Disclaimer */}
+      <div
+        className={cn(
+          'flex items-start gap-2 px-4 py-3',
+          isTechnical
+            ? 'rounded-sm border border-amber-500/20 bg-amber-500/5'
+            : 'rounded-[10px] border border-amber-200 bg-amber-50',
+        )}
+      >
+        <Info
+          className={cn(
+            'h-4 w-4 mt-0.5 flex-shrink-0',
+            isTechnical ? 'text-amber-600' : 'text-amber-600',
+          )}
+        />
+        <p
+          className={cn(
+            'text-[12px] leading-relaxed',
+            isTechnical ? 'font-mono text-amber-700' : 'text-amber-800',
+          )}
+        >
+          {isTechnical
+            ? 'NOTE::FEE_DELTA // Actual received amount may be slightly less due to fees. Any difference will be reimbursed.'
+            : 'Actual received amount may be slightly less due to fees. Any difference will be reimbursed.'}
+        </p>
+      </div>
+
       {/* Show full accounts first when available (they're the upgrade) */}
       {hasFull && (
         <div>

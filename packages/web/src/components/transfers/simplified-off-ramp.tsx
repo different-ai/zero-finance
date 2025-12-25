@@ -495,11 +495,246 @@ const QuotePreview = ({
             )}
             <div className="flex justify-between items-center text-[12px]">
               <span className="text-[#101010]/60">Arrival</span>
-              <span className="text-[#101010]">1-2 business days</span>
+              <span className="text-[#101010]">
+                {isEur ? 'Same day' : '1-2 business days'}
+              </span>
             </div>
           </div>
         )}
       </div>
+    </div>
+  );
+};
+
+// ============================================================================
+// UNIFIED AMOUNT + QUOTE COMPONENT (Wise-style currency converter)
+// ============================================================================
+
+interface UnifiedAmountQuoteProps {
+  amountValue: string;
+  onAmountChange: (value: string) => void;
+  destinationType: 'ach' | 'iban' | 'crypto';
+  onQuoteChange?: (quote: QuoteData | null) => void;
+  usdcBalance: string | null | undefined;
+  isLoadingBalance: boolean;
+  maxBalance: number | undefined;
+  error?: string;
+}
+
+const UnifiedAmountQuote = ({
+  amountValue,
+  onAmountChange,
+  destinationType,
+  onQuoteChange,
+  usdcBalance,
+  isLoadingBalance,
+  maxBalance,
+  error: formError,
+}: UnifiedAmountQuoteProps) => {
+  const [debouncedAmount, setDebouncedAmount] = useState<number>(0);
+  const amountNum = parseFloat(amountValue || '0');
+
+  const isEur = destinationType === 'iban';
+  const currencySymbol = isEur ? '€' : '$';
+  const currencyCode = isEur ? 'EUR' : 'USD';
+
+  // Debounce the amount to avoid too many API calls
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedAmount(amountNum);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [amountNum]);
+
+  // Fetch real quote from Align API
+  const {
+    mutate: fetchQuote,
+    data: quote,
+    isPending: isLoading,
+    error: quoteError,
+  } = api.align.getOfframpQuote.useMutation();
+
+  // Notify parent when quote changes
+  useEffect(() => {
+    if (quote && onQuoteChange) {
+      onQuoteChange({
+        quoteId: quote.quoteId,
+        sourceAmount: quote.sourceAmount,
+        destinationAmount: quote.destinationAmount,
+        feeAmount: quote.feeAmount,
+        exchangeRate: quote.exchangeRate,
+        destinationCurrency: quote.destinationCurrency as 'usd' | 'eur' | 'aed',
+        destinationPaymentRails: isEur ? 'sepa' : 'ach',
+      });
+    } else if (!quote && onQuoteChange) {
+      onQuoteChange(null);
+    }
+  }, [quote, onQuoteChange, isEur]);
+
+  // Fetch quote when debounced amount changes
+  useEffect(() => {
+    if (debouncedAmount > 0) {
+      fetchQuote({
+        sourceAmount: debouncedAmount.toString(),
+        destinationCurrency: isEur ? 'eur' : 'usd',
+        destinationPaymentRails: isEur ? 'sepa' : 'ach',
+        sourceToken: 'usdc',
+        sourceNetwork: 'base',
+      });
+    }
+  }, [debouncedAmount, isEur, fetchQuote]);
+
+  // Parse quote data
+  const destinationAmount = quote ? parseFloat(quote.destinationAmount) : 0;
+  const feeAmount = quote ? parseFloat(quote.feeAmount) : 0;
+  const exchangeRate = quote ? parseFloat(quote.exchangeRate) : 0;
+
+  const handleMaxClick = () => {
+    const balance =
+      maxBalance !== undefined ? maxBalance.toString() : usdcBalance;
+    if (balance) {
+      onAmountChange(balance);
+    }
+  };
+
+  return (
+    <div className="bg-white border border-[#101010]/10 rounded-xl overflow-hidden">
+      {/* You Send Section */}
+      <div className="px-4 py-3 bg-[#F7F7F2]">
+        <div className="flex items-center justify-between mb-2">
+          <p className="text-[10px] text-[#101010]/50 uppercase tracking-wider">
+            You send
+          </p>
+          <CurrencyPill currency="USDC" variant="highlight" />
+        </div>
+        <div className="relative">
+          <Input
+            type="text"
+            inputMode="decimal"
+            value={amountValue}
+            onChange={(e) => onAmountChange(e.target.value)}
+            placeholder="0.00"
+            className="text-[24px] font-semibold tabular-nums h-10 border-0 bg-transparent p-0 focus-visible:ring-0 pr-16"
+          />
+          {!isLoadingBalance && (maxBalance !== undefined || usdcBalance) && (
+            <button
+              type="button"
+              onClick={handleMaxClick}
+              className="absolute right-0 top-1/2 -translate-y-1/2 px-2.5 py-1 text-[11px] font-medium text-[#1B29FF] bg-[#1B29FF]/10 rounded-md hover:bg-[#1B29FF]/20 transition-colors"
+            >
+              MAX
+            </button>
+          )}
+        </div>
+        <div className="mt-2 flex justify-between text-[11px]">
+          <span className="text-[#101010]/50">Available</span>
+          <span className="font-medium tabular-nums text-[#101010]/70">
+            {isLoadingBalance ? (
+              <Loader2 className="h-3 w-3 animate-spin inline" />
+            ) : maxBalance !== undefined ? (
+              `${maxBalance.toLocaleString('en-US', { minimumFractionDigits: 2 })} USDC`
+            ) : usdcBalance ? (
+              `${parseFloat(usdcBalance).toLocaleString('en-US', { minimumFractionDigits: 2 })} USDC`
+            ) : (
+              '—'
+            )}
+          </span>
+        </div>
+        {formError && (
+          <p className="text-[11px] text-red-500 mt-1.5">{formError}</p>
+        )}
+      </div>
+
+      {/* Conversion Arrow Divider */}
+      <div className="relative h-0">
+        <div className="absolute left-1/2 -translate-x-1/2 -translate-y-1/2 z-10">
+          <div className="w-8 h-8 rounded-full bg-white border border-[#101010]/10 flex items-center justify-center shadow-sm">
+            {isLoading ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin text-[#101010]/40" />
+            ) : (
+              <ArrowDown className="h-3.5 w-3.5 text-[#101010]/50" />
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Bank Receives Section */}
+      <div className="px-4 py-3 bg-white">
+        <div className="flex items-center justify-between mb-2">
+          <p className="text-[10px] text-[#10B981]/70 uppercase tracking-wider">
+            Bank receives
+          </p>
+          <CurrencyPill currency={currencyCode as 'EUR' | 'USD'} />
+        </div>
+        <div className="h-10 flex items-center">
+          {amountNum <= 0 ? (
+            <span className="text-[20px] font-semibold tabular-nums text-[#101010]/25">
+              {currencySymbol}0.00
+            </span>
+          ) : isLoading ? (
+            <div className="flex items-center gap-2">
+              <Loader2 className="h-4 w-4 animate-spin text-[#101010]/40" />
+              <span className="text-[13px] text-[#101010]/40">
+                Calculating...
+              </span>
+            </div>
+          ) : quote ? (
+            <span className="text-[20px] font-semibold tabular-nums text-[#10B981]">
+              {currencySymbol}
+              {destinationAmount.toLocaleString('en-US', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              })}
+            </span>
+          ) : quoteError ? (
+            <span className="text-[13px] text-red-500">
+              Failed to get quote
+            </span>
+          ) : (
+            <span className="text-[20px] font-semibold tabular-nums text-[#101010]/25">
+              {currencySymbol}—
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* Fee breakdown footer */}
+      {amountNum > 0 && (
+        <div className="px-4 py-2.5 bg-[#F7F7F2]/50 border-t border-[#101010]/5">
+          <div className="flex items-center justify-between text-[11px]">
+            {quote ? (
+              <>
+                <div className="flex items-center gap-3">
+                  {feeAmount > 0 && (
+                    <span className="text-[#101010]/50">
+                      Fee:{' '}
+                      <span className="text-[#101010]/70 tabular-nums">
+                        {feeAmount.toFixed(2)} USDC
+                      </span>
+                    </span>
+                  )}
+                  {exchangeRate > 0 && (
+                    <span className="text-[#101010]/50">
+                      Rate:{' '}
+                      <span className="text-[#101010]/70 tabular-nums">
+                        1 USDC = {currencySymbol}
+                        {exchangeRate.toFixed(4)}
+                      </span>
+                    </span>
+                  )}
+                </div>
+                <span className="text-[#101010]/50">
+                  {isEur ? 'Same day' : '1-2 days'}
+                </span>
+              </>
+            ) : isLoading ? (
+              <span className="text-[#101010]/40">Getting best rate...</span>
+            ) : (
+              <span className="text-[#101010]/40">Enter amount for quote</span>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -558,7 +793,7 @@ const DestinationSelector = ({
         </div>
       ),
       badge: 'SEPA',
-      timing: '1-2 days',
+      timing: 'Same day',
       currency: 'EUR',
       disabled: !hasIbanAccount,
     },
@@ -1037,7 +1272,55 @@ function SimplifiedOffRampReal({
       'accountHolderType',
       selectedAccount.accountHolderType as 'individual' | 'business',
     );
+
+    // Account holder name fields
+    if (selectedAccount.accountHolderFirstName) {
+      setValue(
+        'accountHolderFirstName',
+        selectedAccount.accountHolderFirstName,
+      );
+    }
+    if (selectedAccount.accountHolderLastName) {
+      setValue('accountHolderLastName', selectedAccount.accountHolderLastName);
+    }
+    if (selectedAccount.accountHolderBusinessName) {
+      setValue(
+        'accountHolderBusinessName',
+        selectedAccount.accountHolderBusinessName,
+      );
+    }
+
+    // Address fields
     setValue('country', selectedAccount.country);
+    if (selectedAccount.city) {
+      setValue('city', selectedAccount.city);
+    }
+    if (selectedAccount.streetLine1) {
+      setValue('streetLine1', selectedAccount.streetLine1);
+    }
+    if (selectedAccount.streetLine2) {
+      setValue('streetLine2', selectedAccount.streetLine2);
+    }
+    if (selectedAccount.postalCode) {
+      setValue('postalCode', selectedAccount.postalCode);
+    }
+
+    // Account details (for transfers)
+    if (selectedAccount.accountType === 'us') {
+      if (selectedAccount.accountNumber) {
+        setValue('accountNumber', selectedAccount.accountNumber);
+      }
+      if (selectedAccount.routingNumber) {
+        setValue('routingNumber', selectedAccount.routingNumber);
+      }
+    } else if (selectedAccount.accountType === 'iban') {
+      if (selectedAccount.ibanNumber) {
+        setValue('iban', selectedAccount.ibanNumber);
+      }
+      if (selectedAccount.bicSwift) {
+        setValue('bic', selectedAccount.bicSwift);
+      }
+    }
 
     // Set destination type based on account type
     if (selectedAccount.accountType === 'us') {
@@ -1366,11 +1649,19 @@ function SimplifiedOffRampReal({
   // ============================================================================
   if (currentStep === 2) {
     const isEur = destinationType === 'iban';
-    const rate = isEur ? APPROX_RATES.USDC_TO_EUR : APPROX_RATES.USDC_TO_USD;
-    const amountNum = Number(watchedAmount || 0);
-    const fee = amountNum * APPROX_RATES.FEE_PERCENTAGE;
-    const netAmount = (amountNum - fee) * rate;
     const currencySymbol = isEur ? '€' : '$';
+
+    // Use actual values from the transfer/quote, not hardcoded calculations
+    // For bank transfers, use transferDetails; for crypto, use watchedAmount
+    const sourceAmount = transferDetails
+      ? Number(
+          transferDetails.sourceAmount || transferDetails.depositAmount || 0,
+        )
+      : Number(watchedAmount || 0);
+    const destinationAmount = transferDetails
+      ? Number(transferDetails.destinationAmount || 0)
+      : 0;
+    const fee = transferDetails ? Number(transferDetails.fee || 0) : 0;
 
     return (
       <div className="bg-white h-full max-h-[100dvh] flex flex-col overflow-hidden">
@@ -1386,7 +1677,7 @@ function SimplifiedOffRampReal({
                 ? 'Your crypto transfer has been completed successfully.'
                 : destinationType === 'crypto'
                   ? 'Your transfer is being processed.'
-                  : `Your bank will receive ${currencySymbol}${netAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${isEur ? 'EUR' : 'USD'} in 1-2 business days.`}
+                  : `Your bank will receive ${currencySymbol}${destinationAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${isEur ? 'EUR' : 'USD'} in ${isEur ? 'less than 24 hours' : '1-2 business days'}.`}
             </p>
           </div>
 
@@ -1396,26 +1687,28 @@ function SimplifiedOffRampReal({
               <div className="flex justify-between items-center">
                 <span className="text-[13px] text-[#101010]/60">You sent</span>
                 <span className="text-[15px] font-medium tabular-nums">
-                  {amountNum.toLocaleString('en-US', {
+                  {sourceAmount.toLocaleString('en-US', {
                     minimumFractionDigits: 2,
                   })}{' '}
                   USDC
                 </span>
               </div>
-              <div className="flex justify-between items-center">
-                <span className="text-[13px] text-[#101010]/60">Fee</span>
-                <span className="text-[15px] tabular-nums text-[#101010]/70">
-                  -{fee.toLocaleString('en-US', { minimumFractionDigits: 2 })}{' '}
-                  USDC
-                </span>
-              </div>
+              {fee > 0 && (
+                <div className="flex justify-between items-center">
+                  <span className="text-[13px] text-[#101010]/60">Fee</span>
+                  <span className="text-[15px] tabular-nums text-[#101010]/70">
+                    -{fee.toLocaleString('en-US', { minimumFractionDigits: 2 })}{' '}
+                    USDC
+                  </span>
+                </div>
+              )}
               <div className="border-t border-[#101010]/10 pt-3 flex justify-between items-center">
                 <span className="text-[13px] font-medium text-[#101010]">
                   Bank receives
                 </span>
                 <span className="text-[18px] font-semibold tabular-nums text-green-600">
                   {currencySymbol}
-                  {netAmount.toLocaleString('en-US', {
+                  {destinationAmount.toLocaleString('en-US', {
                     minimumFractionDigits: 2,
                   })}
                 </span>
@@ -1675,88 +1968,40 @@ function SimplifiedOffRampReal({
           {/* ==================== STEP 2: Amount & Details ==================== */}
           {formStep === 2 && destinationType !== 'crypto' && (
             <div className="space-y-6">
-              {/* Amount Input with Quote Preview */}
-              <div className="space-y-4">
-                <div className="bg-[#F7F7F2] border border-[#101010]/10 rounded-2xl p-5">
-                  <div className="flex items-center justify-between mb-3">
-                    <div>
-                      <Label className="text-[13px] font-medium text-[#101010]">
-                        Amount to send
-                      </Label>
-                      <p className="text-[11px] text-[#101010]/50 mt-0.5">
-                        From your Safe on Base
-                      </p>
-                    </div>
-                    <CurrencyPill currency="USDC" />
-                  </div>
-                  <div className="relative">
-                    <Input
-                      id="amount"
-                      {...register('amount', {
-                        required: 'Amount is required',
-                        validate: (value) => {
-                          const num = parseFloat(value);
-                          if (isNaN(num) || num <= 0)
-                            return 'Please enter a valid positive amount.';
-                          // Validate against USDC balance
-                          const balance = parseFloat(usdcBalance || '0');
-                          if (num > balance)
-                            return `Insufficient balance. You have ${balance.toFixed(2)} USDC.`;
-                          return true;
-                        },
-                      })}
-                      placeholder="0.00"
-                      className="text-[28px] font-semibold tabular-nums h-14 border-0 bg-transparent p-0 focus-visible:ring-0 pr-20"
-                    />
-                    {!isLoadingBalance &&
-                      (maxBalance !== undefined || usdcBalance) && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const balance =
-                              maxBalance !== undefined
-                                ? maxBalance.toString()
-                                : usdcBalance;
-                            if (balance) {
-                              setValue('amount', balance, {
-                                shouldValidate: true,
-                              });
-                            }
-                          }}
-                          className="absolute right-0 top-1/2 -translate-y-1/2 px-3 py-1.5 text-[12px] font-medium text-[#1B29FF] bg-[#1B29FF]/10 rounded-lg hover:bg-[#1B29FF]/20 transition-colors"
-                        >
-                          MAX
-                        </button>
-                      )}
-                  </div>
-                  <div className="mt-3 flex justify-between text-[12px]">
-                    <span className="text-[#101010]/60">Available</span>
-                    <span className="font-medium tabular-nums text-[#101010]">
-                      {isLoadingBalance ? (
-                        <Loader2 className="h-3 w-3 animate-spin inline" />
-                      ) : maxBalance !== undefined ? (
-                        `${maxBalance.toLocaleString('en-US', { minimumFractionDigits: 2 })} USDC`
-                      ) : usdcBalance ? (
-                        `${parseFloat(usdcBalance).toLocaleString('en-US', { minimumFractionDigits: 2 })} USDC`
-                      ) : (
-                        '—'
-                      )}
-                    </span>
-                  </div>
-                  {errors.amount && (
-                    <p className="text-[12px] text-red-500 mt-2">
-                      {errors.amount.message}
-                    </p>
-                  )}
-                </div>
-
-                {/* Live Quote Preview */}
-                <QuotePreview
-                  amountUsdc={Number(watchedAmount || 0)}
-                  destinationType={destinationType as 'ach' | 'iban' | 'crypto'}
-                  onQuoteChange={setCurrentQuote}
-                />
-              </div>
+              {/* Unified Amount + Quote Component (Wise-style) */}
+              <Controller
+                control={control}
+                name="amount"
+                rules={{
+                  required: 'Amount is required',
+                  validate: (value) => {
+                    const num = parseFloat(value);
+                    if (isNaN(num) || num <= 0)
+                      return 'Please enter a valid positive amount.';
+                    // Validate against USDC balance
+                    const balance = parseFloat(usdcBalance || '0');
+                    if (num > balance)
+                      return `Insufficient balance. You have ${balance.toFixed(2)} USDC.`;
+                    return true;
+                  },
+                }}
+                render={({ field }) => (
+                  <UnifiedAmountQuote
+                    amountValue={field.value || ''}
+                    onAmountChange={(value) => {
+                      field.onChange(value);
+                    }}
+                    destinationType={
+                      destinationType as 'ach' | 'iban' | 'crypto'
+                    }
+                    onQuoteChange={setCurrentQuote}
+                    usdcBalance={usdcBalance}
+                    isLoadingBalance={isLoadingBalance}
+                    maxBalance={maxBalance}
+                    error={errors.amount?.message}
+                  />
+                )}
+              />
 
               {/* Saved Bank Accounts Selector */}
               {savedBankAccounts && savedBankAccounts.length > 0 && (

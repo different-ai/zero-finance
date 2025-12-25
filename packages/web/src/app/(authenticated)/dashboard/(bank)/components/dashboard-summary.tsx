@@ -86,7 +86,7 @@ export function DashboardSummary({
 
   return (
     <div className="flex flex-col sm:flex-row gap-4 items-stretch">
-      {/* Balance Card - Only contains Available Balance and Savings Balance */}
+      {/* Balance Card - Spendable (USDC in Safe) and Earning (USDC in yield vaults) */}
       <div
         className={cn(
           'flex-1 grid gap-4 p-6',
@@ -96,7 +96,7 @@ export function DashboardSummary({
             : 'bg-white border border-[#101010]/10 rounded-[12px] shadow-[0_2px_8px_rgba(16,16,16,0.04)]',
         )}
       >
-        {/* Left Column - Available Balance */}
+        {/* Left Column - Spendable Balance */}
         <div className="flex flex-col justify-center">
           <p
             className={cn(
@@ -106,7 +106,7 @@ export function DashboardSummary({
                 : 'uppercase tracking-[0.14em] text-[11px] text-[#101010]/60',
             )}
           >
-            {isTechnical ? 'BALANCE::AVAILABLE' : 'Available Balance'}
+            {isTechnical ? 'BALANCE::SPENDABLE' : 'Spendable'}
           </p>
           <p
             className={cn(
@@ -120,12 +120,12 @@ export function DashboardSummary({
           </p>
           {isTechnical && (
             <p className="mt-1 font-mono text-[11px] text-[#101010]/50">
-              Ready for transfer or deposit
+              USDC in Safe :: Ready for transfer
             </p>
           )}
         </div>
 
-        {/* Right Column - Savings Balance (Clickable) */}
+        {/* Right Column - Earning Balance (Clickable) */}
         <Link
           href="/dashboard/savings"
           className={cn(
@@ -145,7 +145,7 @@ export function DashboardSummary({
                     : 'uppercase tracking-[0.14em] text-[11px] text-[#101010]/60',
                 )}
               >
-                {isTechnical ? 'VAULT::SAVINGS' : 'Savings Balance'}
+                {isTechnical ? 'VAULT::EARNING' : 'Earning'}
               </p>
               <p
                 className={cn(
