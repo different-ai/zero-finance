@@ -292,8 +292,9 @@ export function CheckingActionsCard({
   const hasOnlyStarterAccounts = !hasCompletedKyc && fundingSources.length > 0;
   // In technical mode, bypass starter account AND ownership restrictions - power users can always withdraw
   // Ownership check is skipped in technical mode because workspace members share Safe access
+  // Use spendableBalance (idle + earning) since we can auto-withdraw from vaults during transfer
   const canInitiateMove =
-    (isDemoMode || totalAvailableBalance > 0) &&
+    (isDemoMode || spendableBalance > 0) &&
     !!safeAddress &&
     (isTechnical || !hasOnlyStarterAccounts) &&
     (isTechnical || isOwner !== false);
@@ -301,7 +302,7 @@ export function CheckingActionsCard({
     ? 'Add a treasury safe to move funds'
     : !isTechnical && isOwner === false
       ? 'You are not an owner of this Safe'
-      : totalAvailableBalance <= 0
+      : spendableBalance <= 0
         ? 'No withdrawable balance available'
         : !isTechnical && hasOnlyStarterAccounts
           ? 'Complete business verification to enable withdrawals'

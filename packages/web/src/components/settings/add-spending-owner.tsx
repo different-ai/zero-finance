@@ -333,28 +333,161 @@ export function AddSpendingOwner({
 }
 
 /**
- * Component to show when a member doesn't have a smart wallet yet
+ * Component to show when a member doesn't have a smart wallet yet.
+ * Shows a button that opens a dialog explaining why login is needed.
  */
 export function MemberNeedsLogin({
   memberName,
+  memberEmail,
   isTechnical = false,
 }: {
   memberName: string;
+  memberEmail?: string;
   isTechnical?: boolean;
 }) {
+  const [isOpen, setIsOpen] = useState(false);
+
   return (
-    <div
-      className={cn(
-        'flex items-center gap-2 text-xs',
-        isTechnical ? 'text-[#101010]/40 font-mono' : 'text-[#101010]/50',
-      )}
-    >
-      <Clock className="h-3.5 w-3.5" />
-      <span>
-        {isTechnical
-          ? 'Awaiting first login'
-          : `Ask ${memberName} to log in first`}
-      </span>
-    </div>
+    <>
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => setIsOpen(true)}
+        className={cn(
+          'gap-1.5',
+          isTechnical
+            ? 'border-[#101010]/20 text-[#101010]/60 hover:bg-[#101010]/5 font-mono text-xs'
+            : 'border-[#101010]/20 text-[#101010]/60 hover:bg-[#101010]/5',
+        )}
+      >
+        <UserPlus className="h-3.5 w-3.5" />
+        {isTechnical ? 'Make Owner' : 'Make Spending Owner'}
+      </Button>
+
+      <Dialog open={isOpen} onOpenChange={setIsOpen}>
+        <DialogContent className={cn(isTechnical && 'font-mono')}>
+          <DialogHeader>
+            <DialogTitle className={cn(isTechnical && 'font-mono')}>
+              {isTechnical ? 'LOGIN_REQUIRED' : 'Login Required'}
+            </DialogTitle>
+            <DialogDescription className={cn(isTechnical && 'font-mono')}>
+              {isTechnical
+                ? `${memberName} must log in to create their wallet`
+                : `${memberName} needs to log in first`}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            {/* Explanation */}
+            <div
+              className={cn(
+                'p-4 border rounded-lg',
+                isTechnical
+                  ? 'border-[#1B29FF]/20 bg-[#1B29FF]/5'
+                  : 'border-[#101010]/10 bg-[#F7F7F2]',
+              )}
+            >
+              <div className="flex items-start gap-3">
+                <div
+                  className={cn(
+                    'w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0',
+                    isTechnical ? 'bg-[#1B29FF]/10' : 'bg-amber-100',
+                  )}
+                >
+                  <Clock
+                    className={cn(
+                      'h-5 w-5',
+                      isTechnical ? 'text-[#1B29FF]' : 'text-amber-600',
+                    )}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <p
+                    className={cn(
+                      'text-[14px] font-medium',
+                      isTechnical ? 'font-mono' : '',
+                    )}
+                  >
+                    {isTechnical
+                      ? 'Smart wallet not initialized'
+                      : 'Wallet not created yet'}
+                  </p>
+                  <p
+                    className={cn(
+                      'text-[13px]',
+                      isTechnical
+                        ? 'font-mono text-[#101010]/60'
+                        : 'text-[#101010]/70',
+                    )}
+                  >
+                    {isTechnical
+                      ? `When ${memberName} logs in, a smart wallet will be created automatically. This wallet address is needed to add them as a Safe owner.`
+                      : `When ${memberName} logs in for the first time, we'll create a secure wallet for them. Once they've logged in, you can add them as a spending owner.`}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* What to do */}
+            <div className="space-y-2">
+              <p
+                className={cn(
+                  'text-sm font-medium',
+                  isTechnical && 'font-mono',
+                )}
+              >
+                {isTechnical ? 'NEXT_STEPS:' : 'What to do:'}
+              </p>
+              <ul
+                className={cn(
+                  'text-sm space-y-1.5',
+                  isTechnical
+                    ? 'text-[#101010]/60 font-mono'
+                    : 'text-[#101010]/70',
+                )}
+              >
+                <li className="flex items-start gap-2">
+                  <span className="text-[#1B29FF] font-medium">1.</span>
+                  {memberEmail ? (
+                    <span>
+                      Ask {memberName} to log in at{' '}
+                      <span className="font-medium">0.finance</span>
+                    </span>
+                  ) : (
+                    <span>Share the login link with {memberName}</span>
+                  )}
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-[#1B29FF] font-medium">2.</span>
+                  <span>
+                    {isTechnical
+                      ? 'Their smart wallet will be auto-provisioned'
+                      : 'Their wallet will be created automatically'}
+                  </span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-[#1B29FF] font-medium">3.</span>
+                  <span>
+                    {isTechnical
+                      ? 'Return here to grant Safe ownership'
+                      : 'Come back here to make them a spending owner'}
+                  </span>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsOpen(false)}
+              className={cn(isTechnical && 'font-mono')}
+            >
+              {isTechnical ? 'Close' : 'Got it'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

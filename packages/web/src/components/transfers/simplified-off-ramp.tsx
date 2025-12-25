@@ -1490,6 +1490,7 @@ function SimplifiedOffRampReal({
   const earning = earningBalance || 0;
   const total = spendableBalance || idle + earning;
   const deficit = Math.max(0, amountNum - idle);
+  const insufficientFunds = amountNum > total;
   const needsEarningWithdraw =
     deficit > 0 &&
     deficit <= earning &&
@@ -1716,6 +1717,63 @@ function SimplifiedOffRampReal({
     setError(null);
     setCryptoTxHash(null);
 
+    // Check if we need multi-step transfer (withdraw from earning first)
+    // Only applicable for USDC transfers
+    const needsWithdrawForCrypto =
+      asset === 'usdc' && needsEarningWithdraw && !isMultiStepTransfer;
+
+    if (needsWithdrawForCrypto) {
+      // Initialize multi-step transfer
+      setIsMultiStepTransfer(true);
+      setTransferSteps([
+        {
+          id: 'withdraw',
+          label: 'Withdrawing from earning balance',
+          status: 'pending',
+          subtitle: `${deficit.toFixed(2)} USDC from vaults`,
+        },
+        {
+          id: 'transfer',
+          label: `Sending ${assetConfig.symbol}`,
+          status: 'pending',
+          subtitle: `To ${values.cryptoAddress.slice(0, 6)}...${values.cryptoAddress.slice(-4)}`,
+        },
+        {
+          id: 'complete',
+          label: 'Transfer complete',
+          status: 'pending',
+        },
+      ]);
+      setCurrentTransferStepIndex(0);
+
+      try {
+        // Step 1: Withdraw from vaults
+        setTransferSteps((prev) =>
+          prev.map((s, i) => (i === 0 ? { ...s, status: 'in_progress' } : s)),
+        );
+
+        await handleVaultWithdrawal();
+
+        setTransferSteps((prev) =>
+          prev.map((s, i) => (i === 0 ? { ...s, status: 'completed' } : s)),
+        );
+        setCurrentTransferStepIndex(1);
+
+        // Step 2: Continue with crypto transfer
+        setTransferSteps((prev) =>
+          prev.map((s, i) => (i === 1 ? { ...s, status: 'in_progress' } : s)),
+        );
+      } catch (error: any) {
+        setTransferSteps((prev) =>
+          prev.map((s, i) => (i === 0 ? { ...s, status: 'error' } : s)),
+        );
+        setError(`Vault withdrawal failed: ${error.message}`);
+        setIsLoading(false);
+        setIsMultiStepTransfer(false);
+        return;
+      }
+    }
+
     try {
       setLoadingMessage(`Preparing ${assetConfig.symbol} transfer...`);
 
@@ -1755,16 +1813,40 @@ function SimplifiedOffRampReal({
       setLoadingMessage('Sending transaction...');
       const txHash = await sendWithRelay(transactions);
       setCryptoTxHash(txHash);
+
+      // Update multi-step transfer progress
+      if (isMultiStepTransfer || needsWithdrawForCrypto) {
+        setTransferSteps((prev) =>
+          prev.map((s, i) => {
+            if (i === 1) return { ...s, status: 'completed' };
+            if (i === 2) return { ...s, status: 'completed' };
+            return s;
+          }),
+        );
+        setCurrentTransferStepIndex(2);
+      }
+
       setCurrentStep(2);
       toast.success(`${assetConfig.symbol} transfer completed successfully!`);
     } catch (err: any) {
       const errMsg = err.message || 'An unknown error occurred.';
       setError(`Failed to send ${assetConfig.symbol} transfer: ${errMsg}`);
+
+      // Update multi-step transfer on error
+      if (isMultiStepTransfer || needsWithdrawForCrypto) {
+        setTransferSteps((prev) =>
+          prev.map((s, i) => (i === 1 ? { ...s, status: 'error' } : s)),
+        );
+      }
+
       toast.error(`${assetConfig.symbol} transfer failed`, {
         description: errMsg,
       });
     } finally {
       setIsLoading(false);
+      if (isMultiStepTransfer) {
+        setIsMultiStepTransfer(false);
+      }
     }
   };
 
@@ -2892,22 +2974,44 @@ function SimplifiedOffRampReal({
                         validate: (value) => {
                           const num = parseFloat(value);
                           if (isNaN(num) || num <= 0) return 'Invalid amount';
-                          const bal = getSelectedAssetBalance();
-                          if (bal && num > parseFloat(bal))
-                            return 'Exceeds balance';
+                          // For USDC, check against spendable balance (idle + earning)
+                          if (
+                            cryptoAsset === 'usdc' &&
+                            spendableBalance !== undefined
+                          ) {
+                            if (num > spendableBalance)
+                              return 'Exceeds spendable balance';
+                          } else {
+                            const bal = getSelectedAssetBalance();
+                            if (bal && num > parseFloat(bal))
+                              return 'Exceeds balance';
+                          }
                           return true;
                         },
                       })}
                       placeholder="0.00"
                       className="text-[24px] font-mono font-semibold tabular-nums h-12 border-[#1B29FF]/20 rounded-lg pr-20"
                     />
-                    {getSelectedAssetBalance() && (
+                    {/* For USDC, show MAX as spendable balance; for others, show asset balance */}
+                    {(cryptoAsset === 'usdc'
+                      ? spendableBalance !== undefined ||
+                        getSelectedAssetBalance()
+                      : getSelectedAssetBalance()) && (
                       <button
                         type="button"
                         onClick={() => {
-                          const bal = getSelectedAssetBalance();
-                          if (bal)
-                            setValue('amount', bal, { shouldValidate: true });
+                          if (
+                            cryptoAsset === 'usdc' &&
+                            spendableBalance !== undefined
+                          ) {
+                            setValue('amount', spendableBalance.toString(), {
+                              shouldValidate: true,
+                            });
+                          } else {
+                            const bal = getSelectedAssetBalance();
+                            if (bal)
+                              setValue('amount', bal, { shouldValidate: true });
+                          }
                         }}
                         className="absolute right-2 top-1/2 -translate-y-1/2 px-2 py-1 font-mono text-[10px] text-[#1B29FF] border border-[#1B29FF]/30 rounded hover:bg-[#1B29FF]/5"
                       >
@@ -2920,6 +3024,49 @@ function SimplifiedOffRampReal({
                       {errors.amount.message}
                     </p>
                   )}
+                  {/* Show spendable breakdown for USDC */}
+                  {cryptoAsset === 'usdc' &&
+                    spendableBalance !== undefined &&
+                    earningBalance !== undefined &&
+                    idleBalance !== undefined && (
+                      <div className="mt-2 font-mono text-[10px] text-[#101010]/50">
+                        Spendable:{' '}
+                        {spendableBalance.toLocaleString('en-US', {
+                          minimumFractionDigits: 2,
+                        })}{' '}
+                        USDC
+                        <span className="mx-1">·</span>
+                        {earningBalance.toLocaleString('en-US', {
+                          minimumFractionDigits: 2,
+                        })}{' '}
+                        earning
+                        <span className="mx-1">·</span>
+                        {idleBalance.toLocaleString('en-US', {
+                          minimumFractionDigits: 2,
+                        })}{' '}
+                        idle
+                      </div>
+                    )}
+                  {/* Warning: will use earning balance */}
+                  {cryptoAsset === 'usdc' &&
+                    needsEarningWithdraw &&
+                    !insufficientFunds &&
+                    amountNum > 0 && (
+                      <div className="mt-2 flex items-center gap-2 font-mono text-[11px] text-amber-700 bg-amber-50 border border-amber-200 px-3 py-2 rounded-lg">
+                        <TrendingDown className="h-3.5 w-3.5 flex-shrink-0" />
+                        <span>
+                          Uses{' '}
+                          <span className="font-medium">
+                            {deficit.toLocaleString('en-US', {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2,
+                            })}{' '}
+                            USDC
+                          </span>{' '}
+                          from earning
+                        </span>
+                      </div>
+                    )}
                 </div>
               </div>
 
@@ -3050,26 +3197,28 @@ function SimplifiedOffRampReal({
                   </div>
 
                   {/* Multi-step transfer warning */}
-                  {needsEarningWithdraw && destinationType !== 'crypto' && (
-                    <Alert className="bg-blue-50 border-blue-200 rounded-xl">
-                      <Clock className="h-4 w-4 text-blue-600" />
-                      <AlertDescription className="text-[12px] text-blue-800">
-                        <span className="font-medium">
-                          Multi-step transfer:
-                        </span>{' '}
-                        This will first withdraw{' '}
-                        <span className="font-medium tabular-nums">
-                          {deficit.toLocaleString('en-US', {
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 2,
-                          })}{' '}
-                          USDC
-                        </span>{' '}
-                        from your earning balance. Please stay on this page
-                        until complete (~30 seconds).
-                      </AlertDescription>
-                    </Alert>
-                  )}
+                  {needsEarningWithdraw &&
+                    (destinationType !== 'crypto' ||
+                      cryptoAsset === 'usdc') && (
+                      <Alert className="bg-blue-50 border-blue-200 rounded-xl">
+                        <Clock className="h-4 w-4 text-blue-600" />
+                        <AlertDescription className="text-[12px] text-blue-800">
+                          <span className="font-medium">
+                            Multi-step transfer:
+                          </span>{' '}
+                          This will first withdraw{' '}
+                          <span className="font-medium tabular-nums">
+                            {deficit.toLocaleString('en-US', {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2,
+                            })}{' '}
+                            USDC
+                          </span>{' '}
+                          from your earning balance. Please stay on this page
+                          until complete (~30 seconds).
+                        </AlertDescription>
+                      </Alert>
+                    )}
 
                   {/* Warning */}
                   <Alert className="bg-amber-50 border-amber-200 rounded-xl">

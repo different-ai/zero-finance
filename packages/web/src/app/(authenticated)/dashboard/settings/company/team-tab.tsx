@@ -671,6 +671,7 @@ export function TeamTab({ companyId }: TeamTabProps) {
                           memberName={
                             member.name || member.email || 'This member'
                           }
+                          memberEmail={member.email}
                           isTechnical={isTechnical}
                         />
                       )}
