@@ -34,8 +34,8 @@ import {
 } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { useBimodal } from '@/components/ui/bimodal';
-import { useUserSafes } from '@/hooks/use-user-safes';
 import { formatUnits, type Address } from 'viem';
+import { SUPPORTED_CHAINS } from '@/lib/constants/chains';
 import { USDC_ADDRESS, USDC_DECIMALS } from '@/lib/constants';
 import { toast } from 'sonner';
 import { ResumeTransferModal } from './resume-transfer-modal';
@@ -685,11 +685,12 @@ export function UnifiedActivity() {
   const [resumeTransferId, setResumeTransferId] = useState<string | null>(null);
   const hasSyncedRef = React.useRef(false);
 
-  // Get user's primary safe
-  const { data: userSafesData } = useUserSafes();
-  const primarySafeAddress = userSafesData?.find(
-    (s) => s.safeType === 'primary',
-  )?.safeAddress as Address | undefined;
+  // Get user's primary safe via getMultiChainPositions (user-scoped, not workspace-scoped)
+  // This ensures consistency with balance queries per AGENTS.md guidelines
+  const { data: positions } = trpc.earn.getMultiChainPositions.useQuery();
+  const primarySafeAddress = positions?.safes.find(
+    (s) => s.chainId === SUPPORTED_CHAINS.BASE,
+  )?.address as Address | undefined;
 
   // Fetch bank transactions
   const {
