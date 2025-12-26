@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import Image from 'next/image';
 import {
   CreditCard,
   Coffee,
@@ -11,6 +12,13 @@ import {
   Fuel,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { trpc } from '@/utils/trpc';
+import { useUserSafes } from '@/hooks/use-user-safes-demo';
+import { USDC_ADDRESS } from '@/lib/constants';
+import { BASE_USDC_VAULTS } from '@/server/earn/base-vaults';
+import { SUPPORTED_CHAINS } from '@/lib/constants/chains';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Dithering } from '@paper-design/shaders-react';
 
 // Mock transaction data
 const DEMO_TRANSACTIONS = [
@@ -75,23 +83,39 @@ function VirtualCard() {
       {/* Card background with gradient */}
       <div className="absolute inset-0 bg-gradient-to-br from-[#1B29FF] via-[#2d3bff] to-[#0050ff]" />
 
-      {/* Subtle pattern overlay */}
-      <div
-        className="absolute inset-0 opacity-10"
-        style={{
-          backgroundImage: `radial-gradient(circle at 2px 2px, white 1px, transparent 0)`,
-          backgroundSize: '24px 24px',
-        }}
-      />
+      {/* Dithering shader overlay */}
+      <div className="absolute inset-0 opacity-30">
+        <Dithering
+          colorBack="#00000000"
+          colorFront="#ffffff"
+          speed={0.03}
+          shape="warp"
+          type="4x4"
+          size={2}
+          scale={0.5}
+          pxSize={0.03}
+          style={{
+            width: '100%',
+            height: '100%',
+            position: 'absolute',
+            top: 0,
+            left: 0,
+          }}
+        />
+      </div>
 
       {/* Card content */}
-      <div className="relative h-full p-6 flex flex-col justify-between text-white">
+      <div className="relative h-full p-6 flex flex-col justify-between text-white z-10">
         {/* Top row - Logo */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
-              <span className="text-[14px] font-bold">0</span>
-            </div>
+            <Image
+              src="/new-logo-bluer.png"
+              alt="Zero Finance"
+              width={28}
+              height={28}
+              className="rounded-full bg-white/90 p-0.5"
+            />
             <span className="text-[14px] font-semibold tracking-wide">
               ZERO FINANCE
             </span>
@@ -232,17 +256,24 @@ function TransactionRow({
   );
 }
 
-export default function CardDemoPage() {
+function CardDemoContent({
+  spendableBalance,
+  earningBalance,
+  savingsApy,
+}: {
+  spendableBalance: number;
+  earningBalance: number;
+  savingsApy: number;
+}) {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [transactionIndex, setTransactionIndex] = useState(0);
   const [newestId, setNewestId] = useState<number | null>(null);
 
-  // Calculate balances based on transactions
-  const totalBalance = 10000;
+  // Calculate display balances based on transactions
   const totalSpent = transactions.reduce((sum, t) => sum + t.amount, 0);
-  const earningBalance =
-    5000 - transactions.reduce((sum, t) => sum + t.fromVault, 0);
-  const remainingBalance = totalBalance - totalSpent;
+  const vaultSpent = transactions.reduce((sum, t) => sum + t.fromVault, 0);
+  const displayBalance = spendableBalance - totalSpent;
+  const displayEarning = Math.max(0, earningBalance - vaultSpent);
 
   const addTransaction = useCallback(() => {
     if (transactionIndex >= DEMO_TRANSACTIONS.length) {
@@ -291,6 +322,200 @@ export default function CardDemoPage() {
   }, [addTransaction]);
 
   return (
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+      {/* Left column - Card */}
+      <div className="lg:col-span-5 space-y-6">
+        {/* Virtual Card */}
+        <div className="flex justify-center lg:justify-start">
+          <VirtualCard />
+        </div>
+
+        {/* Balance Info */}
+        <div className="bg-white border border-[#101010]/10 rounded-xl p-5 shadow-[0_2px_8px_rgba(16,16,16,0.04)]">
+          <p className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60 mb-1">
+            Card Balance
+          </p>
+          <p className="text-[32px] font-semibold tabular-nums text-[#101010]">
+            $
+            {displayBalance.toLocaleString('en-US', {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+            })}
+          </p>
+          <p className="mt-2 text-[13px] text-[#101010]/60">
+            Includes{' '}
+            <span className="text-[#1B29FF] font-medium">
+              $
+              {displayEarning.toLocaleString('en-US', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              })}
+            </span>{' '}
+            earning {savingsApy.toFixed(1)}% APY
+          </p>
+        </div>
+      </div>
+
+      {/* Right column - Transactions */}
+      <div className="lg:col-span-7">
+        <div className="bg-white border border-[#101010]/10 rounded-xl shadow-[0_2px_8px_rgba(16,16,16,0.04)] overflow-hidden">
+          {/* Header */}
+          <div className="px-5 py-4 border-b border-[#101010]/10 bg-[#F7F7F2]">
+            <p className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60">
+              Recent Activity
+            </p>
+          </div>
+
+          {/* Transaction list */}
+          <div className="max-h-[500px] overflow-y-auto">
+            {transactions.length === 0 ? (
+              <div className="p-12 text-center">
+                <div className="w-16 h-16 mx-auto bg-[#F7F7F2] rounded-full flex items-center justify-center mb-4">
+                  <CreditCard className="w-8 h-8 text-[#101010]/30" />
+                </div>
+                <p className="text-[15px] font-medium text-[#101010]/70 mb-2">
+                  No transactions yet
+                </p>
+                <p className="text-[13px] text-[#101010]/50">
+                  Card transactions will appear here
+                </p>
+              </div>
+            ) : (
+              transactions.map((tx) => (
+                <TransactionRow
+                  key={tx.visibleId}
+                  transaction={tx}
+                  isNew={tx.visibleId === newestId}
+                />
+              ))
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function LoadingSkeleton() {
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+      <div className="lg:col-span-5 space-y-6">
+        <Skeleton className="w-full max-w-[400px] aspect-[1.586/1] rounded-2xl" />
+        <div className="bg-white border border-[#101010]/10 rounded-xl p-5">
+          <Skeleton className="h-3 w-24 mb-2" />
+          <Skeleton className="h-10 w-40 mb-2" />
+          <Skeleton className="h-4 w-48" />
+        </div>
+      </div>
+      <div className="lg:col-span-7">
+        <div className="bg-white border border-[#101010]/10 rounded-xl overflow-hidden">
+          <div className="px-5 py-4 border-b border-[#101010]/10 bg-[#F7F7F2]">
+            <Skeleton className="h-3 w-28" />
+          </div>
+          <div className="p-6 space-y-4">
+            {[1, 2, 3].map((i) => (
+              <Skeleton key={i} className="h-20 w-full" />
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function CardDemoPage() {
+  // Get safe data
+  const safesQuery = useUserSafes();
+  const safesData = safesQuery.data;
+  const isLoadingSafes = safesQuery.isLoading;
+
+  const primarySafe = safesData?.[0];
+  const safeAddress = primarySafe?.safeAddress || null;
+
+  // Fetch checking account balance (idle balance)
+  const { data: checkingBalance } = trpc.safe.getBalance.useQuery(
+    {
+      safeAddress: safeAddress!,
+      tokenAddress: USDC_ADDRESS,
+    },
+    {
+      enabled: !!safeAddress,
+      refetchInterval: 10000,
+    },
+  );
+
+  const idleBalance = checkingBalance
+    ? Number(checkingBalance.balance) / 1e6
+    : 0;
+
+  // Fetch vault positions for savings balance
+  const baseVaultAddresses = useMemo(
+    () => BASE_USDC_VAULTS.map((v) => v.address),
+    [],
+  );
+
+  const { data: userPositions, isLoading: isLoadingPositions } =
+    trpc.earn.userPositions.useQuery(
+      { vaultAddresses: baseVaultAddresses },
+      {
+        refetchInterval: 10000,
+      },
+    );
+
+  // Fetch vault stats for APY
+  const { data: vaultStats } = trpc.earn.statsByVault.useQuery(
+    { safeAddress: safeAddress!, vaultAddresses: baseVaultAddresses },
+    {
+      enabled: !!safeAddress,
+      refetchInterval: 30000,
+    },
+  );
+
+  // Calculate total savings balance from vault positions (earning balance)
+  const earningBalance = useMemo(() => {
+    if (!userPositions) return 0;
+
+    return userPositions.reduce((total, position) => {
+      return total + (position.assetsUsd || 0);
+    }, 0);
+  }, [userPositions]);
+
+  // Spendable = Total (Earning + Idle)
+  const spendableBalance = earningBalance + idleBalance;
+
+  // Calculate average APY from vaults
+  const savingsApy = useMemo(() => {
+    if (!vaultStats || vaultStats.length === 0) return 8.0;
+
+    // Weight APY by position size
+    let totalWeight = 0;
+    let weightedApy = 0;
+
+    vaultStats.forEach((stat) => {
+      const position = userPositions?.find(
+        (p) => p.vaultAddress.toLowerCase() === stat.vaultAddress.toLowerCase(),
+      );
+      const balance = position?.assetsUsd || 0;
+      if (balance > 0) {
+        totalWeight += balance;
+        weightedApy += (stat.apy || 0) * balance;
+      }
+    });
+
+    if (totalWeight === 0) {
+      // No positions, use simple average
+      const avgApy =
+        vaultStats.reduce((sum, s) => sum + (s.apy || 0), 0) /
+        vaultStats.length;
+      return avgApy * 100;
+    }
+
+    return (weightedApy / totalWeight) * 100;
+  }, [vaultStats, userPositions]);
+
+  const isLoading = isLoadingSafes || isLoadingPositions;
+
+  return (
     <div className="min-h-screen bg-[#fafafa]">
       <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
         {/* Page Header */}
@@ -307,96 +532,15 @@ export default function CardDemoPage() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          {/* Left column - Card */}
-          <div className="lg:col-span-5 space-y-6">
-            {/* Virtual Card */}
-            <div className="flex justify-center lg:justify-start">
-              <VirtualCard />
-            </div>
-
-            {/* Balance Info */}
-            <div className="bg-white border border-[#101010]/10 rounded-xl p-5 shadow-[0_2px_8px_rgba(16,16,16,0.04)]">
-              <p className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60 mb-1">
-                Card Balance
-              </p>
-              <p className="text-[32px] font-semibold tabular-nums text-[#101010]">
-                $
-                {remainingBalance.toLocaleString('en-US', {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2,
-                })}
-              </p>
-              <p className="mt-2 text-[13px] text-[#101010]/60">
-                Includes{' '}
-                <span className="text-[#1B29FF] font-medium">
-                  $
-                  {earningBalance.toLocaleString('en-US', {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}
-                </span>{' '}
-                earning 8% APY
-              </p>
-            </div>
-
-            {/* Demo hint */}
-            <div className="bg-[#1B29FF]/5 border border-[#1B29FF]/20 rounded-xl p-4 text-center">
-              <p className="text-[13px] text-[#1B29FF]">
-                Press{' '}
-                <kbd className="px-2 py-0.5 bg-white border border-[#1B29FF]/30 rounded text-[12px] font-mono mx-1">
-                  T
-                </kbd>{' '}
-                or{' '}
-                <kbd className="px-2 py-0.5 bg-white border border-[#1B29FF]/30 rounded text-[12px] font-mono mx-1">
-                  Space
-                </kbd>{' '}
-                to simulate a card payment
-              </p>
-            </div>
-          </div>
-
-          {/* Right column - Transactions */}
-          <div className="lg:col-span-7">
-            <div className="bg-white border border-[#101010]/10 rounded-xl shadow-[0_2px_8px_rgba(16,16,16,0.04)] overflow-hidden">
-              {/* Header */}
-              <div className="px-5 py-4 border-b border-[#101010]/10 bg-[#F7F7F2]">
-                <p className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60">
-                  Recent Activity
-                </p>
-              </div>
-
-              {/* Transaction list */}
-              <div className="max-h-[500px] overflow-y-auto">
-                {transactions.length === 0 ? (
-                  <div className="p-12 text-center">
-                    <div className="w-16 h-16 mx-auto bg-[#F7F7F2] rounded-full flex items-center justify-center mb-4">
-                      <CreditCard className="w-8 h-8 text-[#101010]/30" />
-                    </div>
-                    <p className="text-[15px] font-medium text-[#101010]/70 mb-2">
-                      No transactions yet
-                    </p>
-                    <p className="text-[13px] text-[#101010]/50">
-                      Press{' '}
-                      <kbd className="px-1.5 py-0.5 bg-[#F7F7F2] border border-[#101010]/10 rounded text-[11px] font-mono">
-                        T
-                      </kbd>{' '}
-                      to simulate a payment
-                    </p>
-                  </div>
-                ) : (
-                  transactions.map((tx) => (
-                    <TransactionRow
-                      key={tx.visibleId}
-                      transaction={tx}
-                      isNew={tx.visibleId === newestId}
-                    />
-                  ))
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
+        {isLoading ? (
+          <LoadingSkeleton />
+        ) : (
+          <CardDemoContent
+            spendableBalance={spendableBalance}
+            earningBalance={earningBalance}
+            savingsApy={savingsApy}
+          />
+        )}
       </div>
     </div>
   );
