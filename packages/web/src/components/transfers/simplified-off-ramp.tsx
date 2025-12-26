@@ -2492,8 +2492,11 @@ function SimplifiedOffRampReal({
                     const num = parseFloat(value);
                     if (isNaN(num) || num <= 0)
                       return 'Please enter a valid positive amount.';
-                    // Validate against USDC balance
-                    const balance = parseFloat(usdcBalance || '0');
+                    // Validate against spendable balance (idle + earning) to allow auto-withdraw
+                    const balance =
+                      spendableBalance !== undefined
+                        ? spendableBalance
+                        : parseFloat(usdcBalance || '0');
                     if (num > balance)
                       return `Insufficient balance. You have ${balance.toFixed(2)} USDC.`;
                     return true;

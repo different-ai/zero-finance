@@ -26,10 +26,11 @@ export default async function AuthenticatedLayout({
   const email = privyUser.email?.address ?? '';
 
   // Get wallet addresses from Privy user
+  // Note: embedded wallet has walletClientType === 'privy' but type !== 'smart_wallet'
+  // We must only look for type === 'smart_wallet' to get the ERC-4337 smart wallet
   const embeddedWalletAddress = (privyUser as any).wallet?.address;
   const smartWalletAccount = (privyUser as any).linkedAccounts?.find(
-    (account: any) =>
-      account.type === 'smart_wallet' || account.walletClientType === 'privy',
+    (account: any) => account.type === 'smart_wallet',
   );
   const smartWalletAddress = smartWalletAccount?.address;
 
