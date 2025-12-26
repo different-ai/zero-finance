@@ -1,6 +1,6 @@
 # Zero Finance Design Language
 
-> **Philosophy**: Progressive disclosure. Banking-first experience with technical depth available on demand.
+> **Philosophy**: Progressive disclosure. Banking-first experience with technical depth available on demand. Sharp, modern interfaces that feel precise and trustworthy.
 
 ## Core Principles
 
@@ -33,6 +33,7 @@ Hide complexity. Show clarity.
 
 - Compact sans-serif typography
 - Clean white cards on `#F7F7F2` canvas
+- **Sharp corners** (`rounded-sm` or none) for a precise, modern feel
 - Tight spacing, efficient layouts
 - Clear, actionable content
 
@@ -105,9 +106,9 @@ Clean, data-dense interfaces that reveal the underlying system architecture whil
 
 **Visual Elements:**
 
-- **Crosshairs**: Minimal corner markers using brand blue at 40% opacity
+- **Crosshairs**: Minimal corner markers using brand blue at 30% opacity
 - **Technical Labels**: Uppercase, tracked-out, monospace labels (`text-[10px]` to `text-[11px]`)
-- **Accent Borders**: `border-[#1B29FF]/30` for cards, `border-[#1B29FF]/20` for containers
+- **Accent Borders**: `border-[#1B29FF]/20` for containers, `border-[#1B29FF]/10` for subtle dividers
 
 ---
 
@@ -163,17 +164,22 @@ Clean, data-dense interfaces that reveal the underlying system architecture whil
 --cream: #f7f7f2; /* App canvas */
 --white: #ffffff; /* Cards, modals */
 --off-white: #f6f5ef; /* Alternate background */
+--fafafa: #fafafa; /* Subtle card background */
 
 /* Semantic */
---positive: #10b981; /* Success, gains */
+--positive: #10b981; /* Success, gains, growth vaults */
 --destructive: #ef4444; /* Errors, destructive actions */
 --warning: #f59e0b; /* Warnings */
 
+/* Asset Colors */
+--usdc-blue: #2775ca; /* USDC badges */
+--eth-purple: #627eea; /* ETH/WETH badges */
+
 /* Technical / CAD Accents (Blueprint Mode) */
---tech-line: rgba(27, 41, 255, 0.15); /* Structural lines (Brand Blue) */
---tech-grid: rgba(27, 41, 255, 0.05); /* Subtle background grid */
+--tech-line: rgba(27, 41, 255, 0.2); /* Structural borders (Brand Blue) */
+--tech-grid: rgba(27, 41, 255, 0.05); /* Subtle background */
 --tech-mono: #1b29ff; /* Monospace data text */
---tech-label: rgba(16, 16, 16, 0.5); /* Technical labels */
+--tech-label: rgba(27, 41, 255, 0.7); /* Technical labels */
 --tech-accent: #0050ff; /* Highlights */
 ```
 
@@ -182,7 +188,7 @@ Clean, data-dense interfaces that reveal the underlying system architecture whil
 - **Landing pages**: Use `#1B29FF` for CTAs, gradients, and emphasis
 - **Dashboard**: Use white cards on `#F7F7F2` canvas
 - **Advanced/Technical**: Use `Blueprint` styles (Light grid + Mono type)
-- **Text hierarchy**: `#101010` → `rgba(16,16,16,0.80)` → `rgba(16,16,16,0.60)`
+- **Text hierarchy**: `#101010` → `rgba(16,16,16,0.60)` → `rgba(16,16,16,0.40)`
 - **Borders**: Always `border-[#101010]/10` for subtle division
 
 ---
@@ -221,12 +227,13 @@ Labels:             uppercase tracking-[0.14-0.18em] text-[11-13px] text-ink-60
 #### Dashboard/App
 
 ```
-Page Titles:        font-serif text-[24-28px] leading-[1.1] (use sparingly)
-Section Headings:   text-[20-22px] font-semibold tracking-[-0.01em]
-Card Titles:        text-[15-16px] font-medium
+Page Titles:        text-[24-28px] font-medium tracking-[-0.01em]
+Section Headings:   text-[18-20px] font-semibold
+Card Titles:        text-[15px] font-medium
 Body:               text-[13-14px] leading-[1.5]
-Small:              text-[12-13px]
+Small:              text-[12px]
 Labels:             uppercase tracking-[0.14em] text-[11px] text-ink-60
+Table Headers:      uppercase tracking-[0.14em] text-[11px] text-[#101010]/60
 ```
 
 **Typography Rules:**
@@ -243,46 +250,97 @@ Labels:             uppercase tracking-[0.14em] text-[11px] text-ink-60
 ### Spacing System
 
 ```
-Micro:     gap-2  (8px)   - Icon + text, inline elements
-Small:     gap-3  (12px)  - Form fields, tight lists
-Medium:    gap-4  (16px)  - Card content, sections
+Micro:     gap-1  (4px)   - Tight inline elements
+Small:     gap-2  (8px)   - Icon + text, badges
+Medium:    gap-3  (12px)  - Form fields, tight lists
+Standard:  gap-4  (16px)  - Card content, sections
 Large:     gap-6  (24px)  - Page sections
 XLarge:    gap-8  (32px)  - Major layout divisions
 
 Padding:
-  Cards:   p-5 sm:p-6
-  Modals:  p-6 sm:p-8
-  Sections: py-6 sm:py-8
+  Cards:   p-4
+  Tables:  p-4 (cells)
+  Modals:  p-6
+  Sections: py-6
 ```
 
 ### Elevation & Shadows
 
+**Philosophy**: Prefer borders over shadows for a sharper, more modern look.
+
 ```css
-/* Subtle card elevation (default) */
-shadow-ambient: 0 2px 8px rgba(16,16,16,0.04)
-border: 1px solid rgba(16,16,16,0.10)
+/* Default card - NO shadow, border only */
+border: 1px solid rgba(16, 16, 16, 0.1);
+background: white;
 
-/* Hover states */
-shadow-hover: 0 6px 16px rgba(16,16,16,0.08)
+/* Technical mode card */
+border: 1px solid rgba(27, 41, 255, 0.2);
+background: white;
 
-/* CTAs (use sparingly) */
-shadow-primary: 0 10px 25px -5px rgba(27,41,255,0.25)
+/* Hover states - subtle background change, not shadow */
+hover:bg-[#F7F7F2]/50  /* Banking mode */
+hover:bg-[#1B29FF]/5   /* Technical mode */
+
+/* Selected/Active states */
+ring-1 ring-[#1B29FF]/30  /* Focus ring */
+bg-[#1B29FF]/5            /* Selected background */
 ```
 
 **Elevation Guidelines:**
 
-- Default cards: `border + shadow-ambient` (subtle)
-- Hover: Lift with `shadow-hover`
-- Never stack heavy shadows; prefer border + subtle shadow
-- Modals: Use backdrop blur + border
+- **Default cards**: Border only, no shadow
+- **Hover**: Background color change, not shadow lift
+- **Selected**: Subtle ring + background tint
+- **Never use**: Heavy drop shadows in dashboard
 
 ### Border Radius
 
+**Sharp, Modern Aesthetic**
+
 ```
-Buttons:     rounded-md (6px)
-Cards:       rounded-card-lg (12px)
-Inputs:      rounded-md (6px)
-Pills/Tags:  rounded-full (999px)
+None:        rounded-none  - Technical mode cards, table cells
+Minimal:     rounded-sm    - Dashboard cards, buttons
+Standard:    rounded       - Inputs, form elements (4px)
+Pills/Tags:  rounded-full  - Status badges, avatars
+```
+
+**Key Principle**: Dashboard components use `rounded-sm` or no rounding for a precise, professional feel. Only use `rounded-lg`/`rounded-xl` for landing pages and modals.
+
+### Cards
+
+#### Dashboard Card (Banking Mode)
+
+```jsx
+<div className="bg-white border border-[#101010]/10">
+  <div className="p-4">{/* Card content */}</div>
+</div>
+```
+
+#### Dashboard Card (Technical Mode)
+
+```jsx
+<div className="bg-white border border-[#1B29FF]/20 rounded-sm">
+  <div className="p-4">{/* Card content */}</div>
+</div>
+```
+
+#### Table/List Container
+
+```jsx
+<div className="bg-white border border-[#101010]/10 overflow-hidden">
+  {/* Table Header */}
+  <div className="grid grid-cols-12 gap-3 p-4 border-b border-[#101010]/10 bg-[#F7F7F2]">
+    <div className="col-span-4">
+      <p className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60">
+        Column Header
+      </p>
+    </div>
+    {/* More columns... */}
+  </div>
+
+  {/* Table Rows */}
+  <div className="divide-y divide-[#101010]/10">{/* Row content */}</div>
+</div>
 ```
 
 ### Buttons
@@ -290,25 +348,76 @@ Pills/Tags:  rounded-full (999px)
 #### Primary CTA
 
 ```jsx
-<button className="bg-[#1B29FF] hover:bg-[#1420CC] text-white font-medium px-6 py-3 rounded-md transition-colors">
-  Get Started
+<button className="bg-[#1B29FF] hover:bg-[#1420CC] text-white text-[12px] font-medium px-3 py-2 transition-colors">
+  Deposit
 </button>
 ```
 
 #### Secondary
 
 ```jsx
-<button className="bg-white border border-[#101010]/20 hover:border-[#101010]/40 text-[#101010] font-medium px-6 py-3 rounded-md transition-colors">
-  Learn More
+<button className="bg-white border border-[#101010]/10 hover:bg-[#F7F7F2] text-[#101010] text-[12px] px-3 py-2 transition-colors">
+  Withdraw
 </button>
 ```
 
-#### Ghost
+#### Technical Mode Primary
 
 ```jsx
-<button className="text-[#101010]/70 hover:text-[#1B29FF] underline underline-offset-4 transition-colors">
-  View All →
+<button className="bg-transparent border border-[#1B29FF] text-[#1B29FF] hover:bg-[#1B29FF]/5 font-mono uppercase text-[12px] px-3 py-2 transition-colors">
+  Deposit
 </button>
+```
+
+#### Technical Mode Secondary
+
+```jsx
+<button className="text-[#101010]/60 hover:text-[#1B29FF] font-mono uppercase text-[12px] underline decoration-dotted underline-offset-4 transition-colors">
+  Withdraw
+</button>
+```
+
+#### Ghost/Link
+
+```jsx
+<button className="text-[#101010]/60 hover:text-[#101010] transition-colors flex items-center">
+  <ExternalLink className="h-3 w-3" />
+</button>
+```
+
+### Badges & Tags
+
+#### Asset Badge (USDC)
+
+```jsx
+<span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wide bg-[#2775ca]/10 text-[#2775ca]">
+  USDC
+</span>
+```
+
+#### Asset Badge (ETH)
+
+```jsx
+<span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wide bg-[#627eea]/10 text-[#627eea]">
+  ETH
+</span>
+```
+
+#### Technical Mode Badge
+
+```jsx
+<span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-mono uppercase tracking-wide bg-[#1B29FF]/10 text-[#1B29FF]">
+  USDC
+</span>
+```
+
+#### Status Badge (Success)
+
+```jsx
+<span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-mono uppercase tracking-wide bg-[#10B981]/10 text-[#10B981]">
+  <Shield className="h-3 w-3" />
+  INSURED
+</span>
 ```
 
 ### Forms & Inputs
@@ -318,379 +427,328 @@ Pills/Tags:  rounded-full (999px)
 ```jsx
 <input
   type="text"
-  className="h-12 px-4 bg-white border border-[#101010]/20 rounded-md 
-             focus:border-[#1B29FF] focus:ring-2 focus:ring-[#1B29FF]/20 
-             text-[15px] placeholder:text-[#101010]/40 transition-colors"
-  placeholder="you@company.com"
+  className="h-10 px-3 bg-white border border-[#101010]/10 
+             focus:border-[#1B29FF] focus:ring-1 focus:ring-[#1B29FF]/20 
+             text-[14px] placeholder:text-[#101010]/40 transition-colors"
+  placeholder="Enter amount"
 />
 ```
 
-#### OTP Input (6-digit code)
+#### Technical Mode Input
 
 ```jsx
-<InputOTP maxLength={6}>
-  <InputOTPGroup>
-    <InputOTPSlot index={0} />
-    <InputOTPSlot index={1} />
-    <InputOTPSlot index={2} />
-    <InputOTPSlot index={3} />
-    <InputOTPSlot index={4} />
-    <InputOTPSlot index={5} />
-  </InputOTPGroup>
-</InputOTP>
+<div className="space-y-1.5">
+  <label className="font-mono text-[10px] text-[#1B29FF]/70 uppercase tracking-wider">
+    INPUT::AMOUNT
+  </label>
+  <input
+    type="number"
+    className="w-full h-10 px-3 font-mono bg-white border border-[#1B29FF]/20 
+               focus:border-[#1B29FF] focus:outline-none text-[14px] transition-colors"
+  />
+</div>
 ```
-
-Styling: White background, `#1B29FF` focus ring, 12px height, 11px width per slot
 
 ---
 
 ## Layout Templates
 
-### Landing Page Hero
-
-**With Gradient Background:**
+### Dashboard Table Layout
 
 ```jsx
-<section className="relative min-h-screen border-y border-[#101010]/10 bg-white/90 overflow-hidden">
-  {/* Gradient background */}
-  <GeneratedComponent className="z-0 bg-[#F6F5EF]" />
-
-  <div className="relative z-10 max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 pt-20 sm:pt-24 lg:pt-32">
-    <p className="uppercase tracking-[0.14em] text-[12px] text-[#101010]/60 mb-3">
-      Business Savings Account
-    </p>
-    <h1 className="mt-3 font-serif text-[56px] sm:text-[72px] lg:text-[88px] leading-[0.96] tracking-[-0.015em] text-[#101010]">
-      Earn <span className="text-[#1B29FF]">8% APY</span>
-    </h1>
-    <p className="mt-6 text-[16px] leading-[1.5] text-[#101010]/80 max-w-[600px]">
-      High-yield savings for startups. No minimums, no lock-ups, full liquidity.
-    </p>
-
-    <div className="mt-10 flex items-center gap-6">
-      <button className="bg-[#1B29FF] hover:bg-[#1420CC] text-white px-6 py-3 rounded-md font-medium transition-colors shadow-primary">
-        Open Account →
-      </button>
-      <a
-        href="/demo"
-        className="text-[#101010]/70 hover:text-[#1B29FF] underline underline-offset-4 transition-colors"
-      >
-        Try Demo
-      </a>
-    </div>
-  </div>
-</section>
-```
-
-**With Solid Background:**
-
-```jsx
-<section className="relative min-h-screen bg-[#F6F5EF] overflow-hidden">
-  <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 pt-20 sm:pt-24 lg:pt-32">
-    <p className="uppercase tracking-[0.14em] text-[12px] text-[#101010]/60 mb-3">
-      Business Savings Account
-    </p>
-    <h1 className="mt-3 font-serif text-[56px] sm:text-[72px] lg:text-[88px] leading-[0.96] tracking-[-0.015em] text-[#101010]">
-      Earn <span className="text-[#1B29FF]">8% APY</span>
-    </h1>
-    <p className="mt-6 text-[16px] leading-[1.5] text-[#101010]/80 max-w-[600px]">
-      High-yield savings for startups. No minimums, no lock-ups, full liquidity.
-    </p>
-
-    <div className="mt-10 flex items-center gap-6">
-      <button className="bg-[#1B29FF] hover:bg-[#1420CC] text-white px-6 py-3 rounded-md font-medium transition-colors">
-        Open Account →
-      </button>
-      <a
-        href="/demo"
-        className="text-[#101010]/70 hover:text-[#1B29FF] underline underline-offset-4 transition-colors"
-      >
-        Try Demo
-      </a>
-    </div>
-  </div>
-</section>
-```
-
-**Gradient Background Guidelines:**
-
-- Use `bg-white/90` or `bg-white/95` for section background to ensure text contrast
-- Text should always be dark (`#101010`) on gradient backgrounds, never white
-- Accent colors (like `#1B29FF`) work for spans and highlights
-- Add `border-y border-[#101010]/10` for subtle separation
-- Use `backdrop-blur-sm` on content cards for glassmorphism effect
-
-### Dashboard Shell
-
-```jsx
-<div className="min-h-screen bg-[#F7F7F2]">
-  {/* Sticky header */}
-  <header className="sticky top-0 z-40 bg-[#F7F7F2] border-b border-[#101010]/10">
-    <div className="h-[60px] flex items-center px-4 sm:px-6 max-w-[1400px] mx-auto">
-      <div className="flex items-center gap-3">
-        <p className="uppercase tracking-[0.14em] text-[11px] text-ink-60">
-          Dashboard
-        </p>
-        <h1 className="text-[24px] sm:text-[28px] font-medium text-[#101010]">
-          Overview
-        </h1>
-      </div>
-      <div className="ml-auto flex items-center gap-3">{/* Actions */}</div>
-    </div>
-  </header>
-
-  {/* Main content */}
-  <main className="px-4 sm:px-6 py-6 sm:py-8 max-w-[1400px] mx-auto">
-    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-      {/* Primary column (8/12) */}
-      <section className="lg:col-span-8 space-y-6">
-        <div className="bg-white border border-[#101010]/10 rounded-card-lg p-6 shadow-ambient">
-          {/* Balance overview */}
-        </div>
-        <div className="bg-white border border-[#101010]/10 rounded-card-lg p-0">
-          {/* Transaction table */}
-        </div>
-      </section>
-
-      {/* Sidebar (4/12) */}
-      <aside className="lg:col-span-4 space-y-6">
-        <div className="bg-white border border-[#101010]/10 rounded-card-lg p-6">
-          {/* Quick actions */}
-        </div>
-      </aside>
-    </div>
-  </main>
-</div>
-```
-
-### Onboarding & Auth Pages
-
-**Animated Background Pattern:**
-
-```jsx
-<section className="relative min-h-screen border-y border-[#101010]/10 bg-white/90 overflow-hidden">
-  {/* Animated gradient background */}
-  <GeneratedComponent className="z-0 bg-[#F6F5EF]" />
-
-  <div className="relative z-10 max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 lg:py-20">
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-0 max-w-5xl mx-auto rounded-xl overflow-hidden border border-[#101010]/10 shadow-[0_2px_8px_rgba(16,16,16,0.04)]">
-      {/* Left Card */}
-      <div className="bg-white/95 backdrop-blur-sm p-8 lg:p-12">
-        {/* Content */}
-      </div>
-
-      {/* Right Card - separated by border */}
-      <div className="bg-white/90 backdrop-blur-sm border-t lg:border-t-0 lg:border-l border-[#101010]/10 p-8 lg:p-12">
-        {/* Form content */}
-      </div>
-    </div>
-  </div>
-</section>
-```
-
-**Auth Page Guidelines:**
-
-- ✅ Animated gradients allowed (using `MeshGradient` component)
-- ✅ Single container border instead of individual card borders
-- ✅ Internal divider with `border-t lg:border-l` pattern
-- ✅ Cards use `bg-white/95` and `bg-white/90` with `backdrop-blur-sm`
-- ✅ Container has `rounded-xl overflow-hidden` for clean edges
-- ✅ Shadow: `shadow-[0_2px_8px_rgba(16,16,16,0.04)]`
-- ❌ No vertical divider bars (gap-px bg-[#101010]/10)
-- ❌ No heavy drop shadows
-
-### Landing Page Cards
-
-**Two-Column Split Layout (with gradient background):**
-
-```jsx
-<div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 lg:py-20">
-  <div className="grid grid-cols-1 lg:grid-cols-2 gap-px bg-[#101010]/10 max-w-5xl mx-auto shadow-ambient">
-    {/* Left Card - Value Prop */}
-    <div className="bg-white/95 backdrop-blur-sm border border-[#101010]/10 p-8 lg:p-12">
-      <div className="mb-8">
-        <p className="uppercase tracking-[0.14em] text-[12px] text-[#101010]/60 mb-3">
-          Business Savings Account
-        </p>
-        <h1 className="font-serif text-[56px] sm:text-[64px] lg:text-[72px] leading-[0.96] tracking-[-0.015em] text-[#101010] mb-6">
-          Earn <span className="text-[#1B29FF]">8% APY</span>
-        </h1>
-        <p className="text-[16px] leading-[1.5] text-[#101010]/80 max-w-[400px]">
-          High-yield savings for startups. No minimums, no lock-ups, full
-          liquidity.
-        </p>
-      </div>
-
-      {/* Feature list */}
-      <div className="space-y-4">
-        {features.map((item, index) => (
-          <div key={index} className="flex items-start gap-3">
-            <div className="h-5 w-5 rounded-full bg-[#1B29FF]/10 flex items-center justify-center flex-shrink-0 mt-0.5">
-              <Check className="h-3 w-3 text-[#1B29FF]" />
-            </div>
-            <span className="text-[14px] text-[#101010]/70">{item}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-
-    {/* Right Card - Form/CTA */}
-    <div className="bg-white/90 backdrop-blur-sm border border-[#101010]/10 p-8 lg:p-12 flex flex-col justify-center">
-      {/* Form content */}
-    </div>
-  </div>
-</div>
-```
-
-**Card Design Rules:**
-
-- Use `bg-white/95` or `bg-white/90` with `backdrop-blur-sm` for glassmorphism on gradients
-- Always include `border border-[#101010]/10` for definition
-- Add `shadow-ambient` to the container for subtle elevation
-- Use `p-8 lg:p-12` for generous internal spacing
-- Keep headlines at `text-[56-72px]` for impact
-- Accent spans use `text-[#1B29FF]` not `text-[#0050ff]`
-
-### Technical Mode Component Patterns
-
-When a component operates in technical mode (`isTechnical = true`), it reveals precise data and protocol details while maintaining a clean, engineering-focused aesthetic.
-
-#### Container Pattern
-
-```jsx
-// Technical mode wrapper
-<div className="space-y-6 p-4 bg-[#fafafa] border border-[#1B29FF]/20 relative">
-  {/* Content cards */}
-</div>
-
-// Technical mode card
-<div className="bg-white border border-[#1B29FF]/30 p-4 relative">
-  <div className="flex justify-between items-start mb-3">
-    <div>
-      <p className="font-mono uppercase tracking-[0.14em] text-[11px] text-[#1B29FF] mb-1">
-        BALANCE::AVAILABLE
-      </p>
-      <p className="font-mono text-[24px] tabular-nums text-[#101010]">
-        1,234.56 <span className="text-[12px] text-[#1B29FF]">USDC</span>
+<div className="bg-white border border-[#101010]/10 overflow-x-auto">
+  {/* Table Header */}
+  <div className="grid grid-cols-12 gap-3 p-4 border-b border-[#101010]/10 bg-[#F7F7F2]">
+    <div className="col-span-4">
+      <p className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60">
+        Strategy
       </p>
     </div>
-    {/* Crosshair decoration */}
-    <div className="h-3 w-3 relative">
-      <div className="absolute top-1/2 w-full h-px bg-[#1B29FF]/40" />
-      <div className="absolute left-1/2 h-full w-px bg-[#1B29FF]/40" />
-    </div>
-  </div>
-</div>
-```
-
-#### Form Elements Pattern
-
-```jsx
-// Technical mode input
-<div className="space-y-2">
-  <label className="font-mono text-[10px] text-[#1B29FF]/70 uppercase">
-    INPUT::DEPOSIT_AMOUNT
-  </label>
-  <div className="relative">
-    <input
-      type="number"
-      className="w-full h-10 px-3 font-mono bg-white border border-[#1B29FF]/30 focus:border-[#1B29FF] focus:outline-none text-[14px] transition-colors"
-    />
-    <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-2">
-      <span className="font-mono text-[10px] text-[#1B29FF]/70">USDC</span>
-      <button className="font-mono px-2 py-1 text-[10px] text-[#1B29FF] border border-[#1B29FF]/30 hover:border-[#1B29FF] bg-white hover:bg-[#1B29FF]/5">
-        MAX
-      </button>
-    </div>
-  </div>
-</div>
-
-// Technical mode primary button
-<button className="w-full h-10 font-mono uppercase bg-white border-2 border-[#1B29FF] text-[#1B29FF] hover:bg-[#1B29FF] hover:text-white transition-colors flex items-center justify-center gap-2">
-  <ArrowDownToLine className="h-4 w-4" />
-  <span>[ EXECUTE DEPOSIT ]</span>
-</button>
-
-// Technical mode secondary button
-<button className="px-4 h-10 font-mono uppercase bg-white border border-[#1B29FF]/30 hover:border-[#1B29FF] text-[#1B29FF] text-[11px] transition-colors">
-  BRIDGE
-</button>
-```
-
-#### Status States Pattern
-
-```jsx
-// Success state
-<div className="bg-[#10B981]/5 border border-[#10B981]/30 p-4">
-  <div className="flex gap-3">
-    <CheckCircle className="h-5 w-5 text-[#10B981]" />
-    <div>
-      <p className="font-mono text-[14px] font-medium text-[#101010]">
-        DEPOSIT::COMPLETE — 100.00 USDC
+    <div className="col-span-2 text-right">
+      <p className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60">
+        APY
       </p>
-      <p className="font-mono text-[12px] text-[#101010]/60">
-        NOTE: BALANCE_UPDATE may take up to 60s
+    </div>
+    <div className="col-span-3 text-right">
+      <p className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60">
+        Your Position
+      </p>
+    </div>
+    <div className="col-span-3 text-right">
+      <p className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60">
+        Actions
       </p>
     </div>
   </div>
-</div>
 
-// Warning state
-<div className="bg-[#F59E0B]/5 border border-[#F59E0B]/30 p-3">
-  <div className="flex gap-2 items-start">
-    <AlertCircle className="h-4 w-4 text-[#F59E0B]" />
-    <p className="font-mono text-[11px] text-[#F59E0B]">
-      WARN: BALANCE = 0
-    </p>
+  {/* Table Rows */}
+  {items.map((item, index) => (
+    <div
+      key={item.id}
+      className={cn(
+        'grid grid-cols-12 gap-3 p-4 items-center transition-all duration-200',
+        'hover:bg-[#F7F7F2]/30',
+        index !== items.length - 1 && 'border-b border-[#101010]/10',
+      )}
+    >
+      {/* Row content */}
+    </div>
+  ))}
+</div>
+```
+
+### Technical Mode Table Layout
+
+```jsx
+<div className="bg-white border border-[#1B29FF]/20 rounded-sm overflow-x-auto">
+  {/* Technical Header */}
+  <div className="px-4 py-2 grid grid-cols-12 gap-3 border-b border-[#1B29FF]/10">
+    <span className="col-span-4 font-mono text-[10px] text-[#1B29FF]/50">
+      STRATEGY_ID
+    </span>
+    <span className="col-span-2 font-mono text-[10px] text-[#1B29FF]/50 text-right">
+      APY_VAR
+    </span>
+    <span className="col-span-3 font-mono text-[10px] text-[#1B29FF]/50 text-right">
+      POSITION
+    </span>
+    <span className="col-span-3 font-mono text-[10px] text-[#1B29FF]/50 text-right">
+      EXECUTE
+    </span>
   </div>
-</div>
 
-// Info box
-<div className="p-2 bg-[#1B29FF]/5 border border-[#1B29FF]/10">
-  <p className="font-mono text-[10px] text-[#101010]/70">
-    FEE: $0.50 • EST_TIME: 30s
+  {/* Table Rows */}
+  {items.map((item, index) => (
+    <div
+      key={item.id}
+      className={cn(
+        'grid grid-cols-12 gap-3 p-4 items-center transition-all duration-200',
+        'bg-white border-b border-[#1B29FF]/10',
+        'hover:bg-[#1B29FF]/5',
+      )}
+    >
+      {/* Row content */}
+    </div>
+  ))}
+</div>
+```
+
+### Section with Header
+
+```jsx
+<div className="space-y-4">
+  {/* Section Header */}
+  <p className="uppercase tracking-[0.18em] text-[11px] text-[#101010]/60">
+    Available Strategies
   </p>
+
+  {/* Content */}
+  <div className="bg-white border border-[#101010]/10">{/* ... */}</div>
+
+  {/* Footer */}
+  <div className="flex items-center justify-center">
+    <p className="flex items-center gap-2 text-[13px] text-[#101010]/40">
+      <Lock className="w-4 h-4" />
+      Your funds are held securely with instant access
+    </p>
+  </div>
 </div>
 ```
 
-#### Crosshair Decoration Component
+### Technical Mode Section Header
 
 ```jsx
-// Reusable crosshair for card corners
-const Crosshair = () => (
-  <div className="h-3 w-3 relative">
-    <div className="absolute top-1/2 w-full h-px bg-[#1B29FF]/40" />
-    <div className="absolute left-1/2 h-full w-px bg-[#1B29FF]/40" />
-  </div>
-);
+<p className="font-mono text-[10px] text-[#1B29FF] tracking-wider uppercase mb-4">
+  VAULT::STRATEGIES
+</p>
 ```
 
-#### Typography Reference
+---
 
-| Element     | Classes                                                            |
-| ----------- | ------------------------------------------------------------------ |
-| Card Title  | `font-mono uppercase tracking-[0.14em] text-[11px] text-[#1B29FF]` |
-| Large Value | `font-mono text-[24px] tabular-nums text-[#101010]`                |
-| Value Unit  | `text-[12px] text-[#1B29FF]`                                       |
-| Input Label | `font-mono text-[10px] text-[#1B29FF]/70 uppercase`                |
-| Help Text   | `font-mono text-[10px] text-[#1B29FF]/60`                          |
-| Button Text | `font-mono uppercase` with `[ BRACKETS ]`                          |
+## Row/List Item Patterns
 
-#### Naming Conventions
+### Standard Row
 
-Use `NAMESPACE::IDENTIFIER` format for labels:
+```jsx
+<div
+  className={cn(
+    'grid grid-cols-12 gap-3 p-4 items-center transition-all duration-200',
+    'hover:bg-[#F7F7F2]/30',
+    !isLastRow && 'border-b border-[#101010]/10',
+  )}
+>
+  {/* Primary Column */}
+  <div className="col-span-4">
+    <p className="text-[15px] font-medium text-[#101010]">{item.name}</p>
+    <p className="text-[12px] text-[#101010]/60 mt-1">{item.subtitle}</p>
+  </div>
 
-- `BALANCE::AVAILABLE`, `BALANCE::ARBITRUM`
-- `PROTOCOL::MORPHO`, `PROTOCOL::SUPER_OETH`
-- `INPUT::DEPOSIT_AMOUNT`, `INPUT::BRIDGE_AMOUNT`
-- `SOURCE::BASE_CHAIN`, `ROUTE::ACROSS_BRIDGE`
+  {/* Value Column */}
+  <div className="col-span-2 text-right">
+    <p className="text-[24px] font-semibold tabular-nums text-[#1B29FF]">
+      {item.value}%
+    </p>
+  </div>
 
-**Key Principles:**
+  {/* Secondary Value */}
+  <div className="col-span-3 text-right">
+    <p className="text-[18px] font-semibold tabular-nums text-[#101010]">
+      {formatUsd(item.balance)}
+    </p>
+  </div>
 
-- **Container**: Light gray background (`bg-[#fafafa]`) with accent border
-- **Cards**: White background with `border-[#1B29FF]/30`
-- **Typography**: Monospace for all text, tabular-nums for numbers
-- **Accents**: Brand blue at various opacities (30%, 40%, 70%)
-- **Vibe**: Engineering precision meets elegant banking
+  {/* Actions */}
+  <div className="col-span-3 flex justify-end gap-1">
+    <button className="bg-[#1B29FF] hover:bg-[#1420CC] text-white text-[12px] px-2.5 py-1">
+      Deposit
+    </button>
+    <button className="text-[#101010] border border-[#101010]/10 hover:bg-[#F7F7F2] text-[12px] px-2.5 py-1">
+      Withdraw
+    </button>
+  </div>
+</div>
+```
+
+### Row with Category Accent
+
+```jsx
+<div
+  className={cn(
+    'grid grid-cols-12 gap-3 p-4 items-center transition-all duration-200',
+    // Category-based styling
+    item.category === 'growth'
+      ? 'bg-gradient-to-r from-[#10b981]/5 to-transparent border-l-2 border-[#10b981]'
+      : item.isInsured
+        ? 'bg-[#1B29FF]/5 border-l-2 border-[#1B29FF]'
+        : 'hover:bg-[#F7F7F2]/30',
+    !isLastRow && 'border-b border-[#101010]/10',
+  )}
+>
+  {/* ... */}
+</div>
+```
+
+### Selected Row State
+
+```jsx
+<div
+  className={cn(
+    'grid grid-cols-12 gap-3 p-4 items-center',
+    isSelected && 'ring-1 ring-[#1B29FF]/30 bg-[#1B29FF]/5',
+  )}
+>
+  {/* ... */}
+</div>
+```
+
+---
+
+## Value Display Patterns
+
+### Large Value (APY)
+
+```jsx
+{
+  /* Banking Mode */
+}
+<p className="text-[24px] font-semibold tabular-nums text-[#1B29FF]">8.5%</p>;
+
+{
+  /* Growth Category */
+}
+<p className="text-[24px] font-semibold tabular-nums text-[#10b981]">12.3%</p>;
+
+{
+  /* Technical Mode */
+}
+<div className="flex items-baseline gap-1">
+  <p className="text-[18px] font-mono tabular-nums text-[#1B29FF]">8.5%</p>
+  <span className="text-[10px] text-[#1B29FF]/60 font-mono">VAR</span>
+</div>;
+```
+
+### Balance Display
+
+```jsx
+{
+  /* Banking Mode - USD primary */
+}
+<p className="text-[18px] font-semibold tabular-nums text-[#101010]">
+  $12,345.67
+</p>;
+
+{
+  /* With native token */
+}
+<div>
+  <p className="text-[18px] font-semibold tabular-nums text-[#101010]">
+    1.234567 ETH
+  </p>
+  <p className="text-[13px] text-[#101010]/60 tabular-nums">$2,345.67</p>
+</div>;
+
+{
+  /* Technical Mode */
+}
+<div>
+  <p className="text-[15px] font-mono tabular-nums text-[#101010]">
+    1.234567
+    <span className="ml-1 text-[11px] text-[#101010]/50">ETH</span>
+  </p>
+  <p className="text-[11px] font-mono text-[#101010]/50 tabular-nums">
+    ≈ $2,345.67
+  </p>
+</div>;
+```
+
+### No Position State
+
+```jsx
+{
+  /* Banking Mode */
+}
+<p className="text-[14px] text-[#101010]/40">No position</p>;
+
+{
+  /* Technical Mode */
+}
+<p className="text-[13px] font-mono text-[#101010]/40">0.00</p>;
+```
+
+---
+
+## Technical Mode Patterns
+
+### Container with Crosshairs
+
+```jsx
+<div className="relative">
+  {/* Architectural Crosshairs */}
+  <div className="absolute top-0 left-0 w-4 h-4 border-l border-t border-[#1B29FF]/30" />
+  <div className="absolute top-0 right-0 w-4 h-4 border-r border-t border-[#1B29FF]/30" />
+  <div className="absolute bottom-0 left-0 w-4 h-4 border-l border-b border-[#1B29FF]/30" />
+  <div className="absolute bottom-0 right-0 w-4 h-4 border-r border-b border-[#1B29FF]/30" />
+
+  {/* Content */}
+  <div className="relative z-10">{/* ... */}</div>
+</div>
+```
+
+### ID Tag
+
+```jsx
+<div className="absolute top-2 right-2 font-mono text-[9px] text-[#1B29FF]/40">
+  ID::MORPHO_USDC_BASE
+</div>
+```
+
+### Status Footer
+
+```jsx
+<div className="font-mono text-[11px] text-[#1B29FF]/60 text-center p-4 border border-dashed border-[#1B29FF]/20 bg-[#1B29FF]/5 rounded">
+  SYS_STATUS: ONLINE | CHAINS: BASE, ARBITRUM | CONTRACTS: ERC-4626
+</div>
+```
 
 ---
 
@@ -702,7 +760,7 @@ Use `NAMESPACE::IDENTIFIER` format for labels:
 {
   /* Skeleton */
 }
-<div className="h-8 bg-[#101010]/5 animate-pulse rounded-md" />;
+<div className="h-8 bg-[#101010]/5 animate-pulse" />;
 
 {
   /* Spinner */
@@ -723,15 +781,15 @@ Use `NAMESPACE::IDENTIFIER` format for labels:
 ```jsx
 <div className="text-center py-12">
   <div className="w-16 h-16 mx-auto bg-[#101010]/5 rounded-full flex items-center justify-center mb-4">
-    <Icon className="h-8 w-8 text-ink-60" />
+    <Icon className="h-8 w-8 text-[#101010]/40" />
   </div>
   <h3 className="text-[16px] font-medium text-[#101010] mb-2">
     No transactions yet
   </h3>
-  <p className="text-[14px] text-ink-60 max-w-[400px] mx-auto">
+  <p className="text-[14px] text-[#101010]/60 max-w-[400px] mx-auto">
     Your transaction history will appear here once you make your first transfer.
   </p>
-  <button className="mt-6 bg-[#1B29FF] hover:bg-[#1420CC] text-white px-6 py-2.5 rounded-md font-medium transition-colors">
+  <button className="mt-6 bg-[#1B29FF] hover:bg-[#1420CC] text-white px-6 py-2.5 font-medium transition-colors">
     Make First Transfer
   </button>
 </div>
@@ -740,7 +798,7 @@ Use `NAMESPACE::IDENTIFIER` format for labels:
 ### Error States
 
 ```jsx
-<div className="p-4 bg-red-50 border border-red-200 rounded-md">
+<div className="p-4 bg-red-50 border border-red-200">
   <div className="flex items-start gap-3">
     <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
     <div className="flex-1">
@@ -759,138 +817,6 @@ Use `NAMESPACE::IDENTIFIER` format for labels:
 
 ## Content Guidelines
 
-### Progressive Disclosure & Information Hierarchy
-
-**Philosophy:** Layer information by relevance and technical depth. Users should see banking-first value propositions immediately, with legal/technical details accessible on demand.
-
-#### 3-Tier Information Architecture
-
-**Level 0: Value Propositions (Always Visible)**
-
-The first impression. Focus on benefits, features, and user outcomes.
-
-- ✅ Banking-first language: "Enable higher limits & transfers"
-- ✅ Specific, measurable benefits: "Remove $10,000 deposit limit"
-- ✅ Action-oriented copy: "Enable", "Transfer", "Earn"
-- ❌ No legal entities: Different AI Inc., custody providers
-- ❌ No technical jargon: "virtual account", "settlement layer"
-- ❌ No vague promises: "unlimited" → use specific limits instead
-
-**Examples:**
-
-```jsx
-// Onboarding card (Level 0)
-<h3>Enable higher limits & transfers</h3>
-<ul>
-  <li>Remove $10,000 deposit limit</li>
-  <li>Enable bank transfers in and out</li>
-  <li>Earn 8-10% annually on deposits</li>
-</ul>
-```
-
-**Level 1: Banking Details (Click → Modal/Dialog)**
-
-Operational information users need for transactions. Revealed when clicking "Account Info", "Banking Details", or "View Details".
-
-- ✅ Banking coordinates: IBAN, routing numbers, account numbers
-- ✅ Source currency: USD, EUR
-- ✅ Operational messaging: "Funds arrive directly to your account"
-- ✅ Copy-to-clipboard functionality for all reference numbers
-- ❌ Still hide: Different AI Inc., blockchain infrastructure
-- ❌ Avoid crypto terminology at this level
-
-**Examples:**
-
-```jsx
-// Banking instructions modal (Level 1)
-<Dialog>
-  <DialogHeader>
-    <DialogTitle>Banking information</DialogTitle>
-    <DialogDescription>Your account details</DialogDescription>
-  </DialogHeader>
-  <DialogContent>
-    <div>
-      <label>Account Number</label>
-      <p>1234567890</p>
-      <CopyButton />
-    </div>
-    <div>
-      <label>Routing Number</label>
-      <p>987654321</p>
-      <CopyButton />
-    </div>
-  </DialogContent>
-</Dialog>
-```
-
-**Level 2: Technical Details (Deliberate Toggle)**
-
-Advanced/developer information. Only shown when user explicitly clicks "Technical details" or "Advanced settings" toggle.
-
-- ✅ Legal entities: "Different AI Inc."
-- ✅ Settlement/custody information: Destination addresses, networks
-- ✅ Blockchain infrastructure: "Settlement address", destination currency
-- ✅ Developer context: Chain IDs, contract addresses (if needed)
-- ❌ Still maintain banking-adjacent language where possible
-
-**Examples:**
-
-```jsx
-// Technical details toggle (Level 2)
-<Collapsible>
-  <CollapsibleTrigger>
-    <ChevronRight />
-    Technical details
-  </CollapsibleTrigger>
-  <CollapsibleContent>
-    <div>
-      <label>Legal Entity</label>
-      <p>Different AI Inc.</p>
-    </div>
-    <div>
-      <label>Settlement Address</label>
-      <p>0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb</p>
-    </div>
-    <div>
-      <label>Destination Currency</label>
-      <p>USDC (ERC-20)</p>
-    </div>
-  </CollapsibleContent>
-</Collapsible>
-```
-
-#### Button & Label Guidelines
-
-**Level 0 → Level 1 Transitions:**
-
-- ✅ "Account Info", "Banking Details", "View Details", "Get Banking Info"
-- ❌ "Details", "More Info", "Click Here"
-
-**Level 1 → Level 2 Transitions:**
-
-- ✅ "Technical details", "Advanced settings", "Developer info"
-- ❌ "Crypto details", "Show all", "Advanced details"
-
-#### Terminology Mapping
-
-| ❌ Avoid              | ✅ Use Instead         | Level |
-| --------------------- | ---------------------- | ----- |
-| "Unlimited deposits"  | "Remove $X limit"      | 0     |
-| "Virtual account"     | "Bank account"         | 0-1   |
-| "Destination address" | "Settlement address"   | 2     |
-| "Crypto details"      | "Technical details"    | 2     |
-| "Unlock features"     | "Enable [specific]"    | 0     |
-| "Different AI Inc."   | (Show only at Level 2) | 2     |
-| "Custody provider"    | (Show only at Level 2) | 2     |
-
-#### When to Disclose Legal Entities
-
-- ❌ **Never at Level 0**: Value prop cards, onboarding CTAs, landing pages
-- ❌ **Not at Level 1**: Banking instructions, account details modals
-- ✅ **Only at Level 2**: Inside "Technical details" toggle, terms of service, legal footer
-
-**Rationale:** Different AI Inc. is operationally important but creates cognitive friction in banking flows. Users need to trust the product first, understand the banking layer second, and learn infrastructure details third.
-
 ### Voice & Tone
 
 - **Clear**: Banking terms over crypto jargon
@@ -899,311 +825,68 @@ Advanced/developer information. Only shown when user explicitly clicks "Technica
 - **Human**: Avoid robotic corporate speak
 - **Specific**: Use measurable limits over vague promises
 
-### Writing Patterns
-
-**✅ Good:**
-
-- "Transfer complete" → Clear, active
-- "Account created successfully" → Simple banking language
-- "Earning 8% APY on $50,000" → Specific, valuable
-- "View technical details" → Progressive disclosure
-- "Remove $10,000 deposit limit" → Specific and measurable
-- "Enable bank transfers in and out" → Action-oriented
-
-**❌ Avoid:**
-
-- "Safe deployment successful" → Too technical
-- "Transaction broadcasted to mempool" → Crypto jargon
-- "Your wallet address is..." → Use "account number" instead
-- "Gas fees: 0.002 ETH" → Hide in advanced, show USD equivalent
-- "Unlock unlimited deposits" → Vague promise
-- "Different AI Inc. account" → Entity disclosure at wrong level
-
 ### Number Formatting
 
 ```jsx
-{/* Currency (always USD first) */}
-<span className="tabular-nums">$2,480,930.22</span>
-
-{/* Percentages */}
-<span className="text-[#1B29FF]">+8% APY</span>
-
-{/* Large numbers */}
-<span className="tabular-nums">$1.2M</span> {/* or */}
-<span className="tabular-nums">$1,234,567</span>
-
-{/* Dates */}
-<time className="text-[13px] text-ink-60">Jan 15, 2025</time>
-```
-
----
-
-## Accessibility
-
-### Focus States
-
-```css
-/* All interactive elements */
-focus:outline-none
-focus:ring-2
-focus:ring-[#1B29FF]
-focus:ring-offset-2
-```
-
-### Color Contrast
-
-- Text on white: Minimum `#101010` (21:1 ratio)
-- Secondary text: `rgba(16,16,16,0.80)` (16.8:1)
-- Muted labels: `rgba(16,16,16,0.60)` (12.6:1)
-- All meet WCAG AAA standards
-
-### Motion
-
-```css
-/* Respect user preferences */
-@media (prefers-reduced-motion: reduce) {
-  * {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-  }
+{
+  /* Currency (always USD first) */
 }
+<span className="tabular-nums">$2,480,930.22</span>;
+
+{
+  /* Percentages */
+}
+<span className="text-[#1B29FF]">8.5%</span>;
+
+{
+  /* Large numbers */
+}
+<span className="tabular-nums">$1.2M</span>;
+
+{
+  /* Token amounts */
+}
+<span className="tabular-nums font-mono">1.234567 ETH</span>;
+
+{
+  /* Dates */
+}
+<time className="text-[13px] text-[#101010]/60">Jan 15, 2025</time>;
 ```
 
 ---
 
-## Common Mistakes & Fixes
+## Bimodal Styling Reference
 
-### Landing Page Typography
+### Quick Reference Tables
 
-❌ **Wrong - Headline too small, wrong accent color:**
+**Card Styling by Mode:**
 
-```jsx
-<h1 className="font-serif text-[36px] leading-[1.1]">
-  Earn <span className="text-[#0050ff]">8% APY</span>
-</h1>
-```
+| Property      | Banking Mode (Default)  | Technical Mode         |
+| ------------- | ----------------------- | ---------------------- |
+| Background    | `bg-white`              | `bg-white`             |
+| Border        | `border-[#101010]/10`   | `border-[#1B29FF]/20`  |
+| Border Radius | none or `rounded-sm`    | `rounded-sm` or none   |
+| Shadow        | none                    | none                   |
+| Hover         | `hover:bg-[#F7F7F2]/30` | `hover:bg-[#1B29FF]/5` |
 
-✅ **Correct - Proper scale, brand primary color:**
+**Typography by Mode:**
 
-```jsx
-<h1 className="font-serif text-[56px] sm:text-[72px] lg:text-[88px] leading-[0.96] tracking-[-0.015em] text-[#101010]">
-  Earn <span className="text-[#1B29FF]">8% APY</span>
-</h1>
-```
+| Element   | Banking Mode                                                | Technical Mode                                                     |
+| --------- | ----------------------------------------------------------- | ------------------------------------------------------------------ |
+| Labels    | `uppercase tracking-[0.14em] text-[11px] text-[#101010]/60` | `font-mono text-[10px] text-[#1B29FF]/50 tracking-wider uppercase` |
+| Amounts   | `text-[24px] font-semibold tabular-nums text-[#1B29FF]`     | `font-mono text-[18px] tabular-nums text-[#1B29FF]`                |
+| Secondary | `text-[13px] text-[#101010]/60`                             | `font-mono text-[11px] text-[#101010]/50`                          |
+| Names     | `text-[15px] font-medium text-[#101010]`                    | `text-[15px] font-mono text-[#1B29FF]` + link                      |
 
-### Landing Page Spacing
+**Button Styling by Mode:**
 
-❌ **Wrong - Cramped spacing:**
-
-```jsx
-<div className="pt-12">
-  <p className="uppercase text-[12px] mb-1">Label</p>
-  <h1 className="mt-1 text-[48px]">Headline</h1>
-  <p className="mt-3">Body text</p>
-  <button className="mt-4">CTA</button>
-</div>
-```
-
-✅ **Correct - Breathing room:**
-
-```jsx
-<div className="pt-20 sm:pt-24 lg:pt-32">
-  <p className="uppercase tracking-[0.14em] text-[12px] text-[#101010]/60 mb-3">
-    Label
-  </p>
-  <h1 className="mt-3 font-serif text-[56px] sm:text-[72px] lg:text-[88px]">
-    Headline
-  </h1>
-  <p className="mt-6 text-[16px] leading-[1.5] max-w-[600px]">Body text</p>
-  <div className="mt-10">
-    <button>CTA</button>
-  </div>
-</div>
-```
-
-### Gradient Background Cards
-
-❌ **Wrong - Poor contrast, missing borders:**
-
-```jsx
-<div className="bg-white p-6">
-  <h2 className="text-[24px]">Card Title</h2>
-  <p className="text-[14px]">Card content</p>
-</div>
-```
-
-✅ **Correct - Glassmorphism with proper contrast:**
-
-```jsx
-<div className="bg-white/95 backdrop-blur-sm border border-[#101010]/10 p-8 lg:p-12 shadow-ambient">
-  <h2 className="font-serif text-[56px] sm:text-[64px] lg:text-[72px] leading-[0.96] tracking-[-0.015em] text-[#101010]">
-    Card Title
-  </h2>
-  <p className="text-[16px] leading-[1.5] text-[#101010]/80">Card content</p>
-</div>
-```
-
-### Button Styling
-
-❌ **Wrong - Inconsistent colors:**
-
-```jsx
-<button className="bg-[#0050ff] hover:bg-blue-600 px-4 py-2 text-white">
-  Click Me
-</button>
-```
-
-✅ **Correct - Brand colors, proper sizing:**
-
-```jsx
-<button className="bg-[#1B29FF] hover:bg-[#1420CC] text-white font-medium px-6 py-3 rounded-md transition-colors">
-  Click Me
-</button>
-```
-
-### Feature List Icons
-
-❌ **Wrong - Wrong icon color, poor spacing:**
-
-```jsx
-<div className="flex gap-2">
-  <Check className="h-4 w-4 text-[#0050ff]" />
-  <span className="text-[13px]">Feature</span>
-</div>
-```
-
-✅ **Correct - Brand color, proper sizing:**
-
-```jsx
-<div className="flex items-start gap-3">
-  <div className="h-5 w-5 rounded-full bg-[#1B29FF]/10 flex items-center justify-center flex-shrink-0 mt-0.5">
-    <Check className="h-3 w-3 text-[#1B29FF]" />
-  </div>
-  <span className="text-[14px] text-[#101010]/70">Feature</span>
-</div>
-```
-
-### Auth Page Card Structure
-
-❌ **Wrong - Vertical divider bar, individual card borders:**
-
-```jsx
-<div className="grid grid-cols-1 lg:grid-cols-2 gap-px bg-[#101010]/10">
-  <div className="bg-white border border-[#101010]/10 p-8">Left</div>
-  <div className="bg-white border border-[#101010]/10 p-8">Right</div>
-</div>
-```
-
-✅ **Correct - Container border, internal divider:**
-
-```jsx
-<div className="grid grid-cols-1 lg:grid-cols-2 gap-0 rounded-xl overflow-hidden border border-[#101010]/10 shadow-[0_2px_8px_rgba(16,16,16,0.04)]">
-  <div className="bg-white/95 backdrop-blur-sm p-8 lg:p-12">Left</div>
-  <div className="bg-white/90 backdrop-blur-sm border-t lg:border-t-0 lg:border-l border-[#101010]/10 p-8 lg:p-12">
-    Right
-  </div>
-</div>
-```
-
-✅ **Correct - Brand color, proper sizing:**
-
-```jsx
-<div className="flex items-start gap-3">
-  <div className="h-5 w-5 rounded-full bg-[#1B29FF]/10 flex items-center justify-center flex-shrink-0 mt-0.5">
-    <Check className="h-3 w-3 text-[#1B29FF]" />
-  </div>
-  <span className="text-[14px] text-[#101010]/70">Feature</span>
-</div>
-```
+| Button Type | Banking Mode                                | Technical Mode                                                           |
+| ----------- | ------------------------------------------- | ------------------------------------------------------------------------ |
+| Primary     | `bg-[#1B29FF] text-white px-2.5 py-1`       | `border border-[#1B29FF] text-[#1B29FF] font-mono uppercase px-2.5 py-1` |
+| Secondary   | `border border-[#101010]/10 text-[#101010]` | `text-[#101010]/60 font-mono uppercase underline decoration-dotted`      |
 
 ---
-
-## Do's and Don'ts
-
-### ✅ Do
-
-- Hide crypto complexity from primary flows
-- Use banking terminology consistently
-- Provide "Advanced" toggles for power users
-- Show USD values prominently
-- Use serif fonts only on landing/marketing pages
-- Maintain consistent spacing (8px base unit)
-- Use subtle shadows + borders for elevation
-- Write concise, clear copy
-
-### ❌ Don't
-
-- Show wallet addresses in primary UI
-- Mention "private keys" or "seed phrases" outside security settings
-- Use crypto jargon ("gas", "mempool", "nonce") in main flows
-- Mix serif and sans fonts in dashboard
-- Use heavy drop shadows
-- Alternate page backgrounds unnecessarily
-- Write long-form explanations when a label suffices
-
----
-
-## Landing & Auth Page Checklist
-
-When building landing/onboarding/auth pages, ensure:
-
-### Typography
-
-- [ ] Hero headlines are `text-[56px] sm:text-[72px] lg:text-[88px]`
-- [ ] Accent spans use `text-[#1B29FF]` (brand primary)
-- [ ] Labels use `uppercase tracking-[0.14em] text-[12px] text-[#101010]/60`
-- [ ] Body text is `text-[16px] leading-[1.5]` with `max-w-[600px]`
-- [ ] Only serif fonts for headlines, sans for body
-
-### Spacing
-
-- [ ] Section padding: `pt-20 sm:pt-24 lg:pt-32`
-- [ ] Label margin: `mb-3`
-- [ ] Headline margin: `mt-3`
-- [ ] Body margin: `mt-6`
-- [ ] CTA margin: `mt-10`
-- [ ] Feature list spacing: `space-y-4`
-
-### Colors & Contrast
-
-- [ ] Dark text (`#101010`) on gradient backgrounds, not white
-- [ ] Cards use `bg-white/95` or `bg-white/90` with `backdrop-blur-sm`
-- [ ] All borders are `border-[#101010]/10`
-- [ ] CTAs use `bg-[#1B29FF] hover:bg-[#1420CC]`
-- [ ] Text meets WCAG AA contrast (4.5:1 minimum)
-
-### Layout & Structure
-
-- [ ] Max container width: `max-w-[1200px]`
-- [ ] Horizontal padding: `px-4 sm:px-6 lg:px-8`
-- [ ] Two-column grids: `max-w-5xl mx-auto`
-- [ ] Card padding: `p-8 lg:p-12`
-- [ ] Cards have `shadow-ambient` on container
-
-### Gradient Backgrounds
-
-- [ ] Section uses `bg-white/90` overlay for contrast
-- [ ] Text is always dark (`#101010`), never white
-- [ ] Cards have `backdrop-blur-sm` for glassmorphism
-- [ ] Border separator: `border-y border-[#101010]/10`
-
-### Auth/Onboarding Specific
-
-- [ ] Container border: `border border-[#101010]/10 rounded-xl overflow-hidden`
-- [ ] Internal divider: `border-t lg:border-t-0 lg:border-l border-[#101010]/10`
-- [ ] NO vertical divider bars (gap-px bg-[#101010]/10)
-- [ ] Shadow: `shadow-[0_2px_8px_rgba(16,16,16,0.04)]`
-- [ ] Animated gradient: `<GeneratedComponent className="z-0 bg-[#F6F5EF]" />`
-
-### CTAs & Buttons
-
-- [ ] Primary: `bg-[#1B29FF] hover:bg-[#1420CC]`
-- [ ] Secondary/Ghost: `text-[#101010]/70 hover:text-[#1B29FF]`
-- [ ] Padding: `px-6 py-3`
-- [ ] Border radius: `rounded-md`
-- [ ] Include transition: `transition-colors`
-- [ ] Primary CTAs can have `shadow-primary`
 
 ## Quick Reference
 
@@ -1218,138 +901,36 @@ When building landing/onboarding/auth pages, ensure:
 'rgba(16,16,16,0.10)'; // Borders
 '#F7F7F2'; // App canvas
 '#FFFFFF'; // Cards
+'#10B981'; // Success/Growth
+'#2775ca'; // USDC blue
+'#627eea'; // ETH purple
 ```
 
-### Shadow Classes
+### Border Classes
 
 ```tsx
-shadow-ambient      // Subtle card elevation
-shadow-hover        // Hover state
-border-[#101010]/10 // Standard border
+border-[#101010]/10     // Standard border
+border-[#101010]/5      // Subtle divider
+border-[#1B29FF]/20     // Technical border
+border-[#1B29FF]/10     // Technical divider
 ```
 
 ### Spacing Scale
 
 ```tsx
-gap-2  (8px)   gap-3  (12px)  gap-4  (16px)
-gap-6  (24px)  gap-8  (32px)
-p-5 sm:p-6     // Card padding
-py-6 sm:py-8   // Section padding
+gap-1  (4px)   gap-2  (8px)   gap-3  (12px)
+gap-4  (16px)  gap-6  (24px)  gap-8  (32px)
+p-4            // Standard card padding
+py-2           // Table header padding
 ```
 
 ### Border Radius
 
 ```tsx
-rounded - md; // 6px (buttons, inputs)
-rounded - card - lg; // 12px (cards)
+rounded - sm; // 2px - Dashboard components
+rounded; // 4px - Inputs
 rounded - full; // Pills, avatars
-```
-
----
-
-## Bimodal Styling Reference
-
-All dashboard components must support both banking and technical modes. The mode is set in user settings, not via a visible toggle.
-
-### Quick Reference Tables
-
-**Card Styling by Mode:**
-
-| Property      | Banking Mode (Default)                   | Technical Mode        |
-| ------------- | ---------------------------------------- | --------------------- |
-| Background    | `bg-white`                               | `bg-white`            |
-| Border        | `border-[#101010]/10`                    | `border-[#1B29FF]/30` |
-| Border Radius | `rounded-[12px]`                         | none (sharp corners)  |
-| Shadow        | `shadow-[0_2px_8px_rgba(16,16,16,0.04)]` | `shadow-none`         |
-| Container BG  | none                                     | `bg-[#fafafa]`        |
-
-**Typography by Mode:**
-
-| Element   | Banking Mode                                                | Technical Mode                                                  |
-| --------- | ----------------------------------------------------------- | --------------------------------------------------------------- |
-| Labels    | `uppercase tracking-[0.14em] text-[11px] text-[#101010]/60` | `font-mono text-[10px] text-[#1B29FF] tracking-wider uppercase` |
-| Amounts   | `text-[32px] font-semibold tabular-nums text-[#101010]`     | `font-mono text-[28px] tabular-nums text-[#101010]`             |
-| Secondary | `text-[13px] text-[#101010]/60`                             | `font-mono text-[11px] text-[#101010]/60`                       |
-
-**Button Styling by Mode:**
-
-| Button Type | Banking Mode                                   | Technical Mode                                                          |
-| ----------- | ---------------------------------------------- | ----------------------------------------------------------------------- |
-| Primary     | `bg-[#1B29FF] text-white px-6 py-3 rounded-md` | `border border-[#1B29FF] text-[#1B29FF] font-mono px-4 py-2 rounded-sm` |
-| Secondary   | `border border-[#101010]/10 text-[#101010]`    | `text-[#1B29FF]/70 font-mono underline`                                 |
-
-**Content Translation:**
-
-| Banking Mode       | Technical Mode          |
-| ------------------ | ----------------------- |
-| Available Balance  | BALANCE::AVAILABLE      |
-| High-Yield Savings | PROTOCOL::MORPHO        |
-| 8% APY             | 7.89% instantaneous APY |
-| Transfer           | EXECUTE::TRANSFER       |
-| Deposit            | [ DEPOSIT ]             |
-
-### Implementation Pattern
-
-```jsx
-function BimodalCard({ title, value, unit, children }) {
-  const { isTechnical } = useBimodal();
-
-  return (
-    <div
-      className={cn(
-        'p-4 relative',
-        isTechnical
-          ? 'bg-white border border-[#1B29FF]/30'
-          : 'bg-white border border-[#101010]/10 rounded-[12px] shadow-[0_2px_8px_rgba(16,16,16,0.04)]',
-      )}
-    >
-      <p
-        className={cn(
-          'uppercase tracking-[0.14em] text-[11px] mb-1',
-          isTechnical ? 'font-mono text-[#1B29FF]' : 'text-[#101010]/60',
-        )}
-      >
-        {title}
-      </p>
-      <p
-        className={cn(
-          'text-[24px] tabular-nums text-[#101010]',
-          isTechnical && 'font-mono',
-        )}
-      >
-        {value}
-        {unit && (
-          <span
-            className={cn(
-              'text-[12px] ml-1',
-              isTechnical ? 'text-[#1B29FF]' : 'text-[#101010]/60',
-            )}
-          >
-            {unit}
-          </span>
-        )}
-      </p>
-      {/* Crosshair decoration (Technical only) */}
-      {isTechnical && <Crosshair />}
-      {children}
-    </div>
-  );
-}
-```
-
-### Helper Components
-
-```jsx
-// Crosshair decoration for technical mode cards
-const Crosshair = () => (
-  <div className="absolute top-4 right-4 h-3 w-3">
-    <div className="absolute top-1/2 w-full h-px bg-[#1B29FF]/40" />
-    <div className="absolute left-1/2 h-full w-px bg-[#1B29FF]/40" />
-  </div>
-);
-
-// Reusable bimodal card wrapper
-import { BimodalCard } from '@/components/ui/bimodal';
+// No rounding  - Technical mode, table cells
 ```
 
 ---
