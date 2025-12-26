@@ -48,7 +48,7 @@ interface TeamTabProps {
   companyId?: string; // Kept for backwards compatibility, but not used
 }
 
-export function TeamTab({ companyId }: TeamTabProps) {
+export function TeamTab(_props?: TeamTabProps) {
   const { user } = usePrivy();
   const { isTechnical } = useBimodal();
   const [copiedLink, setCopiedLink] = useState<string | null>(null);

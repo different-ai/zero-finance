@@ -59,16 +59,29 @@ export function SettingsClientContent() {
     //   technicalOnly: true,
     // },
     {
-      id: 'company',
+      id: 'workspace',
       title: isTechnical ? 'WORKSPACE::CONFIG' : 'Workspace & Company',
       description: isTechnical
-        ? 'Configure workspace parameters, team permissions, and company entity settings'
-        : 'Manage your workspace settings, team members, and company profile for invoicing',
+        ? 'Configure workspace identifier and company entity settings for invoicing'
+        : 'Manage your workspace name and company profile for invoices',
+      icon: Building2,
+      features: isTechnical
+        ? ['Workspace ID', 'Entity config', 'Invoice details']
+        : ['Workspace name', 'Company profile', 'Invoice settings'],
+      path: '/dashboard/settings/workspace',
+      technicalOnly: false,
+    },
+    {
+      id: 'team',
+      title: isTechnical ? 'TEAM::MEMBERS' : 'Team',
+      description: isTechnical
+        ? 'Manage team access, invite tokens, and Safe co-owner permissions'
+        : 'Invite team members and manage who can access your workspace',
       icon: Users,
       features: isTechnical
-        ? ['Workspace params', 'Permissions', 'Entity config']
-        : ['Workspace name', 'Team members', 'Company profile', 'Contractors'],
-      path: '/dashboard/settings/company',
+        ? ['Invite tokens', 'Member list', 'Safe owners']
+        : ['Team invites', 'Member access', 'Spending permissions'],
+      path: '/dashboard/settings/team',
       technicalOnly: false,
     },
     {
