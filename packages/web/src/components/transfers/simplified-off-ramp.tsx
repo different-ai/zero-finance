@@ -1571,53 +1571,34 @@ function SimplifiedOffRampReal({
       selectedAccount.accountHolderType as 'individual' | 'business',
     );
 
-    // Account holder name fields
-    if (selectedAccount.accountHolderFirstName) {
-      setValue(
-        'accountHolderFirstName',
-        selectedAccount.accountHolderFirstName,
-      );
-    }
-    if (selectedAccount.accountHolderLastName) {
-      setValue('accountHolderLastName', selectedAccount.accountHolderLastName);
-    }
-    if (selectedAccount.accountHolderBusinessName) {
-      setValue(
-        'accountHolderBusinessName',
-        selectedAccount.accountHolderBusinessName,
-      );
-    }
+    // Account holder name fields - always set to ensure form is populated
+    setValue(
+      'accountHolderFirstName',
+      selectedAccount.accountHolderFirstName || '',
+    );
+    setValue(
+      'accountHolderLastName',
+      selectedAccount.accountHolderLastName || '',
+    );
+    setValue(
+      'accountHolderBusinessName',
+      selectedAccount.accountHolderBusinessName || '',
+    );
 
-    // Address fields
+    // Address fields - always set to ensure form is populated
     setValue('country', selectedAccount.country);
-    if (selectedAccount.city) {
-      setValue('city', selectedAccount.city);
-    }
-    if (selectedAccount.streetLine1) {
-      setValue('streetLine1', selectedAccount.streetLine1);
-    }
-    if (selectedAccount.streetLine2) {
-      setValue('streetLine2', selectedAccount.streetLine2);
-    }
-    if (selectedAccount.postalCode) {
-      setValue('postalCode', selectedAccount.postalCode);
-    }
+    setValue('city', selectedAccount.city || '');
+    setValue('streetLine1', selectedAccount.streetLine1 || '');
+    setValue('streetLine2', selectedAccount.streetLine2 || '');
+    setValue('postalCode', selectedAccount.postalCode || '');
 
-    // Account details (for transfers)
+    // Account details (for transfers) - always set
     if (selectedAccount.accountType === 'us') {
-      if (selectedAccount.accountNumber) {
-        setValue('accountNumber', selectedAccount.accountNumber);
-      }
-      if (selectedAccount.routingNumber) {
-        setValue('routingNumber', selectedAccount.routingNumber);
-      }
+      setValue('accountNumber', selectedAccount.accountNumber || '');
+      setValue('routingNumber', selectedAccount.routingNumber || '');
     } else if (selectedAccount.accountType === 'iban') {
-      if (selectedAccount.ibanNumber) {
-        setValue('iban', selectedAccount.ibanNumber);
-      }
-      if (selectedAccount.bicSwift) {
-        setValue('bic', selectedAccount.bicSwift);
-      }
+      setValue('iban', selectedAccount.ibanNumber || '');
+      setValue('bic', selectedAccount.bicSwift || '');
     }
 
     // Set destination type based on account type
@@ -2544,7 +2525,7 @@ function SimplifiedOffRampReal({
                           onClick={() => {
                             setUseNewAccount(false);
                             setValue('savedBankAccountId', account.id);
-                            // Populate form fields from saved account
+                            // Populate ALL form fields from saved account
                             setValue('bankName', account.bankName);
                             setValue(
                               'accountHolderType',
@@ -2552,7 +2533,39 @@ function SimplifiedOffRampReal({
                                 | 'individual'
                                 | 'business',
                             );
+                            // Account holder name fields - always set to ensure form is populated
+                            setValue(
+                              'accountHolderFirstName',
+                              account.accountHolderFirstName || '',
+                            );
+                            setValue(
+                              'accountHolderLastName',
+                              account.accountHolderLastName || '',
+                            );
+                            setValue(
+                              'accountHolderBusinessName',
+                              account.accountHolderBusinessName || '',
+                            );
+                            // Address fields - required for transfers
                             setValue('country', account.country);
+                            setValue('city', account.city || '');
+                            setValue('streetLine1', account.streetLine1 || '');
+                            setValue('streetLine2', account.streetLine2 || '');
+                            setValue('postalCode', account.postalCode || '');
+                            // Account details based on type
+                            if (account.accountType === 'us') {
+                              setValue(
+                                'accountNumber',
+                                account.accountNumber || '',
+                              );
+                              setValue(
+                                'routingNumber',
+                                account.routingNumber || '',
+                              );
+                            } else if (account.accountType === 'iban') {
+                              setValue('iban', account.ibanNumber || '');
+                              setValue('bic', account.bicSwift || '');
+                            }
                           }}
                           className={cn(
                             'w-full flex items-center gap-3 p-4 rounded-xl border-2 transition-all text-left',
