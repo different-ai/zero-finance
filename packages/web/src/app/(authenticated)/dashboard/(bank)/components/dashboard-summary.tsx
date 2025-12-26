@@ -91,17 +91,17 @@ export function DashboardSummary({
 
   return (
     <div className="flex flex-col sm:flex-row gap-4 items-stretch">
-      {/* Balance Card - Spendable (USDC in Safe) and Earning (USDC in yield vaults) */}
+      {/* Balance Card - Spendable | Earning | Idle */}
       <div
         className={cn(
           'flex-1 grid gap-4 p-6',
-          'grid-cols-1 md:grid-cols-2',
+          'grid-cols-1 md:grid-cols-3',
           isTechnical
             ? 'bg-white border border-[#1B29FF]/20'
             : 'bg-white border border-[#101010]/10 rounded-[12px] shadow-[0_2px_8px_rgba(16,16,16,0.04)]',
         )}
       >
-        {/* Left Column - Spendable Balance (Total) */}
+        {/* Column 1 - Spendable Balance (Total) */}
         <div className="flex flex-col justify-center">
           <p
             className={cn(
@@ -123,22 +123,9 @@ export function DashboardSummary({
           >
             {formatUsd(spendableBalance)}
           </p>
-          {/* Breakdown: earning + idle */}
-          <p
-            className={cn(
-              'mt-1',
-              isTechnical
-                ? 'font-mono text-[11px] text-[#101010]/50'
-                : 'text-[11px] text-[#101010]/50',
-            )}
-          >
-            {isTechnical
-              ? `${formatUsd(earningBalance)} EARNING :: ${formatUsd(idleBalance)} IDLE`
-              : `${formatUsd(earningBalance)} earning · ${formatUsd(idleBalance)} idle`}
-          </p>
         </div>
 
-        {/* Right Column - Earning Balance (Clickable) */}
+        {/* Column 2 - Earning Balance (Clickable) */}
         <Link
           href="/dashboard/savings"
           className={cn(
@@ -197,6 +184,47 @@ export function DashboardSummary({
             />
           </div>
         </Link>
+
+        {/* Column 3 - Idle Balance */}
+        <div
+          className={cn(
+            'flex flex-col justify-center px-4 py-3 -my-3',
+            isTechnical
+              ? 'border-l border-[#1B29FF]/10'
+              : 'border-l border-[#101010]/10',
+          )}
+        >
+          <p
+            className={cn(
+              'mb-1',
+              isTechnical
+                ? 'font-mono text-[10px] text-[#1B29FF] tracking-wider uppercase'
+                : 'uppercase tracking-[0.14em] text-[11px] text-[#101010]/60',
+            )}
+          >
+            {isTechnical ? 'BALANCE::IDLE' : 'Idle'}
+          </p>
+          <p
+            className={cn(
+              'tabular-nums',
+              isTechnical
+                ? 'font-mono text-[28px] text-[#101010]'
+                : 'text-[32px] font-semibold text-[#101010]',
+            )}
+          >
+            {formatUsd(idleBalance)}
+          </p>
+          <p
+            className={cn(
+              'mt-1',
+              isTechnical
+                ? 'font-mono text-[11px] text-[#101010]/50'
+                : 'text-[11px] text-[#101010]/50',
+            )}
+          >
+            {isTechnical ? 'NOT_EARNING' : 'Not earning'}
+          </p>
+        </div>
       </div>
 
       {/* Action Buttons - Outside the card, on the right */}

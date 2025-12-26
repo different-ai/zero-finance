@@ -1,82 +1,112 @@
 'use client';
 
 import { formatUsd, cn } from '@/lib/utils';
-import { BlueprintGrid, Crosshairs } from '@/components/ui/bimodal';
+import { TrendingUp } from 'lucide-react';
 
 type PortfolioOverviewProps = {
-  totalSaved: number;
-  vaultCount: number;
+  earningBalance: number;
+  idleBalance: number;
+  savingsApy: number;
   isTechnical?: boolean;
 };
 
 export function PortfolioOverview({
-  totalSaved,
-  vaultCount,
+  earningBalance,
+  idleBalance,
+  savingsApy,
   isTechnical = false,
 }: PortfolioOverviewProps) {
   return (
-    <div>
-      {/* Savings Balance Card */}
+    <div
+      className={cn(
+        'grid gap-4 p-6',
+        'grid-cols-1 md:grid-cols-2',
+        isTechnical
+          ? 'bg-white border border-[#1B29FF]/20'
+          : 'bg-white border border-[#101010]/10 rounded-[12px] shadow-[0_2px_8px_rgba(16,16,16,0.04)]',
+      )}
+    >
+      {/* Column 1 - Earning Balance */}
+      <div className="flex flex-col justify-center">
+        <p
+          className={cn(
+            'mb-1',
+            isTechnical
+              ? 'font-mono text-[10px] text-[#1B29FF] tracking-wider uppercase'
+              : 'uppercase tracking-[0.14em] text-[11px] text-[#101010]/60',
+          )}
+        >
+          {isTechnical ? 'VAULT::EARNING' : 'Earning'}
+        </p>
+        <p
+          className={cn(
+            'tabular-nums',
+            isTechnical
+              ? 'font-mono text-[28px] text-[#101010]'
+              : 'text-[32px] font-semibold text-[#101010]',
+          )}
+        >
+          {formatUsd(earningBalance)}
+        </p>
+        <div className="flex items-center gap-2 mt-1">
+          <TrendingUp
+            className={cn(
+              'h-3 w-3',
+              isTechnical ? 'text-[#1B29FF]' : 'text-green-600',
+            )}
+          />
+          <span
+            className={cn(
+              'text-[12px]',
+              isTechnical
+                ? 'font-mono text-[#1B29FF]'
+                : 'text-green-600 font-medium',
+            )}
+          >
+            {savingsApy.toFixed(2)}% APY
+          </span>
+        </div>
+      </div>
+
+      {/* Column 2 - Idle Balance */}
       <div
         className={cn(
-          'relative overflow-hidden p-6 sm:p-8 transition-all duration-300',
+          'flex flex-col justify-center px-4 py-3 -my-3',
           isTechnical
-            ? 'bg-white border border-[#1B29FF]/20 rounded-sm'
-            : 'bg-white border border-[#101010]/10 rounded-[12px]',
+            ? 'border-l border-[#1B29FF]/10'
+            : 'border-l border-[#101010]/10',
         )}
       >
-        {isTechnical && <BlueprintGrid />}
-        {isTechnical && <Crosshairs position="top-left" />}
-        {isTechnical && (
-          <div className="absolute top-2 right-2 font-mono text-[9px] text-[#1B29FF]/40">
-            BAL::TOTAL
-          </div>
-        )}
-
-        <div className="relative z-10">
-          <p
-            className={cn(
-              'mb-3',
-              isTechnical
-                ? 'font-mono text-[10px] text-[#1B29FF] tracking-wider uppercase'
-                : 'uppercase tracking-[0.16em] text-[11px] text-[#101010]/60',
-            )}
-          >
-            {isTechnical ? 'BALANCE::SAVINGS' : 'Savings Balance'}
-          </p>
-
-          {isTechnical ? (
-            <>
-              <p className="font-mono text-[28px] tabular-nums text-[#101010]">
-                {totalSaved.toLocaleString('en-US', {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2,
-                })}
-                <span className="ml-1 text-[14px] text-[#1B29FF]">USDC</span>
-              </p>
-              <p className="mt-2 font-mono text-[11px] text-[#101010]/60">
-                ≈ {formatUsd(totalSaved)} USD
-              </p>
-            </>
-          ) : (
-            <p className="font-serif text-[32px] sm:text-[40px] leading-[0.95] tabular-nums text-[#101010]">
-              {formatUsd(totalSaved)}
-            </p>
+        <p
+          className={cn(
+            'mb-1',
+            isTechnical
+              ? 'font-mono text-[10px] text-[#1B29FF] tracking-wider uppercase'
+              : 'uppercase tracking-[0.14em] text-[11px] text-[#101010]/60',
           )}
-
-          <p
-            className={cn(
-              'mt-3',
-              isTechnical
-                ? 'font-mono text-[11px] text-[#101010]/50'
-                : 'text-[13px] text-[#101010]/60',
-            )}
-          >
-            {isTechnical
-              ? `VAULTS: ${vaultCount} | STATUS: ACTIVE`
-              : `Deposited across ${vaultCount} ${vaultCount === 1 ? 'strategy' : 'strategies'}`}
-          </p>
-        </div>
+        >
+          {isTechnical ? 'BALANCE::IDLE' : 'Idle'}
+        </p>
+        <p
+          className={cn(
+            'tabular-nums',
+            isTechnical
+              ? 'font-mono text-[28px] text-[#101010]'
+              : 'text-[32px] font-semibold text-[#101010]',
+          )}
+        >
+          {formatUsd(idleBalance)}
+        </p>
+        <p
+          className={cn(
+            'mt-1',
+            isTechnical
+              ? 'font-mono text-[11px] text-[#101010]/50'
+              : 'text-[11px] text-[#101010]/50',
+          )}
+        >
+          {isTechnical ? 'NOT_EARNING' : 'Not earning'}
+        </p>
       </div>
     </div>
   );

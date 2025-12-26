@@ -25,7 +25,6 @@ import { USDC_ADDRESS } from '@/lib/constants';
 import {
   InsuranceBanner,
   VaultsSection,
-  CheckingActionsCard,
   PortfolioOverview,
   AutoSavingsStatus,
 } from './components';
@@ -459,21 +458,13 @@ export default function SavingsPageWrapper({
           onToggleInsurance={toggleVaultAction}
         />
 
-        {/* Portfolio Overview - Grid Layout */}
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,360px)_1fr]">
-          <CheckingActionsCard
-            balanceUsd={withdrawableBalanceUsd}
-            safeAddress={safeAddress}
-            isDemoMode={isDemoMode}
-            isTechnical={isTechnical}
-          />
-
-          <PortfolioOverview
-            totalSaved={totalSaved}
-            vaultCount={vaultsVM.length}
-            isTechnical={isTechnical}
-          />
-        </div>
+        {/* Portfolio Overview - Earning | Idle */}
+        <PortfolioOverview
+          earningBalance={totalSaved}
+          idleBalance={withdrawableBalanceUsd}
+          savingsApy={fallbackApyPercent}
+          isTechnical={isTechnical}
+        />
 
         {/* Live Yield Counter removed - projections were confusing users */}
 
