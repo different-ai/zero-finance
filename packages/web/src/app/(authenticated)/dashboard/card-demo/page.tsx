@@ -108,18 +108,12 @@ function VirtualCard() {
       <div className="relative h-full p-6 flex flex-col justify-between text-white z-10">
         {/* Top row - Logo */}
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Image
-              src="/new-logo-bluer.png"
-              alt="Zero Finance"
-              width={28}
-              height={28}
-              className="rounded-full bg-white/90 p-0.5"
-            />
-            <span className="text-[14px] font-semibold tracking-wide">
-              ZERO FINANCE
-            </span>
-          </div>
+          <Image
+            src="/logo-whiter.png"
+            alt="Zero Finance"
+            width={32}
+            height={32}
+          />
           <div className="text-[11px] font-medium tracking-wider opacity-80">
             VIRTUAL
           </div>
