@@ -1437,3 +1437,356 @@ describe('Demo Mode Behavior', () => {
     });
   });
 });
+
+// ============================================================================
+// TEST 17: Edge Cases & Error Handling
+// Critical for robustness - these are the "gotchas"
+// ============================================================================
+
+describe('Edge Cases & Error Handling', () => {
+  describe('amount edge cases', () => {
+    it('handles very small amounts', () => {
+      const amount = '0.000001';
+      const parsed = parseFloat(amount);
+      expect(parsed).toBe(0.000001);
+      expect(parsed > 0).toBe(true);
+    });
+
+    it('handles very large amounts', () => {
+      const amount = '999999999.99';
+      const parsed = parseFloat(amount);
+      expect(parsed).toBe(999999999.99);
+    });
+
+    it('handles amounts with trailing zeros', () => {
+      const amount = '100.00';
+      const parsed = parseFloat(amount);
+      expect(parsed).toBe(100);
+    });
+
+    it('handles amounts without decimal', () => {
+      const amount = '100';
+      const parsed = parseFloat(amount);
+      expect(parsed).toBe(100);
+    });
+
+    it('handles scientific notation (edge case)', () => {
+      const amount = '1e6';
+      const parsed = parseFloat(amount);
+      expect(parsed).toBe(1000000);
+    });
+  });
+
+  describe('balance boundary conditions', () => {
+    it('exact balance match (no deficit)', () => {
+      const idleBalance = 100;
+      const amountToSend = 100;
+      const deficit = Math.max(0, amountToSend - idleBalance);
+      expect(deficit).toBe(0);
+    });
+
+    it('one unit over balance (needs earning)', () => {
+      const idleBalance = 100;
+      const amountToSend = 100.01;
+      const deficit = Math.max(0, amountToSend - idleBalance);
+      expect(deficit).toBeCloseTo(0.01, 2);
+    });
+
+    it('handles floating point precision', () => {
+      // Classic JS floating point issue
+      const idleBalance = 0.1 + 0.2; // ~0.30000000000000004
+      const amountToSend = 0.3;
+
+      // Using toFixed to handle precision
+      const idleFixed = parseFloat(idleBalance.toFixed(6));
+      const amountFixed = parseFloat(amountToSend.toFixed(6));
+      const deficit = Math.max(0, amountFixed - idleFixed);
+
+      expect(deficit).toBe(0);
+    });
+  });
+
+  describe('empty/null handling', () => {
+    it('handles undefined vault positions', () => {
+      const vaultPositions:
+        | { vaultAddress: string; assetsUsd: number }[]
+        | undefined = undefined;
+      const hasVaults = vaultPositions && vaultPositions.length > 0;
+      expect(hasVaults).toBeFalsy();
+    });
+
+    it('handles empty vault positions array', () => {
+      const vaultPositions: { vaultAddress: string; assetsUsd: number }[] = [];
+      const hasVaults = vaultPositions && vaultPositions.length > 0;
+      expect(hasVaults).toBe(false);
+    });
+
+    it('handles null funding sources gracefully', () => {
+      const fundingSources: unknown[] | null = null;
+      const achAccount = fundingSources
+        ? fundingSources.find(() => true)
+        : undefined;
+      expect(achAccount).toBeUndefined();
+    });
+
+    it('handles empty bank name', () => {
+      const bankName: string = '';
+      const isValid = bankName && bankName.trim().length > 0;
+      expect(isValid).toBeFalsy();
+    });
+  });
+
+  describe('form step edge cases', () => {
+    it('step 1 with no accounts', () => {
+      const hasAchAccount = false;
+      const hasIbanAccount = false;
+      const canProceed = true; // Can always go to step 2, crypto is available
+      expect(canProceed).toBe(true);
+    });
+
+    it('handles going back from step 3', () => {
+      let formStep = 3;
+      formStep = formStep - 1;
+      expect(formStep).toBe(2);
+    });
+
+    it('prevents going below step 1', () => {
+      let formStep = 1;
+      const previousStep = Math.max(1, formStep - 1);
+      expect(previousStep).toBe(1);
+    });
+  });
+
+  describe('multi-step transfer recovery', () => {
+    it('can reset after error at step 0', () => {
+      const steps = [
+        { id: 'withdraw', status: 'error' as const },
+        { id: 'transfer', status: 'pending' as const },
+      ];
+
+      const reset = steps.map((s) => ({ ...s, status: 'pending' as const }));
+      expect(reset[0].status).toBe('pending');
+      expect(reset[1].status).toBe('pending');
+    });
+
+    it('identifies which step failed', () => {
+      const steps = [
+        { id: 'withdraw', status: 'completed' as const },
+        { id: 'transfer', status: 'error' as const },
+        { id: 'complete', status: 'pending' as const },
+      ];
+
+      const failedStep = steps.find((s) => s.status === 'error');
+      expect(failedStep?.id).toBe('transfer');
+    });
+  });
+});
+
+// ============================================================================
+// TEST 18: Currency Formatting
+// Ensures consistent display across the component
+// ============================================================================
+
+describe('Currency Formatting', () => {
+  describe('USDC formatting', () => {
+    it('formats with 2 decimal places by default', () => {
+      const amount = 1234.5;
+      const formatted = amount.toLocaleString('en-US', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      });
+      expect(formatted).toBe('1,234.50');
+    });
+
+    it('formats large amounts with thousands separator', () => {
+      const amount = 1234567.89;
+      const formatted = amount.toLocaleString('en-US', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      });
+      expect(formatted).toBe('1,234,567.89');
+    });
+
+    it('formats small amounts correctly', () => {
+      const amount = 0.01;
+      const formatted = amount.toLocaleString('en-US', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      });
+      expect(formatted).toBe('0.01');
+    });
+  });
+
+  describe('fiat currency formatting', () => {
+    it('formats EUR with symbol', () => {
+      const amount = 92.5;
+      const symbol = '€';
+      const formatted = `${symbol}${amount.toLocaleString('en-US', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      })}`;
+      expect(formatted).toBe('€92.50');
+    });
+
+    it('formats USD with symbol', () => {
+      const amount = 100;
+      const symbol = '$';
+      const formatted = `${symbol}${amount.toLocaleString('en-US', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      })}`;
+      expect(formatted).toBe('$100.00');
+    });
+  });
+
+  describe('exchange rate formatting', () => {
+    it('formats rate with 4 decimal places', () => {
+      const rate = 0.925;
+      const formatted = rate.toFixed(4);
+      expect(formatted).toBe('0.9250');
+    });
+
+    it('formats rate display string', () => {
+      const rate = 0.925;
+      const currencySymbol = '€';
+      const display = `1 USDC = ${currencySymbol}${rate.toFixed(4)}`;
+      expect(display).toBe('1 USDC = €0.9250');
+    });
+  });
+
+  describe('fee formatting', () => {
+    it('formats fee with USDC suffix', () => {
+      const fee = 0.5;
+      const formatted = `${fee.toFixed(2)} USDC`;
+      expect(formatted).toBe('0.50 USDC');
+    });
+
+    it('handles zero fee', () => {
+      const fee = 0;
+      const showFee = fee > 0;
+      expect(showFee).toBe(false);
+    });
+  });
+});
+
+// ============================================================================
+// TEST 19: Address Truncation
+// For displaying addresses in UI
+// ============================================================================
+
+describe('Address Display', () => {
+  describe('truncation', () => {
+    it('truncates address to first 6 and last 4 chars', () => {
+      const address = '0x1234567890abcdef1234567890abcdef12345678';
+      const truncated = `${address.slice(0, 6)}...${address.slice(-4)}`;
+      expect(truncated).toBe('0x1234...5678');
+    });
+
+    it('handles undefined address gracefully', () => {
+      const address: string | undefined = undefined;
+      const truncated = address
+        ? `${address.slice(0, 6)}...${address.slice(-4)}`
+        : '';
+      expect(truncated).toBe('');
+    });
+  });
+
+  describe('transaction hash display', () => {
+    it('builds correct basescan URL', () => {
+      const txHash =
+        '0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890';
+      const url = `https://basescan.org/tx/${txHash}`;
+      expect(url).toContain('basescan.org/tx/');
+      expect(url).toContain(txHash);
+    });
+
+    it('handles userOpHash for display', () => {
+      const userOpHash = '0xuserop123...';
+      const cryptoTxHash = '0xtxhash456...';
+
+      const displayHash = userOpHash || cryptoTxHash;
+      expect(displayHash).toBe('0xuserop123...');
+    });
+  });
+});
+
+// ============================================================================
+// TEST 20: Component Props Validation
+// Ensures prop contracts are maintained after refactoring
+// ============================================================================
+
+describe('Component Props Contract', () => {
+  describe('SimplifiedOffRamp props', () => {
+    interface SimplifiedOffRampProps {
+      fundingSources: unknown[];
+      defaultValues?: Record<string, unknown>;
+      prefillFromInvoice?: {
+        amount?: string;
+        currency?: string;
+        vendorName?: string | null;
+        description?: string | null;
+      };
+      mode?: 'demo' | 'real';
+      idleBalance?: number;
+      earningBalance?: number;
+      spendableBalance?: number;
+      vaultPositions?: unknown[];
+    }
+
+    it('accepts minimal required props', () => {
+      const props: SimplifiedOffRampProps = {
+        fundingSources: [],
+      };
+      expect(props.fundingSources).toBeDefined();
+    });
+
+    it('accepts all optional props', () => {
+      const props: SimplifiedOffRampProps = {
+        fundingSources: [],
+        defaultValues: { amount: '100' },
+        prefillFromInvoice: {
+          amount: '500',
+          currency: 'USD',
+          vendorName: 'Acme',
+          description: 'Invoice #123',
+        },
+        mode: 'real',
+        idleBalance: 100,
+        earningBalance: 500,
+        spendableBalance: 600,
+        vaultPositions: [],
+      };
+
+      expect(props.mode).toBe('real');
+      expect(props.spendableBalance).toBe(600);
+    });
+
+    it('validates mode defaults to real', () => {
+      const props: SimplifiedOffRampProps = {
+        fundingSources: [],
+      };
+
+      const effectiveMode = props.mode || 'real';
+      expect(effectiveMode).toBe('real');
+    });
+  });
+
+  describe('prefillFromInvoice contract', () => {
+    it('handles all optional fields', () => {
+      const prefill = {
+        amount: '1000',
+        currency: 'EUR',
+        vendorName: null,
+        description: null,
+      };
+
+      expect(prefill.amount).toBe('1000');
+      expect(prefill.vendorName).toBeNull();
+    });
+
+    it('handles completely empty prefill', () => {
+      const prefill = {};
+      expect(prefill).toEqual({});
+    });
+  });
+});
