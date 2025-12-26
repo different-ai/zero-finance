@@ -3505,6 +3505,13 @@ export const alignRouter = router({
         // For agent proposals
         proposedByAgent?: boolean;
         agentProposalMessage?: string | null;
+        // Bank account details (for offramp transfers)
+        bankAccountDetails?: {
+          bankName?: string;
+          accountMask?: string;
+          recipientName?: string;
+          accountType?: string;
+        } | null;
       };
 
       const transactions: UnifiedTransaction[] = [];
@@ -3516,9 +3523,7 @@ export const alignRouter = router({
             virtualAccountHistory.workspaceId,
             userRecord.primaryWorkspaceId,
           ),
-          orderBy: (history, { desc: descFn }) => [
-            descFn(history.eventTimestamp),
-          ],
+          orderBy: (history, { desc: descFn }) => [descFn(history.createdAt)],
           limit: limit * 2, // Fetch more since we'll filter
         });
 
@@ -3547,7 +3552,10 @@ export const alignRouter = router({
               secondaryAmount: sourceAmount,
               secondaryCurrency: sourceCurrency.toUpperCase(),
               feeAmount: null, // VA deposits typically don't show fees
-              createdAt: event.eventTimestamp?.toISOString() || null,
+              createdAt:
+                event.createdAt?.toISOString() ||
+                event.eventTimestamp?.toISOString() ||
+                null,
               source: 'virtual_account',
               paymentRails: event.sourcePaymentRails,
               transactionHash: event.transactionHash,
@@ -3576,6 +3584,56 @@ export const alignRouter = router({
         });
 
         for (const tx of offrampTxs) {
+          // Parse bank account snapshot if available
+          let bankAccountDetails: UnifiedTransaction['bankAccountDetails'] =
+            null;
+          if (tx.destinationBankAccountSnapshot) {
+            const snapshot = tx.destinationBankAccountSnapshot as {
+              bank_name?: string;
+              account_holder_first_name?: string;
+              account_holder_last_name?: string;
+              account_holder_business_name?: string;
+              account_holder_type?: string;
+              account_type?: string;
+              us?: { account_number?: string };
+              iban?: { iban_number?: string };
+            };
+
+            // Build recipient name
+            let recipientName: string | undefined;
+            if (
+              snapshot.account_holder_type === 'business' &&
+              snapshot.account_holder_business_name
+            ) {
+              recipientName = snapshot.account_holder_business_name;
+            } else if (
+              snapshot.account_holder_first_name ||
+              snapshot.account_holder_last_name
+            ) {
+              recipientName = [
+                snapshot.account_holder_first_name,
+                snapshot.account_holder_last_name,
+              ]
+                .filter(Boolean)
+                .join(' ');
+            }
+
+            // Get masked account number
+            let accountMask: string | undefined;
+            if (snapshot.us?.account_number) {
+              accountMask = `****${snapshot.us.account_number.slice(-4)}`;
+            } else if (snapshot.iban?.iban_number) {
+              accountMask = `****${snapshot.iban.iban_number.slice(-4)}`;
+            }
+
+            bankAccountDetails = {
+              bankName: snapshot.bank_name,
+              accountMask,
+              recipientName,
+              accountType: snapshot.account_type,
+            };
+          }
+
           transactions.push({
             id: tx.alignTransferId,
             type: 'outgoing',
@@ -3593,6 +3651,7 @@ export const alignRouter = router({
             transactionHash: tx.transactionHash,
             proposedByAgent: tx.proposedByAgent ?? false,
             agentProposalMessage: tx.agentProposalMessage ?? null,
+            bankAccountDetails,
           });
         }
       } catch (offrampError) {
