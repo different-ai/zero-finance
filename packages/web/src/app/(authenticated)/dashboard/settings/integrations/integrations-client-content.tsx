@@ -41,10 +41,61 @@ import {
   Plus,
   Bot,
   ExternalLink,
+  Terminal,
 } from 'lucide-react';
 import { trpc } from '@/lib/trpc';
 import { toast } from 'sonner';
 import { formatDistanceToNow } from 'date-fns';
+
+function InstallMcpCommand({ apiKey }: { apiKey: string }) {
+  const [copiedCommand, setCopiedCommand] = useState(false);
+
+  const installCommand = `npx install-mcp https://www.0.finance/api/mcp --client claude --header "Authorization: Bearer ${apiKey}"`;
+
+  const handleCopyCommand = async () => {
+    await navigator.clipboard.writeText(installCommand);
+    setCopiedCommand(true);
+    toast.success('Command copied to clipboard');
+    setTimeout(() => setCopiedCommand(false), 2000);
+  };
+
+  return (
+    <div className="space-y-3 rounded-lg border bg-muted/30 p-4">
+      <div className="flex items-center gap-2">
+        <Terminal className="h-4 w-4 text-muted-foreground" />
+        <span className="text-sm font-medium">Quick Install</span>
+      </div>
+      <p className="text-xs text-muted-foreground">
+        Run this command in your terminal to add 0 Finance to Claude Desktop:
+      </p>
+      <div className="relative">
+        <pre className="rounded bg-black p-3 pr-12 font-mono text-xs text-green-400 overflow-x-auto whitespace-pre-wrap break-all">
+          {installCommand}
+        </pre>
+        <Button
+          size="icon"
+          variant="outline"
+          onClick={handleCopyCommand}
+          className="absolute right-2 top-2 h-8 w-8 bg-black/50 border-gray-600 hover:bg-black/70"
+        >
+          {copiedCommand ? (
+            <Check className="h-4 w-4 text-green-500" />
+          ) : (
+            <Copy className="h-4 w-4 text-gray-400" />
+          )}
+        </Button>
+      </div>
+      <p className="text-xs text-muted-foreground">
+        For other clients, replace{' '}
+        <code className="rounded bg-muted px-1">claude</code> with:{' '}
+        <code className="rounded bg-muted px-1">cursor</code>,{' '}
+        <code className="rounded bg-muted px-1">vscode</code>,{' '}
+        <code className="rounded bg-muted px-1">windsurf</code>, or{' '}
+        <code className="rounded bg-muted px-1">cline</code>
+      </p>
+    </div>
+  );
+}
 
 export function IntegrationsClientContent() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -133,7 +184,7 @@ export function IntegrationsClientContent() {
                   Create Key
                 </Button>
               </DialogTrigger>
-              <DialogContent>
+              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                 {newKey ? (
                   <>
                     <DialogHeader>
@@ -143,24 +194,30 @@ export function IntegrationsClientContent() {
                       </DialogDescription>
                     </DialogHeader>
                     <div className="space-y-4 py-4">
-                      <div className="flex items-center gap-2">
-                        <Input
-                          value={newKey}
-                          readOnly
-                          className="font-mono text-sm"
-                        />
-                        <Button
-                          size="icon"
-                          variant="outline"
-                          onClick={handleCopyKey}
-                        >
-                          {copied ? (
-                            <Check className="h-4 w-4 text-green-500" />
-                          ) : (
-                            <Copy className="h-4 w-4" />
-                          )}
-                        </Button>
+                      <div>
+                        <Label className="text-xs text-muted-foreground">
+                          Your API Key
+                        </Label>
+                        <div className="mt-1 flex items-center gap-2">
+                          <Input
+                            value={newKey}
+                            readOnly
+                            className="font-mono text-sm"
+                          />
+                          <Button
+                            size="icon"
+                            variant="outline"
+                            onClick={handleCopyKey}
+                          >
+                            {copied ? (
+                              <Check className="h-4 w-4 text-green-500" />
+                            ) : (
+                              <Copy className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </div>
                       </div>
+                      <InstallMcpCommand apiKey={newKey} />
                       <div className="rounded-lg bg-amber-50 p-3 text-sm text-amber-800 dark:bg-amber-950 dark:text-amber-200">
                         <strong>Important:</strong> Store this key securely. You
                         won&apos;t be able to see it again.
