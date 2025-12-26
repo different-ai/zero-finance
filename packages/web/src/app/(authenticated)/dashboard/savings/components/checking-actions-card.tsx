@@ -254,22 +254,22 @@ export function CheckingActionsCard({
   const spendableBalance = earningBalance + idleBalance;
 
   // Build vault positions with APY for transfer flow (Base chain only)
-  const vaultPositions: VaultPosition[] =
-    userVaultPositions && vaultStats
-      ? userVaultPositions
-          .filter((p) => p.chainId === SUPPORTED_CHAINS.BASE && p.assetsUsd > 0)
-          .map((position) => {
-            const stat = vaultStats.find(
-              (s) =>
-                s.vaultAddress.toLowerCase() ===
-                position.vaultAddress.toLowerCase(),
-            );
-            return {
-              ...position,
-              apy: stat?.apy ? stat.apy * 100 : 0, // Convert to percentage
-            };
-          })
-      : [];
+  // Note: vaultStats is optional - we can still withdraw without APY data
+  const vaultPositions: VaultPosition[] = userVaultPositions
+    ? userVaultPositions
+        .filter((p) => p.chainId === SUPPORTED_CHAINS.BASE && p.assetsUsd > 0)
+        .map((position) => {
+          const stat = vaultStats?.find(
+            (s) =>
+              s.vaultAddress.toLowerCase() ===
+              position.vaultAddress.toLowerCase(),
+          );
+          return {
+            ...position,
+            apy: stat?.apy ? stat.apy * 100 : 0, // Convert to percentage (0 if stats not loaded)
+          };
+        })
+    : [];
 
   const hasAnyBalance =
     totalAvailableBalance > 0 || balanceUsd > 0 || earningBalance > 0;

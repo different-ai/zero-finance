@@ -95,21 +95,22 @@ export function DashboardSummaryWrapper({
   const spendableBalance = earningBalance + idleBalance;
 
   // Build vault positions with APY for transfer flow (Base chain only)
+  // Note: vaultStats is optional - we can still withdraw without APY data
   const vaultPositions: VaultPosition[] = useMemo(() => {
-    if (isDemoMode || !userPositions || !vaultStats) return [];
+    if (isDemoMode || !userPositions) return [];
 
     // Only include Base chain vaults with non-zero balance
     return userPositions
       .filter((p) => p.chainId === SUPPORTED_CHAINS.BASE && p.assetsUsd > 0)
       .map((position) => {
-        const stat = vaultStats.find(
+        const stat = vaultStats?.find(
           (s) =>
             s.vaultAddress.toLowerCase() ===
             position.vaultAddress.toLowerCase(),
         );
         return {
           ...position,
-          apy: stat?.apy ? stat.apy * 100 : 0, // Convert to percentage
+          apy: stat?.apy ? stat.apy * 100 : 0, // Convert to percentage (0 if stats not loaded)
         };
       });
   }, [userPositions, vaultStats, isDemoMode]);
