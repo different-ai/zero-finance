@@ -233,127 +233,113 @@ export function TeamTab(_props?: TeamTabProps) {
 
   return (
     <div className="space-y-6">
-      {/* E2E Flow Guide */}
-      <div
-        className={cn(
-          'p-5 sm:p-6',
-          isTechnical
-            ? 'bg-[#1B29FF]/5 border border-[#1B29FF]/20'
-            : 'bg-[#1B29FF]/5 border border-[#1B29FF]/20 rounded-lg',
-        )}
-      >
-        <h3
-          className={cn(
-            'flex items-center gap-2 text-[#1B29FF] mb-4',
-            isTechnical ? 'font-mono text-[16px]' : 'font-medium text-[17px]',
-          )}
-        >
-          <Users className="h-5 w-5" />
-          {isTechnical ? 'TEAM::ONBOARDING_FLOW' : 'How to Add Team Members'}
-        </h3>
-        <div className="space-y-3">
-          <div className="flex items-start gap-3">
-            <div
-              className={cn(
-                'flex-shrink-0 w-6 h-6 bg-[#1B29FF] text-white text-sm flex items-center justify-center',
-                isTechnical ? '' : 'rounded-full',
-              )}
-            >
-              1
+      {/* Getting Started Guide - Banking Mode: Simple & Clean */}
+      {!isTechnical && (
+        <div className="bg-gradient-to-br from-[#1B29FF]/5 to-[#1B29FF]/10 border border-[#1B29FF]/15 rounded-xl p-6 sm:p-8">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="h-10 w-10 rounded-full bg-[#1B29FF] flex items-center justify-center">
+              <Users className="h-5 w-5 text-white" />
             </div>
             <div>
-              <p
-                className={cn(
-                  'text-[#101010]',
-                  isTechnical ? 'font-mono font-medium' : 'font-medium',
-                )}
-              >
-                {isTechnical
-                  ? 'Generate invite token'
-                  : 'Invite them to view the dashboard'}
-              </p>
-              <p
-                className={cn(
-                  'text-sm mt-1',
-                  isTechnical
-                    ? 'text-[#101010]/50 font-mono'
-                    : 'text-[#666666]',
-                )}
-              >
-                {isTechnical
-                  ? 'Create an invite link and distribute to team member'
-                  : 'Create an invite link below and share it with your team member'}
+              <h3 className="text-[18px] font-semibold text-[#101010]">
+                Add your team
+              </h3>
+              <p className="text-[14px] text-[#101010]/60">
+                Share access to your account in 3 easy steps
               </p>
             </div>
           </div>
-          <div className="flex items-start gap-3">
-            <div
-              className={cn(
-                'flex-shrink-0 w-6 h-6 bg-[#1B29FF] text-white text-sm flex items-center justify-center',
-                isTechnical ? '' : 'rounded-full',
-              )}
-            >
-              2
-            </div>
-            <div>
-              <p
-                className={cn(
-                  'text-[#101010]',
-                  isTechnical ? 'font-mono font-medium' : 'font-medium',
-                )}
-              >
-                {isTechnical ? 'Wait for login' : 'Ask them to log in'}
+
+          <div className="grid sm:grid-cols-3 gap-4 sm:gap-6">
+            <div className="flex flex-col items-center text-center p-4 bg-white/60 rounded-lg border border-[#101010]/5">
+              <div className="h-8 w-8 rounded-full bg-[#1B29FF] text-white text-[14px] font-semibold flex items-center justify-center mb-3">
+                1
+              </div>
+              <p className="text-[14px] font-medium text-[#101010] mb-1">
+                Send an invite
               </p>
-              <p
-                className={cn(
-                  'text-sm mt-1',
-                  isTechnical
-                    ? 'text-[#101010]/50 font-mono'
-                    : 'text-[#666666]',
-                )}
-              >
-                {isTechnical
-                  ? 'Member must authenticate to initialize smart wallet'
-                  : 'Once they log in, their wallet will be created automatically'}
+              <p className="text-[13px] text-[#101010]/60 leading-relaxed">
+                Create a link and share it with your teammate
               </p>
             </div>
-          </div>
-          <div className="flex items-start gap-3">
-            <div
-              className={cn(
-                'flex-shrink-0 w-6 h-6 bg-[#1B29FF] text-white text-sm flex items-center justify-center',
-                isTechnical ? '' : 'rounded-full',
-              )}
-            >
-              3
-            </div>
-            <div>
-              <p
-                className={cn(
-                  'text-[#101010]',
-                  isTechnical ? 'font-mono font-medium' : 'font-medium',
-                )}
-              >
-                {isTechnical
-                  ? 'Grant Safe ownership'
-                  : 'Make them a spending owner'}
+
+            <div className="flex flex-col items-center text-center p-4 bg-white/60 rounded-lg border border-[#101010]/5">
+              <div className="h-8 w-8 rounded-full bg-[#1B29FF] text-white text-[14px] font-semibold flex items-center justify-center mb-3">
+                2
+              </div>
+              <p className="text-[14px] font-medium text-[#101010] mb-1">
+                They sign up
               </p>
-              <p
-                className={cn(
-                  'text-sm mt-1',
-                  isTechnical
-                    ? 'text-[#101010]/50 font-mono'
-                    : 'text-[#666666]',
-                )}
-              >
-                {isTechnical
-                  ? 'Use "Make Owner" button in team list below'
-                  : 'Click "Make Spending Owner" next to their name below to let them move funds'}
+              <p className="text-[13px] text-[#101010]/60 leading-relaxed">
+                They click the link and create their account
+              </p>
+            </div>
+
+            <div className="flex flex-col items-center text-center p-4 bg-white/60 rounded-lg border border-[#101010]/5">
+              <div className="h-8 w-8 rounded-full bg-[#1B29FF] text-white text-[14px] font-semibold flex items-center justify-center mb-3">
+                3
+              </div>
+              <p className="text-[14px] font-medium text-[#101010] mb-1">
+                Grant access
+              </p>
+              <p className="text-[13px] text-[#101010]/60 leading-relaxed">
+                Enable them to make transfers from your account
               </p>
             </div>
           </div>
         </div>
-      </div>
+      )}
+
+      {/* Technical Mode: E2E Flow Guide */}
+      {isTechnical && (
+        <div className="bg-[#1B29FF]/5 border border-[#1B29FF]/20 p-5 sm:p-6">
+          <h3 className="flex items-center gap-2 text-[#1B29FF] font-mono text-[16px] mb-4">
+            <Users className="h-5 w-5" />
+            TEAM::ONBOARDING_FLOW
+          </h3>
+          <div className="space-y-3">
+            <div className="flex items-start gap-3">
+              <div className="flex-shrink-0 w-6 h-6 bg-[#1B29FF] text-white text-sm flex items-center justify-center">
+                1
+              </div>
+              <div>
+                <p className="text-[#101010] font-mono font-medium">
+                  Generate invite token
+                </p>
+                <p className="text-sm mt-1 text-[#101010]/50 font-mono">
+                  Create an invite link and distribute to team member
+                </p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3">
+              <div className="flex-shrink-0 w-6 h-6 bg-[#1B29FF] text-white text-sm flex items-center justify-center">
+                2
+              </div>
+              <div>
+                <p className="text-[#101010] font-mono font-medium">
+                  Wait for authentication
+                </p>
+                <p className="text-sm mt-1 text-[#101010]/50 font-mono">
+                  Member must authenticate to initialize smart wallet
+                </p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3">
+              <div className="flex-shrink-0 w-6 h-6 bg-[#1B29FF] text-white text-sm flex items-center justify-center">
+                3
+              </div>
+              <div>
+                <p className="text-[#101010] font-mono font-medium">
+                  Grant Safe ownership
+                </p>
+                <p className="text-sm mt-1 text-[#101010]/50 font-mono">
+                  Use &quot;Make Owner&quot; button in team list below
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Create Invite Section */}
       <div
@@ -655,7 +641,7 @@ export function TeamTab(_props?: TeamTabProps) {
                       >
                         {isTechnical ? member.role.toUpperCase() : member.role}
                       </Badge>
-                      {/* Safe Owner / Spending Owner badge */}
+                      {/* Can make transfers badge */}
                       {member.smartWalletAddress &&
                         isSafeOwner(member.smartWalletAddress) && (
                           <Badge
@@ -667,7 +653,7 @@ export function TeamTab(_props?: TeamTabProps) {
                             )}
                           >
                             <Shield className="h-3 w-3 mr-1" />
-                            {isTechnical ? 'SAFE_OWNER' : 'Spending Owner'}
+                            {isTechnical ? 'SAFE_OWNER' : 'Can transfer'}
                           </Badge>
                         )}
                     </div>
@@ -685,7 +671,7 @@ export function TeamTab(_props?: TeamTabProps) {
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
-                    {/* Make Spending Owner button - show for non-owners who don't have Safe ownership yet */}
+                    {/* Enable transfers button - show for members who can't transfer yet */}
                     {canManageTeam &&
                       primarySafeAddress &&
                       member.smartWalletAddress &&
@@ -706,7 +692,7 @@ export function TeamTab(_props?: TeamTabProps) {
                           }}
                         />
                       )}
-                    {/* Show "needs login" message if member has no smart wallet */}
+                    {/* Show "needs login" message if member hasn't logged in yet */}
                     {canManageTeam &&
                       primarySafeAddress &&
                       !member.smartWalletAddress &&

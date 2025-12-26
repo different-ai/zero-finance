@@ -187,19 +187,19 @@ export function AddSpendingOwner({
         )}
       >
         <UserPlus className="h-3.5 w-3.5" />
-        {isTechnical ? 'Make Owner' : 'Make Spending Owner'}
+        {isTechnical ? 'Make Owner' : 'Enable transfers'}
       </Button>
 
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogContent className={cn(isTechnical && 'font-mono')}>
           <DialogHeader>
             <DialogTitle className={cn(isTechnical && 'font-mono')}>
-              {isTechnical ? 'ADD_SAFE_OWNER' : 'Add Spending Owner'}
+              {isTechnical ? 'ADD_SAFE_OWNER' : 'Enable transfers'}
             </DialogTitle>
             <DialogDescription className={cn(isTechnical && 'font-mono')}>
               {isTechnical
                 ? `Grant ${memberName} transaction signing privileges`
-                : `Allow ${memberName} to move funds from this account`}
+                : `Allow ${memberName} to make transfers from this account`}
             </DialogDescription>
           </DialogHeader>
 
@@ -316,12 +316,12 @@ export function AddSpendingOwner({
               {isProcessing ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  {isTechnical ? 'Processing...' : 'Adding...'}
+                  {isTechnical ? 'Processing...' : 'Enabling...'}
                 </>
               ) : (
                 <>
                   <UserPlus className="h-4 w-4 mr-2" />
-                  {isTechnical ? 'Add Owner' : 'Add Spending Owner'}
+                  {isTechnical ? 'Add Owner' : 'Enable transfers'}
                 </>
               )}
             </Button>
@@ -361,19 +361,19 @@ export function MemberNeedsLogin({
         )}
       >
         <UserPlus className="h-3.5 w-3.5" />
-        {isTechnical ? 'Make Owner' : 'Make Spending Owner'}
+        {isTechnical ? 'Make Owner' : 'Enable transfers'}
       </Button>
 
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogContent className={cn(isTechnical && 'font-mono')}>
           <DialogHeader>
             <DialogTitle className={cn(isTechnical && 'font-mono')}>
-              {isTechnical ? 'LOGIN_REQUIRED' : 'Login Required'}
+              {isTechnical ? 'LOGIN_REQUIRED' : 'Login required'}
             </DialogTitle>
             <DialogDescription className={cn(isTechnical && 'font-mono')}>
               {isTechnical
                 ? `${memberName} must log in to create their wallet`
-                : `${memberName} needs to log in first`}
+                : `${memberName} needs to sign in first`}
             </DialogDescription>
           </DialogHeader>
 
@@ -410,7 +410,7 @@ export function MemberNeedsLogin({
                   >
                     {isTechnical
                       ? 'Smart wallet not initialized'
-                      : 'Wallet not created yet'}
+                      : 'Waiting for sign in'}
                   </p>
                   <p
                     className={cn(
@@ -422,7 +422,7 @@ export function MemberNeedsLogin({
                   >
                     {isTechnical
                       ? `When ${memberName} logs in, a smart wallet will be created automatically. This wallet address is needed to add them as a Safe owner.`
-                      : `When ${memberName} logs in for the first time, we'll create a secure wallet for them. Once they've logged in, you can add them as a spending owner.`}
+                      : `Once ${memberName} signs in for the first time, you'll be able to enable transfers for them.`}
                   </p>
                 </div>
               </div>
@@ -462,7 +462,7 @@ export function MemberNeedsLogin({
                   <span>
                     {isTechnical
                       ? 'Their smart wallet will be auto-provisioned'
-                      : 'Their wallet will be created automatically'}
+                      : 'Their account will be created automatically'}
                   </span>
                 </li>
                 <li className="flex items-start gap-2">
@@ -470,7 +470,7 @@ export function MemberNeedsLogin({
                   <span>
                     {isTechnical
                       ? 'Return here to grant Safe ownership'
-                      : 'Come back here to make them a spending owner'}
+                      : 'Come back here to enable transfers for them'}
                   </span>
                 </li>
               </ul>
