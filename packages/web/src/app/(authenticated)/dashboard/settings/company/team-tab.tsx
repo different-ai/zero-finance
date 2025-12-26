@@ -270,7 +270,7 @@ export function TeamTab({ companyId }: TeamTabProps) {
               >
                 {isTechnical
                   ? 'Generate invite token'
-                  : 'Invite someone to view the dashboard'}
+                  : 'Invite them to view the dashboard'}
               </p>
               <p
                 className={cn(
@@ -286,28 +286,72 @@ export function TeamTab({ companyId }: TeamTabProps) {
               </p>
             </div>
           </div>
-          {isTechnical && (
-            <div className="flex items-start gap-3">
-              <div className="flex-shrink-0 w-6 h-6 bg-[#1B29FF] text-white text-sm flex items-center justify-center">
-                2
-              </div>
-              <div>
-                <p className="font-mono font-medium text-[#101010]">
-                  Configure Safe ownership
-                </p>
-                <p className="text-sm text-[#101010]/50 font-mono mt-1">
-                  After they join, navigate to{' '}
-                  <a
-                    href="/dashboard/settings/advanced-wallet"
-                    className="text-[#1B29FF] underline"
-                  >
-                    WALLET::ADVANCED
-                  </a>{' '}
-                  to add them as a Safe owner
-                </p>
-              </div>
+          <div className="flex items-start gap-3">
+            <div
+              className={cn(
+                'flex-shrink-0 w-6 h-6 bg-[#1B29FF] text-white text-sm flex items-center justify-center',
+                isTechnical ? '' : 'rounded-full',
+              )}
+            >
+              2
             </div>
-          )}
+            <div>
+              <p
+                className={cn(
+                  'text-[#101010]',
+                  isTechnical ? 'font-mono font-medium' : 'font-medium',
+                )}
+              >
+                {isTechnical ? 'Wait for login' : 'Ask them to log in'}
+              </p>
+              <p
+                className={cn(
+                  'text-sm mt-1',
+                  isTechnical
+                    ? 'text-[#101010]/50 font-mono'
+                    : 'text-[#666666]',
+                )}
+              >
+                {isTechnical
+                  ? 'Member must authenticate to initialize smart wallet'
+                  : 'Once they log in, their wallet will be created automatically'}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-start gap-3">
+            <div
+              className={cn(
+                'flex-shrink-0 w-6 h-6 bg-[#1B29FF] text-white text-sm flex items-center justify-center',
+                isTechnical ? '' : 'rounded-full',
+              )}
+            >
+              3
+            </div>
+            <div>
+              <p
+                className={cn(
+                  'text-[#101010]',
+                  isTechnical ? 'font-mono font-medium' : 'font-medium',
+                )}
+              >
+                {isTechnical
+                  ? 'Grant Safe ownership'
+                  : 'Make them a spending owner'}
+              </p>
+              <p
+                className={cn(
+                  'text-sm mt-1',
+                  isTechnical
+                    ? 'text-[#101010]/50 font-mono'
+                    : 'text-[#666666]',
+                )}
+              >
+                {isTechnical
+                  ? 'Use "Make Owner" button in team list below'
+                  : 'Click "Make Spending Owner" next to their name below to let them move funds'}
+              </p>
+            </div>
+          </div>
         </div>
       </div>
 
