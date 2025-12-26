@@ -225,7 +225,7 @@ function TransactionRow({
           {/* Source breakdown */}
           <div className="mt-3 pt-3 border-t border-[#101010]/5 space-y-1.5">
             <div className="flex items-center justify-between text-[13px]">
-              <span className="text-[#101010]/60">From Spendable</span>
+              <span className="text-[#101010]/60">From Idle</span>
               <span className="tabular-nums text-[#101010]/80">
                 ${transaction.fromSpendable.toFixed(2)}
               </span>
