@@ -1,6 +1,13 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
-import { CreditCard, Shield, BellRing, ArrowRight } from 'lucide-react';
+import {
+  CreditCard,
+  Shield,
+  BellRing,
+  ArrowRight,
+  Building2,
+} from 'lucide-react';
+import { SavedBankAccounts } from './components/saved-bank-accounts';
 
 export const metadata: Metadata = {
   title: 'Settings - Zero Finance',
@@ -24,6 +31,24 @@ export default function SettingsPage() {
 
       {/* Main Content */}
       <main className="px-4 sm:px-6 py-6 sm:py-8 max-w-[1400px] mx-auto">
+        {/* Saved Bank Accounts Section */}
+        <div className="mb-8">
+          <div className="bg-white border border-[#101010]/10 rounded-lg p-5 sm:p-6">
+            <div className="flex items-start gap-3 mb-5">
+              <Building2 className="h-5 w-5 text-[#0050ff] mt-1 flex-shrink-0" />
+              <div>
+                <h2 className="text-[15px] sm:text-[16px] font-medium text-[#101010]">
+                  Saved Bank Accounts
+                </h2>
+                <p className="mt-1 text-[13px] text-[#101010]/60">
+                  Manage your saved recipient bank accounts for transfers
+                </p>
+              </div>
+            </div>
+            <SavedBankAccounts />
+          </div>
+        </div>
+
         <div className="grid gap-5 sm:gap-6 md:grid-cols-2 lg:grid-cols-3">
           {/* Funding Sources Card */}
           <div className="bg-white border border-[#101010]/10 rounded-lg p-5 sm:p-6">
