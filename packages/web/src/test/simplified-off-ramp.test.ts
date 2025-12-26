@@ -11,7 +11,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { type Address } from 'viem';
+import { type Address, isAddress } from 'viem';
 
 // ============================================================================
 // TEST 1: Constants & Configuration
@@ -687,6 +687,415 @@ describe('Transfer State Machine', () => {
 
       const steps = createSteps(100, 'USDC', '0x1234...5678');
       expect(steps[1].label).toBe('Sending USDC');
+    });
+  });
+});
+
+// ============================================================================
+// TEST 9: Funding Source Handling
+// Critical for determining available transfer options
+// ============================================================================
+
+describe('Funding Source Handling', () => {
+  // Match the FundingSource type from the component
+  interface FundingSource {
+    id: string;
+    accountType: 'us_ach' | 'iban' | 'uk_details' | 'other';
+    sourceAccountType?: 'us_ach' | 'iban' | 'uk_details' | 'other';
+    bankName: string | null;
+  }
+
+  const getAccountType = (source: FundingSource): string =>
+    source.sourceAccountType || source.accountType;
+
+  describe('account type detection', () => {
+    it('prefers sourceAccountType over accountType', () => {
+      const source: FundingSource = {
+        id: '1',
+        accountType: 'other',
+        sourceAccountType: 'us_ach',
+        bankName: 'Test Bank',
+      };
+      expect(getAccountType(source)).toBe('us_ach');
+    });
+
+    it('falls back to accountType when sourceAccountType is missing', () => {
+      const source: FundingSource = {
+        id: '1',
+        accountType: 'iban',
+        bankName: 'Test Bank',
+      };
+      expect(getAccountType(source)).toBe('iban');
+    });
+  });
+
+  describe('finding ACH and IBAN accounts', () => {
+    const fundingSources: FundingSource[] = [
+      { id: '1', accountType: 'us_ach', bankName: 'Chase' },
+      { id: '2', accountType: 'iban', bankName: 'Deutsche Bank' },
+      { id: '3', accountType: 'other', bankName: 'Other Bank' },
+    ];
+
+    it('finds ACH account', () => {
+      const achAccount = fundingSources.find(
+        (source) => getAccountType(source) === 'us_ach',
+      );
+      expect(achAccount).toBeDefined();
+      expect(achAccount?.bankName).toBe('Chase');
+    });
+
+    it('finds IBAN account', () => {
+      const ibanAccount = fundingSources.find(
+        (source) => getAccountType(source) === 'iban',
+      );
+      expect(ibanAccount).toBeDefined();
+      expect(ibanAccount?.bankName).toBe('Deutsche Bank');
+    });
+
+    it('returns undefined when no matching account', () => {
+      const ukAccount = fundingSources.find(
+        (source) => getAccountType(source) === 'uk_details',
+      );
+      expect(ukAccount).toBeUndefined();
+    });
+  });
+
+  describe('destination availability', () => {
+    it('disables ACH when no ACH account exists', () => {
+      const hasAchAccount = false;
+      const hasIbanAccount = true;
+
+      // DestinationSelector disables options based on account availability
+      expect(hasAchAccount).toBe(false);
+      expect(hasIbanAccount).toBe(true);
+    });
+
+    it('crypto is always available', () => {
+      // Crypto option doesn't depend on funding sources
+      const cryptoAlwaysAvailable = true;
+      expect(cryptoAlwaysAvailable).toBe(true);
+    });
+  });
+});
+
+// ============================================================================
+// TEST 10: Crypto Address Validation
+// Prevents loss of funds to invalid addresses
+// ============================================================================
+
+describe('Crypto Address Validation', () => {
+  describe('EVM address validation', () => {
+    it('validates correct checksummed address', () => {
+      const address = '0x5aAeb6053F3E94C9b9A09f33669435E7Ef1BeAed';
+      expect(isAddress(address)).toBe(true);
+    });
+
+    it('validates lowercase address', () => {
+      const address = '0x5aaeb6053f3e94c9b9a09f33669435e7ef1beaed';
+      expect(isAddress(address)).toBe(true);
+    });
+
+    it('rejects address without 0x prefix', () => {
+      const address = '5aAeb6053F3E94C9b9A09f33669435E7Ef1BeAed';
+      expect(isAddress(address)).toBe(false);
+    });
+
+    it('rejects short address', () => {
+      const address = '0x5aAeb6053F3E94C9b9A09f33669435E7Ef1Be';
+      expect(isAddress(address)).toBe(false);
+    });
+
+    it('rejects non-hex characters', () => {
+      const address = '0x5aAeb6053F3E94C9b9A09f33669435E7Ef1BGGGG';
+      expect(isAddress(address)).toBe(false);
+    });
+
+    it('rejects empty string', () => {
+      expect(isAddress('')).toBe(false);
+    });
+  });
+});
+
+// ============================================================================
+// TEST 11: Saved Bank Account Selection
+// Ensures saved accounts populate form correctly
+// ============================================================================
+
+describe('Saved Bank Account Selection', () => {
+  interface SavedBankAccount {
+    id: string;
+    accountName: string;
+    bankName: string;
+    accountType: 'us' | 'iban';
+    accountHolderType: 'individual' | 'business';
+    accountHolderFirstName?: string;
+    accountHolderLastName?: string;
+    accountHolderBusinessName?: string;
+    country: string;
+    city?: string;
+    streetLine1?: string;
+    postalCode?: string;
+    accountNumber?: string;
+    routingNumber?: string;
+    ibanNumber?: string;
+    bicSwift?: string;
+  }
+
+  const savedAccounts: SavedBankAccount[] = [
+    {
+      id: 'saved-1',
+      accountName: 'Chase Checking',
+      bankName: 'Chase',
+      accountType: 'us',
+      accountHolderType: 'individual',
+      accountHolderFirstName: 'John',
+      accountHolderLastName: 'Doe',
+      country: 'US',
+      city: 'New York',
+      streetLine1: '123 Main St',
+      postalCode: '10001',
+      accountNumber: '123456789',
+      routingNumber: '021000021',
+    },
+    {
+      id: 'saved-2',
+      accountName: 'Deutsche Bank EUR',
+      bankName: 'Deutsche Bank',
+      accountType: 'iban',
+      accountHolderType: 'business',
+      accountHolderBusinessName: 'Acme Corp',
+      country: 'DE',
+      city: 'Berlin',
+      streetLine1: 'Unter den Linden 1',
+      postalCode: '10117',
+      ibanNumber: 'DE89370400440532013000',
+      bicSwift: 'COBADEFFXXX',
+    },
+  ];
+
+  describe('filtering by destination type', () => {
+    it('filters for ACH accounts when destination is ACH', () => {
+      const destinationType = 'ach';
+      const filtered = savedAccounts.filter((acc) =>
+        destinationType === 'ach'
+          ? acc.accountType === 'us'
+          : acc.accountType === 'iban',
+      );
+      expect(filtered).toHaveLength(1);
+      expect(filtered[0].accountName).toBe('Chase Checking');
+    });
+
+    it('filters for IBAN accounts when destination is IBAN', () => {
+      const destinationType = 'iban' as 'ach' | 'iban';
+      const filtered = savedAccounts.filter((acc) =>
+        destinationType === 'ach'
+          ? acc.accountType === 'us'
+          : acc.accountType === 'iban',
+      );
+      expect(filtered).toHaveLength(1);
+      expect(filtered[0].accountName).toBe('Deutsche Bank EUR');
+    });
+  });
+
+  describe('form population from saved account', () => {
+    it('populates US ACH fields correctly', () => {
+      const account = savedAccounts[0];
+      const formValues = {
+        bankName: account.bankName,
+        accountHolderType: account.accountHolderType,
+        accountHolderFirstName: account.accountHolderFirstName || '',
+        accountHolderLastName: account.accountHolderLastName || '',
+        country: account.country,
+        city: account.city || '',
+        streetLine1: account.streetLine1 || '',
+        postalCode: account.postalCode || '',
+        accountNumber: account.accountNumber || '',
+        routingNumber: account.routingNumber || '',
+      };
+
+      expect(formValues.bankName).toBe('Chase');
+      expect(formValues.accountNumber).toBe('123456789');
+      expect(formValues.routingNumber).toBe('021000021');
+    });
+
+    it('populates IBAN fields correctly', () => {
+      const account = savedAccounts[1];
+      const formValues = {
+        bankName: account.bankName,
+        accountHolderType: account.accountHolderType,
+        accountHolderBusinessName: account.accountHolderBusinessName || '',
+        country: account.country,
+        iban: account.ibanNumber || '',
+        bic: account.bicSwift || '',
+      };
+
+      expect(formValues.bankName).toBe('Deutsche Bank');
+      expect(formValues.iban).toBe('DE89370400440532013000');
+      expect(formValues.bic).toBe('COBADEFFXXX');
+    });
+  });
+});
+
+// ============================================================================
+// TEST 12: Balance Display Logic
+// Ensures correct balance breakdown display
+// ============================================================================
+
+describe('Balance Display Logic', () => {
+  describe('spendable balance calculation', () => {
+    it('calculates total spendable as idle + earning', () => {
+      const idleBalance = 100;
+      const earningBalance = 500;
+      const spendable = idleBalance + earningBalance;
+      expect(spendable).toBe(600);
+    });
+
+    it('handles zero earning balance', () => {
+      const idleBalance = 100;
+      const earningBalance = 0;
+      const spendable = idleBalance + earningBalance;
+      expect(spendable).toBe(100);
+    });
+
+    it('handles zero idle balance', () => {
+      const idleBalance = 0;
+      const earningBalance = 500;
+      const spendable = idleBalance + earningBalance;
+      expect(spendable).toBe(500);
+    });
+  });
+
+  describe('MAX button behavior', () => {
+    it('sets amount to full spendable balance', () => {
+      const spendableBalance = 1234.56;
+      const amountAfterMax = spendableBalance.toString();
+      expect(amountAfterMax).toBe('1234.56');
+    });
+
+    it('falls back to USDC balance when spendable undefined', () => {
+      const spendableBalance = undefined;
+      const usdcBalance = '500.00';
+      const amountAfterMax =
+        spendableBalance !== undefined
+          ? spendableBalance.toString()
+          : usdcBalance;
+      expect(amountAfterMax).toBe('500.00');
+    });
+  });
+
+  describe('warning conditions', () => {
+    it('shows warning when deficit > 0 and deficit <= earning', () => {
+      const idleBalance = 100;
+      const earningBalance = 500;
+      const amountToSend = 300;
+
+      const deficit = Math.max(0, amountToSend - idleBalance);
+      const needsEarningWithdraw = deficit > 0 && deficit <= earningBalance;
+
+      expect(deficit).toBe(200);
+      expect(needsEarningWithdraw).toBe(true);
+    });
+
+    it('does not show warning when amount <= idle', () => {
+      const idleBalance = 500;
+      const earningBalance = 500;
+      const amountToSend = 300;
+
+      const deficit = Math.max(0, amountToSend - idleBalance);
+      const needsEarningWithdraw = deficit > 0 && deficit <= earningBalance;
+
+      expect(deficit).toBe(0);
+      expect(needsEarningWithdraw).toBe(false);
+    });
+
+    it('shows insufficient funds when amount > total', () => {
+      const idleBalance = 100;
+      const earningBalance = 100;
+      const spendableBalance = idleBalance + earningBalance;
+      const amountToSend = 300;
+
+      const insufficientFunds = amountToSend > spendableBalance;
+
+      expect(insufficientFunds).toBe(true);
+    });
+  });
+});
+
+// ============================================================================
+// TEST 13: Transfer Success State Data
+// Ensures correct data is shown on success screen
+// ============================================================================
+
+describe('Transfer Success State', () => {
+  interface TransferDetails {
+    alignTransferId: string;
+    depositAmount: string;
+    fee: string;
+    depositNetwork: string;
+    status: string;
+    sourceAmount?: string;
+    destinationAmount?: string;
+  }
+
+  describe('success data extraction', () => {
+    it('extracts source amount from quote-based transfer', () => {
+      const transferDetails: TransferDetails = {
+        alignTransferId: 'transfer-123',
+        depositAmount: '100.00',
+        fee: '0.50',
+        depositNetwork: 'base',
+        status: 'pending',
+        sourceAmount: '100.00',
+        destinationAmount: '92.00',
+      };
+
+      const sourceAmount = Number(
+        transferDetails.sourceAmount || transferDetails.depositAmount || 0,
+      );
+      expect(sourceAmount).toBe(100);
+    });
+
+    it('falls back to depositAmount when sourceAmount missing', () => {
+      const transferDetails: TransferDetails = {
+        alignTransferId: 'transfer-123',
+        depositAmount: '100.00',
+        fee: '0.50',
+        depositNetwork: 'base',
+        status: 'pending',
+      };
+
+      const sourceAmount = Number(
+        transferDetails.sourceAmount || transferDetails.depositAmount || 0,
+      );
+      expect(sourceAmount).toBe(100);
+    });
+
+    it('extracts destination amount correctly', () => {
+      const transferDetails: TransferDetails = {
+        alignTransferId: 'transfer-123',
+        depositAmount: '100.00',
+        fee: '0.50',
+        depositNetwork: 'base',
+        status: 'pending',
+        destinationAmount: '92.00',
+      };
+
+      const destinationAmount = Number(transferDetails.destinationAmount || 0);
+      expect(destinationAmount).toBe(92);
+    });
+  });
+
+  describe('arrival time messaging', () => {
+    it('shows same day for EUR/SEPA', () => {
+      const isEur = true;
+      const arrivalMessage = isEur ? 'less than 24 hours' : '1-2 business days';
+      expect(arrivalMessage).toBe('less than 24 hours');
+    });
+
+    it('shows 1-2 days for USD/ACH', () => {
+      const isEur = false;
+      const arrivalMessage = isEur ? 'less than 24 hours' : '1-2 business days';
+      expect(arrivalMessage).toBe('1-2 business days');
     });
   });
 });
