@@ -1,10 +1,18 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { ArrowRight, Users, Settings2, Wallet, Bot } from 'lucide-react';
+import {
+  ArrowRight,
+  Users,
+  Settings2,
+  Wallet,
+  Bot,
+  Building2,
+} from 'lucide-react';
 import Link from 'next/link';
 import { useBimodal } from '@/components/ui/bimodal';
 import { cn } from '@/lib/utils';
+import { SavedBankAccounts } from './components/saved-bank-accounts';
 
 export function SettingsClientContent() {
   const router = useRouter();
@@ -124,6 +132,50 @@ export function SettingsClientContent() {
 
       {/* Main Content */}
       <main className="px-4 sm:px-6 py-6 sm:py-8 max-w-[1400px] mx-auto">
+        {/* Saved Bank Accounts Section */}
+        <div className="mb-8">
+          <div
+            className={cn(
+              'p-5 sm:p-6',
+              isTechnical
+                ? 'bg-white border border-[#1B29FF]/20'
+                : 'bg-white border border-[#101010]/10 rounded-lg',
+            )}
+          >
+            <div className="flex items-start gap-3 mb-5">
+              <Building2
+                className={cn(
+                  'h-5 w-5 mt-1 flex-shrink-0',
+                  isTechnical ? 'text-[#1B29FF]' : 'text-[#0050ff]',
+                )}
+              />
+              <div>
+                <h2
+                  className={cn(
+                    'text-[15px] sm:text-[16px] font-medium text-[#101010]',
+                    isTechnical && 'font-mono',
+                  )}
+                >
+                  {isTechnical ? 'BANK::ACCOUNTS' : 'Saved Bank Accounts'}
+                </h2>
+                <p
+                  className={cn(
+                    'mt-1 text-[13px]',
+                    isTechnical
+                      ? 'text-[#101010]/60 font-mono'
+                      : 'text-[#101010]/60',
+                  )}
+                >
+                  {isTechnical
+                    ? 'Manage saved recipient accounts for off-ramp transfers'
+                    : 'Manage your saved recipient bank accounts for transfers'}
+                </p>
+              </div>
+            </div>
+            <SavedBankAccounts />
+          </div>
+        </div>
+
         {/* Settings Cards Grid */}
         <div className="grid gap-5 sm:gap-6 md:grid-cols-2 lg:grid-cols-3">
           {visibleOptions.map((option) => {
