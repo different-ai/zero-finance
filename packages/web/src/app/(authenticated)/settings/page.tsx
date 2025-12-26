@@ -7,7 +7,6 @@ import {
   ArrowRight,
   Building2,
 } from 'lucide-react';
-import { SavedBankAccounts } from './components/saved-bank-accounts';
 
 export const metadata: Metadata = {
   title: 'Settings - Zero Finance',
@@ -19,7 +18,7 @@ export default function SettingsPage() {
     <div className="min-h-screen bg-[#F7F7F2]">
       {/* Dashboard Header - Following Design Language */}
       <header className="sticky top-0 z-40 bg-[#F7F7F2] border-b border-[#101010]/10">
-        <div className="h-[60px] flex items-center px-4 sm:px-6 max-w-[1400px] mx-auto">
+        <div className="h-[60px] flex items-center px-4 sm:px-6 max-w-[1400px] mx-auto mt-1">
           <p className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60 mr-3">
             Account
           </p>
@@ -31,25 +30,33 @@ export default function SettingsPage() {
 
       {/* Main Content */}
       <main className="px-4 sm:px-6 py-6 sm:py-8 max-w-[1400px] mx-auto">
-        {/* Saved Bank Accounts Section */}
-        <div className="mb-8">
+        <div className="grid gap-5 sm:gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {/* Saved Bank Accounts Card */}
           <div className="bg-white border border-[#101010]/10 rounded-lg p-5 sm:p-6">
-            <div className="flex items-start gap-3 mb-5">
+            <div className="flex items-start gap-3">
               <Building2 className="h-5 w-5 text-[#0050ff] mt-1 flex-shrink-0" />
-              <div>
+              <div className="flex-1">
                 <h2 className="text-[15px] sm:text-[16px] font-medium text-[#101010]">
                   Saved Bank Accounts
                 </h2>
-                <p className="mt-1 text-[13px] text-[#101010]/60">
+                <p className="mt-2 text-[13px] sm:text-[14px] text-[#101010]/70 leading-[1.5]">
                   Manage your saved recipient bank accounts for transfers
                 </p>
+                <p className="mt-3 text-[12px] text-[#101010]/50">
+                  View and delete saved bank accounts used for off-ramp
+                  transfers.
+                </p>
+                <Link
+                  href="/dashboard/settings/bank-accounts"
+                  className="inline-flex items-center mt-4 text-[13px] text-[#0050ff] hover:text-[#0040dd] transition-colors"
+                >
+                  Manage bank accounts
+                  <ArrowRight className="ml-1 h-3 w-3" />
+                </Link>
               </div>
             </div>
-            <SavedBankAccounts />
           </div>
-        </div>
 
-        <div className="grid gap-5 sm:gap-6 md:grid-cols-2 lg:grid-cols-3">
           {/* Funding Sources Card */}
           <div className="bg-white border border-[#101010]/10 rounded-lg p-5 sm:p-6">
             <div className="flex items-start gap-3">
