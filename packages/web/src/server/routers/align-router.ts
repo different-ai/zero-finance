@@ -1,5 +1,6 @@
 import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
+import { createHash } from 'crypto';
 import { router, protectedProcedure, publicProcedure } from '../create-router';
 import { db } from '../../db';
 import {
@@ -25,6 +26,22 @@ import {
 } from '../services/safe-token-service';
 import type { Address } from 'viem';
 import { featureConfig } from '@/lib/feature-config';
+
+/**
+ * Generate a deterministic event hash for deduplication
+ * Used when Align API doesn't provide a unique event ID or timestamp
+ */
+function generateEventHash(
+  vaId: string,
+  eventType: string,
+  amount: string | null | undefined,
+  currency: string | null | undefined,
+  paymentRails: string | null | undefined,
+  txHash: string | null | undefined,
+): string {
+  const data = `${vaId}:${eventType}:${amount || ''}:${currency || ''}:${paymentRails || ''}:${txHash || ''}`;
+  return createHash('sha256').update(data).digest('hex').substring(0, 32);
+}
 
 /**
  * Helper function to map country names to ISO 3166-1 alpha-2 codes
@@ -3180,7 +3197,48 @@ export const alignRouter = router({
               ? new Date(event.created_at)
               : null;
 
+            // Generate a deterministic hash for deduplication
+            // This handles the case where Align API doesn't provide unique timestamps
+            const eventHash = generateEventHash(
+              va.id,
+              event.event_type,
+              event.source?.amount,
+              event.source?.currency,
+              event.source?.payment_rails,
+              event.destination?.transaction_hash,
+            );
+
             try {
+              // Check if this event already exists (handles NULL timestamp case)
+              // The unique index doesn't work with NULL values, so we need manual check
+              const existingEvent =
+                await db.query.virtualAccountHistory.findFirst({
+                  where: and(
+                    eq(virtualAccountHistory.alignVirtualAccountId, va.id),
+                    eq(
+                      virtualAccountHistory.eventType,
+                      event.event_type as any,
+                    ),
+                    eq(
+                      virtualAccountHistory.sourceAmount,
+                      event.source?.amount || '',
+                    ),
+                    // For events with transaction hash, use it as additional uniqueness
+                    event.destination?.transaction_hash
+                      ? eq(
+                          virtualAccountHistory.transactionHash,
+                          event.destination.transaction_hash,
+                        )
+                      : undefined,
+                  ),
+                  columns: { id: true },
+                });
+
+              if (existingEvent) {
+                // Event already exists, skip
+                continue;
+              }
+
               await db
                 .insert(virtualAccountHistory)
                 .values({
@@ -3197,7 +3255,7 @@ export const alignRouter = router({
                   destinationNetwork: event.destination?.network || null,
                   destinationAddress: event.destination?.address || null,
                   transactionHash: event.destination?.transaction_hash || null,
-                  rawEventData: event as any,
+                  rawEventData: { ...event, _eventHash: eventHash } as any,
                 })
                 .onConflictDoNothing(); // Skip duplicates based on unique index
 
