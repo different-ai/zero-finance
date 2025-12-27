@@ -199,37 +199,78 @@ export async function POST(request: NextRequest) {
     const headersObj = await getHeadersObject();
     const contentType = headersObj['content-type'] || '';
 
+    const snsMessageType = headersObj['x-amz-sns-message-type'];
     console.log('[AI Email] Received request, content-type:', contentType);
+    console.log('[AI Email] x-amz-sns-message-type:', snsMessageType);
     console.log('[AI Email] Body preview:', rawBody.substring(0, 200));
+
+    // Handle SNS messages based on x-amz-sns-message-type header
+    // AWS SNS sends JSON with Content-Type: text/plain and uses this header to indicate message type
+    if (snsMessageType === 'SubscriptionConfirmation') {
+      console.log('[AI Email] Handling SNS SubscriptionConfirmation');
+      try {
+        const snsPayload = JSON.parse(rawBody);
+        const subscribeUrl = snsPayload.SubscribeURL;
+        if (subscribeUrl) {
+          console.log(
+            '[AI Email] Visiting SubscribeURL to confirm subscription...',
+          );
+          const confirmResponse = await fetch(subscribeUrl);
+          if (confirmResponse.ok) {
+            console.log('[AI Email] SNS subscription confirmed successfully');
+            return NextResponse.json(
+              { message: 'Subscription confirmed' },
+              { status: 200 },
+            );
+          } else {
+            console.error(
+              '[AI Email] Failed to confirm subscription:',
+              confirmResponse.status,
+            );
+            return NextResponse.json(
+              { error: 'Failed to confirm subscription' },
+              { status: 500 },
+            );
+          }
+        }
+      } catch (err) {
+        console.error(
+          '[AI Email] Error handling SubscriptionConfirmation:',
+          err,
+        );
+        return NextResponse.json(
+          { error: 'Failed to process subscription confirmation' },
+          { status: 500 },
+        );
+      }
+    }
 
     // Parse the payload based on content type
     let payload: unknown;
 
     if (contentType.includes('application/x-www-form-urlencoded')) {
-      // SNS sometimes sends form-urlencoded data for subscription confirmation
-      // Parse as URL search params and convert to object
+      // Some requests come as form-urlencoded (not standard SNS)
       const params = new URLSearchParams(rawBody);
       const formData: Record<string, string> = {};
       params.forEach((value, key) => {
         formData[key] = value;
       });
-
-      // Check if this is an SNS message embedded in form data
-      if (formData.Message) {
-        try {
-          payload = JSON.parse(formData.Message);
-        } catch {
-          payload = formData;
-        }
-      } else {
-        payload = formData;
-      }
+      payload = formData;
       console.log(
         '[AI Email] Parsed form-urlencoded payload:',
         Object.keys(formData),
       );
+
+      // If this looks like an AWS API call (has Action parameter), acknowledge it
+      if (formData.Action) {
+        console.log(
+          '[AI Email] Received AWS API-style request, Action:',
+          formData.Action,
+        );
+        return NextResponse.json({ message: 'Acknowledged' }, { status: 200 });
+      }
     } else {
-      // Standard JSON payload
+      // Standard JSON payload (including SNS Notification messages)
       try {
         payload = JSON.parse(rawBody);
       } catch (parseError) {
@@ -239,24 +280,6 @@ export async function POST(request: NextRequest) {
           { status: 400 },
         );
       }
-    }
-
-    // Check if this is an SNS subscription confirmation (form-urlencoded format)
-    // AWS sends form data with Action=ConfirmSubscription or Action=Subscribe
-    const formPayload = payload as Record<string, string>;
-    if (
-      formPayload.Action === 'ConfirmSubscription' ||
-      formPayload.Action === 'Subscribe'
-    ) {
-      console.log(
-        '[AI Email] Received SNS subscription request via form-urlencoded',
-      );
-      // For form-urlencoded subscription requests, we just acknowledge
-      // The actual subscription is handled by AWS when we return 200
-      return NextResponse.json(
-        { message: 'Subscription acknowledged' },
-        { status: 200 },
-      );
     }
 
     if (emailProvider.handleWebhookHandshake) {
