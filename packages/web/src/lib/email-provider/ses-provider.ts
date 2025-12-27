@@ -258,6 +258,47 @@ export class SESProvider implements EmailProvider {
     }
   }
 
+  /**
+   * Build the string to sign for SNS message verification.
+   * Fields must be in alphabetical order and only include fields that exist.
+   */
+  private buildStringToSign(message: Record<string, unknown>): string {
+    // Keys that can be signed, in alphabetical order
+    const signableKeysNotification = [
+      'Message',
+      'MessageId',
+      'Subject',
+      'SubscribeURL',
+      'Timestamp',
+      'TopicArn',
+      'Type',
+    ];
+    const signableKeysSubscription = [
+      'Message',
+      'MessageId',
+      'Subject',
+      'SubscribeURL',
+      'Timestamp',
+      'Token',
+      'TopicArn',
+      'Type',
+    ];
+
+    const keys =
+      message.Type === 'Notification'
+        ? signableKeysNotification
+        : signableKeysSubscription;
+
+    let stringToSign = '';
+    for (const key of keys) {
+      // CRITICAL: Only include keys that exist and are not null/undefined
+      if (key in message && message[key] != null) {
+        stringToSign += key + '\n' + message[key] + '\n';
+      }
+    }
+    return stringToSign;
+  }
+
   async verifyWebhookSignature(
     payload: string,
     _headers: Record<string, string>,
@@ -272,6 +313,9 @@ export class SESProvider implements EmailProvider {
         MessageId: string;
         Timestamp: string;
         TopicArn: string;
+        Subject?: string;
+        SubscribeURL?: string;
+        Token?: string;
       };
 
       // Verify the signing cert URL is from AWS
@@ -280,68 +324,28 @@ export class SESProvider implements EmailProvider {
         !certUrl.hostname.endsWith('.amazonaws.com') ||
         certUrl.protocol !== 'https:'
       ) {
-        console.log('[SESProvider] Invalid signing cert URL');
+        console.log('[SESProvider] Invalid signing cert URL:', certUrl.href);
         return false;
       }
 
-      // Build the string to sign based on message type
-      let stringToSign: string;
-      if (message.Type === 'Notification') {
-        stringToSign =
-          [
-            'Message',
-            message.Message,
-            'MessageId',
-            message.MessageId,
-            'Timestamp',
-            message.Timestamp,
-            'TopicArn',
-            message.TopicArn,
-            'Type',
-            message.Type,
-          ].join('\n') + '\n';
-      } else {
-        // SubscriptionConfirmation or UnsubscribeConfirmation
-        const subMessage = JSON.parse(payload) as {
-          Type: string;
-          MessageId: string;
-          Token: string;
-          TopicArn: string;
-          Message: string;
-          SubscribeURL: string;
-          Timestamp: string;
-          Signature: string;
-          SigningCertURL: string;
-        };
-        stringToSign =
-          [
-            'Message',
-            subMessage.Message,
-            'MessageId',
-            subMessage.MessageId,
-            'SubscribeURL',
-            subMessage.SubscribeURL,
-            'Timestamp',
-            subMessage.Timestamp,
-            'Token',
-            subMessage.Token,
-            'TopicArn',
-            subMessage.TopicArn,
-            'Type',
-            subMessage.Type,
-          ].join('\n') + '\n';
-      }
+      // Build the string to sign (alphabetical order, only existing fields)
+      const stringToSign = this.buildStringToSign(
+        message as unknown as Record<string, unknown>,
+      );
 
       // Fetch the certificate
       const cert = await this.fetchCertificate(message.SigningCertURL);
 
-      // Verify the signature
-      const verifier = crypto.createVerify('SHA1');
-      verifier.update(stringToSign);
+      // Use correct algorithm based on SignatureVersion
+      const algorithm =
+        message.SignatureVersion === '2' ? 'RSA-SHA256' : 'RSA-SHA1';
+      const verifier = crypto.createVerify(algorithm);
+      verifier.update(stringToSign, 'utf8');
       const isValid = verifier.verify(cert, message.Signature, 'base64');
 
       if (!isValid) {
         console.log('[SESProvider] Invalid SNS signature');
+        console.log('[SESProvider] String to sign:', stringToSign);
       }
 
       return isValid;

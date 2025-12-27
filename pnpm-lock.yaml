@@ -485,6 +485,9 @@ importers:
       resend:
         specifier: ^6.6.0
         version: 6.6.0
+      sns-validator:
+        specifier: ^0.3.5
+        version: 0.3.5
       sonner:
         specifier: 'catalog:'
         version: 2.0.7(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
@@ -9913,6 +9916,9 @@ packages:
   snarkjs@0.7.5:
     resolution: {integrity: sha512-h+3c4rXZKLhLuHk4LHydZCk/h5GcNvk5GjVKRRkHmfb6Ntf8gHOA9zea3g656iclRuhqQ3iKDWFgiD9ypLrKiA==}
     hasBin: true
+
+  sns-validator@0.3.5:
+    resolution: {integrity: sha512-lapYNmezLsltnt2fcQyhmYnC41mYZ7EjU7f2oR/hrhpbD/LemryclRpApwxO84gOyDIQ7MWe/h4HvkdunFzSKg==}
 
   socket.io-client@4.8.1:
     resolution: {integrity: sha512-hJVXfu3E28NmzGk8o1sHhN3om52tRvwYeidbj7xKy2eIIse5IoKX3USlS6Tqt3BHAtflLIkCQBkzVrEEfWUyYQ==}
@@ -24971,6 +24977,8 @@ snapshots:
       r1csfile: 0.0.48
     transitivePeerDependencies:
       - react-native-b4a
+
+  sns-validator@0.3.5: {}
 
   socket.io-client@4.8.1(bufferutil@4.0.9)(utf-8-validate@5.0.10):
     dependencies:
