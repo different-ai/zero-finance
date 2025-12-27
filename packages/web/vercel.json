@@ -14,14 +14,6 @@
   },
   "crons": [
     {
-      "path": "/api/cron/auto-earn",
-      "schedule": "*/1 * * * *"
-    },
-    {
-      "path": "/api/cron/process-gmail-sync",
-      "schedule": "*/2 * * * *"
-    },
-    {
       "path": "/api/cron/kyc-notifications",
       "schedule": "*/10 * * * *"
     },

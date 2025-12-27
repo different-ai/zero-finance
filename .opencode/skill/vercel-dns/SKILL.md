@@ -23,6 +23,15 @@ Manage DNS records for domains hosted on Vercel, including:
 - Logged in: `vercel login`
 - Domain must be on Vercel nameservers or have Vercel as DNS provider
 
+## 0 Finance Project
+
+For the 0 Finance project, always use `--scope prologe`:
+
+```bash
+vercel dns ls 0.finance --scope prologe
+vercel logs www.0.finance --scope prologe
+```
+
 ## Common Commands
 
 ### Check Login & Team
@@ -36,16 +45,19 @@ vercel teams ls
 
 # Switch to a specific team (use slug, not display name)
 vercel switch <team-slug>
+
+# Or use --scope flag instead of switching
+vercel domains ls --scope prologe
 ```
 
 ### List Domains & Records
 
 ```bash
 # List all domains in current team/account
-vercel domains ls
+vercel domains ls --scope prologe
 
 # List DNS records for a specific domain
-vercel dns ls <domain>
+vercel dns ls <domain> --scope prologe
 ```
 
 ### Add DNS Records

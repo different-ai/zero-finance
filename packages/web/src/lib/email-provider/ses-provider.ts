@@ -330,21 +330,24 @@ export class SESProvider implements EmailProvider {
     }
 
     console.log('[SESProvider] Confirming SNS subscription...');
+    console.log('[SESProvider] SubscribeURL:', snsMessage.SubscribeURL);
 
-    // Confirm the subscription by visiting the SubscribeURL
-    return new Promise((resolve) => {
-      https.get(snsMessage.SubscribeURL, (res) => {
-        let data = '';
-        res.on('data', (chunk) => (data += chunk));
-        res.on('end', () => {
-          console.log('[SESProvider] SNS subscription confirmed');
-          resolve({ status: 200, body: 'Subscription confirmed' });
-        });
-        res.on('error', (err) => {
-          console.error('[SESProvider] Failed to confirm subscription:', err);
-          resolve({ status: 500, body: 'Failed to confirm subscription' });
-        });
-      });
-    });
+    try {
+      // Confirm the subscription by visiting the SubscribeURL
+      const response = await fetch(snsMessage.SubscribeURL);
+      if (response.ok) {
+        console.log('[SESProvider] SNS subscription confirmed');
+        return { status: 200, body: 'Subscription confirmed' };
+      } else {
+        console.error(
+          '[SESProvider] Failed to confirm subscription:',
+          response.status,
+        );
+        return { status: 500, body: 'Failed to confirm subscription' };
+      }
+    } catch (err) {
+      console.error('[SESProvider] Failed to confirm subscription:', err);
+      return { status: 500, body: 'Failed to confirm subscription' };
+    }
   }
 }
