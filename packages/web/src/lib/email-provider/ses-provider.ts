@@ -2,7 +2,6 @@ import { SESClient, SendEmailCommand } from '@aws-sdk/client-ses';
 import { simpleParser } from 'mailparser';
 import type { AddressObject, Attachment } from 'mailparser';
 import crypto from 'crypto';
-import https from 'https';
 import type {
   EmailProvider,
   SendEmailOptions,
@@ -300,15 +299,12 @@ export class SESProvider implements EmailProvider {
   /**
    * Fetch the signing certificate from AWS
    */
-  private fetchCertificate(url: string): Promise<string> {
-    return new Promise((resolve, reject) => {
-      https.get(url, (res) => {
-        let data = '';
-        res.on('data', (chunk) => (data += chunk));
-        res.on('end', () => resolve(data));
-        res.on('error', reject);
-      });
-    });
+  private async fetchCertificate(url: string): Promise<string> {
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch certificate: ${response.status}`);
+    }
+    return response.text();
   }
 
   /**
