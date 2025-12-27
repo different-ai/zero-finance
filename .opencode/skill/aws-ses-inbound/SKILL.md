@@ -120,13 +120,20 @@ aws ses set-active-receipt-rule-set --rule-set-name my-email-rules
 
 ```bash
 # Subscribe your HTTPS endpoint to the SNS topic
+# IMPORTANT: Use --notification-endpoint, NOT --endpoint
+# (--endpoint overrides the AWS API URL, which is NOT what you want)
 aws sns subscribe \
   --topic-arn "arn:aws:sns:us-east-1:123456789:my-inbound-email-topic" \
   --protocol https \
-  --endpoint "https://example.com/api/email-webhook"
+  --notification-endpoint "https://example.com/api/email-webhook"
 ```
 
-**Important**: Your webhook endpoint must handle the SNS subscription confirmation request. SNS sends a `SubscriptionConfirmation` message type that your endpoint must acknowledge by visiting the `SubscribeURL` in the payload.
+**Important**: Your webhook endpoint must handle the SNS subscription confirmation request. SNS sends a POST with:
+
+- Header: `x-amz-sns-message-type: SubscriptionConfirmation`
+- Body: JSON with `Type`, `SubscribeURL`, `Token`, etc.
+
+Your endpoint must visit the `SubscribeURL` (make a GET request) to confirm the subscription.
 
 ## Required DNS Records
 
