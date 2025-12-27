@@ -42,8 +42,11 @@ import {
   Bot,
   ExternalLink,
   Terminal,
+  Mail,
+  Sparkles,
 } from 'lucide-react';
 import { trpc } from '@/lib/trpc';
+import { api } from '@/trpc/react';
 import { toast } from 'sonner';
 import { formatDistanceToNow } from 'date-fns';
 
@@ -94,6 +97,116 @@ function InstallMcpCommand({ apiKey }: { apiKey: string }) {
         <code className="rounded bg-muted px-1">cline</code>
       </p>
     </div>
+  );
+}
+
+function AiEmailCard() {
+  const [copiedEmail, setCopiedEmail] = useState(false);
+  const { data: currentWorkspace, isLoading } =
+    api.workspace.getOrCreateWorkspace.useQuery();
+
+  // Get the AI email domain from environment or use default
+  const aiEmailDomain =
+    process.env.NEXT_PUBLIC_AI_EMAIL_DOMAIN || 'ai.0.finance';
+
+  const aiEmailAddress = currentWorkspace?.workspaceId
+    ? `${currentWorkspace.workspaceId}@${aiEmailDomain}`
+    : null;
+
+  const handleCopyEmail = async () => {
+    if (aiEmailAddress) {
+      await navigator.clipboard.writeText(aiEmailAddress);
+      setCopiedEmail(true);
+      toast.success('Email address copied to clipboard');
+      setTimeout(() => setCopiedEmail(false), 2000);
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-purple-600">
+              <Mail className="h-5 w-5 text-white" />
+            </div>
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                AI Email Agent
+                <Badge
+                  variant="secondary"
+                  className="bg-gradient-to-r from-blue-100 to-purple-100 text-blue-700 dark:from-blue-900 dark:to-purple-900 dark:text-blue-300"
+                >
+                  <Sparkles className="mr-1 h-3 w-3" />
+                  Beta
+                </Badge>
+              </CardTitle>
+              <CardDescription>
+                Create invoices by forwarding emails to your workspace
+              </CardDescription>
+            </div>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {isLoading ? (
+          <div className="h-20 animate-pulse rounded-lg bg-muted" />
+        ) : aiEmailAddress ? (
+          <>
+            <div className="space-y-2">
+              <Label className="text-xs text-muted-foreground">
+                Your AI Email Address
+              </Label>
+              <div className="flex items-center gap-2">
+                <div className="flex-1 rounded-lg border bg-muted/50 px-4 py-3">
+                  <code className="text-sm font-medium">{aiEmailAddress}</code>
+                </div>
+                <Button
+                  size="icon"
+                  variant="outline"
+                  onClick={handleCopyEmail}
+                  className="h-12 w-12"
+                >
+                  {copiedEmail ? (
+                    <Check className="h-4 w-4 text-green-500" />
+                  ) : (
+                    <Copy className="h-4 w-4" />
+                  )}
+                </Button>
+              </div>
+            </div>
+
+            <div className="rounded-lg bg-gradient-to-r from-blue-50 to-purple-50 p-4 dark:from-blue-950/50 dark:to-purple-950/50">
+              <h4 className="text-sm font-medium">How it works</h4>
+              <ol className="mt-2 list-inside list-decimal space-y-1 text-sm text-muted-foreground">
+                <li>
+                  Forward any email with invoice details to your AI email
+                  address
+                </li>
+                <li>
+                  AI extracts recipient, amount, and description automatically
+                </li>
+                <li>Review and confirm the invoice via email reply</li>
+                <li>Invoice is sent to your client instantly</li>
+              </ol>
+            </div>
+
+            <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950/50 dark:text-amber-200">
+              <strong>Tip:</strong> Forward emails from clients with project
+              details, quotes, or agreements. The AI will extract invoice
+              information automatically.
+            </div>
+          </>
+        ) : (
+          <div className="rounded-lg border border-dashed p-6 text-center">
+            <Mail className="mx-auto h-8 w-8 text-muted-foreground/50" />
+            <p className="mt-2 text-sm text-muted-foreground">
+              Unable to load workspace. Please try refreshing the page.
+            </p>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 
@@ -162,6 +275,9 @@ export function IntegrationsClientContent() {
           Connect AI agents and external services to your workspace.
         </p>
       </div>
+
+      {/* AI Email Agent Section */}
+      <AiEmailCard />
 
       {/* MCP API Keys Section */}
       <Card>

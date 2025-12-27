@@ -150,6 +150,101 @@ When upgrading from A to B:
 
 ---
 
+---
+
+## Resend DNS & Webhook Setup
+
+### Prerequisites
+
+1. **Resend Account** with inbound email enabled
+2. **DNS Access** for 0.finance domain
+
+### DNS Configuration
+
+Add these records to your DNS provider for the `ai.0.finance` subdomain:
+
+```
+# MX Record for receiving emails
+Type: MX
+Host: ai
+Value: inbound.resend.com
+Priority: 10
+
+# SPF Record for sending emails
+Type: TXT
+Host: ai
+Value: v=spf1 include:resend.com ~all
+
+# DKIM Records (provided by Resend)
+Type: CNAME
+Host: resend._domainkey.ai
+Value: <provided-by-resend>
+```
+
+### Resend Dashboard Setup
+
+1. **Add Inbound Domain**
+   - Go to Resend Dashboard → Domains → Add Domain
+   - Add `ai.0.finance` as an inbound domain
+   - Complete DNS verification
+
+2. **Configure Catch-All Webhook**
+   - Go to Webhooks → Create Webhook
+   - URL: `https://www.0.finance/api/ai-email`
+   - Events: `email.received`
+   - Note the signing secret for `RESEND_WEBHOOK_SECRET`
+
+3. **Configure Outbound Sending**
+   - Verify outbound domain for sending emails from `ai@ai.0.finance` and `invoices@ai.0.finance`
+
+### Environment Variables
+
+Add to `.env.local`:
+
+```bash
+# Resend API key for sending emails
+RESEND_API_KEY=re_xxxxxxxxxxxx
+
+# Webhook signing secret for verifying inbound webhooks (optional but recommended)
+RESEND_WEBHOOK_SECRET=whsec_xxxxxxxxxxxx
+
+# AI email domain (for generating workspace email addresses)
+AI_EMAIL_INBOUND_DOMAIN=ai.0.finance
+
+# Public env var for frontend (optional)
+NEXT_PUBLIC_AI_EMAIL_DOMAIN=ai.0.finance
+```
+
+### Testing
+
+1. **Verify DNS propagation:**
+
+   ```bash
+   dig MX ai.0.finance
+   ```
+
+2. **Test webhook endpoint:**
+
+   ```bash
+   curl -X GET https://www.0.finance/api/ai-email
+   ```
+
+3. **Send test email:**
+   - Forward an email to `{workspaceId}@ai.0.finance`
+   - Check Resend dashboard for delivery status
+   - Check application logs for webhook processing
+
+### Troubleshooting
+
+| Issue               | Check                                          |
+| ------------------- | ---------------------------------------------- |
+| Emails not received | DNS MX record, Resend domain verification      |
+| Webhook 401 error   | RESEND_WEBHOOK_SECRET matches Resend dashboard |
+| Emails not sent     | RESEND_API_KEY valid, outbound domain verified |
+| Rate limit (429)    | Sender exceeded 10 emails/minute               |
+
+---
+
 ## Decision Log
 
 | Date       | Decision              | Rationale                                                           |

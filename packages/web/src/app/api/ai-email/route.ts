@@ -3,6 +3,8 @@ import { Resend } from 'resend';
 import { generateText } from 'ai';
 import { openai } from '@/lib/ai/providers';
 import { z } from 'zod';
+import { headers } from 'next/headers';
+import crypto from 'crypto';
 
 import {
   mapToWorkspace,
@@ -22,6 +24,107 @@ import type {
 } from '@/db/schema/ai-email-sessions';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
+
+// In-memory rate limiter (for production, use Redis)
+const rateLimiter = new Map<string, { count: number; resetTime: number }>();
+const RATE_LIMIT_WINDOW_MS = 60 * 1000; // 1 minute
+const RATE_LIMIT_MAX_REQUESTS = 10; // 10 emails per minute per sender
+
+/**
+ * Check if a sender is rate limited
+ */
+function isRateLimited(senderEmail: string): boolean {
+  const now = Date.now();
+  const key = senderEmail.toLowerCase();
+  const record = rateLimiter.get(key);
+
+  if (!record || now > record.resetTime) {
+    // Create new record or reset
+    rateLimiter.set(key, { count: 1, resetTime: now + RATE_LIMIT_WINDOW_MS });
+    return false;
+  }
+
+  if (record.count >= RATE_LIMIT_MAX_REQUESTS) {
+    return true;
+  }
+
+  record.count++;
+  return false;
+}
+
+/**
+ * Clean up old rate limit records (call periodically)
+ */
+function cleanupRateLimiter(): void {
+  const now = Date.now();
+  for (const [key, record] of rateLimiter.entries()) {
+    if (now > record.resetTime) {
+      rateLimiter.delete(key);
+    }
+  }
+}
+
+// Cleanup every 5 minutes
+if (typeof setInterval !== 'undefined') {
+  setInterval(cleanupRateLimiter, 5 * 60 * 1000);
+}
+
+/**
+ * Verify Resend webhook signature (if configured)
+ * https://resend.com/docs/dashboard/webhooks/verify-webhooks
+ */
+async function verifyWebhookSignature(
+  request: NextRequest,
+  rawBody: string,
+): Promise<boolean> {
+  const webhookSecret = process.env.RESEND_WEBHOOK_SECRET;
+
+  // If no secret configured, skip verification (development mode)
+  if (!webhookSecret) {
+    console.log(
+      '[AI Email] Webhook signature verification skipped (no secret configured)',
+    );
+    return true;
+  }
+
+  const headersList = await headers();
+  const signature = headersList.get('svix-signature');
+  const timestamp = headersList.get('svix-timestamp');
+  const svixId = headersList.get('svix-id');
+
+  if (!signature || !timestamp || !svixId) {
+    console.log('[AI Email] Missing webhook signature headers');
+    return false;
+  }
+
+  // Verify timestamp is recent (within 5 minutes)
+  const timestampNum = parseInt(timestamp, 10);
+  const now = Math.floor(Date.now() / 1000);
+  if (Math.abs(now - timestampNum) > 300) {
+    console.log('[AI Email] Webhook timestamp too old');
+    return false;
+  }
+
+  // Verify signature using HMAC-SHA256
+  const signedPayload = `${svixId}.${timestamp}.${rawBody}`;
+  const expectedSignature = crypto
+    .createHmac('sha256', webhookSecret)
+    .update(signedPayload)
+    .digest('base64');
+
+  // Signature header contains multiple signatures separated by space
+  const signatures = signature.split(' ');
+  const isValid = signatures.some((sig) => {
+    const [, sigValue] = sig.split(',');
+    return sigValue === expectedSignature;
+  });
+
+  if (!isValid) {
+    console.log('[AI Email] Invalid webhook signature');
+  }
+
+  return isValid;
+}
 
 /**
  * Resend inbound email payload type.
@@ -128,9 +231,25 @@ const sendInvoiceToRecipientSchema = z.object({
  * Receives inbound emails from Resend and processes them using AI.
  */
 export async function POST(request: NextRequest) {
+  let rawBody = '';
+  let senderEmail = '';
+
   try {
+    // Read raw body for signature verification
+    rawBody = await request.text();
+
+    // Verify webhook signature
+    const isValidSignature = await verifyWebhookSignature(request, rawBody);
+    if (!isValidSignature) {
+      console.log('[AI Email] Webhook signature verification failed');
+      return NextResponse.json(
+        { error: 'Invalid webhook signature' },
+        { status: 401 },
+      );
+    }
+
     // Parse the webhook payload
-    const payload = await request.json();
+    const payload = JSON.parse(rawBody);
 
     // For inbound emails, the payload structure is the email directly
     const email = payload as ResendInboundEmail;
@@ -141,6 +260,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: 'Invalid email payload' },
         { status: 400 },
+      );
+    }
+
+    // Store sender for error handling
+    senderEmail = email.from;
+
+    // Check rate limit
+    if (isRateLimited(email.from)) {
+      console.log(`[AI Email] Rate limited: ${email.from}`);
+      return NextResponse.json(
+        { error: 'Rate limit exceeded. Please try again later.' },
+        { status: 429 },
       );
     }
 
@@ -432,16 +563,12 @@ export async function POST(request: NextRequest) {
 
     // Try to send error reply if we have sender info
     try {
-      const payload = await request.clone().json();
-      if (payload.from) {
+      // We have senderEmail in outer scope if it was parsed successfully
+      if (senderEmail) {
         const errorTemplate = emailTemplates.error(
           error instanceof Error ? error.message : undefined,
         );
-        await sendReply(
-          payload.from,
-          errorTemplate.subject,
-          errorTemplate.body,
-        );
+        await sendReply(senderEmail, errorTemplate.subject, errorTemplate.body);
       }
     } catch {
       // Ignore error in error handler

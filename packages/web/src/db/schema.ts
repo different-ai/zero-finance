@@ -1517,3 +1517,15 @@ export {
   type NewWorkspaceFeature,
   type WorkspaceFeatureName,
 } from './schema/workspace-features';
+
+// AI Email Sessions for email-based invoice creation
+export {
+  aiEmailSessions,
+  aiEmailSessionsRelations,
+  type AiEmailSession,
+  type NewAiEmailSession,
+  type AiEmailSessionState,
+  type AiEmailMessage,
+  type AiEmailPendingAction,
+  type AiEmailExtractedData,
+} from './schema/ai-email-sessions';
