@@ -198,8 +198,23 @@ export async function POST(request: NextRequest) {
     rawBody = await request.text();
     const headersObj = await getHeadersObject();
 
+    console.log(
+      '[AI Email] Received request, content-type:',
+      headersObj['content-type'],
+    );
+    console.log('[AI Email] Body preview:', rawBody.substring(0, 200));
+
     // Handle provider-specific webhook handshakes (e.g., SNS subscription confirmation)
-    const payload = JSON.parse(rawBody);
+    let payload: unknown;
+    try {
+      payload = JSON.parse(rawBody);
+    } catch (parseError) {
+      console.log('[AI Email] Failed to parse JSON body:', parseError);
+      return NextResponse.json(
+        { error: 'Invalid JSON payload' },
+        { status: 400 },
+      );
+    }
     if (emailProvider.handleWebhookHandshake) {
       const handshakeResponse = await emailProvider.handleWebhookHandshake(
         payload,

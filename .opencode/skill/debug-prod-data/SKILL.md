@@ -63,23 +63,48 @@ vercel ls --scope prologe 2>/dev/null | head -1
 
 ### Waiting for Deployments
 
-**DO NOT** just `sleep` and hope. Check deployment status properly:
+**DO NOT** just `sleep` and hope. Use `vercel inspect --wait`:
 
 ```bash
-# Method 1: Check if latest deployment changed
-BEFORE=$(vercel ls --scope prologe 2>/dev/null | head -1)
-# ... trigger deploy (push to git) ...
-while [ "$(vercel ls --scope prologe 2>/dev/null | head -1)" = "$BEFORE" ]; do
-  echo "Waiting for new deployment..."
-  sleep 10
-done
-echo "New deployment detected!"
+# Get the latest deployment URL
+LATEST=$(vercel ls --scope prologe 2>/dev/null | head -1)
 
-# Method 2: Poll the endpoint for changes (if you changed something visible)
-# e.g., check if a new env var took effect or code change is live
+# Wait for it to be ready (up to 5 minutes)
+vercel inspect "$LATEST" --scope prologe --wait --timeout 5m
 
-# Method 3: Watch Vercel dashboard
-# https://vercel.com/prologe/zerofinance/deployments
+# Check the status in the output:
+#   status: ● Building  -> still building
+#   status: ● Ready     -> deployed and live!
+#   status: ● Error     -> build failed
+```
+
+**Full workflow after pushing code:**
+
+```bash
+# 1. Push your changes
+git push origin main
+
+# 2. Wait a few seconds for Vercel to pick it up
+sleep 5
+
+# 3. Get the new deployment URL
+LATEST=$(vercel ls --scope prologe 2>/dev/null | head -1)
+echo "Waiting for: $LATEST"
+
+# 4. Wait for it to complete
+vercel inspect "$LATEST" --scope prologe --wait --timeout 5m
+
+# 5. Now your changes are live!
+```
+
+**Check deployment details:**
+
+```bash
+# See build info, aliases, and status
+vercel inspect <deployment-url> --scope prologe
+
+# See build logs if something failed
+vercel inspect <deployment-url> --scope prologe --logs
 ```
 
 ### Triggering a Redeploy
