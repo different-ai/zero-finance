@@ -130,9 +130,11 @@ export function DashboardSummary({
           href="/dashboard/savings"
           className={cn(
             'flex flex-col justify-center px-4 py-3 -my-3 transition-colors group',
+            // Border: top on mobile (stacked), left on desktop (side-by-side)
+            'border-t lg:border-t-0 lg:border-l',
             isTechnical
-              ? 'hover:bg-[#1B29FF]/5 border-l border-[#1B29FF]/10'
-              : 'hover:bg-[#F7F7F2] border-l border-[#101010]/10',
+              ? 'hover:bg-[#1B29FF]/5 border-[#1B29FF]/10'
+              : 'hover:bg-[#F7F7F2] border-[#101010]/10',
           )}
         >
           <div className="flex items-center justify-between">
@@ -151,8 +153,8 @@ export function DashboardSummary({
                 className={cn(
                   'tabular-nums',
                   isTechnical
-                    ? 'font-mono text-[28px] text-[#101010]'
-                    : 'text-[32px] font-semibold text-[#101010]',
+                    ? 'font-mono text-[24px] lg:text-[28px] text-[#101010]'
+                    : 'text-[24px] sm:text-[28px] lg:text-[32px] font-semibold text-[#101010]',
                 )}
               >
                 {formatUsd(earningBalance)}
@@ -189,9 +191,9 @@ export function DashboardSummary({
         <div
           className={cn(
             'flex flex-col justify-center px-4 py-3 -my-3',
-            isTechnical
-              ? 'border-l border-[#1B29FF]/10'
-              : 'border-l border-[#101010]/10',
+            // Border: top on mobile (stacked), left on desktop (side-by-side)
+            'border-t lg:border-t-0 lg:border-l',
+            isTechnical ? 'border-[#1B29FF]/10' : 'border-[#101010]/10',
           )}
         >
           <p
@@ -208,8 +210,8 @@ export function DashboardSummary({
             className={cn(
               'tabular-nums',
               isTechnical
-                ? 'font-mono text-[28px] text-[#101010]'
-                : 'text-[32px] font-semibold text-[#101010]',
+                ? 'font-mono text-[24px] lg:text-[28px] text-[#101010]'
+                : 'text-[24px] sm:text-[28px] lg:text-[32px] font-semibold text-[#101010]',
             )}
           >
             {formatUsd(idleBalance)}
