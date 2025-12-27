@@ -334,9 +334,15 @@ export async function POST(request: NextRequest) {
     const messageId = email.messageId || crypto.randomUUID();
 
     console.log(`[AI Email] Received email from ${email.from} to ${toAddress}`);
+    console.log(`[AI Email] Full email.to value:`, JSON.stringify(email.to));
 
     // 1. Map the "to" address to a workspace
+    console.log(`[AI Email] Calling mapToWorkspace with: "${toAddress}"`);
     const workspaceResult = await mapToWorkspace(toAddress);
+    console.log(
+      `[AI Email] mapToWorkspace result:`,
+      JSON.stringify(workspaceResult),
+    );
 
     if (!workspaceResult.isValid) {
       console.log(

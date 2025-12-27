@@ -83,6 +83,9 @@ export class SESProvider implements EmailProvider {
       MessageId: string;
     };
 
+    console.log('[SESProvider] parseInboundWebhook called');
+    console.log('[SESProvider] SNS Message Type:', snsMessage.Type);
+
     // Handle SNS subscription confirmation (handled separately)
     if (snsMessage.Type === 'SubscriptionConfirmation') {
       return null;
@@ -113,8 +116,30 @@ export class SESProvider implements EmailProvider {
 
     try {
       sesNotification = JSON.parse(snsMessage.Message);
-    } catch {
-      console.log('[SESProvider] Failed to parse SNS message');
+      console.log(
+        '[SESProvider] Parsed SES notification type:',
+        sesNotification.notificationType,
+      );
+      console.log(
+        '[SESProvider] SES mail.destination:',
+        sesNotification.mail?.destination,
+      );
+      console.log(
+        '[SESProvider] SES mail.commonHeaders.to:',
+        sesNotification.mail?.commonHeaders?.to,
+      );
+      console.log(
+        '[SESProvider] SES mail.source:',
+        sesNotification.mail?.source,
+      );
+      console.log(
+        '[SESProvider] Has content:',
+        !!sesNotification.content,
+        'length:',
+        sesNotification.content?.length,
+      );
+    } catch (err) {
+      console.log('[SESProvider] Failed to parse SNS message:', err);
       return null;
     }
 
@@ -133,8 +158,11 @@ export class SESProvider implements EmailProvider {
 
     if (!parsedEmail) {
       // Fallback to headers if MIME parsing fails
+      console.log(
+        '[SESProvider] MIME parsing failed, using fallback from mail headers',
+      );
       const mail = sesNotification.mail;
-      return {
+      const fallbackEmail = {
         from: mail.commonHeaders.from?.[0] || mail.source,
         to: mail.commonHeaders.to || mail.destination,
         subject: mail.commonHeaders.subject || '',
@@ -142,8 +170,13 @@ export class SESProvider implements EmailProvider {
         headers: {},
         messageId: mail.messageId,
       };
+      console.log('[SESProvider] Fallback email from:', fallbackEmail.from);
+      console.log('[SESProvider] Fallback email to:', fallbackEmail.to);
+      return fallbackEmail;
     }
 
+    console.log('[SESProvider] Parsed email from:', parsedEmail.from);
+    console.log('[SESProvider] Parsed email to:', parsedEmail.to);
     return parsedEmail;
   }
 

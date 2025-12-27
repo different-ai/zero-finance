@@ -5,6 +5,7 @@ import { fundingSourceRouter } from './funding-source-router';
 import { userSafesRouter } from './settings/user-safes';
 import { bankAccountsRouter } from './settings/bank-accounts-router';
 import { apiKeysRouter } from './settings/api-keys-router';
+import { emailVerificationRouter } from './settings/email-verification-router';
 import { safeRouter } from './safe-router';
 import { onboardingRouter } from './onboarding-router';
 import { alignRouter } from './align-router';
@@ -39,6 +40,7 @@ export const appRouter = router({
     bankAccounts: bankAccountsRouter,
     classificationSettings: classificationSettingsRouter,
     apiKeys: apiKeysRouter,
+    emailVerification: emailVerificationRouter,
   }),
   align: alignRouter,
   admin: adminRouter,
