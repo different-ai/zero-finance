@@ -241,6 +241,24 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Check if this is an SNS subscription confirmation (form-urlencoded format)
+    // AWS sends form data with Action=ConfirmSubscription or Action=Subscribe
+    const formPayload = payload as Record<string, string>;
+    if (
+      formPayload.Action === 'ConfirmSubscription' ||
+      formPayload.Action === 'Subscribe'
+    ) {
+      console.log(
+        '[AI Email] Received SNS subscription request via form-urlencoded',
+      );
+      // For form-urlencoded subscription requests, we just acknowledge
+      // The actual subscription is handled by AWS when we return 200
+      return NextResponse.json(
+        { message: 'Subscription acknowledged' },
+        { status: 200 },
+      );
+    }
+
     if (emailProvider.handleWebhookHandshake) {
       const handshakeResponse = await emailProvider.handleWebhookHandshake(
         payload,
