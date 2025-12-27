@@ -1,6 +1,6 @@
 ---
 name: debug-prod-data
-description: Debug production database issues by connecting to the correct Neon database and inspecting/fixing data
+description: Debug production issues on Vercel using logs, database inspection, and proper deployment waiting
 license: MIT
 compatibility: opencode
 metadata:
@@ -10,14 +10,107 @@ metadata:
 
 ## What I Do
 
-- Connect to the **production** Neon database (not dev)
+- Debug production issues on Vercel
+- View and filter Vercel function logs
+- Wait for deployments correctly
+- Connect to production Neon database
 - Inspect tables and data for debugging
-- Run cleanup scripts and migrations
-- Diagnose workspace/Safe mismatches
 
-## Environment Setup
+## Vercel Debugging (0 Finance)
 
-**CRITICAL**: Always load `.env.production.local` from the `packages/web` folder:
+**IMPORTANT**: Always use `--scope prologe` for the 0 Finance project:
+
+```bash
+# All Vercel commands need --scope prologe
+vercel logs www.0.finance --scope prologe
+vercel ls --scope prologe
+vercel env ls --scope prologe
+```
+
+### Viewing Logs
+
+```bash
+# Stream live logs (waits for new logs)
+vercel logs www.0.finance --scope prologe
+
+# Logs since a specific time
+vercel logs www.0.finance --scope prologe --since 5m
+vercel logs www.0.finance --scope prologe --since 1h
+
+# Filter logs (pipe to grep)
+vercel logs www.0.finance --scope prologe 2>&1 | grep -i "error"
+vercel logs www.0.finance --scope prologe 2>&1 | grep "ai-email"
+```
+
+**Note**: `vercel logs` can be slow/hang. Use `timeout` or Ctrl+C if needed:
+
+```bash
+timeout 30 vercel logs www.0.finance --scope prologe --since 5m 2>&1 | head -100
+```
+
+### Checking Deployments
+
+```bash
+# List recent deployments
+vercel ls --scope prologe | head -10
+
+# Check specific deployment status
+vercel inspect <deployment-url> --scope prologe
+
+# Get latest deployment URL
+vercel ls --scope prologe 2>/dev/null | head -1
+```
+
+### Waiting for Deployments
+
+**DO NOT** just `sleep` and hope. Check deployment status properly:
+
+```bash
+# Method 1: Check if latest deployment changed
+BEFORE=$(vercel ls --scope prologe 2>/dev/null | head -1)
+# ... trigger deploy (push to git) ...
+while [ "$(vercel ls --scope prologe 2>/dev/null | head -1)" = "$BEFORE" ]; do
+  echo "Waiting for new deployment..."
+  sleep 10
+done
+echo "New deployment detected!"
+
+# Method 2: Poll the endpoint for changes (if you changed something visible)
+# e.g., check if a new env var took effect or code change is live
+
+# Method 3: Watch Vercel dashboard
+# https://vercel.com/prologe/zerofinance/deployments
+```
+
+### Triggering a Redeploy
+
+```bash
+# Redeploy production from current state
+vercel --prod --scope prologe
+
+# Or push to git and wait
+git push origin main
+# Then use the waiting method above
+```
+
+### Environment Variables
+
+```bash
+# List env vars
+vercel env ls --scope prologe
+
+# Add an env var (will prompt for value)
+echo "value" | vercel env add VAR_NAME production --scope prologe
+
+# Pull env vars to local .env
+vercel env pull .env.local --scope prologe
+```
+
+## Database Debugging
+
+### Environment Setup
+
+**CRITICAL**: Always load `.env.production.local` for production database:
 
 ```typescript
 import * as dotenv from 'dotenv';
@@ -42,22 +135,22 @@ import { db } from './src/db';
 "
 ```
 
-## Common Database Locations
+### Database Locations
 
-Zero Finance uses **Neon Postgres**. There are typically two databases:
+Zero Finance uses **Neon Postgres**:
 
 | Environment | Host Pattern                   | Used By                      |
 | ----------- | ------------------------------ | ---------------------------- |
 | Development | `ep-aged-cherry-*`             | Local dev, some scripts      |
 | Production  | `ep-wispy-recipe-*` or similar | Vercel deployment, prod data |
 
-**Always verify which database you're connecting to** by checking the console output:
+**Always verify which database you're connecting to**:
 
 ```
 [DB] Connecting to database host: ep-xxxxx-pooler.us-east-1.aws.neon.tech
 ```
 
-## Key Tables for Debugging
+### Key Tables
 
 | Table                | Purpose                                        |
 | -------------------- | ---------------------------------------------- |
@@ -67,66 +160,9 @@ Zero Finance uses **Neon Postgres**. There are typically two databases:
 | `users`              | User records with `primaryWorkspaceId`         |
 | `workspace_members`  | User-workspace membership                      |
 | `earn_deposits`      | Vault deposit records                          |
+| `ai_email_sessions`  | AI email agent conversation sessions           |
 
-## Common Issues
-
-### 1. Safe Not Found for Workspace
-
-**Symptom**: `Safe not found for the active workspace` error
-
-**Debug steps**:
-
-```typescript
-// Check if Safe exists
-const safe = await db.query.userSafes.findFirst({
-  where: eq(userSafes.safeAddress, '0x...'),
-});
-
-// Check user's primary workspace
-const user = await db.query.users.findFirst({
-  where: eq(users.privyDid, safe.userDid),
-});
-
-// Verify they match
-console.log('Safe workspace:', safe.workspaceId);
-console.log('User primary workspace:', user.primaryWorkspaceId);
-```
-
-### 2. Vault Redemptions Showing as "Received"
-
-**Symptom**: Transfers FROM vault addresses appear as incoming deposits
-
-**Fix**: Filter by known vault addresses from `all-vault-addresses.ts`:
-
-```typescript
-import { ALL_VAULT_ADDRESSES } from './src/server/earn/all-vault-addresses';
-
-// Check if address is a vault
-const isVault = ALL_VAULT_ADDRESSES.has(fromAddress.toLowerCase());
-```
-
-### 3. Empty Transaction Tables
-
-**Symptom**: `incomingDeposits` or `outgoingTransfers` tables are empty
-
-**Cause**: The `syncSafeTransactions` mutation hasn't been called, or migrations weren't run.
-
-**Fix**:
-
-1. Check if migration `0120_flashy_devos.sql` was applied
-2. Trigger a sync from the UI or call the mutation directly
-
-## Running Migrations on Production
-
-```bash
-cd packages/web
-
-# Load prod env and run migrations
-POSTGRES_URL="$(grep POSTGRES_URL .env.production.local | cut -d'=' -f2 | tr -d '"')" \
-  pnpm tsx scripts/migrate.ts
-```
-
-## Script Template
+### Script Template
 
 ```typescript
 import * as dotenv from 'dotenv';
@@ -147,10 +183,65 @@ main()
   .catch(console.error);
 ```
 
+## Common Issues
+
+### 1. "Internal server error" from API endpoint
+
+**Debug steps**:
+
+1. Check Vercel logs for the specific endpoint
+2. Look for stack traces or error messages
+3. Test with curl to see response:
+   ```bash
+   curl -s -X POST "https://www.0.finance/api/endpoint" \
+     -H "Content-Type: application/json" \
+     -d '{"test": true}'
+   ```
+
+### 2. Code changes not taking effect
+
+**Causes**:
+
+- Deployment not complete yet
+- Environment variables not updated (need redeploy)
+- Caching issues
+
+**Fix**:
+
+1. Verify new deployment exists: `vercel ls --scope prologe | head -3`
+2. Check deployment time matches your push
+3. Force redeploy if needed: `vercel --prod --scope prologe`
+
+### 3. Safe Not Found for Workspace
+
+**Debug**:
+
+```typescript
+const safe = await db.query.userSafes.findFirst({
+  where: eq(userSafes.safeAddress, '0x...'),
+});
+const user = await db.query.users.findFirst({
+  where: eq(users.privyDid, safe.userDid),
+});
+console.log('Safe workspace:', safe.workspaceId);
+console.log('User primary workspace:', user.primaryWorkspaceId);
+```
+
+### 4. Environment variable not working
+
+```bash
+# Check it's set in Vercel
+vercel env ls --scope prologe | grep VAR_NAME
+
+# Check which environments it's set for (production, preview, development)
+# May need to redeploy for changes to take effect
+```
+
 ## When to Use This Skill
 
-- Investigating production data issues
-- Running one-off cleanup scripts
-- Debugging workspace/Safe mismatches
-- Checking if migrations were applied
-- Syncing transaction data manually
+- Investigating production API errors
+- Checking if deployments completed
+- Viewing function logs
+- Debugging database/data issues
+- Verifying environment variables
+- Running one-off database scripts
