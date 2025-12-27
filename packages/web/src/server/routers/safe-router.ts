@@ -19,7 +19,7 @@ import {
   workspaceMembers,
 } from '@/db/schema';
 import type { UserSafe } from '@/db/schema';
-import { eq, and, desc, or, isNull } from 'drizzle-orm';
+import { eq, and, desc, or, isNull, sql } from 'drizzle-orm';
 import { formatUnits } from 'viem';
 import { USDC_ADDRESS, USDC_DECIMALS } from '@/lib/constants';
 import { ALL_VAULT_ADDRESSES } from '../earn/all-vault-addresses';
@@ -324,9 +324,10 @@ export const safeRouter = router({
       const transactions: TransactionItem[] = [];
 
       // Step 1: Fetch incoming deposits from our DB
+      // Use case-insensitive comparison since addresses may be stored with different casing
       const deposits = await db.query.incomingDeposits.findMany({
         where: and(
-          eq(incomingDeposits.safeAddress, safeAddress),
+          sql`lower(${incomingDeposits.safeAddress}) = ${safeAddress.toLowerCase()}`,
           or(
             eq(incomingDeposits.workspaceId, workspaceId),
             isNull(incomingDeposits.workspaceId),
@@ -357,9 +358,10 @@ export const safeRouter = router({
       }
 
       // Step 2: Fetch outgoing transfers from our DB
+      // Use case-insensitive comparison since addresses may be stored with different casing
       const outgoing = await db.query.outgoingTransfers.findMany({
         where: and(
-          eq(outgoingTransfers.safeAddress, safeAddress),
+          sql`lower(${outgoingTransfers.safeAddress}) = ${safeAddress.toLowerCase()}`,
           or(
             eq(outgoingTransfers.workspaceId, workspaceId),
             isNull(outgoingTransfers.workspaceId),
@@ -469,10 +471,10 @@ export const safeRouter = router({
               incomingRecords.push({
                 userDid: userId,
                 workspaceId,
-                safeAddress: safeAddress as `0x${string}`,
+                safeAddress: safeAddress.toLowerCase() as `0x${string}`,
                 txHash: transfer.transactionHash as `0x${string}`,
-                fromAddress: transfer.from as `0x${string}`,
-                tokenAddress: USDC_ADDRESS as `0x${string}`,
+                fromAddress: transfer.from.toLowerCase() as `0x${string}`,
+                tokenAddress: USDC_ADDRESS.toLowerCase() as `0x${string}`,
                 amount: BigInt(transfer.value).toString(),
                 blockNumber: BigInt(transfer.blockNumber),
                 timestamp: new Date(transfer.executionDate),
@@ -574,10 +576,10 @@ export const safeRouter = router({
             outgoingRecords.push({
               userDid: userId,
               workspaceId,
-              safeAddress: safeAddress as `0x${string}`,
+              safeAddress: safeAddress.toLowerCase() as `0x${string}`,
               txHash: tx.transactionHash as `0x${string}`,
-              toAddress: toAddress as `0x${string}`,
-              tokenAddress,
+              toAddress: toAddress.toLowerCase() as `0x${string}`,
+              tokenAddress: tokenAddress?.toLowerCase() || null,
               tokenSymbol,
               tokenDecimals,
               amount,
