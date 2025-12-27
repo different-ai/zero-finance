@@ -16,13 +16,13 @@ import {
   incomingDeposits,
   outgoingTransfers,
   userSafes,
-  earnDeposits,
   workspaceMembers,
 } from '@/db/schema';
 import type { UserSafe } from '@/db/schema';
 import { eq, and, desc, or, isNull } from 'drizzle-orm';
 import { formatUnits } from 'viem';
 import { USDC_ADDRESS, USDC_DECIMALS } from '@/lib/constants';
+import { ALL_VAULT_ADDRESSES } from '../earn/all-vault-addresses';
 
 // Base Sepolia URL (Use Base Mainnet URL for production)
 // const BASE_TRANSACTION_SERVICE_URL = 'https://safe-transaction-base-sepolia.safe.global/api';
@@ -426,21 +426,10 @@ export const safeRouter = router({
       let incomingSynced = 0;
       let outgoingSynced = 0;
 
-      // Get vault addresses to filter out vault withdrawals from incoming
-      const userVaults = await db.query.earnDeposits.findMany({
-        where: and(
-          eq(earnDeposits.userDid, userId),
-          eq(earnDeposits.safeAddress, safeAddress),
-          or(
-            eq(earnDeposits.workspaceId, workspaceId),
-            isNull(earnDeposits.workspaceId),
-          ),
-        ),
-        columns: { vaultAddress: true },
-      });
-      const vaultAddresses = new Set(
-        userVaults.map((v) => v.vaultAddress.toLowerCase()),
-      );
+      // Use the global set of ALL known vault addresses to filter out vault withdrawals.
+      // This includes all vaults from base-vaults, arbitrum-vaults, optimism-vaults, gnosis-vaults.
+      // Transfers FROM these addresses are vault redemptions, not regular "Received" transactions.
+      const vaultAddresses = ALL_VAULT_ADDRESSES;
 
       // Step 1: Sync incoming transfers (batch upsert)
       try {
