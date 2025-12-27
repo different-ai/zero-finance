@@ -94,8 +94,8 @@ export function DashboardSummary({
       {/* Balance Card - Spendable | Earning | Idle */}
       <div
         className={cn(
-          'flex-1 grid gap-4 p-6',
-          'grid-cols-1 md:grid-cols-3',
+          'flex-1 grid gap-4 p-4 sm:p-6',
+          'grid-cols-1 lg:grid-cols-3',
           isTechnical
             ? 'border border-[#1B29FF]/20'
             : 'border border-[#101010]/10',
@@ -117,8 +117,8 @@ export function DashboardSummary({
             className={cn(
               'tabular-nums',
               isTechnical
-                ? 'font-mono text-[28px] text-[#101010]'
-                : 'text-[32px] font-semibold text-[#101010]',
+                ? 'font-mono text-[24px] lg:text-[28px] text-[#101010]'
+                : 'text-[24px] sm:text-[28px] lg:text-[32px] font-semibold text-[#101010]',
             )}
           >
             {formatUsd(spendableBalance)}
