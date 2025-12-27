@@ -826,6 +826,60 @@ export const incomingDeposits = pgTable(
 //   }),
 // }));
 
+// --- OUTGOING TRANSFERS (Safe-initiated transactions) ----------------------
+export const outgoingTransfers = pgTable(
+  'outgoing_transfers',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userDid: text('user_did')
+      .notNull()
+      .references(() => users.privyDid, { onDelete: 'cascade' }),
+    workspaceId: uuid('workspace_id'),
+    safeAddress: varchar('safe_address', { length: 42 }).notNull(),
+    txHash: varchar('tx_hash', { length: 66 }).notNull().unique(),
+    toAddress: varchar('to_address', { length: 42 }).notNull(),
+    tokenAddress: varchar('token_address', { length: 42 }), // null for ETH transfers
+    tokenSymbol: varchar('token_symbol', { length: 20 }),
+    tokenDecimals: integer('token_decimals'),
+    amount: largeIntNumeric('amount').notNull(), // Amount in smallest unit
+    blockNumber: bigint('block_number', { mode: 'bigint' }).notNull(),
+    timestamp: timestamp('timestamp', { withTimezone: true }).notNull(),
+
+    // Transaction type classification
+    txType: varchar('tx_type', { length: 50 }), // 'transfer', 'approve', 'deposit', 'withdraw', etc.
+    methodName: varchar('method_name', { length: 100 }), // Decoded method name
+
+    // Metadata
+    metadata: jsonb('metadata'), // Additional data like decoded parameters, labels, etc.
+
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => {
+    return {
+      safeAddressIdx: index('outgoing_transfers_safe_address_idx').on(
+        table.safeAddress,
+      ),
+      txHashIdx: index('outgoing_transfers_tx_hash_idx').on(table.txHash),
+      userDidIdx: index('outgoing_transfers_user_did_idx').on(table.userDid),
+      workspaceIdx: index('outgoing_transfers_workspace_idx').on(
+        table.workspaceId,
+      ),
+      timestampIdx: index('outgoing_transfers_timestamp_idx').on(
+        table.timestamp,
+      ),
+    };
+  },
+);
+
+export type OutgoingTransfer = typeof outgoingTransfers.$inferSelect;
+export type NewOutgoingTransfer = typeof outgoingTransfers.$inferInsert;
+
 // --- AUTO-EARN CONFIGS ------------------------------------------------------
 export const autoEarnConfigs = pgTable(
   'auto_earn_configs',

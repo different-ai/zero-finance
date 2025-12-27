@@ -12,7 +12,12 @@ import {
 } from 'viem';
 import { base } from 'viem/chains';
 import { db } from '@/db';
-import { incomingDeposits, userSafes, earnDeposits } from '@/db/schema';
+import {
+  incomingDeposits,
+  outgoingTransfers,
+  userSafes,
+  earnDeposits,
+} from '@/db/schema';
 import type { UserSafe } from '@/db/schema';
 import { eq, and, desc, or, isNull } from 'drizzle-orm';
 import { formatUnits } from 'viem';
@@ -286,7 +291,8 @@ export const safeRouter = router({
     }),
 
   /**
-   * Fetches enriched transaction history with sweep information
+   * Fetches enriched transaction history from our database.
+   * Call syncSafeTransactions first to ensure DB is up-to-date.
    */
   getEnrichedTransactions: protectedProcedure
     .input(
@@ -297,232 +303,299 @@ export const safeRouter = router({
             message: 'Invalid Ethereum address',
           }),
         limit: z.number().optional().default(100),
-        syncFromBlockchain: z.boolean().optional().default(true),
+        // Keep for backwards compatibility but ignored - use syncSafeTransactions instead
+        syncFromBlockchain: z.boolean().optional().default(false),
       }),
     )
     .query(async ({ input, ctx }): Promise<TransactionItem[]> => {
-      const { safeAddress, limit = 100, syncFromBlockchain = true } = input;
+      const { safeAddress, limit = 100 } = input;
+      const safeRecord = await getSafeForWorkspace(ctx, safeAddress);
+      const workspaceId = safeRecord.workspaceId;
+
+      console.log(
+        `[getEnrichedTransactions] Querying DB for safe: ${safeAddress} (workspace: ${workspaceId})`,
+      );
+
+      const transactions: TransactionItem[] = [];
+
+      // Step 1: Fetch incoming deposits from our DB
+      const deposits = await db.query.incomingDeposits.findMany({
+        where: and(
+          eq(incomingDeposits.safeAddress, safeAddress),
+          or(
+            eq(incomingDeposits.workspaceId, workspaceId),
+            isNull(incomingDeposits.workspaceId),
+          ),
+        ),
+        orderBy: (d, { desc: descFn }) => [descFn(d.timestamp)],
+        limit: limit,
+      });
+
+      for (const deposit of deposits) {
+        transactions.push({
+          type: 'incoming',
+          hash: deposit.txHash,
+          timestamp: deposit.timestamp.getTime(),
+          from: deposit.fromAddress,
+          to: safeAddress,
+          value: deposit.amount?.toString(),
+          tokenAddress: deposit.tokenAddress,
+          tokenSymbol: 'USDC',
+          tokenDecimals: USDC_DECIMALS,
+          // Sweep data
+          swept: deposit.swept,
+          sweptAmount: deposit.sweptAmount?.toString(),
+          sweptPercentage: deposit.sweptPercentage ?? undefined,
+          sweptTxHash: deposit.sweptTxHash ?? undefined,
+          sweptAt: deposit.sweptAt?.getTime(),
+        });
+      }
+
+      // Step 2: Fetch outgoing transfers from our DB
+      const outgoing = await db.query.outgoingTransfers.findMany({
+        where: and(
+          eq(outgoingTransfers.safeAddress, safeAddress),
+          or(
+            eq(outgoingTransfers.workspaceId, workspaceId),
+            isNull(outgoingTransfers.workspaceId),
+          ),
+        ),
+        orderBy: (t, { desc: descFn }) => [descFn(t.timestamp)],
+        limit: limit,
+      });
+
+      for (const tx of outgoing) {
+        transactions.push({
+          type: 'outgoing',
+          hash: tx.txHash,
+          timestamp: tx.timestamp.getTime(),
+          from: safeAddress,
+          to: tx.toAddress,
+          value: tx.amount?.toString(),
+          tokenAddress: tx.tokenAddress ?? undefined,
+          tokenSymbol: tx.tokenSymbol ?? undefined,
+          tokenDecimals: tx.tokenDecimals ?? undefined,
+          methodName: tx.methodName ?? undefined,
+        });
+      }
+
+      // Sort by timestamp descending
+      transactions.sort((a, b) => b.timestamp - a.timestamp);
+
+      console.log(
+        `[getEnrichedTransactions] Found ${deposits.length} incoming, ${outgoing.length} outgoing for ${safeAddress}`,
+      );
+
+      return transactions.slice(0, limit);
+    }),
+
+  /**
+   * Syncs Safe transactions from the Safe Transaction Service to our database.
+   * This includes both incoming transfers and outgoing (multisig) transactions.
+   * Should be called on component mount to ensure the DB is up-to-date.
+   */
+  syncSafeTransactions: protectedProcedure
+    .input(
+      z.object({
+        safeAddress: z
+          .string()
+          .refine((val) => /^0x[a-fA-F0-9]{40}$/.test(val), {
+            message: 'Invalid Ethereum address',
+          }),
+      }),
+    )
+    .mutation(async ({ input, ctx }) => {
+      const { safeAddress } = input;
       const safeRecord = await getSafeForWorkspace(ctx, safeAddress);
       const userId = safeRecord.userDid;
       const workspaceId = safeRecord.workspaceId;
 
       console.log(
-        `[getEnrichedTransactions] Querying for safe address: ${safeAddress} (user: ${userId}, workspace: ${workspaceId})`,
+        `[syncSafeTransactions] Syncing for safe: ${safeAddress} (user: ${userId}, workspace: ${workspaceId})`,
       );
 
-      // Step 1: Sync incoming deposits to our database (only if needed)
-      if (syncFromBlockchain) {
-        try {
-          // Fetch incoming transfers from Safe Transaction Service
-          const url = new URL(
-            `${BASE_TRANSACTION_SERVICE_URL}/v1/safes/${safeAddress}/incoming-transfers/`,
-          );
-          url.searchParams.append('limit', '100');
-          const apiUrl = url.toString();
+      let incomingSynced = 0;
+      let outgoingSynced = 0;
 
-          const response = await fetch(apiUrl);
-          if (response.ok) {
-            const data = await response.json();
-            const transfers = data.results || [];
+      // Get vault addresses to filter out vault withdrawals from incoming
+      const userVaults = await db.query.earnDeposits.findMany({
+        where: and(
+          eq(earnDeposits.userDid, userId),
+          eq(earnDeposits.safeAddress, safeAddress),
+          or(
+            eq(earnDeposits.workspaceId, workspaceId),
+            isNull(earnDeposits.workspaceId),
+          ),
+        ),
+        columns: { vaultAddress: true },
+      });
+      const vaultAddresses = new Set(
+        userVaults.map((v) => v.vaultAddress.toLowerCase()),
+      );
 
-            // Get all vault addresses for this user to filter out withdrawals
-            const userVaults = await db.query.earnDeposits.findMany({
-              where: and(
-                eq(earnDeposits.userDid, userId),
-                eq(earnDeposits.safeAddress, safeAddress),
-                or(
-                  eq(earnDeposits.workspaceId, workspaceId),
-                  isNull(earnDeposits.workspaceId),
-                ),
-              ),
-              columns: { vaultAddress: true },
-            });
+      // Step 1: Sync incoming transfers
+      try {
+        const incomingUrl = new URL(
+          `${BASE_TRANSACTION_SERVICE_URL}/v1/safes/${safeAddress}/incoming-transfers/`,
+        );
+        incomingUrl.searchParams.append('limit', '100');
 
-            const vaultAddresses = new Set(
-              userVaults.map((v) => v.vaultAddress.toLowerCase()),
-            );
-            console.log(
-              `[getEnrichedTransactions] Found ${vaultAddresses.size} vault addresses for filtering`,
-            );
+        const response = await fetch(incomingUrl.toString());
+        if (response.ok) {
+          const data = await response.json();
+          const transfers = data.results || [];
 
-            // Filter for USDC transfers that are NOT from vault addresses and store new ones
-            for (const transfer of transfers) {
-              if (
-                transfer.type === 'ERC20_TRANSFER' &&
-                transfer.tokenAddress?.toLowerCase() ===
-                  USDC_ADDRESS.toLowerCase() &&
-                transfer.to?.toLowerCase() === safeAddress.toLowerCase()
-              ) {
-                // Check if this is a vault withdrawal (should be filtered out)
-                const isFromVault = vaultAddresses.has(
-                  transfer.from.toLowerCase(),
-                );
-                if (isFromVault) {
-                  console.log(
-                    `[getEnrichedTransactions] Filtering out vault withdrawal: ${formatUnits(BigInt(transfer.value), USDC_DECIMALS)} USDC from vault ${transfer.from}`,
-                  );
-                  continue;
-                }
+          for (const transfer of transfers) {
+            // Only sync ERC20 USDC transfers TO the safe
+            if (
+              transfer.type === 'ERC20_TRANSFER' &&
+              transfer.tokenAddress?.toLowerCase() ===
+                USDC_ADDRESS.toLowerCase() &&
+              transfer.to?.toLowerCase() === safeAddress.toLowerCase()
+            ) {
+              // Skip vault withdrawals
+              if (vaultAddresses.has(transfer.from.toLowerCase())) {
+                continue;
+              }
 
-                // Check if we already have this transaction
-                const existing = await db.query.incomingDeposits.findFirst({
-                  where: eq(incomingDeposits.txHash, transfer.transactionHash),
+              // Check if already exists
+              const existing = await db.query.incomingDeposits.findFirst({
+                where: eq(incomingDeposits.txHash, transfer.transactionHash),
+              });
+
+              if (!existing) {
+                await db.insert(incomingDeposits).values({
+                  userDid: userId,
+                  workspaceId,
+                  safeAddress: safeAddress as `0x${string}`,
+                  txHash: transfer.transactionHash as `0x${string}`,
+                  fromAddress: transfer.from as `0x${string}`,
+                  tokenAddress: USDC_ADDRESS as `0x${string}`,
+                  amount: BigInt(transfer.value).toString(),
+                  blockNumber: BigInt(transfer.blockNumber),
+                  timestamp: new Date(transfer.executionDate),
+                  swept: false,
+                  metadata: {
+                    tokenInfo: transfer.tokenInfo,
+                    source: 'safe-transaction-service',
+                  },
                 });
-
-                if (!existing) {
-                  await db.insert(incomingDeposits).values({
-                    userDid: userId,
-                    workspaceId,
-                    safeAddress: safeAddress as `0x${string}`,
-                    txHash: transfer.transactionHash as `0x${string}`,
-                    fromAddress: transfer.from as `0x${string}`,
-                    tokenAddress: USDC_ADDRESS as `0x${string}`,
-                    amount: BigInt(transfer.value).toString(),
-                    blockNumber: BigInt(transfer.blockNumber),
-                    timestamp: new Date(transfer.executionDate),
-                    swept: false,
-                    metadata: {
-                      tokenInfo: transfer.tokenInfo,
-                      source: 'safe-transaction-service',
-                      isVaultWithdrawal: false, // Explicitly mark as not a vault withdrawal
-                    },
-                  });
-                  console.log(
-                    `[getEnrichedTransactions] Stored new deposit: ${formatUnits(
-                      BigInt(transfer.value),
-                      USDC_DECIMALS,
-                    )} USDC from ${transfer.from} (workspace: ${workspaceId})`,
-                  );
-                } else if (!existing.workspaceId) {
-                  await db
-                    .update(incomingDeposits)
-                    .set({ workspaceId })
-                    .where(eq(incomingDeposits.id, existing.id));
-                }
+                incomingSynced++;
+              } else if (!existing.workspaceId) {
+                // Update orphaned record with workspace
+                await db
+                  .update(incomingDeposits)
+                  .set({ workspaceId })
+                  .where(eq(incomingDeposits.id, existing.id));
               }
             }
           }
-        } catch (error) {
-          console.error('Error syncing incoming deposits:', error);
-          // Continue even if sync fails
         }
+      } catch (error) {
+        console.error('[syncSafeTransactions] Error syncing incoming:', error);
       }
 
-      // Step 2: Fetch ALL transactions from Safe Transaction Service
-      const allTxUrl = new URL(
-        `${BASE_TRANSACTION_SERVICE_URL}/v1/safes/${safeAddress}/all-transactions/`,
-      );
-      allTxUrl.searchParams.append('executed', 'true');
-      allTxUrl.searchParams.append('queued', 'false');
-      allTxUrl.searchParams.append('trusted', 'true');
-      allTxUrl.searchParams.append('limit', limit.toString());
-
+      // Step 2: Sync outgoing transfers (multisig transactions)
       try {
-        console.log(
-          `[getEnrichedTransactions] Fetching all transactions for ${safeAddress}`,
+        const outgoingUrl = new URL(
+          `${BASE_TRANSACTION_SERVICE_URL}/v1/safes/${safeAddress}/multisig-transactions/`,
         );
-        const response = await fetch(allTxUrl.toString());
+        outgoingUrl.searchParams.append('executed', 'true');
+        outgoingUrl.searchParams.append('limit', '100');
 
-        if (!response.ok) {
-          const errorBody = await response.text();
-          console.error(
-            `Error response from Safe Service (${response.status}): ${errorBody}`,
-          );
-          throw new Error(
-            `Failed to fetch data from Safe Transaction Service: ${response.statusText}`,
-          );
-        }
+        const response = await fetch(outgoingUrl.toString());
+        if (response.ok) {
+          const data = await response.json();
+          const transactions = data.results || [];
 
-        const data = await response.json();
+          for (const tx of transactions) {
+            if (!tx.transactionHash) continue;
 
-        if (!data || !data.results) {
-          console.error(
-            'Unexpected response structure from Safe Transaction Service',
-            data,
-          );
-          return [];
-        }
+            // Check if already exists
+            const existing = await db.query.outgoingTransfers.findFirst({
+              where: eq(outgoingTransfers.txHash, tx.transactionHash),
+            });
 
-        // Step 3: Get sweep data for incoming USDC deposits
-        const sweepDataMap = new Map<
-          string,
-          {
-            swept: boolean;
-            sweptAmount?: string;
-            sweptPercentage?: number;
-            sweptTxHash?: string;
-            sweptAt?: number;
-          }
-        >();
+            if (!existing) {
+              // Extract token info from transfers array if available
+              let tokenAddress: string | null = null;
+              let tokenSymbol: string | null = null;
+              let tokenDecimals: number | null = null;
+              let amount = '0';
+              let toAddress = tx.to || '';
 
-        // Fetch all sweep data at once
-        const deposits = await db.query.incomingDeposits.findMany({
-          where: and(
-            eq(incomingDeposits.safeAddress, safeAddress),
-            eq(incomingDeposits.tokenAddress, USDC_ADDRESS),
-            or(
-              eq(incomingDeposits.workspaceId, workspaceId),
-              isNull(incomingDeposits.workspaceId),
-            ),
-          ),
-        });
+              // Check transfers array for ERC20 transfers
+              if (tx.transfers && tx.transfers.length > 0) {
+                const erc20Transfer = tx.transfers.find(
+                  (t: any) =>
+                    t.type === 'ERC20_TRANSFER' &&
+                    t.from?.toLowerCase() === safeAddress.toLowerCase(),
+                );
+                if (erc20Transfer) {
+                  tokenAddress = erc20Transfer.tokenInfo?.address || null;
+                  tokenSymbol = erc20Transfer.tokenInfo?.symbol || null;
+                  tokenDecimals = erc20Transfer.tokenInfo?.decimals || null;
+                  amount = erc20Transfer.value || '0';
+                  toAddress = erc20Transfer.to || tx.to || '';
+                }
+              }
 
-        // Create a map for quick lookup
-        deposits.forEach((deposit) => {
-          sweepDataMap.set(deposit.txHash.toLowerCase(), {
-            swept: deposit.swept,
-            sweptAmount: deposit.sweptAmount?.toString(),
-            sweptPercentage: deposit.sweptPercentage ?? undefined,
-            sweptTxHash: deposit.sweptTxHash ?? undefined,
-            sweptAt: deposit.sweptAt?.getTime(),
-          });
-        });
+              // Fall back to decoded data for transfers
+              if (
+                amount === '0' &&
+                tx.dataDecoded?.method === 'transfer' &&
+                tx.dataDecoded.parameters
+              ) {
+                const valueParam = tx.dataDecoded.parameters.find(
+                  (p: any) => p.name === 'value' || p.name === 'amount',
+                );
+                const toParam = tx.dataDecoded.parameters.find(
+                  (p: any) => p.name === 'to' || p.name === 'recipient',
+                );
+                if (valueParam) amount = valueParam.value;
+                if (toParam) toAddress = toParam.value;
+                // tx.to is the token contract in this case
+                tokenAddress = tx.to;
+              }
 
-        // Step 4: Map and enrich transactions
-        const transactions: TransactionItem[] = data.results
-          .map((tx: TransactionItemFromService) => {
-            const mappedTx = mapTxItem(tx, safeAddress);
-            if (!mappedTx) return null;
-
-            // Check if this is an incoming USDC transfer and enrich with sweep data
-            const txHashLower = mappedTx.hash.toLowerCase();
-            if (
-              mappedTx.type === 'incoming' &&
-              mappedTx.tokenSymbol === 'USDC' &&
-              sweepDataMap.has(txHashLower)
-            ) {
-              const sweepData = sweepDataMap.get(txHashLower)!;
-              return {
-                ...mappedTx,
-                ...sweepData,
-              };
+              await db.insert(outgoingTransfers).values({
+                userDid: userId,
+                workspaceId,
+                safeAddress: safeAddress as `0x${string}`,
+                txHash: tx.transactionHash as `0x${string}`,
+                toAddress: toAddress as `0x${string}`,
+                tokenAddress,
+                tokenSymbol,
+                tokenDecimals,
+                amount,
+                blockNumber: BigInt(tx.blockNumber || 0),
+                timestamp: new Date(tx.executionDate),
+                txType: tx.dataDecoded?.method || 'unknown',
+                methodName: tx.dataDecoded?.method || null,
+                metadata: {
+                  dataDecoded: tx.dataDecoded,
+                  transfers: tx.transfers,
+                  value: tx.value,
+                },
+              });
+              outgoingSynced++;
+            } else if (!existing.workspaceId) {
+              await db
+                .update(outgoingTransfers)
+                .set({ workspaceId })
+                .where(eq(outgoingTransfers.id, existing.id));
             }
-
-            return mappedTx;
-          })
-          .filter(
-            (tx: TransactionItem | null): tx is TransactionItem => tx !== null,
-          )
-          .sort(
-            (a: TransactionItem, b: TransactionItem) =>
-              b.timestamp - a.timestamp,
-          );
-
-        console.log(
-          `[getEnrichedTransactions] Found ${transactions.length} transactions for ${safeAddress}`,
-        );
-        return transactions.slice(0, limit);
-      } catch (error: any) {
-        console.error(
-          `Error fetching enriched transactions for Safe ${safeAddress}:`,
-          error.message,
-        );
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Failed to fetch enriched transaction history.',
-          cause: error,
-        });
+          }
+        }
+      } catch (error) {
+        console.error('[syncSafeTransactions] Error syncing outgoing:', error);
       }
+
+      console.log(
+        `[syncSafeTransactions] Synced ${incomingSynced} incoming, ${outgoingSynced} outgoing for ${safeAddress}`,
+      );
+
+      return { incomingSynced, outgoingSynced };
     }),
 
   /**

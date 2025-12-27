@@ -700,10 +700,10 @@ export function UnifiedActivity() {
     error: bankError,
   } = trpc.align.getBankingHistory.useQuery({ limit: 50 });
 
-  // Fetch crypto transactions
+  // Fetch crypto transactions (from our DB - synced separately)
   const { data: cryptoTxs, isLoading: isLoadingCrypto } =
     trpc.safe.getEnrichedTransactions.useQuery(
-      { safeAddress: primarySafeAddress!, limit: 20, syncFromBlockchain: true },
+      { safeAddress: primarySafeAddress!, limit: 50 },
       { enabled: !!primarySafeAddress },
     );
 
@@ -714,20 +714,30 @@ export function UnifiedActivity() {
   const syncOfframp = trpc.align.syncOfframpTransfers.useMutation({
     onSettled: () => utils.align.getBankingHistory.invalidate(),
   });
+  const syncSafeTransactions = trpc.safe.syncSafeTransactions.useMutation({
+    onSettled: () => utils.safe.getEnrichedTransactions.invalidate(),
+  });
   const dismissTransfer = trpc.align.dismissOfframpTransfer.useMutation({
     onSuccess: () => utils.align.getBankingHistory.invalidate(),
   });
 
-  // Initial sync
+  // Initial sync - sync all data sources on component mount
   React.useEffect(() => {
     if (hasSyncedRef.current) return;
     hasSyncedRef.current = true;
 
+    // Sync bank transfers
     Promise.allSettled([
       syncVAHistory.mutateAsync(),
       syncOfframp.mutateAsync(),
     ]);
   }, [syncVAHistory, syncOfframp]);
+
+  // Sync Safe transactions when we have the Safe address
+  React.useEffect(() => {
+    if (!primarySafeAddress) return;
+    syncSafeTransactions.mutate({ safeAddress: primarySafeAddress });
+  }, [primarySafeAddress, syncSafeTransactions]);
 
   // Merge transactions
   const unifiedTransactions = useMemo(() => {
@@ -757,7 +767,9 @@ export function UnifiedActivity() {
     await Promise.allSettled([
       syncVAHistory.mutateAsync(),
       syncOfframp.mutateAsync(),
-      utils.safe.getEnrichedTransactions.invalidate(),
+      primarySafeAddress
+        ? syncSafeTransactions.mutateAsync({ safeAddress: primarySafeAddress })
+        : Promise.resolve(),
     ]);
     setIsRefreshing(false);
   };
