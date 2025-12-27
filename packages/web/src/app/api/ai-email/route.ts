@@ -197,24 +197,50 @@ export async function POST(request: NextRequest) {
     // Read raw body for signature verification
     rawBody = await request.text();
     const headersObj = await getHeadersObject();
+    const contentType = headersObj['content-type'] || '';
 
-    console.log(
-      '[AI Email] Received request, content-type:',
-      headersObj['content-type'],
-    );
+    console.log('[AI Email] Received request, content-type:', contentType);
     console.log('[AI Email] Body preview:', rawBody.substring(0, 200));
 
-    // Handle provider-specific webhook handshakes (e.g., SNS subscription confirmation)
+    // Parse the payload based on content type
     let payload: unknown;
-    try {
-      payload = JSON.parse(rawBody);
-    } catch (parseError) {
-      console.log('[AI Email] Failed to parse JSON body:', parseError);
-      return NextResponse.json(
-        { error: 'Invalid JSON payload' },
-        { status: 400 },
+
+    if (contentType.includes('application/x-www-form-urlencoded')) {
+      // SNS sometimes sends form-urlencoded data for subscription confirmation
+      // Parse as URL search params and convert to object
+      const params = new URLSearchParams(rawBody);
+      const formData: Record<string, string> = {};
+      params.forEach((value, key) => {
+        formData[key] = value;
+      });
+
+      // Check if this is an SNS message embedded in form data
+      if (formData.Message) {
+        try {
+          payload = JSON.parse(formData.Message);
+        } catch {
+          payload = formData;
+        }
+      } else {
+        payload = formData;
+      }
+      console.log(
+        '[AI Email] Parsed form-urlencoded payload:',
+        Object.keys(formData),
       );
+    } else {
+      // Standard JSON payload
+      try {
+        payload = JSON.parse(rawBody);
+      } catch (parseError) {
+        console.log('[AI Email] Failed to parse JSON body:', parseError);
+        return NextResponse.json(
+          { error: 'Invalid JSON payload' },
+          { status: 400 },
+        );
+      }
     }
+
     if (emailProvider.handleWebhookHandshake) {
       const handshakeResponse = await emailProvider.handleWebhookHandshake(
         payload,
