@@ -101,6 +101,9 @@ export class SESProvider implements EmailProvider {
     let sesNotification: {
       notificationType: string;
       content: string;
+      receipt: {
+        recipients: string[]; // The actual envelope RCPT TO addresses
+      };
       mail: {
         messageId: string;
         source: string;
@@ -119,6 +122,10 @@ export class SESProvider implements EmailProvider {
       console.log(
         '[SESProvider] Parsed SES notification type:',
         sesNotification.notificationType,
+      );
+      console.log(
+        '[SESProvider] SES receipt.recipients (envelope RCPT TO):',
+        sesNotification.receipt?.recipients,
       );
       console.log(
         '[SESProvider] SES mail.destination:',
@@ -162,9 +169,13 @@ export class SESProvider implements EmailProvider {
         '[SESProvider] MIME parsing failed, using fallback from mail headers',
       );
       const mail = sesNotification.mail;
+      const receipt = sesNotification.receipt;
+      // Prefer receipt.recipients (envelope RCPT TO) as it's the most reliable
+      const toAddresses =
+        receipt?.recipients || mail.commonHeaders.to || mail.destination;
       const fallbackEmail = {
         from: mail.commonHeaders.from?.[0] || mail.source,
-        to: mail.commonHeaders.to || mail.destination,
+        to: toAddresses,
         subject: mail.commonHeaders.subject || '',
         text: rawEmail, // Raw content as fallback
         headers: {},
@@ -173,6 +184,17 @@ export class SESProvider implements EmailProvider {
       console.log('[SESProvider] Fallback email from:', fallbackEmail.from);
       console.log('[SESProvider] Fallback email to:', fallbackEmail.to);
       return fallbackEmail;
+    }
+
+    // If MIME parsing succeeded but 'to' is empty, use receipt.recipients
+    if (!parsedEmail.to || parsedEmail.to.length === 0) {
+      console.log(
+        '[SESProvider] MIME parsed but to is empty, using receipt.recipients',
+      );
+      parsedEmail.to =
+        sesNotification.receipt?.recipients ||
+        sesNotification.mail?.destination ||
+        [];
     }
 
     console.log('[SESProvider] Parsed email from:', parsedEmail.from);
