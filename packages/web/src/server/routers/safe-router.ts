@@ -17,6 +17,7 @@ import {
   outgoingTransfers,
   userSafes,
   earnDeposits,
+  workspaceMembers,
 } from '@/db/schema';
 import type { UserSafe } from '@/db/schema';
 import { eq, and, desc, or, isNull } from 'drizzle-orm';
@@ -302,15 +303,19 @@ export const safeRouter = router({
           .refine((val) => /^0x[a-fA-F0-9]{40}$/.test(val), {
             message: 'Invalid Ethereum address',
           }),
+        workspaceId: z.string().uuid(),
         limit: z.number().optional().default(100),
         // Keep for backwards compatibility but ignored - use syncSafeTransactions instead
         syncFromBlockchain: z.boolean().optional().default(false),
       }),
     )
     .query(async ({ input, ctx }): Promise<TransactionItem[]> => {
-      const { safeAddress, limit = 100 } = input;
-      const safeRecord = await getSafeForWorkspace(ctx, safeAddress);
-      const workspaceId = safeRecord.workspaceId;
+      const { safeAddress, workspaceId, limit = 100 } = input;
+      const safeRecord = await getSafeForWorkspace(
+        ctx,
+        safeAddress,
+        workspaceId,
+      );
 
       console.log(
         `[getEnrichedTransactions] Querying DB for safe: ${safeAddress} (workspace: ${workspaceId})`,
@@ -402,13 +407,17 @@ export const safeRouter = router({
           .refine((val) => /^0x[a-fA-F0-9]{40}$/.test(val), {
             message: 'Invalid Ethereum address',
           }),
+        workspaceId: z.string().uuid(),
       }),
     )
     .mutation(async ({ input, ctx }) => {
-      const { safeAddress } = input;
-      const safeRecord = await getSafeForWorkspace(ctx, safeAddress);
+      const { safeAddress, workspaceId } = input;
+      const safeRecord = await getSafeForWorkspace(
+        ctx,
+        safeAddress,
+        workspaceId,
+      );
       const userId = safeRecord.userDid;
-      const workspaceId = safeRecord.workspaceId;
 
       console.log(
         `[syncSafeTransactions] Syncing for safe: ${safeAddress} (workspace: ${workspaceId})`,
@@ -728,22 +737,51 @@ function requirePrivyDid(ctx: {
   return privyDid;
 }
 
+/**
+ * Verifies that a user is a member of the specified workspace.
+ * Throws FORBIDDEN if the user is not a member.
+ */
+async function verifyWorkspaceMembership(
+  userId: string,
+  workspaceId: string,
+): Promise<void> {
+  const membership = await db.query.workspaceMembers.findFirst({
+    where: and(
+      eq(workspaceMembers.userId, userId),
+      eq(workspaceMembers.workspaceId, workspaceId),
+    ),
+  });
+
+  if (!membership) {
+    throw new TRPCError({
+      code: 'FORBIDDEN',
+      message: 'You do not have access to this workspace.',
+    });
+  }
+}
+
+/**
+ * Gets a Safe record after verifying workspace membership.
+ * The workspaceId is passed explicitly from the client (not from ctx).
+ */
 async function getSafeForWorkspace(
   ctx: {
     user?: { id?: string | null };
     userId?: string | null;
-    workspaceId?: string | null;
   },
   safeAddress: string,
+  workspaceId: string,
 ): Promise<SafeWithWorkspace> {
   const privyDid = requirePrivyDid(ctx);
-  const workspaceId = requireWorkspaceId(ctx.workspaceId);
   const normalizedSafeAddress = getAddress(safeAddress);
 
+  // Step 1: Verify user is a member of this workspace
+  await verifyWorkspaceMembership(privyDid, workspaceId);
+
+  // Step 2: Find the Safe in this workspace
   const safeRecord = await db.query.userSafes.findFirst({
     where: (tbl, helpers) =>
       helpers.and(
-        helpers.eq(tbl.userDid, privyDid),
         helpers.eq(tbl.safeAddress, normalizedSafeAddress as `0x${string}`),
         helpers.or(
           helpers.eq(tbl.workspaceId, workspaceId),
@@ -755,10 +793,11 @@ async function getSafeForWorkspace(
   if (!safeRecord) {
     throw new TRPCError({
       code: 'NOT_FOUND',
-      message: 'Safe not found for the active workspace.',
+      message: 'Safe not found for this workspace.',
     });
   }
 
+  // Step 3: Backfill workspaceId if missing
   if (!safeRecord.workspaceId) {
     await db
       .update(userSafes)

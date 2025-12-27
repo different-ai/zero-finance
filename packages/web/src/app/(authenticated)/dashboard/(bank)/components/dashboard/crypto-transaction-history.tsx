@@ -4,7 +4,19 @@ import { useState } from 'react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { ChevronRight, ExternalLink, Loader2, AlertCircle, ArrowUpRight, ArrowDownLeft, Code, Shield, Plus, TrendingUp, RefreshCw } from 'lucide-react';
+import {
+  ChevronRight,
+  ExternalLink,
+  Loader2,
+  AlertCircle,
+  ArrowUpRight,
+  ArrowDownLeft,
+  Code,
+  Shield,
+  Plus,
+  TrendingUp,
+  RefreshCw,
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useUserSafes } from '@/hooks/use-user-safes';
 import type { Address } from 'viem';
@@ -19,7 +31,7 @@ interface TransactionItem {
   timestamp: number;
   from?: string;
   to?: string;
-  value?: string; 
+  value?: string;
   tokenAddress?: string;
   tokenSymbol?: string;
   tokenDecimals?: number;
@@ -33,46 +45,51 @@ interface TransactionItem {
 const formatDate = (timestamp: number): string => {
   const now = Date.now();
   const diff = now - timestamp;
-  
+
   // Less than 1 minute
   if (diff < 60000) {
     return 'just now';
   }
-  
+
   // Less than 1 hour
   if (diff < 3600000) {
     const minutes = Math.floor(diff / 60000);
     return `${minutes} minute${minutes > 1 ? 's' : ''} ago`;
   }
-  
+
   // Less than 24 hours
   if (diff < 86400000) {
     const hours = Math.floor(diff / 3600000);
     return `about ${hours} hour${hours > 1 ? 's' : ''} ago`;
   }
-  
+
   // Less than 7 days
   if (diff < 604800000) {
     const days = Math.floor(diff / 86400000);
     return `${days} day${days > 1 ? 's' : ''} ago`;
   }
-  
+
   // Otherwise, show the date
   return new Date(timestamp).toLocaleDateString();
 };
 
-const formatCurrency = (value: string, decimals: number, symbol: string): string => {
+const formatCurrency = (
+  value: string,
+  decimals: number,
+  symbol: string,
+): string => {
   const formatted = formatUnits(BigInt(value), decimals);
   const num = parseFloat(formatted);
-  
+
   // Format with appropriate decimal places
-  const displayValue = num < 0.01 && num > 0 
-    ? '<0.01' 
-    : num.toLocaleString('en-US', {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      });
-  
+  const displayValue =
+    num < 0.01 && num > 0
+      ? '<0.01'
+      : num.toLocaleString('en-US', {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        });
+
   return `${displayValue} ${symbol}`;
 };
 
@@ -91,7 +108,10 @@ const getTransactionIcon = (type: TransactionItem['type']) => {
   }
 };
 
-const getTransactionColor = (type: TransactionItem['type'], methodName?: string) => {
+const getTransactionColor = (
+  type: TransactionItem['type'],
+  methodName?: string,
+) => {
   // For module transactions, check the method name for specific colors
   if (type === 'module' && methodName) {
     switch (methodName.toLowerCase()) {
@@ -111,7 +131,7 @@ const getTransactionColor = (type: TransactionItem['type'], methodName?: string)
         return 'bg-purple-500'; // Default module color
     }
   }
-  
+
   switch (type) {
     case 'incoming':
       return 'bg-green-500';
@@ -129,23 +149,29 @@ const getTransactionColor = (type: TransactionItem['type'], methodName?: string)
 const getTransactionTitle = (tx: TransactionItem): string => {
   // Check if this is a token transfer
   if (tx.tokenSymbol && (tx.type === 'incoming' || tx.type === 'outgoing')) {
-    return tx.type === 'incoming' ? `Received ${tx.tokenSymbol}` : `Sent ${tx.tokenSymbol}`;
+    return tx.type === 'incoming'
+      ? `Received ${tx.tokenSymbol}`
+      : `Sent ${tx.tokenSymbol}`;
   }
-  
+
   // Check method name for token transfers in module executions
   if (tx.type === 'module' && tx.methodName === 'transfer' && tx.tokenSymbol) {
     return `Sent ${tx.tokenSymbol}`;
   }
-  
-  if (tx.type === 'module' && tx.methodName === 'transferFrom' && tx.tokenSymbol) {
+
+  if (
+    tx.type === 'module' &&
+    tx.methodName === 'transferFrom' &&
+    tx.tokenSymbol
+  ) {
     return `Transfer ${tx.tokenSymbol}`;
   }
-  
+
   // ETH transfers
   if ((tx.type === 'incoming' || tx.type === 'outgoing') && !tx.tokenSymbol) {
     return tx.type === 'incoming' ? 'Received ETH' : 'Sent ETH';
   }
-  
+
   switch (tx.type) {
     case 'module':
       // Special handling for common module executions
@@ -171,69 +197,95 @@ const getTransactionDescription = (transaction: TransactionItem): string => {
   if (transaction.swept && transaction.sweptPercentage) {
     return `${transaction.sweptPercentage}% auto-saved • $${formatUnits(BigInt(transaction.sweptAmount || '0'), USDC_DECIMALS)}`;
   }
-  
+
   // Original logic
   if (transaction.from) {
-    const fromAddress = transaction.from.slice(0, 6) + '...' + transaction.from.slice(-4);
+    const fromAddress =
+      transaction.from.slice(0, 6) + '...' + transaction.from.slice(-4);
     if (transaction.type === 'incoming') {
       return `from ${fromAddress}`;
     } else if (transaction.type === 'outgoing' && transaction.to) {
-      const toAddress = transaction.to.slice(0, 6) + '...' + transaction.to.slice(-4);
+      const toAddress =
+        transaction.to.slice(0, 6) + '...' + transaction.to.slice(-4);
       return `to ${toAddress}`;
     }
   }
-  
+
   if (transaction.type === 'module' && transaction.to) {
-    const contractAddress = transaction.to.slice(0, 6) + '...' + transaction.to.slice(-4);
+    const contractAddress =
+      transaction.to.slice(0, 6) + '...' + transaction.to.slice(-4);
     return `Contract ${contractAddress}`;
   }
-  
+
   if (transaction.type === 'creation') {
     return 'Safe deployment';
   }
-  
+
   return 'Transaction';
 };
 
 export function CryptoTransactionHistory() {
-  const [selectedTransaction, setSelectedTransaction] = useState<string | null>(null);
+  const [selectedTransaction, setSelectedTransaction] = useState<string | null>(
+    null,
+  );
   const [isRefreshing, setIsRefreshing] = useState(false);
   const { data: userSafesData, isLoading: isLoadingSafes } = useUserSafes();
-  const primarySafeAddress = userSafesData?.find((s) => s.safeType === 'primary')?.safeAddress as Address | undefined;
+  const primarySafeAddress = userSafesData?.find(
+    (s) => s.safeType === 'primary',
+  )?.safeAddress as Address | undefined;
+
+  // Get current workspace context
+  const { data: workspaceData } =
+    trpc.workspace.getOrCreateWorkspace.useQuery();
+  const workspaceId = workspaceData?.workspaceId;
 
   // Debug logging
   console.log('[CryptoTransactionHistory] User safes data:', userSafesData);
-  console.log('[CryptoTransactionHistory] Primary safe address:', primarySafeAddress);
+  console.log(
+    '[CryptoTransactionHistory] Primary safe address:',
+    primarySafeAddress,
+  );
 
   // Fetch enriched transactions using new endpoint
-  const { 
-    data: transactionsData, 
-    isLoading: isLoadingTransactions, 
-    isError, 
+  const {
+    data: transactionsData,
+    isLoading: isLoadingTransactions,
+    isError,
     error,
-    refetch 
+    refetch,
   } = trpc.safe.getEnrichedTransactions.useQuery(
-    { safeAddress: primarySafeAddress!, limit: 10, syncFromBlockchain: true },
-    { 
-      enabled: !!primarySafeAddress,
+    {
+      safeAddress: primarySafeAddress!,
+      workspaceId: workspaceId!,
+      limit: 10,
+      syncFromBlockchain: true,
+    },
+    {
+      enabled: !!primarySafeAddress && !!workspaceId,
       refetchOnMount: true,
       refetchOnWindowFocus: true,
       staleTime: 0, // Data is immediately stale
       gcTime: 0, // Don't keep in cache after unmount (replaces cacheTime)
-    }
+    },
   );
 
   // Debug logging for transactions
-  console.log('[CryptoTransactionHistory] Transactions data:', transactionsData);
+  console.log(
+    '[CryptoTransactionHistory] Transactions data:',
+    transactionsData,
+  );
 
-  const isLoading = isLoadingSafes || (!!primarySafeAddress && isLoadingTransactions);
+  const isLoading =
+    isLoadingSafes || (!!primarySafeAddress && isLoadingTransactions);
 
   // Filter to show only USDC transactions
-  const recentTransactions = (transactionsData || []).filter(tx => 
-    tx.tokenSymbol === 'USDC' || 
-    (tx.tokenAddress && tx.tokenAddress.toLowerCase() === USDC_ADDRESS.toLowerCase())
+  const recentTransactions = (transactionsData || []).filter(
+    (tx) =>
+      tx.tokenSymbol === 'USDC' ||
+      (tx.tokenAddress &&
+        tx.tokenAddress.toLowerCase() === USDC_ADDRESS.toLowerCase()),
   );
-  
+
   const handleTransactionClick = (hash: string) => {
     window.open(`https://basescan.org/tx/${hash}`, '_blank');
   };
@@ -252,8 +304,12 @@ export function CryptoTransactionHistory() {
     <Card className="bg-white border-gray-200 rounded-2xl shadow-sm">
       <CardHeader className="pb-4 flex flex-row items-center justify-between">
         <div>
-          <h3 className="text-lg font-semibold text-gray-800">USDC Transaction History</h3>
-          <p className="text-sm text-gray-500">Primary Account USDC activity.</p>
+          <h3 className="text-lg font-semibold text-gray-800">
+            USDC Transaction History
+          </h3>
+          <p className="text-sm text-gray-500">
+            Primary Account USDC activity.
+          </p>
         </div>
         {primarySafeAddress && (
           <Button
@@ -263,7 +319,9 @@ export function CryptoTransactionHistory() {
             disabled={isLoading || isRefreshing}
             className="h-8 w-8 p-0"
           >
-            <RefreshCw className={cn("h-4 w-4", isRefreshing && "animate-spin")} />
+            <RefreshCw
+              className={cn('h-4 w-4', isRefreshing && 'animate-spin')}
+            />
           </Button>
         )}
       </CardHeader>
@@ -279,16 +337,21 @@ export function CryptoTransactionHistory() {
               <p className="text-sm font-medium">Error loading transactions</p>
             </div>
             <p className="text-sm text-gray-500 mt-1">
-              {error?.message || 'Could not fetch transaction details. Please try again later.'}
+              {error?.message ||
+                'Could not fetch transaction details. Please try again later.'}
             </p>
           </div>
         ) : !primarySafeAddress ? (
           <div className="px-6 py-8 text-center">
-            <p className="text-sm text-gray-500">Connect your primary Safe to view transaction history.</p>
+            <p className="text-sm text-gray-500">
+              Connect your primary Safe to view transaction history.
+            </p>
           </div>
         ) : recentTransactions.length === 0 ? (
           <div className="px-6 py-8 text-center">
-            <p className="text-sm text-gray-500">No USDC transactions found for this Safe.</p>
+            <p className="text-sm text-gray-500">
+              No USDC transactions found for this Safe.
+            </p>
           </div>
         ) : (
           <>
@@ -298,16 +361,24 @@ export function CryptoTransactionHistory() {
                   <button
                     onClick={() => handleTransactionClick(transaction.hash)}
                     className={cn(
-                      "w-full px-6 py-4 flex items-center gap-4 hover:bg-gray-50 transition-colors text-left group",
-                      selectedTransaction === transaction.hash && "bg-gray-50"
+                      'w-full px-6 py-4 flex items-center gap-4 hover:bg-gray-50 transition-colors text-left group',
+                      selectedTransaction === transaction.hash && 'bg-gray-50',
                     )}
                   >
-                    <Avatar className={cn("h-10 w-10", getTransactionColor(transaction.type, transaction.methodName))}>
+                    <Avatar
+                      className={cn(
+                        'h-10 w-10',
+                        getTransactionColor(
+                          transaction.type,
+                          transaction.methodName,
+                        ),
+                      )}
+                    >
                       <AvatarFallback className="text-white">
                         {getTransactionIcon(transaction.type)}
                       </AvatarFallback>
                     </Avatar>
-                    
+
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <p className="text-gray-800 font-medium truncate">
@@ -324,19 +395,19 @@ export function CryptoTransactionHistory() {
                         {getTransactionDescription(transaction)}
                       </p>
                     </div>
-                    
+
                     <div className="flex items-center gap-2">
                       <div className="text-right">
                         {transaction.value && (
                           <p className="text-gray-800 font-medium">
-                            {transaction.tokenSymbol === 'USDC' 
+                            {transaction.tokenSymbol === 'USDC'
                               ? `$${formatUnits(BigInt(transaction.value), USDC_DECIMALS)}`
-                              : transaction.tokenSymbol && transaction.tokenDecimals
+                              : transaction.tokenSymbol &&
+                                  transaction.tokenDecimals
                                 ? `${formatUnits(BigInt(transaction.value), transaction.tokenDecimals)} ${transaction.tokenSymbol}`
                                 : transaction.tokenSymbol
                                   ? `${transaction.value} ${transaction.tokenSymbol}`
-                                  : `${formatUnits(BigInt(transaction.value), 18)} ETH`
-                            }
+                                  : `${formatUnits(BigInt(transaction.value), 18)} ETH`}
                           </p>
                         )}
                         <p className="text-gray-500 text-sm">
@@ -346,7 +417,7 @@ export function CryptoTransactionHistory() {
                       <ExternalLink className="h-4 w-4 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" />
                     </div>
                   </button>
-                  
+
                   {/* Swept transaction link */}
                   {transaction.swept && transaction.sweptTxHash && (
                     <button
@@ -363,12 +434,17 @@ export function CryptoTransactionHistory() {
                 </div>
               ))}
             </div>
-            
+
             <div className="p-4 border-t border-gray-200">
               <Button
                 variant="ghost"
                 className="w-full text-[#0050ff] hover:text-[#0050ff]/90 hover:bg-[#0050ff]/5"
-                onClick={() => window.open(`https://basescan.org/address/${primarySafeAddress}`, '_blank')}
+                onClick={() =>
+                  window.open(
+                    `https://basescan.org/address/${primarySafeAddress}`,
+                    '_blank',
+                  )
+                }
               >
                 View all on Basescan
                 <ChevronRight className="h-4 w-4 ml-1" />
@@ -379,4 +455,4 @@ export function CryptoTransactionHistory() {
       </CardContent>
     </Card>
   );
-} 
+}

@@ -688,6 +688,11 @@ export function UnifiedActivity() {
   const hasSyncedBankRef = React.useRef(false);
   const hasSyncedSafeRef = React.useRef(false);
 
+  // Get current workspace context
+  const { data: workspaceData } =
+    trpc.workspace.getOrCreateWorkspace.useQuery();
+  const workspaceId = workspaceData?.workspaceId;
+
   // Get user's primary safe via getMultiChainPositions (user-scoped, not workspace-scoped)
   // This ensures consistency with balance queries per AGENTS.md guidelines
   const { data: positions } = trpc.earn.getMultiChainPositions.useQuery();
@@ -706,8 +711,12 @@ export function UnifiedActivity() {
   // Fetch crypto transactions (from our DB - synced separately)
   const { data: cryptoTxs, isLoading: isLoadingCrypto } =
     trpc.safe.getEnrichedTransactions.useQuery(
-      { safeAddress: primarySafeAddress!, limit: 50 },
-      { enabled: !!primarySafeAddress },
+      {
+        safeAddress: primarySafeAddress!,
+        workspaceId: workspaceId!,
+        limit: 50,
+      },
+      { enabled: !!primarySafeAddress && !!workspaceId },
     );
 
   // Sync mutations
@@ -739,13 +748,16 @@ export function UnifiedActivity() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Sync Safe transactions when we have the Safe address (once per address)
+  // Sync Safe transactions when we have the Safe address and workspace (once per address)
   // Note: We intentionally omit syncSafeTransactions from deps to prevent infinite loops.
   React.useEffect(() => {
-    if (!primarySafeAddress || hasSyncedSafeRef.current) return;
+    if (!primarySafeAddress || !workspaceId || hasSyncedSafeRef.current) return;
     hasSyncedSafeRef.current = true;
 
-    syncSafeTransactions.mutate({ safeAddress: primarySafeAddress });
+    syncSafeTransactions.mutate({
+      safeAddress: primarySafeAddress,
+      workspaceId,
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [primarySafeAddress]);
 
@@ -777,8 +789,11 @@ export function UnifiedActivity() {
     await Promise.allSettled([
       syncVAHistory.mutateAsync(),
       syncOfframp.mutateAsync(),
-      primarySafeAddress
-        ? syncSafeTransactions.mutateAsync({ safeAddress: primarySafeAddress })
+      primarySafeAddress && workspaceId
+        ? syncSafeTransactions.mutateAsync({
+            safeAddress: primarySafeAddress,
+            workspaceId,
+          })
         : Promise.resolve(),
     ]);
     setIsRefreshing(false);
