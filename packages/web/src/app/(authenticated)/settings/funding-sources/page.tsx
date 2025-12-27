@@ -12,7 +12,7 @@ export default function FundingSourcesPage() {
     <div className="min-h-screen bg-[#F7F7F2]">
       {/* Dashboard Header - Following Design Language */}
       <header className="sticky top-0 z-40 bg-[#F7F7F2] border-b border-[#101010]/10">
-        <div className="h-[60px] flex items-center px-4 sm:px-6 max-w-[1400px] mx-auto">
+        <div className="h-[60px] flex items-center px-4 sm:px-6 max-w-[1400px] mx-auto mt-1">
           <Link
             href="/settings"
             className="flex items-center text-[#101010]/60 hover:text-[#101010] transition-colors mr-4"

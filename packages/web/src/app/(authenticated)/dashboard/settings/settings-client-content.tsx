@@ -18,19 +18,7 @@ export function SettingsClientContent() {
   const { isTechnical } = useBimodal();
 
   const settingsOptions = [
-    {
-      id: 'preferences',
-      title: isTechnical ? 'PREFERENCES' : 'Preferences',
-      description: isTechnical
-        ? 'Configure interface mode, display settings, and system preferences'
-        : 'Customize your account view and interface settings',
-      icon: Settings2,
-      features: isTechnical
-        ? ['Interface mode', 'Display config']
-        : ['View mode', 'Display options'],
-      path: '/dashboard/settings/preferences',
-      technicalOnly: false,
-    },
+
     {
       id: 'advanced-wallet',
       title: isTechnical ? 'WALLET::ADVANCED' : 'Advanced Wallet Settings',
@@ -71,6 +59,7 @@ export function SettingsClientContent() {
       path: '/dashboard/settings/workspace',
       technicalOnly: false,
     },
+
     {
       id: 'team',
       title: isTechnical ? 'TEAM::MEMBERS' : 'Team',
@@ -85,16 +74,16 @@ export function SettingsClientContent() {
       technicalOnly: false,
     },
     {
-      id: 'integrations',
-      title: isTechnical ? 'API::INTEGRATIONS' : 'Workspace API Keys',
+      id: 'preferences',
+      title: isTechnical ? 'PREFERENCES' : 'Preferences',
       description: isTechnical
-        ? 'Create and manage MCP API keys for AI agent access (Claude, Cursor, etc.)'
-        : 'Connect AI agents to your workspace via the Model Context Protocol',
-      icon: Bot,
+        ? 'Configure interface mode, display settings, and system preferences'
+        : 'Customize your account view and interface settings',
+      icon: Settings2,
       features: isTechnical
-        ? ['MCP endpoint', 'API keys', 'Agent access']
-        : ['AI agents', 'API keys', 'Automations'],
-      path: '/dashboard/settings/integrations',
+        ? ['Interface mode', 'Display config']
+        : ['View mode', 'Display options'],
+      path: '/dashboard/settings/preferences',
       technicalOnly: false,
     },
     {
@@ -110,6 +99,20 @@ export function SettingsClientContent() {
       path: '/dashboard/settings/bank-accounts',
       technicalOnly: false,
     },
+    {
+      id: 'integrations',
+      title: isTechnical ? 'API::INTEGRATIONS' : 'Workspace API Keys',
+      description: isTechnical
+        ? 'Create and manage MCP API keys for AI agent access (Claude, Cursor, etc.)'
+        : 'Connect AI agents to your workspace via the Model Context Protocol',
+      icon: Bot,
+      features: isTechnical
+        ? ['MCP endpoint', 'API keys', 'Agent access']
+        : ['AI agents', 'API keys', 'Automations'],
+      path: '/dashboard/settings/integrations',
+      technicalOnly: false,
+    },
+
   ];
 
   // Filter options based on mode

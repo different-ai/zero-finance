@@ -391,7 +391,7 @@ export const safeRouter = router({
 
   /**
    * Syncs Safe transactions from the Safe Transaction Service to our database.
-   * This includes both incoming transfers and outgoing (multisig) transactions.
+   * Uses batch upserts for performance (no N+1 queries).
    * Should be called on component mount to ensure the DB is up-to-date.
    */
   syncSafeTransactions: protectedProcedure
@@ -411,7 +411,7 @@ export const safeRouter = router({
       const workspaceId = safeRecord.workspaceId;
 
       console.log(
-        `[syncSafeTransactions] Syncing for safe: ${safeAddress} (user: ${userId}, workspace: ${workspaceId})`,
+        `[syncSafeTransactions] Syncing for safe: ${safeAddress} (workspace: ${workspaceId})`,
       );
 
       let incomingSynced = 0;
@@ -433,7 +433,7 @@ export const safeRouter = router({
         userVaults.map((v) => v.vaultAddress.toLowerCase()),
       );
 
-      // Step 1: Sync incoming transfers
+      // Step 1: Sync incoming transfers (batch upsert)
       try {
         const incomingUrl = new URL(
           `${BASE_TRANSACTION_SERVICE_URL}/v1/safes/${safeAddress}/incoming-transfers/`,
@@ -445,57 +445,62 @@ export const safeRouter = router({
           const data = await response.json();
           const transfers = data.results || [];
 
+          // Build batch of records to insert
+          const incomingRecords: Array<{
+            userDid: string;
+            workspaceId: string;
+            safeAddress: `0x${string}`;
+            txHash: `0x${string}`;
+            fromAddress: `0x${string}`;
+            tokenAddress: `0x${string}`;
+            amount: string;
+            blockNumber: bigint;
+            timestamp: Date;
+            swept: boolean;
+            metadata: Record<string, unknown>;
+          }> = [];
+
           for (const transfer of transfers) {
-            // Only sync ERC20 USDC transfers TO the safe
             if (
               transfer.type === 'ERC20_TRANSFER' &&
               transfer.tokenAddress?.toLowerCase() ===
                 USDC_ADDRESS.toLowerCase() &&
-              transfer.to?.toLowerCase() === safeAddress.toLowerCase()
+              transfer.to?.toLowerCase() === safeAddress.toLowerCase() &&
+              !vaultAddresses.has(transfer.from.toLowerCase())
             ) {
-              // Skip vault withdrawals
-              if (vaultAddresses.has(transfer.from.toLowerCase())) {
-                continue;
-              }
-
-              // Check if already exists
-              const existing = await db.query.incomingDeposits.findFirst({
-                where: eq(incomingDeposits.txHash, transfer.transactionHash),
+              incomingRecords.push({
+                userDid: userId,
+                workspaceId,
+                safeAddress: safeAddress as `0x${string}`,
+                txHash: transfer.transactionHash as `0x${string}`,
+                fromAddress: transfer.from as `0x${string}`,
+                tokenAddress: USDC_ADDRESS as `0x${string}`,
+                amount: BigInt(transfer.value).toString(),
+                blockNumber: BigInt(transfer.blockNumber),
+                timestamp: new Date(transfer.executionDate),
+                swept: false,
+                metadata: {
+                  tokenInfo: transfer.tokenInfo,
+                  source: 'safe-transaction-service',
+                },
               });
-
-              if (!existing) {
-                await db.insert(incomingDeposits).values({
-                  userDid: userId,
-                  workspaceId,
-                  safeAddress: safeAddress as `0x${string}`,
-                  txHash: transfer.transactionHash as `0x${string}`,
-                  fromAddress: transfer.from as `0x${string}`,
-                  tokenAddress: USDC_ADDRESS as `0x${string}`,
-                  amount: BigInt(transfer.value).toString(),
-                  blockNumber: BigInt(transfer.blockNumber),
-                  timestamp: new Date(transfer.executionDate),
-                  swept: false,
-                  metadata: {
-                    tokenInfo: transfer.tokenInfo,
-                    source: 'safe-transaction-service',
-                  },
-                });
-                incomingSynced++;
-              } else if (!existing.workspaceId) {
-                // Update orphaned record with workspace
-                await db
-                  .update(incomingDeposits)
-                  .set({ workspaceId })
-                  .where(eq(incomingDeposits.id, existing.id));
-              }
             }
+          }
+
+          // Batch insert with ON CONFLICT DO NOTHING
+          if (incomingRecords.length > 0) {
+            const result = await db
+              .insert(incomingDeposits)
+              .values(incomingRecords)
+              .onConflictDoNothing({ target: incomingDeposits.txHash });
+            incomingSynced = incomingRecords.length;
           }
         }
       } catch (error) {
         console.error('[syncSafeTransactions] Error syncing incoming:', error);
       }
 
-      // Step 2: Sync outgoing transfers (multisig transactions)
+      // Step 2: Sync outgoing transfers (batch upsert)
       try {
         const outgoingUrl = new URL(
           `${BASE_TRANSACTION_SERVICE_URL}/v1/safes/${safeAddress}/multisig-transactions/`,
@@ -508,83 +513,95 @@ export const safeRouter = router({
           const data = await response.json();
           const transactions = data.results || [];
 
+          // Build batch of records to insert
+          const outgoingRecords: Array<{
+            userDid: string;
+            workspaceId: string;
+            safeAddress: `0x${string}`;
+            txHash: `0x${string}`;
+            toAddress: `0x${string}`;
+            tokenAddress: string | null;
+            tokenSymbol: string | null;
+            tokenDecimals: number | null;
+            amount: string;
+            blockNumber: bigint;
+            timestamp: Date;
+            txType: string;
+            methodName: string | null;
+            metadata: Record<string, unknown>;
+          }> = [];
+
           for (const tx of transactions) {
             if (!tx.transactionHash) continue;
 
-            // Check if already exists
-            const existing = await db.query.outgoingTransfers.findFirst({
-              where: eq(outgoingTransfers.txHash, tx.transactionHash),
-            });
+            let tokenAddress: string | null = null;
+            let tokenSymbol: string | null = null;
+            let tokenDecimals: number | null = null;
+            let amount = '0';
+            let toAddress = tx.to || '';
 
-            if (!existing) {
-              // Extract token info from transfers array if available
-              let tokenAddress: string | null = null;
-              let tokenSymbol: string | null = null;
-              let tokenDecimals: number | null = null;
-              let amount = '0';
-              let toAddress = tx.to || '';
-
-              // Check transfers array for ERC20 transfers
-              if (tx.transfers && tx.transfers.length > 0) {
-                const erc20Transfer = tx.transfers.find(
-                  (t: any) =>
-                    t.type === 'ERC20_TRANSFER' &&
-                    t.from?.toLowerCase() === safeAddress.toLowerCase(),
-                );
-                if (erc20Transfer) {
-                  tokenAddress = erc20Transfer.tokenInfo?.address || null;
-                  tokenSymbol = erc20Transfer.tokenInfo?.symbol || null;
-                  tokenDecimals = erc20Transfer.tokenInfo?.decimals || null;
-                  amount = erc20Transfer.value || '0';
-                  toAddress = erc20Transfer.to || tx.to || '';
-                }
+            // Check transfers array for ERC20 transfers
+            if (tx.transfers && tx.transfers.length > 0) {
+              const erc20Transfer = tx.transfers.find(
+                (t: any) =>
+                  t.type === 'ERC20_TRANSFER' &&
+                  t.from?.toLowerCase() === safeAddress.toLowerCase(),
+              );
+              if (erc20Transfer) {
+                tokenAddress = erc20Transfer.tokenInfo?.address || null;
+                tokenSymbol = erc20Transfer.tokenInfo?.symbol || null;
+                tokenDecimals = erc20Transfer.tokenInfo?.decimals || null;
+                amount = erc20Transfer.value || '0';
+                toAddress = erc20Transfer.to || tx.to || '';
               }
-
-              // Fall back to decoded data for transfers
-              if (
-                amount === '0' &&
-                tx.dataDecoded?.method === 'transfer' &&
-                tx.dataDecoded.parameters
-              ) {
-                const valueParam = tx.dataDecoded.parameters.find(
-                  (p: any) => p.name === 'value' || p.name === 'amount',
-                );
-                const toParam = tx.dataDecoded.parameters.find(
-                  (p: any) => p.name === 'to' || p.name === 'recipient',
-                );
-                if (valueParam) amount = valueParam.value;
-                if (toParam) toAddress = toParam.value;
-                // tx.to is the token contract in this case
-                tokenAddress = tx.to;
-              }
-
-              await db.insert(outgoingTransfers).values({
-                userDid: userId,
-                workspaceId,
-                safeAddress: safeAddress as `0x${string}`,
-                txHash: tx.transactionHash as `0x${string}`,
-                toAddress: toAddress as `0x${string}`,
-                tokenAddress,
-                tokenSymbol,
-                tokenDecimals,
-                amount,
-                blockNumber: BigInt(tx.blockNumber || 0),
-                timestamp: new Date(tx.executionDate),
-                txType: tx.dataDecoded?.method || 'unknown',
-                methodName: tx.dataDecoded?.method || null,
-                metadata: {
-                  dataDecoded: tx.dataDecoded,
-                  transfers: tx.transfers,
-                  value: tx.value,
-                },
-              });
-              outgoingSynced++;
-            } else if (!existing.workspaceId) {
-              await db
-                .update(outgoingTransfers)
-                .set({ workspaceId })
-                .where(eq(outgoingTransfers.id, existing.id));
             }
+
+            // Fall back to decoded data for transfers
+            if (
+              amount === '0' &&
+              tx.dataDecoded?.method === 'transfer' &&
+              tx.dataDecoded.parameters
+            ) {
+              const valueParam = tx.dataDecoded.parameters.find(
+                (p: any) => p.name === 'value' || p.name === 'amount',
+              );
+              const toParam = tx.dataDecoded.parameters.find(
+                (p: any) => p.name === 'to' || p.name === 'recipient',
+              );
+              if (valueParam) amount = valueParam.value;
+              if (toParam) toAddress = toParam.value;
+              tokenAddress = tx.to;
+            }
+
+            outgoingRecords.push({
+              userDid: userId,
+              workspaceId,
+              safeAddress: safeAddress as `0x${string}`,
+              txHash: tx.transactionHash as `0x${string}`,
+              toAddress: toAddress as `0x${string}`,
+              tokenAddress,
+              tokenSymbol,
+              tokenDecimals,
+              amount,
+              blockNumber: BigInt(tx.blockNumber || 0),
+              timestamp: new Date(tx.executionDate),
+              txType: tx.dataDecoded?.method || 'unknown',
+              methodName: tx.dataDecoded?.method || null,
+              metadata: {
+                dataDecoded: tx.dataDecoded,
+                transfers: tx.transfers,
+                value: tx.value,
+              },
+            });
+          }
+
+          // Batch insert with ON CONFLICT DO NOTHING
+          if (outgoingRecords.length > 0) {
+            await db
+              .insert(outgoingTransfers)
+              .values(outgoingRecords)
+              .onConflictDoNothing({ target: outgoingTransfers.txHash });
+            outgoingSynced = outgoingRecords.length;
           }
         }
       } catch (error) {

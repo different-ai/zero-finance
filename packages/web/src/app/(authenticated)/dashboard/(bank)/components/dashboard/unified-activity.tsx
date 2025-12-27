@@ -424,22 +424,24 @@ function TransactionRow({
   isActionPending?: boolean;
 }) {
   const amountColor =
-    tx.amountPrefix === '+' ? 'text-emerald-600' : 'text-gray-800';
+    tx.amountPrefix === '+' ? 'text-emerald-600' : 'text-[#101010]';
 
   return (
     <AccordionItem
       value={tx.id}
-      className="border-b border-gray-100 last:border-b-0"
+      className="border-b border-[#101010]/10 last:border-b-0"
     >
-      <AccordionTrigger className="hover:no-underline px-4 py-3 [&[data-state=open]]:bg-gray-50/50">
+      <AccordionTrigger className="hover:no-underline px-4 py-3 [&[data-state=open]]:bg-[#F7F7F2]/50">
         <div className="flex items-center gap-3 w-full">
           <TransactionIcon category={tx.category} status={tx.status} />
 
           <div className="flex-1 min-w-0 text-left">
-            <p className="text-[15px] font-medium text-gray-800 truncate">
+            <p className="text-[15px] font-medium text-[#101010] truncate">
               {tx.title}
             </p>
-            <p className="text-[13px] text-gray-500 truncate">{tx.subtitle}</p>
+            <p className="text-[13px] text-[#101010]/60 truncate">
+              {tx.subtitle}
+            </p>
           </div>
 
           <div className="flex items-center gap-3">
@@ -487,7 +489,7 @@ function TransactionRow({
                   {tx.amountPrefix}
                   {tx.amount}
                 </p>
-                <p className="text-[12px] text-gray-400">
+                <p className="text-[12px] text-[#101010]/40">
                   {formatDate(tx.timestamp)}
                 </p>
               </div>
@@ -804,11 +806,38 @@ export function UnifiedActivity() {
   const hasTransactions = unifiedTransactions.length > 0;
 
   return (
-    <Card className="bg-white border-gray-200 rounded-lg shadow-sm">
+    <Card
+      className={cn(
+        'bg-white border shadow-none',
+        isTechnical ? 'border-[#1B29FF]/20' : 'border-[#101010]/10',
+      )}
+    >
       <CardHeader className="pb-4 flex flex-row items-center justify-between">
         <div>
-          <h3 className="text-lg font-semibold text-gray-800">Activity</h3>
-          <p className="text-sm text-gray-500">
+          <p
+            className={cn(
+              'mb-1',
+              isTechnical
+                ? 'font-mono text-[10px] text-[#1B29FF] tracking-wider uppercase'
+                : 'uppercase tracking-[0.14em] text-[11px] text-[#101010]/60',
+            )}
+          >
+            {isTechnical ? 'TX::HISTORY' : 'RECENT ACTIVITY'}
+          </p>
+          <h3
+            className={cn(
+              'text-lg font-semibold',
+              isTechnical ? 'font-mono text-[#101010]' : 'text-[#101010]',
+            )}
+          >
+            Activity
+          </h3>
+          <p
+            className={cn(
+              'text-[13px]',
+              isTechnical ? 'font-mono text-[#101010]/60' : 'text-[#101010]/60',
+            )}
+          >
             {isTechnical ? 'All account activity' : 'Recent transactions'}
           </p>
         </div>

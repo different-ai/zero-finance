@@ -51,10 +51,10 @@ function InsuranceActiveStatus({ isTechnical }: { isTechnical: boolean }) {
   return (
     <div
       className={cn(
-        'relative overflow-hidden transition-all duration-300',
+        'relative overflow-hidden transition-all duration-300 p-6',
         isTechnical
-          ? 'rounded-sm border border-[#1B29FF]/20 bg-[#1B29FF]/5 p-4'
-          : 'rounded-[12px] border border-[#1B29FF]/10 bg-white p-6 shadow-[0_2px_8px_rgba(27,41,255,0.04)]',
+          ? 'border border-[#1B29FF]/20 bg-[#1B29FF]/5'
+          : 'border border-[#1B29FF]/10 bg-white',
       )}
     >
       {/* Technical Background Grid */}
@@ -141,9 +141,9 @@ function InsuranceCTA({
   return (
     <div
       className={cn(
-        'bg-white border border-[#101010]/10 rounded-[12px] overflow-hidden transition-all duration-300',
-        isExpanded && 'border-[#1B29FF]/20',
-        isTechnical && 'rounded-sm border-[#1B29FF]/20',
+        'bg-white border overflow-hidden transition-all duration-300',
+        isExpanded ? 'border-[#1B29FF]/20' : 'border-[#101010]/10',
+        isTechnical && 'border-[#1B29FF]/20',
       )}
     >
       <button

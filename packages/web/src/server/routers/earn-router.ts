@@ -193,15 +193,23 @@ async function getEthPriceUsd(): Promise<number> {
   return cachedEthPrice?.price ?? 3000;
 }
 
-// Arbitrum public client singleton
-let arbitrumPublicClient: ReturnType<typeof createPublicClient> | null = null;
+// Chain-specific public client singletons
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type ChainPublicClient = any;
+let arbitrumPublicClient: ChainPublicClient = null;
+let gnosisPublicClient: ChainPublicClient = null;
+let optimismPublicClient: ChainPublicClient = null;
 
-// Gnosis public client singleton
-let gnosisPublicClient: ReturnType<typeof createPublicClient> | null = null;
-
-// Optimism public client singleton
-let optimismPublicClient: ReturnType<typeof createPublicClient> | null = null;
-
+/**
+ * Get a public client for the specified chain.
+ * Lazily initializes chain-specific clients on first use.
+ * Always returns a non-null client or throws an error for unsupported chains.
+ *
+ * Note: Chain-specific clients use 'any' type because different chains have
+ * slightly different transaction types in viem (e.g., OP Stack chains include
+ * 'deposit' transactions). The return type is unified to avoid type conflicts
+ * when using common PublicClient methods (readContract, getBalance, etc.).
+ */
 function getPublicClientForChain(chainId: number) {
   if (chainId === BASE_CHAIN_ID) {
     return publicClient;
@@ -225,7 +233,7 @@ function getPublicClientForChain(chainId: number) {
       });
     }
 
-    return ethereumPublicClient;
+    return ethereumPublicClient as unknown as typeof publicClient;
   }
 
   if (chainId === SUPPORTED_CHAINS.ARBITRUM) {

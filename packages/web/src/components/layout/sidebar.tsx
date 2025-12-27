@@ -117,44 +117,42 @@ export function Sidebar() {
       <Link
         href="/dashboard"
         className={cn(
-          'block px-6 py-7 border-b transition-colors duration-200',
+          'h-16 flex items-center justify-between px-4 sm:px-6 border-b transition-colors duration-200',
           isTechnical ? 'border-[#1B29FF]/20' : 'border-[#101010]/10',
         )}
       >
-        <div>
-          <div className="flex items-center gap-2">
-            <Image
-              src="/new-logo-bluer.png"
-              alt="Zero Finance"
-              width={32}
-              height={32}
-              className="h-8 w-8"
-            />
+        <div className="flex items-center gap-2">
+          <Image
+            src="/new-logo-bluer.png"
+            alt="Zero Finance"
+            width={32}
+            height={32}
+            className="h-6 w-6"
+          />
+          <span
+            className={cn(
+              'text-lg font-medium',
+              isTechnical ? 'text-[#1B29FF] font-mono' : 'text-[#0050ff]',
+            )}
+          >
+            {isTechnical ? 'ZERO::FINANCE' : 'finance'}
+          </span>
+        </div>
+        {workspaceData?.workspace?.name && (
+          <div className="hidden sm:flex items-center gap-1.5">
+            <Building className="h-3.5 w-3.5 text-[#101010]/40" />
             <span
               className={cn(
-                'text-xl font-medium',
-                isTechnical ? 'text-[#1B29FF] font-mono' : 'text-[#0050ff]',
+                'text-[11px]',
+                isTechnical
+                  ? 'text-[#1B29FF]/70 font-mono'
+                  : 'text-[#101010]/60',
               )}
             >
-              {isTechnical ? 'ZERO::FINANCE' : 'finance'}
+              {workspaceData.workspace.name}
             </span>
           </div>
-          {workspaceData?.workspace?.name && (
-            <div className="mt-2 flex items-center gap-1.5">
-              <Building className="h-3.5 w-3.5 text-[#101010]/40" />
-              <span
-                className={cn(
-                  'text-[12px]',
-                  isTechnical
-                    ? 'text-[#1B29FF]/70 font-mono'
-                    : 'text-[#101010]/60',
-                )}
-              >
-                {workspaceData.workspace.name}
-              </span>
-            </div>
-          )}
-        </div>
+        )}
       </Link>
 
       {/* Navigation */}

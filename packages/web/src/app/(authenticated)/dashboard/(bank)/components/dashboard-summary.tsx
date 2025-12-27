@@ -97,8 +97,8 @@ export function DashboardSummary({
           'flex-1 grid gap-4 p-6',
           'grid-cols-1 md:grid-cols-3',
           isTechnical
-            ? 'bg-white border border-[#1B29FF]/20'
-            : 'bg-white border border-[#101010]/10 rounded-[12px] shadow-[0_2px_8px_rgba(16,16,16,0.04)]',
+            ? 'border border-[#1B29FF]/20'
+            : 'border border-[#101010]/10',
         )}
       >
         {/* Column 1 - Spendable Balance (Total) */}

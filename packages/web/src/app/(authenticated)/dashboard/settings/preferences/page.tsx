@@ -24,7 +24,7 @@ export default function PreferencesPage() {
             : 'bg-[#F7F7F2] border-[#101010]/10',
         )}
       >
-        <div className="h-[60px] flex items-center px-4 sm:px-6 max-w-[1400px] mx-auto">
+        <div className="h-[60px] flex items-center px-4 sm:px-6 max-w-[1400px] mx-auto mt-1">
           <Link
             href="/dashboard/settings"
             className={cn(

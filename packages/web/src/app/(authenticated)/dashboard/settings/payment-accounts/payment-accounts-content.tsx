@@ -36,7 +36,7 @@ export function PaymentAccountsContent() {
     <div className="min-h-screen bg-[#F8F9FA]">
       {/* Header - Technical Mode */}
       <header className="sticky top-0 z-40 bg-[#F8F9FA] border-b border-[#1B29FF]/20">
-        <div className="h-[60px] flex items-center px-4 sm:px-6 max-w-[1400px] mx-auto">
+        <div className="h-[60px] flex items-center px-4 sm:px-6 max-w-[1400px] mx-auto mt-1">
           <p className="uppercase tracking-[0.14em] text-[11px] text-[#1B29FF] font-mono mr-3">
             CONFIG::ACCOUNTS
           </p>
