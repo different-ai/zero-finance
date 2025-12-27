@@ -510,7 +510,7 @@ function TransactionRow({
       </AccordionTrigger>
 
       <AccordionContent className="px-4 pb-4">
-        <div className="ml-[52px] bg-gray-50 rounded-lg p-4 space-y-3">
+        <div className="ml-[52px] bg-[#F7F7F2] p-4 space-y-3">
           {/* Bank transfer details */}
           {(tx.category === 'bank_send' || tx.category === 'bank_receive') && (
             <>
@@ -525,7 +525,7 @@ function TransactionRow({
                 <DetailRow label="Method" value={tx.paymentRails} />
               )}
 
-              <div className="border-t border-gray-200 my-3" />
+              <div className="border-t border-[#101010]/10 my-3" />
 
               {tx.category === 'bank_send' && (
                 <>
@@ -600,7 +600,7 @@ function TransactionRow({
           {/* Technical mode: show tx hash */}
           {isTechnical && tx.transactionHash && (
             <>
-              <div className="border-t border-gray-200 my-3" />
+              <div className="border-t border-[#101010]/10 my-3" />
               <div className="flex items-center justify-between">
                 <span className="text-[13px] text-gray-500">Tx Hash</span>
                 <a
@@ -648,8 +648,8 @@ function DetailRow({
 }) {
   return (
     <div className="flex items-center justify-between">
-      <span className="text-[13px] text-gray-500">{label}</span>
-      <span className={cn('text-[13px] text-gray-800', mono && 'font-mono')}>
+      <span className="text-[13px] text-[#101010]/60">{label}</span>
+      <span className={cn('text-[13px] text-[#101010]', mono && 'font-mono')}>
         {value}
       </span>
     </div>
@@ -685,7 +685,8 @@ export function UnifiedActivity() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [dismissingIds, setDismissingIds] = useState<Set<string>>(new Set());
   const [resumeTransferId, setResumeTransferId] = useState<string | null>(null);
-  const hasSyncedRef = React.useRef(false);
+  const hasSyncedBankRef = React.useRef(false);
+  const hasSyncedSafeRef = React.useRef(false);
 
   // Get user's primary safe via getMultiChainPositions (user-scoped, not workspace-scoped)
   // This ensures consistency with balance queries per AGENTS.md guidelines
@@ -723,23 +724,30 @@ export function UnifiedActivity() {
     onSuccess: () => utils.align.getBankingHistory.invalidate(),
   });
 
-  // Initial sync - sync all data sources on component mount
+  // Initial sync - sync bank data sources on component mount (once only)
+  // Note: We intentionally omit mutation functions from deps to prevent infinite loops.
+  // tRPC mutation objects change state when called, which would re-trigger the effect.
   React.useEffect(() => {
-    if (hasSyncedRef.current) return;
-    hasSyncedRef.current = true;
+    if (hasSyncedBankRef.current) return;
+    hasSyncedBankRef.current = true;
 
-    // Sync bank transfers
+    // Sync bank transfers (fire and forget)
     Promise.allSettled([
       syncVAHistory.mutateAsync(),
       syncOfframp.mutateAsync(),
     ]);
-  }, [syncVAHistory, syncOfframp]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  // Sync Safe transactions when we have the Safe address
+  // Sync Safe transactions when we have the Safe address (once per address)
+  // Note: We intentionally omit syncSafeTransactions from deps to prevent infinite loops.
   React.useEffect(() => {
-    if (!primarySafeAddress) return;
+    if (!primarySafeAddress || hasSyncedSafeRef.current) return;
+    hasSyncedSafeRef.current = true;
+
     syncSafeTransactions.mutate({ safeAddress: primarySafeAddress });
-  }, [primarySafeAddress, syncSafeTransactions]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [primarySafeAddress]);
 
   // Merge transactions
   const unifiedTransactions = useMemo(() => {
@@ -857,7 +865,7 @@ export function UnifiedActivity() {
       <CardContent className="p-0">
         {isLoading ? (
           <div className="flex justify-center items-center py-12">
-            <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+            <Loader2 className="h-6 w-6 animate-spin text-[#101010]/40" />
           </div>
         ) : isBankError && !isNoCustomerState ? (
           <div className="px-6 py-8">
@@ -865,21 +873,21 @@ export function UnifiedActivity() {
               <AlertCircle className="h-5 w-5" />
               <p className="text-sm font-medium">Error loading activity</p>
             </div>
-            <p className="text-sm text-gray-500 mt-1">
+            <p className="text-sm text-[#101010]/60 mt-1">
               {bankError?.message || 'Please try again later.'}
             </p>
           </div>
         ) : !hasTransactions || isNoCustomerState ? (
           <div className="px-6 py-12 text-center">
             <div className="flex justify-center mb-4">
-              <div className="h-12 w-12 rounded-full bg-gray-100 flex items-center justify-center">
-                <Building2 className="h-6 w-6 text-gray-400" />
+              <div className="h-12 w-12 bg-[#F7F7F2] flex items-center justify-center">
+                <Building2 className="h-6 w-6 text-[#101010]/40" />
               </div>
             </div>
-            <p className="text-[15px] font-medium text-gray-800 mb-1">
+            <p className="text-[15px] font-medium text-[#101010] mb-1">
               No activity yet
             </p>
-            <p className="text-[13px] text-gray-500 max-w-[280px] mx-auto">
+            <p className="text-[13px] text-[#101010]/60 max-w-[280px] mx-auto">
               Your transactions will appear here once you start using your
               account.
             </p>
@@ -892,8 +900,8 @@ export function UnifiedActivity() {
 
               return (
                 <div key={group}>
-                  <div className="px-4 py-2 bg-gray-50/50">
-                    <p className="text-[12px] font-medium text-gray-500 uppercase tracking-wide">
+                  <div className="px-4 py-2 bg-[#F7F7F2]">
+                    <p className="text-[11px] font-medium text-[#101010]/60 uppercase tracking-[0.14em]">
                       {group}
                     </p>
                   </div>
