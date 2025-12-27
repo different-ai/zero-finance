@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { Resend } from 'resend';
 import { generateText } from 'ai';
 import { openai } from '@/lib/ai/providers';
 import { z } from 'zod';
@@ -22,8 +21,13 @@ import type {
   AiEmailMessage,
   AiEmailPendingAction,
 } from '@/db/schema/ai-email-sessions';
+import {
+  getEmailProviderSingleton,
+  type InboundEmail,
+} from '@/lib/email-provider';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Get the configured email provider (SES or Resend based on EMAIL_PROVIDER env var)
+const emailProvider = getEmailProviderSingleton();
 
 // In-memory rate limiter (for production, use Redis)
 const rateLimiter = new Map<string, { count: number; resetTime: number }>();
@@ -70,78 +74,15 @@ if (typeof setInterval !== 'undefined') {
 }
 
 /**
- * Verify Resend webhook signature (if configured)
- * https://resend.com/docs/dashboard/webhooks/verify-webhooks
+ * Get headers as a plain object for the email provider
  */
-async function verifyWebhookSignature(
-  request: NextRequest,
-  rawBody: string,
-): Promise<boolean> {
-  const webhookSecret = process.env.RESEND_WEBHOOK_SECRET;
-
-  // If no secret configured, skip verification (development mode)
-  if (!webhookSecret) {
-    console.log(
-      '[AI Email] Webhook signature verification skipped (no secret configured)',
-    );
-    return true;
-  }
-
+async function getHeadersObject(): Promise<Record<string, string>> {
   const headersList = await headers();
-  const signature = headersList.get('svix-signature');
-  const timestamp = headersList.get('svix-timestamp');
-  const svixId = headersList.get('svix-id');
-
-  if (!signature || !timestamp || !svixId) {
-    console.log('[AI Email] Missing webhook signature headers');
-    return false;
-  }
-
-  // Verify timestamp is recent (within 5 minutes)
-  const timestampNum = parseInt(timestamp, 10);
-  const now = Math.floor(Date.now() / 1000);
-  if (Math.abs(now - timestampNum) > 300) {
-    console.log('[AI Email] Webhook timestamp too old');
-    return false;
-  }
-
-  // Verify signature using HMAC-SHA256
-  const signedPayload = `${svixId}.${timestamp}.${rawBody}`;
-  const expectedSignature = crypto
-    .createHmac('sha256', webhookSecret)
-    .update(signedPayload)
-    .digest('base64');
-
-  // Signature header contains multiple signatures separated by space
-  const signatures = signature.split(' ');
-  const isValid = signatures.some((sig) => {
-    const [, sigValue] = sig.split(',');
-    return sigValue === expectedSignature;
+  const headersObj: Record<string, string> = {};
+  headersList.forEach((value, key) => {
+    headersObj[key] = value;
   });
-
-  if (!isValid) {
-    console.log('[AI Email] Invalid webhook signature');
-  }
-
-  return isValid;
-}
-
-/**
- * Resend inbound email payload type.
- * https://resend.com/docs/dashboard/webhooks/event-types#emailreceived
- */
-interface ResendInboundEmail {
-  from: string;
-  to: string | string[];
-  subject: string;
-  text: string;
-  html?: string;
-  headers: Record<string, string>;
-  attachments?: Array<{
-    filename: string;
-    content: string; // base64
-    content_type: string;
-  }>;
+  return headersObj;
 }
 
 /**
@@ -160,18 +101,35 @@ async function sendReply(
   body: string,
   inReplyTo?: string,
 ): Promise<void> {
-  const headers: Record<string, string> = {};
+  const emailHeaders: Record<string, string> = {};
   if (inReplyTo) {
-    headers['In-Reply-To'] = inReplyTo;
-    headers['References'] = inReplyTo;
+    emailHeaders['In-Reply-To'] = inReplyTo;
+    emailHeaders['References'] = inReplyTo;
   }
 
-  await resend.emails.send({
+  await emailProvider.send({
     from: `0 Finance AI <ai@${AI_EMAIL_INBOUND_DOMAIN}>`,
     to,
     subject,
     text: body,
-    headers,
+    headers: emailHeaders,
+  });
+}
+
+/**
+ * Send an invoice email to the recipient.
+ */
+async function sendInvoiceEmail(
+  to: string,
+  subject: string,
+  body: string,
+  senderName: string,
+): Promise<void> {
+  await emailProvider.send({
+    from: `${senderName} via 0 Finance <invoices@${AI_EMAIL_INBOUND_DOMAIN}>`,
+    to,
+    subject,
+    text: body,
   });
 }
 
@@ -228,7 +186,8 @@ const sendInvoiceToRecipientSchema = z.object({
 /**
  * AI Email Webhook Handler
  *
- * Receives inbound emails from Resend and processes them using AI.
+ * Receives inbound emails from the configured email provider (SES or Resend)
+ * and processes them using AI.
  */
 export async function POST(request: NextRequest) {
   let rawBody = '';
@@ -237,9 +196,29 @@ export async function POST(request: NextRequest) {
   try {
     // Read raw body for signature verification
     rawBody = await request.text();
+    const headersObj = await getHeadersObject();
+
+    // Handle provider-specific webhook handshakes (e.g., SNS subscription confirmation)
+    const payload = JSON.parse(rawBody);
+    if (emailProvider.handleWebhookHandshake) {
+      const handshakeResponse = await emailProvider.handleWebhookHandshake(
+        payload,
+        headersObj,
+      );
+      if (handshakeResponse) {
+        console.log('[AI Email] Handled webhook handshake');
+        return NextResponse.json(
+          { message: handshakeResponse.body },
+          { status: handshakeResponse.status },
+        );
+      }
+    }
 
     // Verify webhook signature
-    const isValidSignature = await verifyWebhookSignature(request, rawBody);
+    const isValidSignature = await emailProvider.verifyWebhookSignature(
+      rawBody,
+      headersObj,
+    );
     if (!isValidSignature) {
       console.log('[AI Email] Webhook signature verification failed');
       return NextResponse.json(
@@ -248,19 +227,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Parse the webhook payload
-    const payload = JSON.parse(rawBody);
+    // Parse inbound email using the provider's parser
+    const email = await emailProvider.parseInboundWebhook(payload, headersObj);
 
-    // For inbound emails, the payload structure is the email directly
-    const email = payload as ResendInboundEmail;
-
-    // Validate we have the required fields
-    if (!email.from || !email.to || !email.text) {
-      console.log('[AI Email] Invalid payload - missing required fields');
-      return NextResponse.json(
-        { error: 'Invalid email payload' },
-        { status: 400 },
-      );
+    // If no email returned (e.g., non-email notification), acknowledge and return
+    if (!email) {
+      console.log('[AI Email] No email in payload (non-email notification)');
+      return NextResponse.json({ success: true, handled: 'no_email' });
     }
 
     // Store sender for error handling
@@ -276,10 +249,7 @@ export async function POST(request: NextRequest) {
     }
 
     const toAddress = getToAddress(email.to);
-    const messageId =
-      email.headers?.['Message-ID'] ||
-      email.headers?.['message-id'] ||
-      crypto.randomUUID();
+    const messageId = email.messageId || crypto.randomUUID();
 
     console.log(`[AI Email] Received email from ${email.from} to ${toAddress}`);
 
@@ -342,12 +312,12 @@ export async function POST(request: NextRequest) {
           recipientName: action.recipientName,
         });
 
-        await resend.emails.send({
-          from: `${workspaceResult.workspaceName} via 0 Finance <invoices@${AI_EMAIL_INBOUND_DOMAIN}>`,
-          to: action.recipientEmail,
-          subject: invoiceTemplate.subject,
-          text: invoiceTemplate.body,
-        });
+        await sendInvoiceEmail(
+          action.recipientEmail,
+          invoiceTemplate.subject,
+          invoiceTemplate.body,
+          workspaceResult.workspaceName,
+        );
 
         // Confirm to user
         const sentTemplate = emailTemplates.invoiceSent({
@@ -525,12 +495,12 @@ export async function POST(request: NextRequest) {
               recipientName: params.recipientName,
             });
 
-            await resend.emails.send({
-              from: `${params.senderName} via 0 Finance <invoices@${AI_EMAIL_INBOUND_DOMAIN}>`,
-              to: params.recipientEmail,
-              subject: template.subject,
-              text: template.body,
-            });
+            await sendInvoiceEmail(
+              params.recipientEmail,
+              template.subject,
+              template.body,
+              params.senderName,
+            );
 
             await updateSession(toolContext.session.id, {
               state: 'completed',
