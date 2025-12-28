@@ -94,12 +94,14 @@ function getToAddress(to: string | string[]): string {
 
 /**
  * Send an email reply to the user.
+ * @param workspaceId - The workspace ID to use in the reply-to address so users can hit "reply"
  */
 async function sendReply(
   to: string,
   subject: string,
   body: string,
   inReplyTo?: string,
+  workspaceId?: string,
 ): Promise<void> {
   const emailHeaders: Record<string, string> = {};
   if (inReplyTo) {
@@ -107,8 +109,13 @@ async function sendReply(
     emailHeaders['References'] = inReplyTo;
   }
 
+  // Use workspace-specific address so users can hit "reply"
+  const fromAddress = workspaceId
+    ? `${workspaceId}@${AI_EMAIL_INBOUND_DOMAIN}`
+    : `ai@${AI_EMAIL_INBOUND_DOMAIN}`;
+
   await emailProvider.send({
-    from: `0 Finance AI <ai@${AI_EMAIL_INBOUND_DOMAIN}>`,
+    from: `0 Finance AI <${fromAddress}>`,
     to,
     subject,
     text: body,
@@ -420,6 +427,7 @@ export async function POST(request: NextRequest) {
           sentTemplate.subject,
           sentTemplate.body,
           messageId,
+          workspaceResult.workspaceId,
         );
 
         // Update session
@@ -435,6 +443,7 @@ export async function POST(request: NextRequest) {
           cancelledTemplate.subject,
           cancelledTemplate.body,
           messageId,
+          workspaceResult.workspaceId,
         );
 
         await updateSession(session.id, {
@@ -540,6 +549,7 @@ export async function POST(request: NextRequest) {
               template.subject,
               template.body,
               toolContext.messageId,
+              toolContext.workspaceResult.workspaceId,
             );
 
             return {
@@ -562,6 +572,7 @@ export async function POST(request: NextRequest) {
               subject,
               body,
               toolContext.messageId,
+              toolContext.workspaceResult.workspaceId,
             );
             return { success: true };
           },
