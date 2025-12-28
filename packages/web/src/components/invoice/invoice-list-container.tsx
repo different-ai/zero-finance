@@ -345,7 +345,7 @@ export function InvoiceListContainer() {
       <div className="bg-white border border-[#101010]/10 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-[#101010]/10 text-[13px]">
-            <thead className="bg-[#F7F7F2]">
+            <thead className="bg-[#fafafa]">
               <tr>
                 <th
                   className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-[#101010]/60 uppercase tracking-[0.14em] cursor-pointer"

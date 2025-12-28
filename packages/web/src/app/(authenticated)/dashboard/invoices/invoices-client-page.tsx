@@ -19,7 +19,7 @@ export function InvoicesClientPage() {
   }
 
   return (
-    <div className="w-full px-6 py-8 bg-zinc-50">
+    <div className="w-full px-6 py-8 bg-[#fafafa]">
       <div className="mb-6 sm:mb-8">
         <div className="flex items-end justify-between gap-3">
           <div>
