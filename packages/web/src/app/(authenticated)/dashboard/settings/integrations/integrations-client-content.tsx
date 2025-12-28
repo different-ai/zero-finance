@@ -100,6 +100,112 @@ function InstallMcpCommand({ apiKey }: { apiKey: string }) {
   );
 }
 
+function EmailVerificationStatus() {
+  const {
+    data: verificationStatus,
+    isLoading,
+    refetch,
+  } = trpc.settings.emailVerification.checkCurrentUserStatus.useQuery();
+
+  const verifyMutation =
+    trpc.settings.emailVerification.verifyCurrentUser.useMutation({
+      onSuccess: () => {
+        toast.success('Verification email sent! Please check your inbox.');
+        refetch();
+      },
+      onError: (error) => {
+        toast.error(error.message || 'Failed to send verification email');
+      },
+    });
+
+  if (isLoading) {
+    return <div className="h-16 animate-pulse rounded-lg bg-muted" />;
+  }
+
+  if (!verificationStatus?.email) {
+    return null;
+  }
+
+  if (verificationStatus.isVerified) {
+    return (
+      <div className="flex items-center gap-3 rounded-lg border border-[#10B981]/20 bg-[#10B981]/5 p-4">
+        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#10B981]/10">
+          <Check className="h-4 w-4 text-[#10B981]" />
+        </div>
+        <div className="flex-1">
+          <p className="text-sm font-medium text-[#101010]">Email Verified</p>
+          <p className="text-xs text-[#101010]/60">
+            You can receive AI responses at {verificationStatus.email}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (verificationStatus.status === 'Pending') {
+    return (
+      <div className="space-y-3 rounded-lg border border-amber-200 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-950/50">
+        <div className="flex items-center gap-3">
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900">
+            <Mail className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+          </div>
+          <div className="flex-1">
+            <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
+              Verification Pending
+            </p>
+            <p className="text-xs text-amber-700 dark:text-amber-300">
+              Check your inbox for the verification email
+            </p>
+          </div>
+        </div>
+        <p className="text-xs text-amber-700 dark:text-amber-300">
+          Click the link in the email from Amazon Web Services to complete
+          verification. It may take a few minutes to arrive.
+        </p>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => refetch()}
+          className="w-full border-amber-300 text-amber-800 hover:bg-amber-100 dark:border-amber-700 dark:text-amber-200 dark:hover:bg-amber-900"
+        >
+          Check Status
+        </Button>
+      </div>
+    );
+  }
+
+  // Not verified - show verification button
+  return (
+    <div className="space-y-3 rounded-lg border border-[#101010]/10 bg-[#F7F7F2] p-4">
+      <div className="flex items-center gap-3">
+        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#1B29FF]/10">
+          <Mail className="h-4 w-4 text-[#1B29FF]" />
+        </div>
+        <div className="flex-1">
+          <p className="text-sm font-medium text-[#101010]">
+            Verify Your Email
+          </p>
+          <p className="text-xs text-[#101010]/60">
+            Required to receive AI responses
+          </p>
+        </div>
+      </div>
+      <p className="text-xs text-[#101010]/60">
+        To receive emails from the AI agent, verify your email address.
+        You&apos;ll receive a confirmation email from Amazon Web Services.
+      </p>
+      <Button
+        onClick={() => verifyMutation.mutate()}
+        disabled={verifyMutation.isPending}
+        className="w-full bg-[#1B29FF] hover:bg-[#1420CC] text-white"
+        size="sm"
+      >
+        {verifyMutation.isPending ? 'Sending...' : 'Send Verification Email'}
+      </Button>
+    </div>
+  );
+}
+
 function AiEmailCard() {
   const [copiedEmail, setCopiedEmail] = useState(false);
   const { data: currentWorkspace, isLoading } =
@@ -153,6 +259,9 @@ function AiEmailCard() {
           <div className="h-20 animate-pulse rounded-lg bg-muted" />
         ) : aiEmailAddress ? (
           <>
+            {/* Email Verification Status */}
+            <EmailVerificationStatus />
+
             <div className="space-y-2">
               <Label className="text-xs text-muted-foreground">
                 Your AI Email Address

@@ -151,6 +151,93 @@ export const emailVerificationRouter = router({
     }),
 
   /**
+   * Send verification email to the current user's email address
+   * This is the simplified flow - no need to enter email
+   */
+  verifyCurrentUser: protectedProcedure.mutation(async ({ ctx }) => {
+    const userEmail = ctx.user.email?.address;
+
+    if (!userEmail) {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'No email address associated with your account',
+      });
+    }
+
+    const client = getSESClient();
+
+    try {
+      const command = new VerifyEmailIdentityCommand({
+        EmailAddress: userEmail,
+      });
+      await client.send(command);
+
+      return {
+        success: true,
+        email: userEmail,
+        message: `Verification email sent to ${userEmail}`,
+      };
+    } catch (error) {
+      console.error(
+        '[EmailVerification] Failed to verify current user email:',
+        error,
+      );
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Failed to send verification email',
+      });
+    }
+  }),
+
+  /**
+   * Check verification status of the current user's email
+   */
+  checkCurrentUserStatus: protectedProcedure.query(async ({ ctx }) => {
+    const userEmail = ctx.user.email?.address;
+
+    if (!userEmail) {
+      return {
+        email: null,
+        status: 'NoEmail' as const,
+        isVerified: false,
+      };
+    }
+
+    const client = getSESClient();
+
+    try {
+      const command = new GetIdentityVerificationAttributesCommand({
+        Identities: [userEmail],
+      });
+      const result = await client.send(command);
+
+      const attrs = result.VerificationAttributes?.[userEmail];
+
+      return {
+        email: userEmail,
+        status: (attrs?.VerificationStatus || 'NotStarted') as
+          | 'Success'
+          | 'Pending'
+          | 'Failed'
+          | 'TemporaryFailure'
+          | 'NotStarted',
+        isVerified: attrs?.VerificationStatus === 'Success',
+      };
+    } catch (error) {
+      console.error(
+        '[EmailVerification] Failed to check current user status:',
+        error,
+      );
+      // Return a safe default instead of throwing - allow UI to still render
+      return {
+        email: userEmail,
+        status: 'NotStarted' as const,
+        isVerified: false,
+      };
+    }
+  }),
+
+  /**
    * Remove a verified email identity
    */
   remove: protectedProcedure
