@@ -11,6 +11,7 @@ import { usePrivy } from '@privy-io/react-auth'; // Import Privy hook
 import { Wallet } from 'lucide-react'; // Import Wallet icon
 import { formatDisplayCurrency } from '@/lib/utils'; // Import the new utility
 import { getCurrencyConfig } from '@/lib/currencies'; // Import currency config
+import WelcomeGradient from '@/app/(landing)/welcome-gradient'; // Import gradient for background
 
 // --- Define necessary types locally or import from a SAFE shared location ---
 // Basic structure based on invoiceDataSchema fields used in this component
@@ -153,13 +154,9 @@ const ExternalPaymentInfo: React.FC<{
       paymentAddress,
     );
 
+    // If no payment address, don't show anything (no warning)
     if (!paymentAddress) {
-      return (
-        <p className="text-sm text-orange-600">
-          Payment address not specified for this invoice. Please contact the
-          seller.
-        </p>
-      );
+      return null;
     }
 
     return (
@@ -184,13 +181,9 @@ const ExternalPaymentInfo: React.FC<{
     );
 
     const bankDetails = (staticInvoiceData as ParsedInvoiceDetails).bankDetails;
+    // If no bank details, don't show anything (no warning)
     if (!bankDetails || Object.keys(bankDetails).length === 0) {
-      return (
-        <p className="text-sm text-orange-600">
-          Bank details not specified for this invoice. Please contact the
-          seller.
-        </p>
-      );
+      return null;
     }
 
     return (
@@ -202,12 +195,8 @@ const ExternalPaymentInfo: React.FC<{
     );
   }
 
-  // Fallback or should not happen if paymentType is always crypto/fiat
-  return (
-    <p className="text-sm text-gray-500">
-      Payment details configuration error.
-    </p>
-  );
+  // Fallback - don't show anything if payment type is unknown
+  return null;
 };
 ExternalPaymentInfo.displayName = 'ExternalPaymentInfo'; // Add display name
 
@@ -312,156 +301,109 @@ const StaticInvoiceDisplay: React.FC<{
   ).toString();
 
   return (
-    <div className="bg-white shadow-xl rounded-xl overflow-hidden">
-      {/* Header */}
-      <div className="bg-gradient-to-r from-neutral-50 to-neutral-100 dark:from-neutral-900 dark:to-neutral-800 px-8 py-6 border-b border-neutral-200 dark:border-neutral-700">
-        <div className="flex justify-between items-start">
-          <div>
-            <h1 className="text-3xl font-bold text-neutral-900 dark:text-white">
-              Invoice{' '}
-              {staticInvoiceData.invoiceNumber
-                ? `#${staticInvoiceData.invoiceNumber}`
-                : ''}
-            </h1>
-            <p className="text-sm text-neutral-600 dark:text-neutral-400 mt-1">
-              ID: {dbInvoiceData.id.slice(-8).toUpperCase()}
-            </p>
-          </div>
-          <div className="text-right">
-            <div
-              className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
-                dbInvoiceData.status === 'paid'
-                  ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400'
-                  : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400'
-              }`}
-            >
-              <div
-                className={`w-2 h-2 rounded-full mr-2 ${
-                  dbInvoiceData.status === 'paid'
-                    ? 'bg-green-600'
-                    : 'bg-yellow-600'
-                }`}
-              />
-              {dbInvoiceData.status === 'paid' ? 'Paid' : 'Pending Payment'}
+    <div className="relative overflow-hidden">
+      {/* Subtle animated gradient background */}
+      <WelcomeGradient />
+
+      <div className="relative z-10 bg-white/95 border border-[#101010]/10 overflow-hidden backdrop-blur-sm">
+        {/* Header - Mobile responsive */}
+        <div className="bg-[#F7F7F2]/90 px-4 sm:px-6 py-4 sm:py-6 border-b border-[#101010]/10">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 sm:gap-0">
+            <div>
+              <h1 className="text-xl sm:text-2xl font-semibold text-[#101010] tracking-[-0.01em]">
+                Invoice{' '}
+                {staticInvoiceData.invoiceNumber
+                  ? `#${staticInvoiceData.invoiceNumber}`
+                  : ''}
+              </h1>
             </div>
-            {staticInvoiceData.issueDate && (
-              <p className="text-sm text-neutral-600 dark:text-neutral-400 mt-2">
-                Issued:{' '}
-                {new Date(staticInvoiceData.issueDate).toLocaleDateString()}
-              </p>
-            )}
-            {staticInvoiceData.dueDate && (
-              <p className="text-sm font-medium text-neutral-700 dark:text-neutral-300">
-                Due: {new Date(staticInvoiceData.dueDate).toLocaleDateString()}
-              </p>
-            )}
-          </div>
-        </div>
-      </div>
-
-      <div className="p-8">
-        {/* Seller/Buyer Info */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
-          <div className="space-y-1">
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 mb-2">
-              From
-            </h3>
-            <p className="font-semibold text-lg text-neutral-900 dark:text-white">
-              {sellerName}
-            </p>
-            {sellerEmail && (
-              <p className="text-sm text-neutral-600 dark:text-neutral-400">
-                {sellerEmail}
-              </p>
-            )}
-            {sellerAddress && (
-              <p className="text-sm text-neutral-600 dark:text-neutral-400">
-                {sellerAddress}
-              </p>
-            )}
-            {(sellerCity || sellerPostalCode) && (
-              <p className="text-sm text-neutral-600 dark:text-neutral-400">
-                {sellerCity}
-                {sellerCity && sellerPostalCode && ', '}
-                {sellerPostalCode}
-              </p>
-            )}
-            {sellerCountry && (
-              <p className="text-sm text-neutral-600 dark:text-neutral-400">
-                {sellerCountry}
-              </p>
-            )}
-          </div>
-          <div className="space-y-1">
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 mb-2">
-              To
-            </h3>
-            <p className="font-semibold text-lg text-neutral-900 dark:text-white">
-              {buyerName}
-            </p>
-            {buyerEmail && (
-              <p className="text-sm text-neutral-600 dark:text-neutral-400">
-                {buyerEmail}
-              </p>
-            )}
-            {buyerAddress && (
-              <p className="text-sm text-neutral-600 dark:text-neutral-400">
-                {buyerAddress}
-              </p>
-            )}
-            {(buyerCity || buyerPostalCode) && (
-              <p className="text-sm text-neutral-600 dark:text-neutral-400">
-                {buyerCity}
-                {buyerCity && buyerPostalCode && ', '}
-                {buyerPostalCode}
-              </p>
-            )}
-            {buyerCountry && (
-              <p className="text-sm text-neutral-600 dark:text-neutral-400">
-                {buyerCountry}
-              </p>
-            )}
+            <div className="text-left sm:text-right space-y-1">
+              {staticInvoiceData.issueDate && (
+                <p className="text-[13px] text-[#101010]/60">
+                  Issued:{' '}
+                  {new Date(staticInvoiceData.issueDate).toLocaleDateString()}
+                </p>
+              )}
+              {staticInvoiceData.dueDate && (
+                <p className="text-[13px] font-medium text-[#101010]/80">
+                  Due:{' '}
+                  {new Date(staticInvoiceData.dueDate).toLocaleDateString()}
+                </p>
+              )}
+            </div>
           </div>
         </div>
 
-        {/* Items Table */}
-        <div className="mb-8">
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 mb-4">
-            Invoice Details
-          </h3>
-          <div className="border border-neutral-200 dark:border-neutral-700 rounded-lg overflow-hidden">
-            <table className="min-w-full">
-              <thead className="bg-neutral-50 dark:bg-neutral-800">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">
-                    Description
-                  </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">
-                    Qty
-                  </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">
-                    Unit Price
-                  </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">
-                    Tax
-                  </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">
-                    Amount
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white dark:bg-neutral-900 divide-y divide-neutral-200 dark:divide-neutral-700">
-                {staticInvoiceItems.map(
-                  (item: ParsedInvoiceItem, index: number) => (
-                    <tr key={index}>
-                      <td className="px-6 py-4 text-sm text-neutral-900 dark:text-neutral-100">
-                        {item.name || 'Item'}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-right text-neutral-600 dark:text-neutral-400">
-                        {item.quantity || 1}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-right text-neutral-600 dark:text-neutral-400">
-                        {/* unitPrice is stored in human-readable format (dollars), not smallest units */}
+        <div className="p-4 sm:p-6">
+          {/* Seller/Buyer Info - Mobile responsive */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 sm:gap-8 mb-6 sm:mb-8">
+            <div className="space-y-1">
+              <h3 className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60 mb-2">
+                From
+              </h3>
+              <p className="font-medium text-[15px] text-[#101010]">
+                {sellerName}
+              </p>
+              {sellerEmail && (
+                <p className="text-[13px] text-[#101010]/60">{sellerEmail}</p>
+              )}
+              {sellerAddress && (
+                <p className="text-[13px] text-[#101010]/60">{sellerAddress}</p>
+              )}
+              {(sellerCity || sellerPostalCode) && (
+                <p className="text-[13px] text-[#101010]/60">
+                  {sellerCity}
+                  {sellerCity && sellerPostalCode && ', '}
+                  {sellerPostalCode}
+                </p>
+              )}
+              {sellerCountry && (
+                <p className="text-[13px] text-[#101010]/60">{sellerCountry}</p>
+              )}
+            </div>
+            <div className="space-y-1">
+              <h3 className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60 mb-2">
+                To
+              </h3>
+              <p className="font-medium text-[15px] text-[#101010]">
+                {buyerName}
+              </p>
+              {buyerEmail && (
+                <p className="text-[13px] text-[#101010]/60">{buyerEmail}</p>
+              )}
+              {buyerAddress && (
+                <p className="text-[13px] text-[#101010]/60">{buyerAddress}</p>
+              )}
+              {(buyerCity || buyerPostalCode) && (
+                <p className="text-[13px] text-[#101010]/60">
+                  {buyerCity}
+                  {buyerCity && buyerPostalCode && ', '}
+                  {buyerPostalCode}
+                </p>
+              )}
+              {buyerCountry && (
+                <p className="text-[13px] text-[#101010]/60">{buyerCountry}</p>
+              )}
+            </div>
+          </div>
+
+          {/* Items - Mobile card layout, Desktop table */}
+          <div className="mb-6 sm:mb-8">
+            <h3 className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60 mb-4">
+              Invoice Details
+            </h3>
+
+            {/* Mobile: Card layout */}
+            <div className="sm:hidden space-y-3">
+              {staticInvoiceItems.map(
+                (item: ParsedInvoiceItem, index: number) => (
+                  <div key={index} className="bg-[#F7F7F2] p-4 space-y-2">
+                    <p className="font-medium text-[14px] text-[#101010]">
+                      {item.name || 'Item'}
+                    </p>
+                    <div className="flex justify-between text-[13px]">
+                      <span className="text-[#101010]/60">
+                        {item.quantity || 1} ×{' '}
                         {parseFloat(item.unitPrice || '0').toLocaleString(
                           'en-US',
                           {
@@ -470,127 +412,183 @@ const StaticInvoiceDisplay: React.FC<{
                           },
                         )}{' '}
                         {dbInvoiceData.currency || currencySymbol}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-right text-neutral-600 dark:text-neutral-400">
-                        {item.tax && typeof item.tax === 'object'
-                          ? item.tax.amount
-                          : item.tax
-                            ? item.tax + '%'
-                            : '0%'}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-right font-medium text-neutral-900 dark:text-neutral-100">
-                        {/* Line item total is calculated in dollars, display directly */}
+                      </span>
+                      <span className="font-medium text-[#101010] tabular-nums">
                         {calculateItemTotal(item).toLocaleString('en-US', {
                           minimumFractionDigits: 2,
                           maximumFractionDigits: 2,
                         })}{' '}
                         {dbInvoiceData.currency || currencySymbol}
-                      </td>
-                    </tr>
-                  ),
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        {/* Totals */}
-        <div className="flex justify-end mb-8">
-          <div className="w-80 space-y-2">
-            <div className="flex justify-between py-2 text-sm">
-              <span className="text-neutral-600 dark:text-neutral-400">
-                Subtotal
-              </span>
-              <span className="text-neutral-900 dark:text-neutral-100">
-                {/* Subtotal is calculated in dollars, display directly */}
-                {subtotal.toLocaleString('en-US', {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2,
-                })}{' '}
-                {dbInvoiceData.currency || currencySymbol}
-              </span>
+                      </span>
+                    </div>
+                  </div>
+                ),
+              )}
             </div>
-            {totalTax > 0 && (
-              <div className="flex justify-between py-2 text-sm">
-                <span className="text-neutral-600 dark:text-neutral-400">
-                  Tax
-                </span>
-                <span className="text-neutral-900 dark:text-neutral-100">
-                  {/* Tax is calculated in dollars, display directly */}
-                  {totalTax.toLocaleString('en-US', {
+
+            {/* Desktop: Table layout */}
+            <div className="hidden sm:block border border-[#101010]/10 overflow-hidden">
+              <table className="min-w-full">
+                <thead className="bg-[#F7F7F2]">
+                  <tr>
+                    <th className="px-4 py-3 text-left uppercase tracking-[0.14em] text-[11px] text-[#101010]/60">
+                      Description
+                    </th>
+                    <th className="px-4 py-3 text-right uppercase tracking-[0.14em] text-[11px] text-[#101010]/60">
+                      Qty
+                    </th>
+                    <th className="px-4 py-3 text-right uppercase tracking-[0.14em] text-[11px] text-[#101010]/60">
+                      Unit Price
+                    </th>
+                    <th className="px-4 py-3 text-right uppercase tracking-[0.14em] text-[11px] text-[#101010]/60">
+                      Amount
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-[#101010]/10">
+                  {staticInvoiceItems.map(
+                    (item: ParsedInvoiceItem, index: number) => (
+                      <tr key={index}>
+                        <td className="px-4 py-4 text-[14px] text-[#101010]">
+                          {item.name || 'Item'}
+                        </td>
+                        <td className="px-4 py-4 text-[14px] text-right text-[#101010]/60 tabular-nums">
+                          {item.quantity || 1}
+                        </td>
+                        <td className="px-4 py-4 text-[14px] text-right text-[#101010]/60 tabular-nums">
+                          {parseFloat(item.unitPrice || '0').toLocaleString(
+                            'en-US',
+                            {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2,
+                            },
+                          )}{' '}
+                          {dbInvoiceData.currency || currencySymbol}
+                        </td>
+                        <td className="px-4 py-4 text-[14px] text-right font-medium text-[#101010] tabular-nums">
+                          {calculateItemTotal(item).toLocaleString('en-US', {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          })}{' '}
+                          {dbInvoiceData.currency || currencySymbol}
+                        </td>
+                      </tr>
+                    ),
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Totals - Mobile responsive */}
+          <div className="flex justify-end mb-6 sm:mb-8">
+            <div className="w-full sm:w-80 space-y-2">
+              <div className="flex justify-between py-2 text-[13px]">
+                <span className="text-[#101010]/60">Subtotal</span>
+                <span className="text-[#101010] tabular-nums">
+                  {subtotal.toLocaleString('en-US', {
                     minimumFractionDigits: 2,
                     maximumFractionDigits: 2,
                   })}{' '}
                   {dbInvoiceData.currency || currencySymbol}
                 </span>
               </div>
-            )}
-            <div className="flex justify-between py-3 text-lg font-semibold border-t border-neutral-200 dark:border-neutral-700">
-              <span className="text-neutral-900 dark:text-neutral-100">
-                Total Amount
-              </span>
-              <span className="text-neutral-900 dark:text-neutral-100">
-                {formatDisplayCurrency(
-                  totalAmountInSmallestUnit,
-                  dbInvoiceData.currency,
-                  network,
-                )}
-              </span>
+              {totalTax > 0 && (
+                <div className="flex justify-between py-2 text-[13px]">
+                  <span className="text-[#101010]/60">Tax</span>
+                  <span className="text-[#101010] tabular-nums">
+                    {totalTax.toLocaleString('en-US', {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}{' '}
+                    {dbInvoiceData.currency || currencySymbol}
+                  </span>
+                </div>
+              )}
+              <div className="flex justify-between py-3 border-t border-[#101010]/10">
+                <span className="text-[15px] font-semibold text-[#101010]">
+                  Total
+                </span>
+                <span className="text-[18px] font-semibold text-[#101010] tabular-nums">
+                  {formatDisplayCurrency(
+                    totalAmountInSmallestUnit,
+                    dbInvoiceData.currency,
+                    network,
+                  )}
+                </span>
+              </div>
             </div>
           </div>
+
+          {/* Notes and Terms */}
+          {(staticInvoiceData.note || staticInvoiceData.terms) && (
+            <div className="space-y-4 pt-4 sm:pt-6 border-t border-[#101010]/10">
+              {staticInvoiceData.note && (
+                <div>
+                  <h4 className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60 mb-2">
+                    Notes
+                  </h4>
+                  <p className="text-[13px] text-[#101010]/80 whitespace-pre-wrap">
+                    {staticInvoiceData.note}
+                  </p>
+                </div>
+              )}
+              {staticInvoiceData.terms && (
+                <div>
+                  <h4 className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60 mb-2">
+                    Terms & Conditions
+                  </h4>
+                  <p className="text-[13px] text-[#101010]/80 whitespace-pre-wrap">
+                    {staticInvoiceData.terms}
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Payment Info Section (External View Only) - only show if payment info exists */}
+          {isExternalView &&
+            (() => {
+              const paymentType = staticInvoiceData.paymentType || 'crypto';
+              const hasPaymentAddress =
+                !!(staticInvoiceData as any)?.paymentAddress ||
+                !!(staticInvoiceData as any)?.payment?.address;
+              const hasBankDetails = !!(
+                staticInvoiceData.bankDetails &&
+                Object.keys(staticInvoiceData.bankDetails).length > 0
+              );
+              const hasPaymentInfo =
+                (paymentType === 'crypto' && hasPaymentAddress) ||
+                (paymentType === 'fiat' && hasBankDetails);
+
+              if (!hasPaymentInfo) return null;
+
+              return (
+                <div className="mt-6 sm:mt-8 pt-4 sm:pt-6 border-t border-[#101010]/10">
+                  <h3 className="text-[15px] font-semibold mb-4 text-[#101010]">
+                    Payment Information
+                  </h3>
+                  <ExternalPaymentInfo
+                    staticInvoiceData={staticInvoiceData}
+                    dbInvoiceData={dbInvoiceData}
+                    requestNetworkId={requestNetworkId}
+                  />
+                </div>
+              );
+            })()}
+
+          {/* Processing Message if not external (and maybe if not paid?) */}
+          {!isExternalView && dbInvoiceData.status !== 'paid' && (
+            <div className="mt-6 sm:mt-8">
+              <div className="bg-[#f59e0b]/10 border border-[#f59e0b]/20 p-4">
+                <p className="text-[13px] text-[#101010]/80">
+                  This invoice is being processed. Full details and payment
+                  options will be available once processing is complete.
+                </p>
+              </div>
+            </div>
+          )}
         </div>
-
-        {/* Notes and Terms */}
-        {(staticInvoiceData.note || staticInvoiceData.terms) && (
-          <div className="space-y-4 pt-6 border-t border-neutral-200 dark:border-neutral-700">
-            {staticInvoiceData.note && (
-              <div>
-                <h4 className="text-xs font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 mb-2">
-                  Notes
-                </h4>
-                <p className="text-sm text-neutral-700 dark:text-neutral-300 whitespace-pre-wrap">
-                  {staticInvoiceData.note}
-                </p>
-              </div>
-            )}
-            {staticInvoiceData.terms && (
-              <div>
-                <h4 className="text-xs font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 mb-2">
-                  Terms & Conditions
-                </h4>
-                <p className="text-sm text-neutral-700 dark:text-neutral-300 whitespace-pre-wrap">
-                  {staticInvoiceData.terms}
-                </p>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Payment Info Section (External View Only) */}
-        {isExternalView && (
-          <div className="mt-8 pt-8 border-t border-neutral-200 dark:border-neutral-700">
-            <h3 className="text-lg font-semibold mb-4 text-neutral-900 dark:text-white">
-              Payment Information
-            </h3>
-            <ExternalPaymentInfo
-              staticInvoiceData={staticInvoiceData}
-              dbInvoiceData={dbInvoiceData}
-              requestNetworkId={requestNetworkId}
-            />
-          </div>
-        )}
-
-        {/* Processing Message if not external (and maybe if not paid?) */}
-        {!isExternalView && dbInvoiceData.status !== 'paid' && (
-          <div className="mt-8">
-            <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
-              <p className="text-sm text-amber-800 dark:text-amber-200">
-                This invoice is being processed. Full details and payment
-                options will be available once processing is complete.
-              </p>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );

@@ -625,10 +625,14 @@ export async function POST(request: NextRequest) {
         inputSchema: createInvoiceSchema,
         execute: async (params) => {
           console.log('[AI Email] Tool: createInvoice called with:', params);
+          // Include the sender's email so the invoice FROM field shows who created it
           const invoice = await createInvoiceForUser(
             toolContext.workspaceResult.workspaceCreatorUserId,
             toolContext.workspaceResult.workspaceId,
-            params,
+            {
+              ...params,
+              senderEmail: toolContext.email.from,
+            },
           );
 
           await updateSession(toolContext.session.id, {

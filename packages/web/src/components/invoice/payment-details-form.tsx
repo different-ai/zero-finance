@@ -92,12 +92,59 @@ export function PaymentDetailsForm({
     'ach',
   );
 
-  // Fetch user's virtual accounts
-  const { data: virtualAccounts, isLoading: loadingAccounts } =
-    api.align.getAllVirtualAccounts.useQuery();
+  // Fetch user's bank accounts from the database (same source as BankingInstructionsDisplay)
+  const { data: accountData, isLoading: loadingAccounts } =
+    api.align.getVirtualAccountDetails.useQuery();
 
-  // We can fetch funding sources if needed later
-  // const { data: fundingSources, isLoading: loadingFunding } = api.fundingSource.getUserFundingSources.useQuery();
+  // Filter to only show US ACH and IBAN accounts, prioritizing full tier over starter
+  // Only show ONE account per type (the best tier available)
+  const bankAccounts = React.useMemo(() => {
+    if (!accountData?.fundingSources) return [];
+
+    const sources = accountData.fundingSources;
+
+    // Filter for us_ach and iban types only
+    const achAndIbanSources = sources.filter(
+      (source: any) =>
+        source.sourceAccountType === 'us_ach' ||
+        source.sourceAccountType === 'iban',
+    );
+
+    // Get the best account for each type (full tier preferred over starter)
+    const result: any[] = [];
+
+    // Find best US ACH account (full tier first, then starter)
+    const fullAch = achAndIbanSources.find(
+      (acc: any) =>
+        acc.sourceAccountType === 'us_ach' && acc.accountTier === 'full',
+    );
+    const starterAch = achAndIbanSources.find(
+      (acc: any) =>
+        acc.sourceAccountType === 'us_ach' && acc.accountTier === 'starter',
+    );
+    if (fullAch) {
+      result.push(fullAch);
+    } else if (starterAch) {
+      result.push(starterAch);
+    }
+
+    // Find best IBAN account (full tier first, then starter)
+    const fullIban = achAndIbanSources.find(
+      (acc: any) =>
+        acc.sourceAccountType === 'iban' && acc.accountTier === 'full',
+    );
+    const starterIban = achAndIbanSources.find(
+      (acc: any) =>
+        acc.sourceAccountType === 'iban' && acc.accountTier === 'starter',
+    );
+    if (fullIban) {
+      result.push(fullIban);
+    } else if (starterIban) {
+      result.push(starterIban);
+    }
+
+    return result;
+  }, [accountData?.fundingSources]);
 
   // Initialize payment type based on current payment method
   useEffect(() => {
@@ -177,8 +224,8 @@ export function PaymentDetailsForm({
     }
   };
 
-  // Handle virtual account selection
-  const handleVirtualAccountSelect = (accountId: string) => {
+  // Handle bank account selection (using database-stored funding sources)
+  const handleBankAccountSelect = (accountId: string) => {
     setSelectedVirtualAccount(accountId);
 
     if (accountId === 'manual') {
@@ -193,53 +240,36 @@ export function PaymentDetailsForm({
       return;
     }
 
-    // Find the selected virtual account
-    const account = virtualAccounts?.find((acc: any) => acc.id === accountId);
-    if (account?.deposit_instructions) {
-      const instructions = account.deposit_instructions;
-
-      // Prefill bank details from virtual account
+    // Find the selected bank account from our filtered list
+    const account = bankAccounts?.find((acc: any) => acc.id === accountId);
+    if (account) {
+      // Prefill bank details from userFundingSource (database schema)
       updateFormData(
         'bankAccountHolder',
-        instructions.beneficiary_name ||
-          instructions.account_beneficiary_name ||
-          '',
+        account.sourceBankBeneficiaryName || '',
       );
-      updateFormData('bankName', instructions.bank_name || '');
-      updateFormData('bankAddress', instructions.bank_address || '');
+      updateFormData('bankName', account.sourceBankName || '');
+      updateFormData('bankAddress', ''); // Not stored in userFundingSources
 
       // Handle IBAN accounts (EUR) - Switch to SEPA tab
-      if (instructions.iban || instructions.currency === 'eur') {
+      if (account.sourceAccountType === 'iban') {
         setBankTransferType('sepa');
-        updateFormData('bankIban', instructions.iban?.iban_number || '');
-        updateFormData(
-          'bankBic',
-          instructions.iban?.bic || instructions.bic?.bic_code || '',
-        );
+        updateFormData('paymentMethod', 'sepa');
+        updateFormData('bankIban', account.sourceIban || '');
+        updateFormData('bankBic', account.sourceBicSwift || '');
         updateFormData('bankAccountNumber', '');
         updateFormData('bankRoutingNumber', '');
+        updateFormData('currency', 'EUR');
       }
       // Handle US accounts (USD) - Switch to ACH tab
-      else if (instructions.us || instructions.currency === 'usd') {
+      else if (account.sourceAccountType === 'us_ach') {
         setBankTransferType('ach');
-        updateFormData(
-          'bankAccountNumber',
-          instructions.us?.account_number || instructions.account_number || '',
-        );
-        updateFormData(
-          'bankRoutingNumber',
-          instructions.us?.routing_number || instructions.routing_number || '',
-        );
+        updateFormData('paymentMethod', 'ach');
+        updateFormData('bankAccountNumber', account.sourceAccountNumber || '');
+        updateFormData('bankRoutingNumber', account.sourceRoutingNumber || '');
         updateFormData('bankIban', '');
         updateFormData('bankBic', '');
-      }
-      // Handle other account formats - default to ACH
-      else {
-        setBankTransferType('ach');
-        updateFormData('bankAccountNumber', instructions.account_number || '');
-        updateFormData('bankRoutingNumber', instructions.routing_number || '');
-        updateFormData('bankIban', '');
-        updateFormData('bankBic', '');
+        updateFormData('currency', 'USD');
       }
     }
   };
@@ -311,29 +341,47 @@ export function PaymentDetailsForm({
         <CardContent className="space-y-4">
           {paymentType === 'fiat' ? (
             <>
-              {/* Virtual Account Selection for Bank Transfer */}
-              {virtualAccounts && virtualAccounts.length > 0 && (
+              {/* Bank Account Selection - filtered to US ACH and IBAN only */}
+              {bankAccounts && bankAccounts.length > 0 && (
                 <div>
                   <Label htmlFor="virtualAccount">Select Bank Account</Label>
                   <Select
                     value={selectedVirtualAccount}
-                    onValueChange={handleVirtualAccountSelect}
+                    onValueChange={handleBankAccountSelect}
                   >
                     <SelectTrigger id="virtualAccount">
                       <SelectValue placeholder="Choose a bank account or enter manually" />
                     </SelectTrigger>
                     <SelectContent>
-                      {virtualAccounts.map((account: any) => (
-                        <SelectItem key={account.id} value={account.id}>
-                          {account.deposit_instructions?.currency === 'eur'
-                            ? '🇪🇺'
-                            : '🇺🇸'}{' '}
-                          {account.deposit_instructions?.currency?.toUpperCase()}{' '}
-                          Account -{' '}
-                          {account.deposit_instructions?.beneficiary_name ||
-                            'Virtual Account'}
-                        </SelectItem>
-                      ))}
+                      {bankAccounts.map((account: any) => {
+                        // Get last 4 digits of account number or IBAN
+                        const accountNumber =
+                          account.sourceAccountType === 'iban'
+                            ? account.sourceIban
+                            : account.sourceAccountNumber;
+                        const lastFour = accountNumber
+                          ? `••••${accountNumber.slice(-4)}`
+                          : '';
+
+                        return (
+                          <SelectItem key={account.id} value={account.id}>
+                            <div className="flex items-center gap-2">
+                              {account.sourceAccountType === 'iban' ? (
+                                <Euro className="h-4 w-4" />
+                              ) : (
+                                <DollarSign className="h-4 w-4" />
+                              )}
+                              <span>
+                                {account.sourceBankName ||
+                                  (account.sourceAccountType === 'iban'
+                                    ? 'SEPA'
+                                    : 'ACH')}{' '}
+                                {lastFour}
+                              </span>
+                            </div>
+                          </SelectItem>
+                        );
+                      })}
                       <SelectItem value="manual">Enter Manually</SelectItem>
                     </SelectContent>
                   </Select>

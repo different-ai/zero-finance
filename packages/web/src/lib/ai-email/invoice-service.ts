@@ -3,9 +3,10 @@ import {
   userProfilesTable,
   userRequestsTable,
   workspaces,
+  userFundingSources,
   type NewUserRequest,
 } from '@/db/schema';
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import { parseUnits } from 'viem';
 import Decimal from 'decimal.js';
 
@@ -35,6 +36,8 @@ export interface CreateInvoiceParams {
   description: string;
   /** Optional billing address */
   billingAddress?: string;
+  /** Email of the person creating the invoice (sender's email from forwarded email) */
+  senderEmail?: string;
 }
 
 export interface CreatedInvoice {
@@ -113,6 +116,26 @@ export async function createInvoiceForUser(
     );
   }
 
+  // Get workspace's US bank account for payment details (prefer 'full' tier accounts)
+  const [fundingSource] = await db
+    .select({
+      accountType: userFundingSources.sourceAccountType,
+      bankName: userFundingSources.sourceBankName,
+      beneficiaryName: userFundingSources.sourceBankBeneficiaryName,
+      accountNumber: userFundingSources.sourceAccountNumber,
+      routingNumber: userFundingSources.sourceRoutingNumber,
+      iban: userFundingSources.sourceIban,
+      bic: userFundingSources.sourceBicSwift,
+    })
+    .from(userFundingSources)
+    .where(
+      and(
+        eq(userFundingSources.workspaceId, workspaceId),
+        eq(userFundingSources.sourceAccountType, 'us_ach'),
+      ),
+    )
+    .limit(1);
+
   const decimals = getCurrencyDecimals(params.currency);
   const invoiceNumber = generateInvoiceNumber();
   const creationDate = new Date().toISOString();
@@ -135,6 +158,24 @@ export async function createInvoiceForUser(
   }
 
   // Build the full invoice data structure
+  // Use the sender's email (from forwarded email) if provided, otherwise fall back to user profile email
+  const sellerEmail = params.senderEmail || userProfile.email || '';
+
+  // Build bank details if we have a US bank account
+  const bankDetails = fundingSource
+    ? {
+        accountHolder: fundingSource.beneficiaryName || sellerBusinessName,
+        bankName: fundingSource.bankName || '',
+        accountNumber: fundingSource.accountNumber || '',
+        routingNumber: fundingSource.routingNumber || '',
+        iban: fundingSource.iban || undefined,
+        bic: fundingSource.bic || undefined,
+      }
+    : null;
+
+  // Use fiat payment type if we have bank details, otherwise crypto
+  const paymentType = bankDetails ? ('fiat' as const) : ('crypto' as const);
+
   const invoiceData = {
     meta: {
       format: 'rnf_invoice',
@@ -144,7 +185,7 @@ export async function createInvoiceForUser(
     invoiceNumber,
     sellerInfo: {
       businessName: sellerBusinessName,
-      email: userProfile.email || '',
+      email: sellerEmail,
     },
     buyerInfo: {
       businessName: params.recipientCompany || params.recipientName || '',
@@ -168,7 +209,8 @@ export async function createInvoiceForUser(
       },
     ],
     currency: params.currency,
-    paymentType: 'crypto' as const, // Default to crypto for now
+    paymentType,
+    bankDetails,
   };
 
   // Calculate amount in smallest units
