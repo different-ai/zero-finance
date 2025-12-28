@@ -625,6 +625,35 @@ export async function POST(request: NextRequest) {
     console.log(
       `[AI Email] Processed email successfully. Steps: ${result.steps.length}`,
     );
+    console.log(
+      `[AI Email] AI response text: ${result.text?.substring(0, 200)}`,
+    );
+
+    // If the AI generated a text response but didn't call sendReplyToUser,
+    // send the response to the user
+    const toolCallsMade = result.steps.flatMap(
+      (step) => step.toolCalls?.map((tc) => tc.toolName) || [],
+    );
+    console.log(
+      `[AI Email] Tools called: ${toolCallsMade.join(', ') || 'none'}`,
+    );
+
+    const sentReply =
+      toolCallsMade.includes('sendReplyToUser') ||
+      toolCallsMade.includes('requestConfirmation');
+
+    if (result.text && !sentReply) {
+      console.log(
+        '[AI Email] AI generated text but no reply tool was called, sending response',
+      );
+      await sendReply(
+        email.from,
+        `Re: ${email.subject || 'Your message'}`,
+        result.text,
+        messageId,
+        workspaceResult.workspaceId,
+      );
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {
