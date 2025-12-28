@@ -19,6 +19,14 @@ export interface WorkspaceMapping {
   workspaceId: string;
   workspaceCreatorUserId: string;
   workspaceName: string;
+  /** Company/business name from workspace settings */
+  companyName: string | null;
+  /** First name of workspace owner (for individual workspaces) */
+  firstName: string | null;
+  /** Last name of workspace owner (for individual workspaces) */
+  lastName: string | null;
+  /** Whether this is a business or personal workspace */
+  workspaceType: 'personal' | 'business' | null;
   isValid: true;
 }
 
@@ -26,6 +34,10 @@ export interface WorkspaceMappingError {
   workspaceId: null;
   workspaceCreatorUserId: null;
   workspaceName: null;
+  companyName: null;
+  firstName: null;
+  lastName: null;
+  workspaceType: null;
   isValid: false;
   error: string;
 }
@@ -102,17 +114,25 @@ export async function mapToWorkspace(
       workspaceId: null,
       workspaceCreatorUserId: null,
       workspaceName: null,
+      companyName: null,
+      firstName: null,
+      lastName: null,
+      workspaceType: null,
       isValid: false,
       error: `Invalid email format. Expected: {workspaceId}@${AI_EMAIL_INBOUND_DOMAIN}`,
     };
   }
 
-  // Verify workspace exists
+  // Verify workspace exists and get company info
   const [workspace] = await db
     .select({
       id: workspaces.id,
       name: workspaces.name,
       createdBy: workspaces.createdBy,
+      companyName: workspaces.companyName,
+      firstName: workspaces.firstName,
+      lastName: workspaces.lastName,
+      workspaceType: workspaces.workspaceType,
     })
     .from(workspaces)
     .where(eq(workspaces.id, workspaceId))
@@ -123,6 +143,10 @@ export async function mapToWorkspace(
       workspaceId: null,
       workspaceCreatorUserId: null,
       workspaceName: null,
+      companyName: null,
+      firstName: null,
+      lastName: null,
+      workspaceType: null,
       isValid: false,
       error:
         'Workspace not found. Check your AI email address in dashboard settings.',
@@ -133,6 +157,10 @@ export async function mapToWorkspace(
     workspaceId: workspace.id,
     workspaceCreatorUserId: workspace.createdBy,
     workspaceName: workspace.name,
+    companyName: workspace.companyName,
+    firstName: workspace.firstName,
+    lastName: workspace.lastName,
+    workspaceType: workspace.workspaceType as 'personal' | 'business' | null,
     isValid: true,
   };
 }

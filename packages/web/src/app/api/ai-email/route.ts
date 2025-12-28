@@ -226,9 +226,33 @@ const sendInvoiceToRecipientSchema = z.object({
  * Receives inbound emails from the configured email provider (SES or Resend)
  * and processes them using AI with tool calling.
  */
+/**
+ * Get the display name for invoice sender based on workspace info.
+ * Priority: companyName > firstName lastName > workspaceName
+ */
+function getSenderDisplayName(workspaceResult: {
+  workspaceName: string;
+  companyName: string | null;
+  firstName: string | null;
+  lastName: string | null;
+}): string {
+  if (workspaceResult.companyName) {
+    return workspaceResult.companyName;
+  }
+  if (workspaceResult.firstName && workspaceResult.lastName) {
+    return `${workspaceResult.firstName} ${workspaceResult.lastName}`;
+  }
+  if (workspaceResult.firstName) {
+    return workspaceResult.firstName;
+  }
+  return workspaceResult.workspaceName;
+}
+
 export async function POST(request: NextRequest) {
   let rawBody = '';
   let senderEmail = '';
+  let messageId: string | undefined;
+  let workspaceId: string | undefined;
 
   try {
     // Read raw body for signature verification
@@ -362,7 +386,7 @@ export async function POST(request: NextRequest) {
     }
 
     const toAddress = getToAddress(email.to);
-    const messageId = email.messageId || crypto.randomUUID();
+    messageId = email.messageId || crypto.randomUUID();
 
     console.log(`[AI Email] Received email from ${email.from} to ${toAddress}`);
 
@@ -389,6 +413,12 @@ export async function POST(request: NextRequest) {
         handled: 'workspace_not_found',
       });
     }
+
+    // Track workspaceId for error handling
+    workspaceId = workspaceResult.workspaceId;
+
+    // Get sender display name from workspace company info
+    const senderDisplayName = getSenderDisplayName(workspaceResult);
 
     // Get or create session for this email thread
     const session = await getOrCreateSession({
@@ -417,7 +447,7 @@ export async function POST(request: NextRequest) {
         // User confirmed - send the invoice
         const action = session.pendingAction;
         const invoiceTemplate = emailTemplates.invoiceToRecipient({
-          senderName: workspaceResult.workspaceName,
+          senderName: senderDisplayName,
           amount: action.amount,
           currency: action.currency,
           description: action.description,
@@ -429,7 +459,7 @@ export async function POST(request: NextRequest) {
           action.recipientEmail,
           invoiceTemplate.subject,
           invoiceTemplate.body,
-          workspaceResult.workspaceName,
+          senderDisplayName,
         );
 
         const sentTemplate = emailTemplates.invoiceSent({
@@ -685,7 +715,14 @@ export async function POST(request: NextRequest) {
         const errorTemplate = emailTemplates.error(
           error instanceof Error ? error.message : undefined,
         );
-        await sendReply(senderEmail, errorTemplate.subject, errorTemplate.body);
+        // Maintain thread context by including messageId and workspaceId
+        await sendReply(
+          senderEmail,
+          errorTemplate.subject,
+          errorTemplate.body,
+          messageId, // Include In-Reply-To header to maintain thread
+          workspaceId, // Use workspace-specific from address
+        );
       }
     } catch {
       // Ignore error in error handler
