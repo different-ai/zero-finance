@@ -138,21 +138,7 @@ export function Sidebar() {
             {isTechnical ? 'ZERO::FINANCE' : 'finance'}
           </span>
         </div>
-        {workspaceData?.workspace?.name && (
-          <div className="hidden sm:flex items-center gap-1.5">
-            <Building className="h-3.5 w-3.5 text-[#101010]/40" />
-            <span
-              className={cn(
-                'text-[11px]',
-                isTechnical
-                  ? 'text-[#1B29FF]/70 font-mono'
-                  : 'text-[#101010]/60',
-              )}
-            >
-              {workspaceData.workspace.name}
-            </span>
-          </div>
-        )}
+        
       </Link>
 
       {/* Navigation */}

@@ -461,11 +461,15 @@ const StaticInvoiceDisplay: React.FC<{
                         {item.quantity || 1}
                       </td>
                       <td className="px-6 py-4 text-sm text-right text-neutral-600 dark:text-neutral-400">
-                        {formatDisplayCurrency(
-                          item.unitPrice || '0',
-                          dbInvoiceData.currency,
-                          network,
-                        )}
+                        {/* unitPrice is stored in human-readable format (dollars), not smallest units */}
+                        {parseFloat(item.unitPrice || '0').toLocaleString(
+                          'en-US',
+                          {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          },
+                        )}{' '}
+                        {dbInvoiceData.currency || currencySymbol}
                       </td>
                       <td className="px-6 py-4 text-sm text-right text-neutral-600 dark:text-neutral-400">
                         {item.tax && typeof item.tax === 'object'
@@ -475,11 +479,12 @@ const StaticInvoiceDisplay: React.FC<{
                             : '0%'}
                       </td>
                       <td className="px-6 py-4 text-sm text-right font-medium text-neutral-900 dark:text-neutral-100">
-                        {formatDisplayCurrency(
-                          calculateItemTotal(item).toFixed(2),
-                          dbInvoiceData.currency,
-                          network,
-                        )}
+                        {/* Line item total is calculated in dollars, display directly */}
+                        {calculateItemTotal(item).toLocaleString('en-US', {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}{' '}
+                        {dbInvoiceData.currency || currencySymbol}
                       </td>
                     </tr>
                   ),
@@ -497,11 +502,12 @@ const StaticInvoiceDisplay: React.FC<{
                 Subtotal
               </span>
               <span className="text-neutral-900 dark:text-neutral-100">
-                {formatDisplayCurrency(
-                  subtotal.toFixed(2),
-                  dbInvoiceData.currency,
-                  network,
-                )}
+                {/* Subtotal is calculated in dollars, display directly */}
+                {subtotal.toLocaleString('en-US', {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}{' '}
+                {dbInvoiceData.currency || currencySymbol}
               </span>
             </div>
             {totalTax > 0 && (
@@ -510,11 +516,12 @@ const StaticInvoiceDisplay: React.FC<{
                   Tax
                 </span>
                 <span className="text-neutral-900 dark:text-neutral-100">
-                  {formatDisplayCurrency(
-                    totalTax.toFixed(2),
-                    dbInvoiceData.currency,
-                    network,
-                  )}
+                  {/* Tax is calculated in dollars, display directly */}
+                  {totalTax.toLocaleString('en-US', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}{' '}
+                  {dbInvoiceData.currency || currencySymbol}
                 </span>
               </div>
             )}
