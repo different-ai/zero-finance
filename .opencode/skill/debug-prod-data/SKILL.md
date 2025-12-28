@@ -1,5 +1,5 @@
 ---
-name: debug-prod-data
+name: debug prod issues
 description: Debug production issues on Vercel using logs, database inspection, and proper deployment waiting
 license: MIT
 compatibility: opencode

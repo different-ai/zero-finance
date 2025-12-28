@@ -163,19 +163,28 @@ export class SESProvider implements EmailProvider {
     const rawEmail = sesNotification.content;
     const parsedEmail = await this.parseRawEmail(rawEmail);
 
+    // ALWAYS use receipt.recipients as the authoritative "to" address
+    // This is the envelope RCPT TO which contains the actual destination
+    // The MIME "to" header might be different (e.g., display name or alias)
+    const authoritativeToAddresses =
+      sesNotification.receipt?.recipients ||
+      sesNotification.mail?.destination ||
+      [];
+
+    console.log(
+      '[SESProvider] Authoritative to (receipt.recipients):',
+      authoritativeToAddresses,
+    );
+
     if (!parsedEmail) {
       // Fallback to headers if MIME parsing fails
       console.log(
         '[SESProvider] MIME parsing failed, using fallback from mail headers',
       );
       const mail = sesNotification.mail;
-      const receipt = sesNotification.receipt;
-      // Prefer receipt.recipients (envelope RCPT TO) as it's the most reliable
-      const toAddresses =
-        receipt?.recipients || mail.commonHeaders.to || mail.destination;
       const fallbackEmail = {
         from: mail.commonHeaders.from?.[0] || mail.source,
-        to: toAddresses,
+        to: authoritativeToAddresses,
         subject: mail.commonHeaders.subject || '',
         text: rawEmail, // Raw content as fallback
         headers: {},
@@ -186,16 +195,8 @@ export class SESProvider implements EmailProvider {
       return fallbackEmail;
     }
 
-    // If MIME parsing succeeded but 'to' is empty, use receipt.recipients
-    if (!parsedEmail.to || parsedEmail.to.length === 0) {
-      console.log(
-        '[SESProvider] MIME parsed but to is empty, using receipt.recipients',
-      );
-      parsedEmail.to =
-        sesNotification.receipt?.recipients ||
-        sesNotification.mail?.destination ||
-        [];
-    }
+    // Always override the MIME "to" with receipt.recipients
+    parsedEmail.to = authoritativeToAddresses;
 
     console.log('[SESProvider] Parsed email from:', parsedEmail.from);
     console.log('[SESProvider] Parsed email to:', parsedEmail.to);
