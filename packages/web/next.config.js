@@ -97,8 +97,11 @@ const nextConfig = {
       'zod',
     ],
   },
-  // Empty turbopack config - we use --webpack flag for builds due to pino/thread-stream
-  // bundling issues in Turbopack. See: https://github.com/vercel/next.js/pull/86884
+  // Turbopack configuration
+  // Note: pino/thread-stream (transitive dep from @walletconnect/logger via @privy-io/react-auth)
+  // have dynamic worker requires that break Turbopack bundling at build time.
+  // Issue tracked at: https://github.com/vercel/next.js/issues/87342
+  // We use --webpack flag for builds until this is resolved.
   turbopack: {},
   outputFileTracingRoot: path.join(__dirname, '../../'),
   staticPageGenerationTimeout: 180,
