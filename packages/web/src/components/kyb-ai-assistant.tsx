@@ -15,8 +15,8 @@ import {
   Conversation,
   ConversationContent,
 } from '@/components/ai-elements/conversation';
-import { useChat } from '@ai-sdk/react';
-import { DefaultChatTransport } from 'ai';
+import { useChat, type UseChatOptions } from '@ai-sdk/react';
+import { DefaultChatTransport, type UIMessage } from 'ai';
 
 const KYB_CONTEXT = `You are an expert KYB (Know Your Business) assistant helping businesses complete their verification for Delaware C-Corps or LLCs.
 
@@ -82,8 +82,8 @@ export function KybAiAssistant() {
   const [input, setInput] = useState('');
   const conversationEndRef = useRef<HTMLDivElement>(null);
 
-  const { messages, sendMessage, status } = useChat({
-    transport: new DefaultChatTransport({
+  const { messages, sendMessage, status } = useChat<UIMessage>({
+    transport: new DefaultChatTransport<UIMessage>({
       api: '/api/kyb-assistant',
       body: { context: KYB_CONTEXT },
     }),

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { generateText } from 'ai';
+import { generateText, tool, stepCountIs } from 'ai';
 import { openai } from '@/lib/ai/providers';
 import { z } from 'zod';
 import { headers } from 'next/headers';
@@ -21,10 +21,7 @@ import type {
   AiEmailMessage,
   AiEmailPendingAction,
 } from '@/db/schema/ai-email-sessions';
-import {
-  getEmailProviderSingleton,
-  type InboundEmail,
-} from '@/lib/email-provider';
+import { getEmailProviderSingleton } from '@/lib/email-provider';
 
 // Get the configured email provider (SES or Resend based on EMAIL_PROVIDER env var)
 const emailProvider = getEmailProviderSingleton();
@@ -43,7 +40,6 @@ function isRateLimited(senderEmail: string): boolean {
   const record = rateLimiter.get(key);
 
   if (!record || now > record.resetTime) {
-    // Create new record or reset
     rateLimiter.set(key, { count: 1, resetTime: now + RATE_LIMIT_WINDOW_MS });
     return false;
   }
@@ -93,13 +89,57 @@ function getToAddress(to: string | string[]): string {
 }
 
 /**
+ * Format the subject line for a reply.
+ * Ensures it starts with "Re:" and maintains threading.
+ */
+function getReplySubject(originalSubject: string | undefined): string {
+  if (!originalSubject) {
+    return 'Re: Your message';
+  }
+  // If it already starts with Re:, don't add another
+  if (originalSubject.toLowerCase().startsWith('re:')) {
+    return originalSubject;
+  }
+  return `Re: ${originalSubject}`;
+}
+
+/**
+ * Format the user's original message as a quote for context.
+ */
+function formatQuotedMessage(
+  originalText: string,
+  senderEmail: string,
+  timestamp?: Date,
+): string {
+  const dateStr = timestamp
+    ? timestamp.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+      })
+    : 'earlier';
+
+  // Quote each line with >
+  const quotedLines = originalText
+    .split('\n')
+    .map((line) => `> ${line}`)
+    .join('\n');
+
+  return `\n\n---\nOn ${dateStr}, ${senderEmail} wrote:\n${quotedLines}`;
+}
+
+/**
  * Send an email reply to the user.
+ * @param workspaceId - The workspace ID to use in the reply-to address so users can hit "reply"
  */
 async function sendReply(
   to: string,
   subject: string,
   body: string,
   inReplyTo?: string,
+  workspaceId?: string,
 ): Promise<void> {
   const emailHeaders: Record<string, string> = {};
   if (inReplyTo) {
@@ -107,8 +147,13 @@ async function sendReply(
     emailHeaders['References'] = inReplyTo;
   }
 
+  // Use workspace-specific address so users can hit "reply"
+  const fromAddress = workspaceId
+    ? `${workspaceId}@${AI_EMAIL_INBOUND_DOMAIN}`
+    : `ai@${AI_EMAIL_INBOUND_DOMAIN}`;
+
   await emailProvider.send({
-    from: `0 Finance AI <ai@${AI_EMAIL_INBOUND_DOMAIN}>`,
+    from: `0 Finance AI <${fromAddress}>`,
     to,
     subject,
     text: body,
@@ -133,52 +178,88 @@ async function sendInvoiceEmail(
   });
 }
 
-// Tool parameter schemas
+// =============================================================================
+// AI SDK 6 Tool Definitions
+// =============================================================================
+
+/**
+ * Schema for extracting invoice details from an email.
+ * This is what the AI will parse from the forwarded email content.
+ */
 const extractInvoiceDetailsSchema = z.object({
-  recipientEmail: z.string().describe('Email address of the invoice recipient'),
-  recipientName: z.string().optional().describe('Name of the recipient'),
+  recipientEmail: z
+    .string()
+    .email()
+    .describe(
+      'Email address of the person/company to invoice (the original sender in forwarded emails)',
+    ),
+  recipientName: z
+    .string()
+    .optional()
+    .describe('Name of the invoice recipient (person or contact name)'),
   recipientCompany: z
     .string()
     .optional()
-    .describe('Company name of the recipient'),
-  amount: z.number().describe('Invoice amount as a number'),
+    .describe('Company/business name of the invoice recipient'),
+  amount: z
+    .number()
+    .positive()
+    .describe('Invoice amount as a positive number (e.g., 2500.00)'),
   currency: z
     .string()
     .default('USD')
-    .describe('Currency code (USD, EUR, etc.)'),
-  description: z.string().describe('Description of the work/service'),
+    .describe('Currency code: USD, EUR, GBP, USDC, etc. Default is USD'),
+  description: z
+    .string()
+    .describe('Description of the work/services being invoiced for'),
 });
 
+/**
+ * Schema for creating the invoice after extraction.
+ */
 const createInvoiceSchema = z.object({
-  recipientEmail: z.string(),
+  recipientEmail: z.string().email(),
   recipientName: z.string().optional(),
   recipientCompany: z.string().optional(),
-  amount: z.number(),
+  amount: z.number().positive(),
   currency: z.string(),
   description: z.string(),
 });
 
+/**
+ * Schema for requesting user confirmation before sending.
+ */
 const requestConfirmationSchema = z.object({
-  invoiceId: z.string(),
-  recipientEmail: z.string(),
+  invoiceId: z.string().describe('The ID of the created invoice'),
+  recipientEmail: z.string().email(),
   recipientName: z.string().optional(),
-  amount: z.number(),
+  amount: z.number().positive(),
   currency: z.string(),
   description: z.string(),
-  invoiceLink: z.string(),
+  invoiceLink: z.string().url().describe('Public link to preview the invoice'),
 });
 
+/**
+ * Schema for sending a reply email to the user.
+ * Note: Subject is auto-generated as "Re: [original]" to maintain threading.
+ */
 const sendReplyToUserSchema = z.object({
-  subject: z.string(),
-  body: z.string(),
+  body: z
+    .string()
+    .describe('Email body text - the response to send to the user'),
 });
 
+/**
+ * Schema for sending the invoice to the recipient.
+ */
 const sendInvoiceToRecipientSchema = z.object({
-  recipientEmail: z.string(),
+  recipientEmail: z.string().email(),
   recipientName: z.string().optional(),
-  invoiceLink: z.string(),
-  senderName: z.string(),
-  amount: z.number(),
+  invoiceLink: z.string().url(),
+  senderName: z
+    .string()
+    .describe('Name of the person/company sending the invoice'),
+  amount: z.number().positive(),
   currency: z.string(),
   description: z.string(),
 });
@@ -187,11 +268,36 @@ const sendInvoiceToRecipientSchema = z.object({
  * AI Email Webhook Handler
  *
  * Receives inbound emails from the configured email provider (SES or Resend)
- * and processes them using AI.
+ * and processes them using AI with tool calling.
  */
+/**
+ * Get the display name for invoice sender based on workspace info.
+ * Priority: companyName > firstName lastName > workspaceName
+ */
+function getSenderDisplayName(workspaceResult: {
+  workspaceName: string;
+  companyName: string | null;
+  firstName: string | null;
+  lastName: string | null;
+}): string {
+  if (workspaceResult.companyName) {
+    return workspaceResult.companyName;
+  }
+  if (workspaceResult.firstName && workspaceResult.lastName) {
+    return `${workspaceResult.firstName} ${workspaceResult.lastName}`;
+  }
+  if (workspaceResult.firstName) {
+    return workspaceResult.firstName;
+  }
+  return workspaceResult.workspaceName;
+}
+
 export async function POST(request: NextRequest) {
   let rawBody = '';
   let senderEmail = '';
+  let messageId: string | undefined;
+  let workspaceId: string | undefined;
+  let originalSubject: string | undefined;
 
   try {
     // Read raw body for signature verification
@@ -204,8 +310,7 @@ export async function POST(request: NextRequest) {
     console.log('[AI Email] x-amz-sns-message-type:', snsMessageType);
     console.log('[AI Email] Body preview:', rawBody.substring(0, 200));
 
-    // Handle SNS messages based on x-amz-sns-message-type header
-    // AWS SNS sends JSON with Content-Type: text/plain and uses this header to indicate message type
+    // Handle SNS SubscriptionConfirmation
     if (snsMessageType === 'SubscriptionConfirmation') {
       console.log('[AI Email] Handling SNS SubscriptionConfirmation');
       try {
@@ -249,7 +354,6 @@ export async function POST(request: NextRequest) {
     let payload: unknown;
 
     if (contentType.includes('application/x-www-form-urlencoded')) {
-      // Some requests come as form-urlencoded (not standard SNS)
       const params = new URLSearchParams(rawBody);
       const formData: Record<string, string> = {};
       params.forEach((value, key) => {
@@ -261,7 +365,6 @@ export async function POST(request: NextRequest) {
         Object.keys(formData),
       );
 
-      // If this looks like an AWS API call (has Action parameter), acknowledge it
       if (formData.Action) {
         console.log(
           '[AI Email] Received AWS API-style request, Action:',
@@ -270,7 +373,6 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ message: 'Acknowledged' }, { status: 200 });
       }
     } else {
-      // Standard JSON payload (including SNS Notification messages)
       try {
         payload = JSON.parse(rawBody);
       } catch (parseError) {
@@ -309,17 +411,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Parse inbound email using the provider's parser
+    // Parse inbound email
     const email = await emailProvider.parseInboundWebhook(payload, headersObj);
 
-    // If no email returned (e.g., non-email notification), acknowledge and return
     if (!email) {
       console.log('[AI Email] No email in payload (non-email notification)');
       return NextResponse.json({ success: true, handled: 'no_email' });
     }
 
-    // Store sender for error handling
     senderEmail = email.from;
+    originalSubject = email.subject;
 
     // Check rate limit
     if (isRateLimited(email.from)) {
@@ -331,13 +432,11 @@ export async function POST(request: NextRequest) {
     }
 
     const toAddress = getToAddress(email.to);
-    const messageId = email.messageId || crypto.randomUUID();
+    messageId = email.messageId || crypto.randomUUID();
 
     console.log(`[AI Email] Received email from ${email.from} to ${toAddress}`);
-    console.log(`[AI Email] Full email.to value:`, JSON.stringify(email.to));
 
-    // 1. Map the "to" address to a workspace
-    console.log(`[AI Email] Calling mapToWorkspace with: "${toAddress}"`);
+    // Map the "to" address to a workspace
     const workspaceResult = await mapToWorkspace(toAddress);
     console.log(
       `[AI Email] mapToWorkspace result:`,
@@ -348,8 +447,6 @@ export async function POST(request: NextRequest) {
       console.log(
         `[AI Email] Workspace mapping failed: ${workspaceResult.error}`,
       );
-
-      // Send error reply to user
       const errorTemplate = emailTemplates.workspaceNotFound();
       await sendReply(
         email.from,
@@ -357,22 +454,40 @@ export async function POST(request: NextRequest) {
         errorTemplate.body,
         messageId,
       );
-
       return NextResponse.json({
         success: true,
         handled: 'workspace_not_found',
       });
     }
 
-    // 2. Get or create session for this email thread
+    // Track workspaceId for error handling
+    workspaceId = workspaceResult.workspaceId;
+
+    // Get sender display name from workspace company info
+    const senderDisplayName = getSenderDisplayName(workspaceResult);
+
+    // Extract thread headers for session continuity
+    // When user replies, the In-Reply-To header references the previous message
+    const inReplyTo =
+      email.headers?.['in-reply-to'] || email.headers?.['In-Reply-To'];
+    const references =
+      email.headers?.['references'] || email.headers?.['References'];
+
+    console.log(
+      `[AI Email] Thread headers - In-Reply-To: ${inReplyTo}, References: ${references?.substring(0, 100)}`,
+    );
+
+    // Get or create session for this email thread
     const session = await getOrCreateSession({
       senderEmail: email.from,
       threadId: messageId,
       workspaceId: workspaceResult.workspaceId,
       creatorUserId: workspaceResult.workspaceCreatorUserId,
+      inReplyTo,
+      references,
     });
 
-    // 3. Add the user's message to the session
+    // Add the user's message to the session
     const userMessage: AiEmailMessage = {
       role: 'user',
       content: formatEmailForAI(email),
@@ -380,19 +495,21 @@ export async function POST(request: NextRequest) {
     };
     await addMessageToSession(session.id, userMessage);
 
-    // 4. Check if this is a simple confirmation reply
+    // Prepare reply subject for threading
+    const replySubject = getReplySubject(email.subject);
+
+    // Check if this is a simple confirmation reply (YES/NO)
     const confirmationCheck = parseConfirmationReply(email.text);
     if (
       confirmationCheck.isConfirmation &&
       session.state === 'awaiting_confirmation' &&
       session.pendingAction
     ) {
-      // Handle confirmation without AI
       if (confirmationCheck.confirmed) {
-        // Send the invoice
+        // User confirmed - send the invoice
         const action = session.pendingAction;
         const invoiceTemplate = emailTemplates.invoiceToRecipient({
-          senderName: workspaceResult.workspaceName,
+          senderName: senderDisplayName,
           amount: action.amount,
           currency: action.currency,
           description: action.description,
@@ -404,10 +521,9 @@ export async function POST(request: NextRequest) {
           action.recipientEmail,
           invoiceTemplate.subject,
           invoiceTemplate.body,
-          workspaceResult.workspaceName,
+          senderDisplayName,
         );
 
-        // Confirm to user
         const sentTemplate = emailTemplates.invoiceSent({
           recipientEmail: action.recipientEmail,
           recipientName: action.recipientName,
@@ -415,28 +531,30 @@ export async function POST(request: NextRequest) {
           currency: action.currency,
           invoiceLink: action.invoiceLink,
         });
+        // Use Re: subject for threading
         await sendReply(
           email.from,
-          sentTemplate.subject,
+          replySubject,
           sentTemplate.body,
           messageId,
+          workspaceResult.workspaceId,
         );
 
-        // Update session
         await updateSession(session.id, {
           state: 'completed',
           pendingAction: null,
         });
       } else {
-        // Cancelled
+        // User cancelled
         const cancelledTemplate = emailTemplates.cancelled();
+        // Use Re: subject for threading
         await sendReply(
           email.from,
-          cancelledTemplate.subject,
+          replySubject,
           cancelledTemplate.body,
           messageId,
+          workspaceResult.workspaceId,
         );
-
         await updateSession(session.id, {
           state: 'completed',
           pendingAction: null,
@@ -446,162 +564,189 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: true, handled: 'confirmation' });
     }
 
-    // 5. Process with AI for complex requests
+    // Process with AI for invoice extraction and creation
     const systemPrompt = getSystemPrompt(
       session,
       workspaceResult.workspaceName,
     );
 
-    // Build conversation history for AI
+    // Build conversation history
     const messages = (session.messages || []).map((msg) => ({
       role: msg.role as 'user' | 'assistant',
       content: msg.content,
     }));
 
-    // Add current message if not already in history
     if (
       messages.length === 0 ||
       messages[messages.length - 1].content !== userMessage.content
     ) {
-      messages.push({
-        role: 'user',
-        content: userMessage.content,
-      });
+      messages.push({ role: 'user', content: userMessage.content });
     }
 
-    // Create tool execution context
+    // Create tool context for closures
+    const quotedOriginal = formatQuotedMessage(
+      email.text || '',
+      email.from,
+      new Date(),
+    );
+
     const toolContext = {
       session,
       workspaceResult,
       email,
       messageId,
+      replySubject,
+      quotedOriginal,
     };
 
-    const result = await generateText({
-      model: openai('gpt-4o'),
-      system: systemPrompt,
-      messages,
-      tools: {
-        extractInvoiceDetails: {
-          description: 'Extract invoice details from a forwarded email',
-          inputSchema: extractInvoiceDetailsSchema,
-          execute: async (
-            params: z.infer<typeof extractInvoiceDetailsSchema>,
-          ) => {
-            await updateSession(toolContext.session.id, {
-              extractedData: params,
-            });
-            return { success: true, extracted: params };
-          },
+    console.log('[AI Email] Starting AI processing with tools...');
+
+    // Define tools using AI SDK 6 pattern
+    const aiTools = {
+      extractInvoiceDetails: tool({
+        description:
+          'Extract invoice details from a forwarded email. Call this first to parse the email content.',
+        inputSchema: extractInvoiceDetailsSchema,
+        execute: async (params) => {
+          console.log(
+            '[AI Email] Tool: extractInvoiceDetails called with:',
+            params,
+          );
+          await updateSession(toolContext.session.id, {
+            extractedData: params,
+          });
+          return { success: true, extracted: params };
         },
+      }),
 
-        createInvoice: {
-          description: 'Create a draft invoice in 0 Finance',
-          inputSchema: createInvoiceSchema,
-          execute: async (params: z.infer<typeof createInvoiceSchema>) => {
-            const invoice = await createInvoiceForUser(
-              toolContext.workspaceResult.workspaceCreatorUserId,
-              toolContext.workspaceResult.workspaceId,
-              params,
-            );
+      createInvoice: tool({
+        description:
+          'Create a draft invoice in 0 Finance. Call this after extracting details.',
+        inputSchema: createInvoiceSchema,
+        execute: async (params) => {
+          console.log('[AI Email] Tool: createInvoice called with:', params);
+          const invoice = await createInvoiceForUser(
+            toolContext.workspaceResult.workspaceCreatorUserId,
+            toolContext.workspaceResult.workspaceId,
+            params,
+          );
 
-            await updateSession(toolContext.session.id, {
-              invoiceId: invoice.invoiceId,
-            });
+          await updateSession(toolContext.session.id, {
+            invoiceId: invoice.invoiceId,
+          });
 
-            return {
-              success: true,
-              invoiceId: invoice.invoiceId,
-              invoiceLink: invoice.publicLink,
-            };
-          },
+          return {
+            success: true,
+            invoiceId: invoice.invoiceId,
+            invoiceLink: invoice.publicLink,
+          };
         },
+      }),
 
-        requestConfirmation: {
-          description:
-            'Ask the user to confirm before sending the invoice. Always use this before sending.',
-          inputSchema: requestConfirmationSchema,
-          execute: async (
-            params: z.infer<typeof requestConfirmationSchema>,
-          ) => {
-            const pendingAction: AiEmailPendingAction = {
-              type: 'send_invoice',
-              ...params,
-            };
+      requestConfirmation: tool({
+        description:
+          'Ask the user to confirm before sending the invoice. ALWAYS call this before sending an invoice.',
+        inputSchema: requestConfirmationSchema,
+        execute: async (params) => {
+          console.log(
+            '[AI Email] Tool: requestConfirmation called with:',
+            params,
+          );
+          const pendingAction: AiEmailPendingAction = {
+            type: 'send_invoice',
+            ...params,
+          };
 
-            await updateSession(toolContext.session.id, {
-              pendingAction,
-              state: 'awaiting_confirmation',
-            });
+          await updateSession(toolContext.session.id, {
+            pendingAction,
+            state: 'awaiting_confirmation',
+          });
 
-            const template = emailTemplates.confirmationRequest(params);
-            await sendReply(
-              toolContext.email.from,
-              template.subject,
-              template.body,
-              toolContext.messageId,
-            );
+          const template = emailTemplates.confirmationRequest(params);
+          // Use Re: subject for threading and include quoted original
+          await sendReply(
+            toolContext.email.from,
+            toolContext.replySubject,
+            template.body + toolContext.quotedOriginal,
+            toolContext.messageId,
+            toolContext.workspaceResult.workspaceId,
+          );
 
-            return {
-              success: true,
-              message: 'Confirmation request sent to user',
-            };
-          },
+          return {
+            success: true,
+            message: 'Confirmation request sent to user',
+          };
         },
+      }),
 
-        sendReplyToUser: {
-          description:
-            'Send a reply email to the user (not the invoice recipient)',
-          inputSchema: sendReplyToUserSchema,
-          execute: async ({
-            subject,
-            body,
-          }: z.infer<typeof sendReplyToUserSchema>) => {
-            await sendReply(
-              toolContext.email.from,
-              subject,
-              body,
-              toolContext.messageId,
-            );
-            return { success: true };
-          },
+      sendReplyToUser: tool({
+        description:
+          'Send a reply email to the user (not the invoice recipient). Use for general responses. Subject is auto-set to maintain threading.',
+        inputSchema: sendReplyToUserSchema,
+        execute: async ({ body }) => {
+          console.log('[AI Email] Tool: sendReplyToUser called');
+          // Use Re: subject for threading and include quoted original
+          await sendReply(
+            toolContext.email.from,
+            toolContext.replySubject,
+            body + toolContext.quotedOriginal,
+            toolContext.messageId,
+            toolContext.workspaceResult.workspaceId,
+          );
+          return { success: true };
         },
+      }),
 
-        sendInvoiceToRecipient: {
-          description:
-            'Send the invoice link to the client/recipient. Only use after user confirms.',
-          inputSchema: sendInvoiceToRecipientSchema,
-          execute: async (
-            params: z.infer<typeof sendInvoiceToRecipientSchema>,
-          ) => {
-            const template = emailTemplates.invoiceToRecipient({
-              senderName: params.senderName,
-              amount: params.amount,
-              currency: params.currency,
-              description: params.description,
-              invoiceLink: params.invoiceLink,
-              recipientName: params.recipientName,
-            });
+      sendInvoiceToRecipient: tool({
+        description:
+          'Send the invoice to the client/recipient. Only use AFTER user confirms with YES.',
+        inputSchema: sendInvoiceToRecipientSchema,
+        execute: async (params) => {
+          console.log(
+            '[AI Email] Tool: sendInvoiceToRecipient called with:',
+            params,
+          );
+          const template = emailTemplates.invoiceToRecipient({
+            senderName: params.senderName,
+            amount: params.amount,
+            currency: params.currency,
+            description: params.description,
+            invoiceLink: params.invoiceLink,
+            recipientName: params.recipientName,
+          });
 
-            await sendInvoiceEmail(
-              params.recipientEmail,
-              template.subject,
-              template.body,
-              params.senderName,
-            );
+          await sendInvoiceEmail(
+            params.recipientEmail,
+            template.subject,
+            template.body,
+            params.senderName,
+          );
 
-            await updateSession(toolContext.session.id, {
-              state: 'completed',
-              pendingAction: null,
-            });
+          await updateSession(toolContext.session.id, {
+            state: 'completed',
+            pendingAction: null,
+          });
 
-            return { success: true };
-          },
+          return { success: true };
         },
-      },
-    });
+      }),
+    };
 
-    // 6. Save AI response to session
+    let result;
+    try {
+      result = await generateText({
+        model: openai('gpt-4o'),
+        system: systemPrompt,
+        messages,
+        tools: aiTools,
+        stopWhen: stepCountIs(5), // Allow up to 5 steps for multi-tool execution
+      });
+    } catch (aiError) {
+      console.error('[AI Email] AI processing failed:', aiError);
+      throw aiError;
+    }
+
+    // Save AI response to session
     if (result.text) {
       const assistantMessage: AiEmailMessage = {
         role: 'assistant',
@@ -611,22 +756,56 @@ export async function POST(request: NextRequest) {
       await addMessageToSession(session.id, assistantMessage);
     }
 
-    console.log(
-      `[AI Email] Processed email successfully. Steps: ${result.steps.length}`,
+    // Log tool calls for debugging
+    const toolCallsMade = result.steps.flatMap(
+      (step) => step.toolCalls?.map((tc) => tc.toolName) || [],
     );
+    console.log(
+      `[AI Email] Processed email. Steps: ${result.steps.length}, Tools called: ${toolCallsMade.join(', ') || 'none'}`,
+    );
+
+    // If AI generated text but didn't send a reply via tool, send it now
+    const sentReply =
+      toolCallsMade.includes('sendReplyToUser') ||
+      toolCallsMade.includes('requestConfirmation');
+
+    if (result.text && !sentReply) {
+      console.log('[AI Email] Sending AI text response as email');
+      // Include quoted original for context
+      const quotedOriginal = formatQuotedMessage(
+        email.text || '',
+        email.from,
+        new Date(),
+      );
+      await sendReply(
+        email.from,
+        toolContext.replySubject,
+        result.text + quotedOriginal,
+        messageId,
+        workspaceResult.workspaceId,
+      );
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('[AI Email] Webhook error:', error);
 
-    // Try to send error reply if we have sender info
     try {
-      // We have senderEmail in outer scope if it was parsed successfully
       if (senderEmail) {
         const errorTemplate = emailTemplates.error(
           error instanceof Error ? error.message : undefined,
         );
-        await sendReply(senderEmail, errorTemplate.subject, errorTemplate.body);
+        // Maintain thread context - use Re: subject format
+        const errorSubject = originalSubject
+          ? getReplySubject(originalSubject)
+          : errorTemplate.subject;
+        await sendReply(
+          senderEmail,
+          errorSubject,
+          errorTemplate.body,
+          messageId, // Include In-Reply-To header to maintain thread
+          workspaceId, // Use workspace-specific from address
+        );
       }
     } catch {
       // Ignore error in error handler

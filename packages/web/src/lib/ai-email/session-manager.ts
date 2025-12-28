@@ -25,6 +25,12 @@ const SESSION_TTL_MS = 24 * 60 * 60 * 1000;
  * Sessions are identified by:
  * - senderEmail: Who is emailing the AI
  * - threadId: The Message-ID for threading replies
+ * - inReplyTo: The In-Reply-To header (for finding existing thread)
+ * - references: The References header (fallback for thread lookup)
+ *
+ * When a user replies to an email, their reply has a NEW messageId.
+ * The original message ID is in the In-Reply-To or References header.
+ * We need to look up sessions by these headers to maintain thread continuity.
  *
  * @param params - Session identification params
  * @returns Existing or new session
@@ -34,45 +40,95 @@ export async function getOrCreateSession(params: {
   threadId: string;
   workspaceId: string;
   creatorUserId: string;
+  /** The In-Reply-To header from the email (references the previous message) */
+  inReplyTo?: string;
+  /** The References header from the email (list of all messages in thread) */
+  references?: string;
 }): Promise<AiEmailSession> {
-  const { senderEmail, threadId, workspaceId, creatorUserId } = params;
+  const {
+    senderEmail,
+    threadId,
+    workspaceId,
+    creatorUserId,
+    inReplyTo,
+    references,
+  } = params;
 
   // Normalize email
   const normalizedEmail = senderEmail.toLowerCase().trim();
 
-  // Try to find existing session
-  const [existingSession] = await db
-    .select()
-    .from(aiEmailSessions)
-    .where(
-      and(
-        eq(aiEmailSessions.senderEmail, normalizedEmail),
-        eq(aiEmailSessions.threadId, threadId),
-      ),
-    )
-    .limit(1);
+  // Build list of possible thread IDs to search for
+  // Priority: inReplyTo > references > current messageId
+  const possibleThreadIds: string[] = [];
 
-  if (existingSession) {
-    // Check if expired
-    if (new Date(existingSession.expiresAt) < new Date()) {
-      // Mark as expired and create new session
-      await db
-        .update(aiEmailSessions)
-        .set({ state: 'expired' as AiEmailSessionState })
-        .where(eq(aiEmailSessions.id, existingSession.id));
-    } else {
-      return existingSession;
+  // In-Reply-To is the most direct reference to the parent message
+  if (inReplyTo) {
+    // Clean up the message ID (remove angle brackets if present)
+    const cleanInReplyTo = inReplyTo.replace(/^<|>$/g, '').trim();
+    if (cleanInReplyTo) {
+      possibleThreadIds.push(cleanInReplyTo);
     }
   }
 
-  // Create new session
+  // References header contains all message IDs in the thread
+  // Usually in order from oldest to newest
+  if (references) {
+    const refIds = references
+      .split(/\s+/)
+      .map((id) => id.replace(/^<|>$/g, '').trim())
+      .filter(Boolean);
+    possibleThreadIds.push(...refIds);
+  }
+
+  // Also try the current message ID (for the first message in a thread)
+  possibleThreadIds.push(threadId);
+
+  // Try to find existing session by any of the thread IDs
+  for (const searchThreadId of possibleThreadIds) {
+    const [existingSession] = await db
+      .select()
+      .from(aiEmailSessions)
+      .where(
+        and(
+          eq(aiEmailSessions.senderEmail, normalizedEmail),
+          eq(aiEmailSessions.threadId, searchThreadId),
+        ),
+      )
+      .limit(1);
+
+    if (existingSession) {
+      // Check if expired
+      if (new Date(existingSession.expiresAt) < new Date()) {
+        // Mark as expired and continue searching
+        await db
+          .update(aiEmailSessions)
+          .set({ state: 'expired' as AiEmailSessionState })
+          .where(eq(aiEmailSessions.id, existingSession.id));
+      } else {
+        console.log(
+          `[Session] Found existing session via threadId: ${searchThreadId}`,
+        );
+        return existingSession;
+      }
+    }
+  }
+
+  // No existing session found - create new one
+  // Use the FIRST message ID we find (inReplyTo if available, else current messageId)
+  // This ensures if user starts by replying, we still track the thread correctly
+  const canonicalThreadId = possibleThreadIds[0] || threadId;
+
+  console.log(
+    `[Session] Creating new session with threadId: ${canonicalThreadId}`,
+  );
+
   const expiresAt = new Date(Date.now() + SESSION_TTL_MS);
 
   const [newSession] = await db
     .insert(aiEmailSessions)
     .values({
       senderEmail: normalizedEmail,
-      threadId,
+      threadId: canonicalThreadId,
       workspaceId,
       creatorUserId,
       state: 'active',

@@ -39,6 +39,12 @@ export class SESProvider implements EmailProvider {
   async send(options: SendEmailOptions): Promise<SendEmailResult> {
     const toAddresses = Array.isArray(options.to) ? options.to : [options.to];
 
+    console.log('[SESProvider] Sending email:', {
+      from: options.from,
+      to: toAddresses,
+      subject: options.subject,
+    });
+
     const command = new SendEmailCommand({
       Source: options.from,
       Destination: {
@@ -65,12 +71,20 @@ export class SESProvider implements EmailProvider {
       ReplyToAddresses: options.replyTo ? [options.replyTo] : undefined,
     });
 
-    const result = await this.client.send(command);
-
-    return {
-      messageId: result.MessageId || '',
-      provider: 'ses',
-    };
+    try {
+      const result = await this.client.send(command);
+      console.log(
+        '[SESProvider] Email sent successfully, MessageId:',
+        result.MessageId,
+      );
+      return {
+        messageId: result.MessageId || '',
+        provider: 'ses',
+      };
+    } catch (error) {
+      console.error('[SESProvider] Failed to send email:', error);
+      throw error;
+    }
   }
 
   async parseInboundWebhook(

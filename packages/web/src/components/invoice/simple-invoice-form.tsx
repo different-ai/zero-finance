@@ -533,14 +533,16 @@ export function SimpleInvoiceForm() {
   return (
     <div className="relative">
       {isSubmitting && (
-        <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-50 flex items-center justify-center rounded-lg">
+        <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-50 flex items-center justify-center">
           <div className="flex flex-col items-center space-y-4">
-            <Loader2 className="h-12 w-12 animate-spin text-blue-600" />
+            <Loader2 className="h-12 w-12 animate-spin text-[#1B29FF]" />
             <div className="text-center">
-              <p className="text-lg font-medium text-gray-900">
+              <p className="text-lg font-medium text-[#101010]">
                 Creating Invoice...
               </p>
-              <p className="text-sm text-gray-600">This may take a moment</p>
+              <p className="text-sm text-[#101010]/60">
+                This may take a moment
+              </p>
             </div>
           </div>
         </div>
@@ -600,7 +602,7 @@ export function SimpleInvoiceForm() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="border rounded-lg p-4 bg-gray-50">
+            <div className="border border-[#101010]/10 rounded-sm p-4 bg-[#fafafa]">
               <Label
                 htmlFor="sender-profile"
                 className="text-sm font-medium mb-2 block"
@@ -673,7 +675,7 @@ export function SimpleInvoiceForm() {
                                   {company.email}
                                 </div>
                                 {company.relationship && (
-                                  <span className="text-xs bg-gray-100 text-gray-700 px-1 py-0.5 rounded ml-1">
+                                  <span className="text-xs bg-[#101010]/5 text-[#101010]/70 px-1 py-0.5 rounded-sm ml-1">
                                     {company.relationship === 'owner'
                                       ? 'My Company'
                                       : company.relationship === 'member'
@@ -882,7 +884,7 @@ export function SimpleInvoiceForm() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="border rounded-lg p-4 bg-gray-50">
+            <div className="border border-[#101010]/10 rounded-sm p-4 bg-[#fafafa]">
               <Label
                 htmlFor="recipient-profile"
                 className="text-sm font-medium mb-2 block"
@@ -944,19 +946,18 @@ export function SimpleInvoiceForm() {
                       {allCompanies.length > 0 ? (
                         allCompanies.map((company: any) => (
                           <SelectItem key={company.id} value={company.id}>
-                            {/*  make it improtant the color  */}
-                            <div className="flex items-center gap-2 hover:text-white ">
+                            <div className="flex items-center gap-2">
                               <User className="h-4 w-4" />
                               <div>
                                 <div className="font-medium">
                                   {company.name}
                                 </div>
-                                <div className="text-xs text-muted-foreground">
+                                <div className="text-xs text-[#101010]/60">
                                   {company.email}
                                 </div>
                                 <div className="flex items-center gap-2">
                                   {company.relationship && (
-                                    <span className="text-xs bg-gray-100 text-gray-700 px-1 py-0.5 rounded">
+                                    <span className="text-xs bg-[#101010]/5 text-[#101010]/70 px-1 py-0.5 rounded-sm">
                                       {company.relationship === 'owner'
                                         ? 'My Company'
                                         : company.relationship === 'member'
@@ -965,7 +966,7 @@ export function SimpleInvoiceForm() {
                                     </span>
                                   )}
                                   {company.lastUsedAt && (
-                                    <span className="text-xs text-gray-500">
+                                    <span className="text-xs text-[#101010]/50">
                                       Last:{' '}
                                       {new Date(
                                         company.lastUsedAt,
@@ -1265,12 +1266,14 @@ export function SimpleInvoiceForm() {
             type="button"
             variant="outline"
             onClick={() => router.push('/dashboard')}
+            className="border-[#101010]/10 hover:bg-[#fafafa]"
           >
             Cancel
           </Button>
           <Button
             type="submit"
             disabled={isSubmitting || createInvoiceMutation.isPending}
+            className="bg-[#1B29FF] hover:bg-[#1420CC] text-white"
           >
             {isSubmitting || createInvoiceMutation.isPending ? (
               <>

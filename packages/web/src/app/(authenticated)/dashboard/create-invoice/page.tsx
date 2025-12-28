@@ -8,7 +8,7 @@ import { AuthGuard } from '@/components/auth/auth-guard';
 export default function CreateInvoicePage() {
   return (
     <AuthGuard>
-      <div className="w-full min-h-screen bg-[#F7F7F2]">
+      <div className="w-full min-h-screen bg-[#fafafa]">
         <Toaster richColors />
 
         <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
@@ -21,7 +21,7 @@ export default function CreateInvoicePage() {
             </h1>
           </div>
 
-          <div className="bg-white border border-[#101010]/10 rounded-[12px] shadow-[0_2px_8px_rgba(16,16,16,0.04)] p-6">
+          <div className="bg-white border border-[#101010]/10 rounded-sm p-6">
             <SimpleInvoiceForm />
           </div>
         </div>

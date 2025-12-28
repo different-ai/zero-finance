@@ -26,8 +26,8 @@
   },
   "dependencies": {
     "@across-protocol/app-sdk": "^0.4.4",
-    "@ai-sdk/openai": "2.0.42",
-    "@ai-sdk/react": "2.0.59",
+    "@ai-sdk/openai": "3.0.1",
+    "@ai-sdk/react": "3.0.3",
     "@aws-sdk/client-ses": "^3.958.0",
     "@hookform/resolvers": "catalog:",
     "@lifi/types": "^17.9.0",
@@ -71,7 +71,7 @@
     "@vercel/postgres": "^0.10.0",
     "@vercel/speed-insights": "^1.2.0",
     "@wagmi/connectors": "5",
-    "ai": "^5.0.59",
+    "ai": "^6.0.3",
     "class-variance-authority": "catalog:",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
@@ -125,7 +125,7 @@
     "viem": "^2.37.12",
     "wagmi": "^2.17.5",
     "xlsx": "^0.18.5",
-    "zod": "^4.1.11",
+    "zod": "3",
     "zustand": "catalog:"
   },
   "devDependencies": {

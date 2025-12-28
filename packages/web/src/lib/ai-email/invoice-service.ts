@@ -2,6 +2,7 @@ import { db } from '@/db';
 import {
   userProfilesTable,
   userRequestsTable,
+  workspaces,
   type NewUserRequest,
 } from '@/db/schema';
 import { eq } from 'drizzle-orm';
@@ -16,6 +17,7 @@ import Decimal from 'decimal.js';
  * - Takes a userId instead of auth context
  * - Accepts simplified input (no full schema required)
  * - Auto-generates invoice metadata
+ * - Uses workspace company info for seller details
  */
 
 export interface CreateInvoiceParams {
@@ -85,7 +87,20 @@ export async function createInvoiceForUser(
   workspaceId: string,
   params: CreateInvoiceParams,
 ): Promise<CreatedInvoice> {
-  // Get user profile for seller info
+  // Get workspace info for seller details (company name, etc.)
+  const [workspace] = await db
+    .select({
+      companyName: workspaces.companyName,
+      firstName: workspaces.firstName,
+      lastName: workspaces.lastName,
+      workspaceType: workspaces.workspaceType,
+      name: workspaces.name,
+    })
+    .from(workspaces)
+    .where(eq(workspaces.id, workspaceId))
+    .limit(1);
+
+  // Get user profile for email fallback
   const [userProfile] = await db
     .select()
     .from(userProfilesTable)
@@ -102,6 +117,23 @@ export async function createInvoiceForUser(
   const invoiceNumber = generateInvoiceNumber();
   const creationDate = new Date().toISOString();
 
+  // Determine seller business name from workspace info
+  // Priority: workspace.companyName > workspace firstName+lastName > userProfile.businessName > workspace.name > email
+  let sellerBusinessName: string;
+  if (workspace?.companyName) {
+    sellerBusinessName = workspace.companyName;
+  } else if (workspace?.firstName && workspace?.lastName) {
+    sellerBusinessName = `${workspace.firstName} ${workspace.lastName}`;
+  } else if (workspace?.firstName) {
+    sellerBusinessName = workspace.firstName;
+  } else if (userProfile.businessName) {
+    sellerBusinessName = userProfile.businessName;
+  } else if (workspace?.name) {
+    sellerBusinessName = workspace.name;
+  } else {
+    sellerBusinessName = userProfile.email || 'Unknown Seller';
+  }
+
   // Build the full invoice data structure
   const invoiceData = {
     meta: {
@@ -111,8 +143,7 @@ export async function createInvoiceForUser(
     creationDate,
     invoiceNumber,
     sellerInfo: {
-      businessName:
-        userProfile.businessName || userProfile.email || 'Unknown Seller',
+      businessName: sellerBusinessName,
       email: userProfile.email || '',
     },
     buyerInfo: {
