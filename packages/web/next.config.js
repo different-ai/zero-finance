@@ -61,10 +61,47 @@ const nextConfig = {
     tsconfigPath: './tsconfig.next.json',
   },
   experimental: {
-    optimizePackageImports: ['lucide-react', '@radix-ui/react-icons'],
+    optimizePackageImports: [
+      'lucide-react',
+      '@radix-ui/react-icons',
+      // Heavy UI libraries
+      'framer-motion',
+      'recharts',
+      'date-fns',
+      // Radix UI components (barrel exports)
+      '@radix-ui/react-accordion',
+      '@radix-ui/react-alert-dialog',
+      '@radix-ui/react-avatar',
+      '@radix-ui/react-checkbox',
+      '@radix-ui/react-collapsible',
+      '@radix-ui/react-dialog',
+      '@radix-ui/react-dropdown-menu',
+      '@radix-ui/react-hover-card',
+      '@radix-ui/react-label',
+      '@radix-ui/react-popover',
+      '@radix-ui/react-progress',
+      '@radix-ui/react-radio-group',
+      '@radix-ui/react-scroll-area',
+      '@radix-ui/react-select',
+      '@radix-ui/react-separator',
+      '@radix-ui/react-slider',
+      '@radix-ui/react-slot',
+      '@radix-ui/react-switch',
+      '@radix-ui/react-tabs',
+      '@radix-ui/react-toast',
+      '@radix-ui/react-tooltip',
+      // Other heavy packages
+      '@tanstack/react-query',
+      'posthog-js',
+      'react-hook-form',
+      'zod',
+    ],
   },
-  // Empty turbopack config - we use --webpack flag for builds due to pino/thread-stream
-  // bundling issues in Turbopack. See: https://github.com/vercel/next.js/pull/86884
+  // Turbopack configuration
+  // Note: pino/thread-stream (transitive dep from @walletconnect/logger via @privy-io/react-auth)
+  // have dynamic worker requires that break Turbopack bundling at build time.
+  // Issue tracked at: https://github.com/vercel/next.js/issues/87342
+  // We use --webpack flag for builds until this is resolved.
   turbopack: {},
   outputFileTracingRoot: path.join(__dirname, '../../'),
   staticPageGenerationTimeout: 180,

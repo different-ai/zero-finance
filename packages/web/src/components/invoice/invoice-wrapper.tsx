@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { UserFundingSource } from '@/db/schema'; // Added
 import { FiatPaymentDetails } from './fiat-payment-details';
 import { CryptoManualPaymentDetails } from './crypto-manual-payment-details';
-import { RequestNetworkPayButton } from './request-network-pay-button';
+// Request Network integration removed - invoices are now handled natively
 import { usePrivy } from '@privy-io/react-auth'; // Import Privy hook
 import { Wallet } from 'lucide-react'; // Import Wallet icon
 import { formatDisplayCurrency } from '@/lib/utils'; // Import the new utility
@@ -139,23 +139,8 @@ const ExternalPaymentInfo: React.FC<{
   // Disable button logic until Privy is ready
   const isLoginDisabled = !ready;
 
-  // Scenario 1 & 2: On-chain Payments (Crypto OR Fiat - Button handles logic)
-  if (isOnChain) {
-    // Check if user is authenticated
-    if (authenticated) {
-      // User is logged in, show the pay/declare button
-      // The button component will determine whether to pay or declare
-      return <RequestNetworkPayButton requestNetworkId={requestNetworkId} />;
-    } else {
-      // User is not logged in, show connect button
-      return (
-        <Button onClick={login} disabled={isLoginDisabled}>
-          <Wallet className="mr-2 h-4 w-4" />
-          {isLoginDisabled ? 'Loading...' : 'Sign in to Pay/Declare'}
-        </Button>
-      );
-    }
-  }
+  // On-chain payments via Request Network have been removed
+  // All payments are now handled natively via crypto or fiat payment details
 
   // Scenario 3a: Off-chain Crypto Payment (Show payment address from invoice)
   if (!isOnChain && paymentType === 'crypto') {

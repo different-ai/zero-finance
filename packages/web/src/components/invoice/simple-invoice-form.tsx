@@ -150,6 +150,12 @@ export function SimpleInvoiceForm() {
   // Fetch user's companies to check if they're a contractor
   const { data: myCompanies = [] } = api.company.getMyCompanies.useQuery();
 
+  // Fetch user's primary safe address for crypto payments
+  const { data: positions } = api.earn.getMultiChainPositions.useQuery();
+  const primarySafeAddress = positions?.safes?.find(
+    (s: any) => s.chainId === 8453, // Base chain
+  )?.address;
+
   // Check if user is a contractor (member, not owner) of any company
   const contractorCompany = myCompanies.find((c: any) => c.role === 'member');
 
@@ -232,6 +238,16 @@ export function SimpleInvoiceForm() {
       toast.info(`Bill-to prefilled with ${contractorCompany.name}`);
     }
   }, [contractorCompany]);
+
+  // Auto-prefill payment address with primary safe
+  useEffect(() => {
+    if (primarySafeAddress && !formData.paymentAddress) {
+      setFormData((prev) => ({
+        ...prev,
+        paymentAddress: primarySafeAddress,
+      }));
+    }
+  }, [primarySafeAddress]);
 
   // Save selected profiles to localStorage
   useEffect(() => {
