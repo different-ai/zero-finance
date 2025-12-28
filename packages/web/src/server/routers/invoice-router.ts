@@ -359,15 +359,9 @@ export const invoiceRouter = router({
     .input(invoiceDataSchema)
     .mutation(async ({ input, ctx }) => {
       const userId = ctx.user.id;
-      const userEmail = ctx.user.email?.address;
+      // Email is optional - use empty string as fallback for profile service
+      const userEmail = ctx.user.email?.address || '';
       const invoiceData = input;
-
-      if (!userEmail) {
-        throw new TRPCError({
-          code: 'BAD_REQUEST',
-          message: 'User email is required.',
-        });
-      }
 
       let dbInvoiceId: string | null = null;
 
