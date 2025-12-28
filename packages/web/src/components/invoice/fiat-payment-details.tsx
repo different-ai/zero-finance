@@ -1,5 +1,6 @@
-import React from 'react';
-import { UserFundingSource } from '@/db/schema'; // Changed import
+import React, { useState } from 'react';
+import { UserFundingSource } from '@/db/schema';
+import { Copy, Check, DollarSign, Euro, Info } from 'lucide-react';
 
 interface FiatPaymentDetailsProps {
   fundingSource: UserFundingSource | null;
@@ -14,97 +15,204 @@ interface FiatPaymentDetailsProps {
   } | null;
 }
 
-export const FiatPaymentDetails: React.FC<FiatPaymentDetailsProps> = ({ fundingSource, invoiceNumber, invoiceBankDetails }) => {
-  console.log('🏦 FiatPaymentDetails - Invoice bank details:', invoiceBankDetails);
-  console.log('🏦 FiatPaymentDetails - Funding source:', fundingSource);
-  
-  // Use invoice bank details if available, otherwise fall back to funding source
-  let accountHolder, iban, bic, bankName, accountNumber, routingNumber, sortCode;
+function CopyButton({ value }: { value: string | null | undefined }) {
+  const [copied, setCopied] = useState(false);
 
-  if (invoiceBankDetails) {
-    // Use bank details from invoice
-    accountHolder = invoiceBankDetails.accountHolder || 'N/A';
-    iban = invoiceBankDetails.iban || 'N/A';
-    bic = invoiceBankDetails.bic || 'N/A';
-    bankName = invoiceBankDetails.bankName || 'N/A';
-    accountNumber = invoiceBankDetails.accountNumber || 'N/A';
-    routingNumber = invoiceBankDetails.routingNumber || 'N/A';
-    sortCode = 'N/A'; // Not typically in invoice data
-    
-    console.log('🏦 Using invoice bank details:', { accountHolder, iban, bic, bankName, accountNumber, routingNumber });
-  } else if (fundingSource) {
-    // Fallback to funding source
-    accountHolder = fundingSource.sourceBankBeneficiaryName || 'N/A';
-    iban = fundingSource.sourceIban || 'N/A';
-    bic = fundingSource.sourceBicSwift || 'N/A';
-    bankName = fundingSource.sourceBankName || 'N/A';
-    accountNumber = fundingSource.sourceAccountNumber || 'N/A';
-    routingNumber = fundingSource.sourceRoutingNumber || 'N/A';
-    sortCode = fundingSource.sourceSortCode || 'N/A';
-    console.log('🏦 Using funding source:', { accountHolder, iban, bic, bankName, accountNumber, routingNumber });
-  } else {
-    console.log('🏦 No bank details available');
-    return <p className="text-sm text-gray-500">Bank details not provided by seller.</p>;
-  }
+  if (!value) return null;
 
-  // Conditionally display details based on what's available
-  const hasIban = iban && iban !== 'N/A' && iban !== '';
-  const hasUsDetails = (accountNumber && accountNumber !== 'N/A' && accountNumber !== '') || 
-                       (routingNumber && routingNumber !== 'N/A' && routingNumber !== '');
-  const hasUkDetails = (sortCode && sortCode !== 'N/A' && sortCode !== '') || 
-                       (accountNumber && accountNumber !== 'N/A' && accountNumber !== '');
-  
-  console.log('🏦 Validation results:', { hasIban, hasUsDetails, hasUkDetails, accountNumber, routingNumber, iban });
+  const handleCopy = async () => {
+    await navigator.clipboard.writeText(value);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   return (
-    <div className="text-left bg-gray-50 p-4 rounded border text-sm space-y-1">
-      <h4 className="font-medium mb-2 text-gray-800">Bank Transfer Details:</h4>
-      <p><strong>Account Holder:</strong> {accountHolder}</p>
-      {bankName !== 'N/A' && <p><strong>Bank:</strong> {bankName}</p>}
-
-      {/* Always show available bank details */}
-      {hasIban && (
-        <>
-          <p><strong>IBAN:</strong> {iban}</p>
-          {bic !== 'N/A' && bic && <p><strong>BIC/SWIFT:</strong> {bic}</p>}
-        </>
+    <button
+      onClick={handleCopy}
+      className="ml-2 p-1 rounded transition-colors hover:bg-[#101010]/5"
+    >
+      {copied ? (
+        <Check className="h-3 w-3 text-green-600" />
+      ) : (
+        <Copy className="h-3 w-3 text-[#101010]/40" />
       )}
+    </button>
+  );
+}
 
-      {hasUsDetails && (
-         <>
-           {accountNumber !== 'N/A' && accountNumber && <p><strong>Account Number:</strong> {accountNumber}</p>}
-           {routingNumber !== 'N/A' && routingNumber && <p><strong>Routing Number:</strong> {routingNumber}</p>}
-         </>
-      )}
+export const FiatPaymentDetails: React.FC<FiatPaymentDetailsProps> = ({
+  fundingSource,
+  invoiceNumber,
+  invoiceBankDetails,
+}) => {
+  // Extract bank details from invoice or funding source
+  let accountHolder: string | undefined;
+  let iban: string | undefined;
+  let bic: string | undefined;
+  let bankName: string | undefined;
+  let accountNumber: string | undefined;
+  let routingNumber: string | undefined;
 
-      {hasUkDetails && (
-         <>
-           {accountNumber !== 'N/A' && accountNumber && <p><strong>Account Number:</strong> {accountNumber}</p>}
-           {sortCode !== 'N/A' && sortCode && <p><strong>Sort Code:</strong> {sortCode}</p>}
-         </>
-      )}
+  if (invoiceBankDetails) {
+    accountHolder = invoiceBankDetails.accountHolder;
+    iban = invoiceBankDetails.iban;
+    bic = invoiceBankDetails.bic;
+    bankName = invoiceBankDetails.bankName;
+    accountNumber = invoiceBankDetails.accountNumber;
+    routingNumber = invoiceBankDetails.routingNumber;
+  } else if (fundingSource) {
+    accountHolder = fundingSource.sourceBankBeneficiaryName ?? undefined;
+    iban = fundingSource.sourceIban ?? undefined;
+    bic = fundingSource.sourceBicSwift ?? undefined;
+    bankName = fundingSource.sourceBankName ?? undefined;
+    accountNumber = fundingSource.sourceAccountNumber ?? undefined;
+    routingNumber = fundingSource.sourceRoutingNumber ?? undefined;
+  }
 
-      {/* Show BIC/SWIFT even if no IBAN when it's available */}
-      {!hasIban && bic !== 'N/A' && bic && (
-        <p><strong>BIC/SWIFT:</strong> {bic}</p>
-      )}
+  // Determine payment type: US ACH or SEPA/IBAN
+  const hasIban = iban && iban.trim() !== '';
+  const hasUsAch =
+    (accountNumber && accountNumber.trim() !== '') ||
+    (routingNumber && routingNumber.trim() !== '');
 
-      {/* Show warning only if critical payment details are missing */}
-      {!hasIban && !hasUsDetails && !hasUkDetails && (
-           <div className="text-orange-600 mt-2 pt-2 border-t">
-             <p className="text-xs">⚠️ Complete payment details (IBAN or Account Number/Routing Number) are not available.</p>
-             <p className="text-xs mt-1">Please contact the sender for complete banking information.</p>
-           </div>
-      )}
+  // No valid payment details
+  if (!hasIban && !hasUsAch) {
+    return (
+      <p className="text-sm text-gray-500">
+        Bank details not provided by seller.
+      </p>
+    );
+  }
 
+  const isAch = hasUsAch && !hasIban;
 
+  return (
+    <div className="rounded-xl border border-neutral-200 bg-neutral-50/50 p-5 sm:p-6">
+      {/* Header */}
+      <div className="flex items-center gap-3 mb-4">
+        <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white border border-[#101010]/10 text-[#1B29FF]">
+          {isAch ? (
+            <DollarSign className="h-4 w-4" />
+          ) : (
+            <Euro className="h-4 w-4" />
+          )}
+        </span>
+        <div>
+          <p className="text-[15px] font-semibold tracking-[-0.01em] text-[#101010]">
+            {isAch ? 'US ACH & Wire' : 'SEPA / IBAN'}
+          </p>
+          <p className="text-[12px] text-[#101010]/60">
+            {isAch
+              ? 'Domestic USD transfers'
+              : 'Eurozone & international wires'}
+          </p>
+        </div>
+      </div>
+
+      {/* Currency info */}
+      <div className="p-3 rounded-md bg-white/60 border border-[#101010]/5 mb-4">
+        <div className="flex items-start gap-2">
+          <Info className="h-4 w-4 mt-0.5 flex-shrink-0 text-[#101010]/40" />
+          <div className="text-[11px] leading-relaxed text-[#101010]/60">
+            <span className="font-semibold text-[#101010]">
+              Source currency:
+            </span>{' '}
+            {isAch ? 'USD' : 'EUR'}
+          </div>
+        </div>
+      </div>
+
+      {/* Bank details */}
+      <dl className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-[13px] text-[#101010]/80">
+        {bankName && (
+          <div>
+            <dt className="uppercase tracking-[0.16em] text-[10px] mb-1 text-[#101010]/45">
+              Bank name
+            </dt>
+            <dd className="text-[14px] font-medium text-[#101010]">
+              {bankName}
+            </dd>
+          </div>
+        )}
+
+        {isAch ? (
+          <>
+            {routingNumber && (
+              <div>
+                <dt className="uppercase tracking-[0.16em] text-[10px] mb-1 text-[#101010]/45">
+                  Routing number
+                </dt>
+                <dd className="text-[14px] font-medium text-[#101010] flex items-center">
+                  {routingNumber}
+                  <CopyButton value={routingNumber} />
+                </dd>
+              </div>
+            )}
+            {accountNumber && (
+              <div>
+                <dt className="uppercase tracking-[0.16em] text-[10px] mb-1 text-[#101010]/45">
+                  Account number
+                </dt>
+                <dd className="text-[14px] font-medium text-[#101010] flex items-center">
+                  {accountNumber}
+                  <CopyButton value={accountNumber} />
+                </dd>
+              </div>
+            )}
+          </>
+        ) : (
+          <>
+            {iban && (
+              <div>
+                <dt className="uppercase tracking-[0.16em] text-[10px] mb-1 text-[#101010]/45">
+                  IBAN
+                </dt>
+                <dd className="text-[14px] font-medium text-[#101010] flex items-center">
+                  {iban}
+                  <CopyButton value={iban} />
+                </dd>
+              </div>
+            )}
+            {bic && (
+              <div>
+                <dt className="uppercase tracking-[0.16em] text-[10px] mb-1 text-[#101010]/45">
+                  BIC / SWIFT
+                </dt>
+                <dd className="text-[14px] font-medium text-[#101010] flex items-center">
+                  {bic}
+                  <CopyButton value={bic} />
+                </dd>
+              </div>
+            )}
+          </>
+        )}
+
+        {accountHolder && (
+          <div>
+            <dt className="uppercase tracking-[0.16em] text-[10px] mb-1 text-[#101010]/45">
+              Beneficiary
+            </dt>
+            <dd className="text-[14px] font-medium text-[#101010]">
+              {accountHolder}
+            </dd>
+          </div>
+        )}
+      </dl>
+
+      {/* Invoice reference */}
       {invoiceNumber && (
-        <p className="mt-2 pt-2 border-t text-xs text-gray-600">
-          Please include Invoice #{invoiceNumber} in your payment reference.
-        </p>
+        <div className="mt-4 pt-4 border-t border-[#101010]/10">
+          <p className="text-[12px] text-[#101010]/60">
+            Please include{' '}
+            <span className="font-semibold text-[#101010]">
+              Invoice #{invoiceNumber}
+            </span>{' '}
+            in your payment reference.
+          </p>
+        </div>
       )}
     </div>
   );
 };
 
-FiatPaymentDetails.displayName = 'FiatPaymentDetails'; 
+FiatPaymentDetails.displayName = 'FiatPaymentDetails';
