@@ -1,30 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { generateText } from 'ai';
 import { openai } from '@/lib/ai/providers';
-import { z } from 'zod';
 import { headers } from 'next/headers';
 import crypto from 'crypto';
 
 import {
   mapToWorkspace,
   formatEmailForAI,
-  parseConfirmationReply,
   getOrCreateSession,
   addMessageToSession,
-  updateSession,
-  createInvoiceForUser,
-  getSystemPrompt,
   emailTemplates,
   AI_EMAIL_INBOUND_DOMAIN,
 } from '@/lib/ai-email';
-import type {
-  AiEmailMessage,
-  AiEmailPendingAction,
-} from '@/db/schema/ai-email-sessions';
-import {
-  getEmailProviderSingleton,
-  type InboundEmail,
-} from '@/lib/email-provider';
+import type { AiEmailMessage } from '@/db/schema/ai-email-sessions';
+import { getEmailProviderSingleton } from '@/lib/email-provider';
 
 // Get the configured email provider (SES or Resend based on EMAIL_PROVIDER env var)
 const emailProvider = getEmailProviderSingleton();
@@ -123,72 +112,12 @@ async function sendReply(
   });
 }
 
-/**
- * Send an invoice email to the recipient.
- */
-async function sendInvoiceEmail(
-  to: string,
-  subject: string,
-  body: string,
-  senderName: string,
-): Promise<void> {
-  await emailProvider.send({
-    from: `${senderName} via 0 Finance <invoices@${AI_EMAIL_INBOUND_DOMAIN}>`,
-    to,
-    subject,
-    text: body,
-  });
-}
-
-// Tool parameter schemas
-const extractInvoiceDetailsSchema = z.object({
-  recipientEmail: z.string().describe('Email address of the invoice recipient'),
-  recipientName: z.string().optional().describe('Name of the recipient'),
-  recipientCompany: z
-    .string()
-    .optional()
-    .describe('Company name of the recipient'),
-  amount: z.number().describe('Invoice amount as a number'),
-  currency: z
-    .string()
-    .default('USD')
-    .describe('Currency code (USD, EUR, etc.)'),
-  description: z.string().describe('Description of the work/service'),
-});
-
-const createInvoiceSchema = z.object({
-  recipientEmail: z.string(),
-  recipientName: z.string().optional(),
-  recipientCompany: z.string().optional(),
-  amount: z.number(),
-  currency: z.string(),
-  description: z.string(),
-});
-
-const requestConfirmationSchema = z.object({
-  invoiceId: z.string(),
-  recipientEmail: z.string(),
-  recipientName: z.string().optional(),
-  amount: z.number(),
-  currency: z.string(),
-  description: z.string(),
-  invoiceLink: z.string(),
-});
-
-const sendReplyToUserSchema = z.object({
-  subject: z.string(),
-  body: z.string(),
-});
-
-const sendInvoiceToRecipientSchema = z.object({
-  recipientEmail: z.string(),
-  recipientName: z.string().optional(),
-  invoiceLink: z.string(),
-  senderName: z.string(),
-  amount: z.number(),
-  currency: z.string(),
-  description: z.string(),
-});
+// Simple system prompt for testing basic email responses
+const SIMPLE_SYSTEM_PROMPT = `You are 0 Finance AI, a helpful assistant for 0 Finance users.
+You're receiving emails from users and should respond helpfully.
+Keep responses concise and friendly.
+If the user asks about invoices, let them know that invoice creation is coming soon.
+For now, just have a helpful conversation.`;
 
 /**
  * AI Email Webhook Handler
@@ -387,79 +316,7 @@ export async function POST(request: NextRequest) {
     };
     await addMessageToSession(session.id, userMessage);
 
-    // 4. Check if this is a simple confirmation reply
-    const confirmationCheck = parseConfirmationReply(email.text);
-    if (
-      confirmationCheck.isConfirmation &&
-      session.state === 'awaiting_confirmation' &&
-      session.pendingAction
-    ) {
-      // Handle confirmation without AI
-      if (confirmationCheck.confirmed) {
-        // Send the invoice
-        const action = session.pendingAction;
-        const invoiceTemplate = emailTemplates.invoiceToRecipient({
-          senderName: workspaceResult.workspaceName,
-          amount: action.amount,
-          currency: action.currency,
-          description: action.description,
-          invoiceLink: action.invoiceLink,
-          recipientName: action.recipientName,
-        });
-
-        await sendInvoiceEmail(
-          action.recipientEmail,
-          invoiceTemplate.subject,
-          invoiceTemplate.body,
-          workspaceResult.workspaceName,
-        );
-
-        // Confirm to user
-        const sentTemplate = emailTemplates.invoiceSent({
-          recipientEmail: action.recipientEmail,
-          recipientName: action.recipientName,
-          amount: action.amount,
-          currency: action.currency,
-          invoiceLink: action.invoiceLink,
-        });
-        await sendReply(
-          email.from,
-          sentTemplate.subject,
-          sentTemplate.body,
-          messageId,
-          workspaceResult.workspaceId,
-        );
-
-        // Update session
-        await updateSession(session.id, {
-          state: 'completed',
-          pendingAction: null,
-        });
-      } else {
-        // Cancelled
-        const cancelledTemplate = emailTemplates.cancelled();
-        await sendReply(
-          email.from,
-          cancelledTemplate.subject,
-          cancelledTemplate.body,
-          messageId,
-          workspaceResult.workspaceId,
-        );
-
-        await updateSession(session.id, {
-          state: 'completed',
-          pendingAction: null,
-        });
-      }
-
-      return NextResponse.json({ success: true, handled: 'confirmation' });
-    }
-
-    // 5. Process with AI for complex requests
-    const systemPrompt = getSystemPrompt(
-      session,
-      workspaceResult.workspaceName,
-    );
+    // 4. Process with AI (simplified - no tools for now)
 
     // Build conversation history for AI
     const messages = (session.messages || []).map((msg) => ({
@@ -478,149 +335,25 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Create tool execution context
-    const toolContext = {
-      session,
-      workspaceResult,
-      email,
-      messageId,
-    };
-
-    console.log('[AI Email] Starting AI processing...');
+    console.log('[AI Email] Starting AI processing (simple mode, no tools)...');
+    console.log(
+      '[AI Email] OPENAI_API_KEY present:',
+      !!process.env.OPENAI_API_KEY,
+    );
 
     let result;
     try {
       result = await generateText({
         model: openai('gpt-4o'),
-        system: systemPrompt,
+        system: SIMPLE_SYSTEM_PROMPT,
         messages,
-        tools: {
-          extractInvoiceDetails: {
-            description: 'Extract invoice details from a forwarded email',
-            inputSchema: extractInvoiceDetailsSchema,
-            execute: async (
-              params: z.infer<typeof extractInvoiceDetailsSchema>,
-            ) => {
-              await updateSession(toolContext.session.id, {
-                extractedData: params,
-              });
-              return { success: true, extracted: params };
-            },
-          },
-
-          createInvoice: {
-            description: 'Create a draft invoice in 0 Finance',
-            inputSchema: createInvoiceSchema,
-            execute: async (params: z.infer<typeof createInvoiceSchema>) => {
-              const invoice = await createInvoiceForUser(
-                toolContext.workspaceResult.workspaceCreatorUserId,
-                toolContext.workspaceResult.workspaceId,
-                params,
-              );
-
-              await updateSession(toolContext.session.id, {
-                invoiceId: invoice.invoiceId,
-              });
-
-              return {
-                success: true,
-                invoiceId: invoice.invoiceId,
-                invoiceLink: invoice.publicLink,
-              };
-            },
-          },
-
-          requestConfirmation: {
-            description:
-              'Ask the user to confirm before sending the invoice. Always use this before sending.',
-            inputSchema: requestConfirmationSchema,
-            execute: async (
-              params: z.infer<typeof requestConfirmationSchema>,
-            ) => {
-              const pendingAction: AiEmailPendingAction = {
-                type: 'send_invoice',
-                ...params,
-              };
-
-              await updateSession(toolContext.session.id, {
-                pendingAction,
-                state: 'awaiting_confirmation',
-              });
-
-              const template = emailTemplates.confirmationRequest(params);
-              await sendReply(
-                toolContext.email.from,
-                template.subject,
-                template.body,
-                toolContext.messageId,
-                toolContext.workspaceResult.workspaceId,
-              );
-
-              return {
-                success: true,
-                message: 'Confirmation request sent to user',
-              };
-            },
-          },
-
-          sendReplyToUser: {
-            description:
-              'Send a reply email to the user (not the invoice recipient)',
-            inputSchema: sendReplyToUserSchema,
-            execute: async ({
-              subject,
-              body,
-            }: z.infer<typeof sendReplyToUserSchema>) => {
-              await sendReply(
-                toolContext.email.from,
-                subject,
-                body,
-                toolContext.messageId,
-                toolContext.workspaceResult.workspaceId,
-              );
-              return { success: true };
-            },
-          },
-
-          sendInvoiceToRecipient: {
-            description:
-              'Send the invoice link to the client/recipient. Only use after user confirms.',
-            inputSchema: sendInvoiceToRecipientSchema,
-            execute: async (
-              params: z.infer<typeof sendInvoiceToRecipientSchema>,
-            ) => {
-              const template = emailTemplates.invoiceToRecipient({
-                senderName: params.senderName,
-                amount: params.amount,
-                currency: params.currency,
-                description: params.description,
-                invoiceLink: params.invoiceLink,
-                recipientName: params.recipientName,
-              });
-
-              await sendInvoiceEmail(
-                params.recipientEmail,
-                template.subject,
-                template.body,
-                params.senderName,
-              );
-
-              await updateSession(toolContext.session.id, {
-                state: 'completed',
-                pendingAction: null,
-              });
-
-              return { success: true };
-            },
-          },
-        },
       });
     } catch (aiError) {
       console.error('[AI Email] AI processing failed:', aiError);
       throw aiError;
     }
 
-    // 6. Save AI response to session
+    // Save AI response to session
     if (result.text) {
       const assistantMessage: AiEmailMessage = {
         role: 'assistant',
@@ -630,30 +363,13 @@ export async function POST(request: NextRequest) {
       await addMessageToSession(session.id, assistantMessage);
     }
 
-    console.log(
-      `[AI Email] Processed email successfully. Steps: ${result.steps.length}`,
-    );
+    console.log('[AI Email] Processed email successfully');
     console.log(
       `[AI Email] AI response text: ${result.text?.substring(0, 200)}`,
     );
 
-    // If the AI generated a text response but didn't call sendReplyToUser,
-    // send the response to the user
-    const toolCallsMade = result.steps.flatMap(
-      (step) => step.toolCalls?.map((tc) => tc.toolName) || [],
-    );
-    console.log(
-      `[AI Email] Tools called: ${toolCallsMade.join(', ') || 'none'}`,
-    );
-
-    const sentReply =
-      toolCallsMade.includes('sendReplyToUser') ||
-      toolCallsMade.includes('requestConfirmation');
-
-    if (result.text && !sentReply) {
-      console.log(
-        '[AI Email] AI generated text but no reply tool was called, sending response',
-      );
+    // Send the AI response back to the user
+    if (result.text) {
       await sendReply(
         email.from,
         `Re: ${email.subject || 'Your message'}`,
