@@ -89,6 +89,48 @@ function getToAddress(to: string | string[]): string {
 }
 
 /**
+ * Format the subject line for a reply.
+ * Ensures it starts with "Re:" and maintains threading.
+ */
+function getReplySubject(originalSubject: string | undefined): string {
+  if (!originalSubject) {
+    return 'Re: Your message';
+  }
+  // If it already starts with Re:, don't add another
+  if (originalSubject.toLowerCase().startsWith('re:')) {
+    return originalSubject;
+  }
+  return `Re: ${originalSubject}`;
+}
+
+/**
+ * Format the user's original message as a quote for context.
+ */
+function formatQuotedMessage(
+  originalText: string,
+  senderEmail: string,
+  timestamp?: Date,
+): string {
+  const dateStr = timestamp
+    ? timestamp.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+      })
+    : 'earlier';
+
+  // Quote each line with >
+  const quotedLines = originalText
+    .split('\n')
+    .map((line) => `> ${line}`)
+    .join('\n');
+
+  return `\n\n---\nOn ${dateStr}, ${senderEmail} wrote:\n${quotedLines}`;
+}
+
+/**
  * Send an email reply to the user.
  * @param workspaceId - The workspace ID to use in the reply-to address so users can hit "reply"
  */
@@ -199,10 +241,12 @@ const requestConfirmationSchema = z.object({
 
 /**
  * Schema for sending a reply email to the user.
+ * Note: Subject is auto-generated as "Re: [original]" to maintain threading.
  */
 const sendReplyToUserSchema = z.object({
-  subject: z.string().describe('Email subject line'),
-  body: z.string().describe('Email body text'),
+  body: z
+    .string()
+    .describe('Email body text - the response to send to the user'),
 });
 
 /**
@@ -253,6 +297,7 @@ export async function POST(request: NextRequest) {
   let senderEmail = '';
   let messageId: string | undefined;
   let workspaceId: string | undefined;
+  let originalSubject: string | undefined;
 
   try {
     // Read raw body for signature verification
@@ -375,6 +420,7 @@ export async function POST(request: NextRequest) {
     }
 
     senderEmail = email.from;
+    originalSubject = email.subject;
 
     // Check rate limit
     if (isRateLimited(email.from)) {
@@ -449,6 +495,9 @@ export async function POST(request: NextRequest) {
     };
     await addMessageToSession(session.id, userMessage);
 
+    // Prepare reply subject for threading
+    const replySubject = getReplySubject(email.subject);
+
     // Check if this is a simple confirmation reply (YES/NO)
     const confirmationCheck = parseConfirmationReply(email.text);
     if (
@@ -482,9 +531,10 @@ export async function POST(request: NextRequest) {
           currency: action.currency,
           invoiceLink: action.invoiceLink,
         });
+        // Use Re: subject for threading
         await sendReply(
           email.from,
-          sentTemplate.subject,
+          replySubject,
           sentTemplate.body,
           messageId,
           workspaceResult.workspaceId,
@@ -497,9 +547,10 @@ export async function POST(request: NextRequest) {
       } else {
         // User cancelled
         const cancelledTemplate = emailTemplates.cancelled();
+        // Use Re: subject for threading
         await sendReply(
           email.from,
-          cancelledTemplate.subject,
+          replySubject,
           cancelledTemplate.body,
           messageId,
           workspaceResult.workspaceId,
@@ -533,11 +584,19 @@ export async function POST(request: NextRequest) {
     }
 
     // Create tool context for closures
+    const quotedOriginal = formatQuotedMessage(
+      email.text || '',
+      email.from,
+      new Date(),
+    );
+
     const toolContext = {
       session,
       workspaceResult,
       email,
       messageId,
+      replySubject,
+      quotedOriginal,
     };
 
     console.log('[AI Email] Starting AI processing with tools...');
@@ -604,10 +663,11 @@ export async function POST(request: NextRequest) {
           });
 
           const template = emailTemplates.confirmationRequest(params);
+          // Use Re: subject for threading and include quoted original
           await sendReply(
             toolContext.email.from,
-            template.subject,
-            template.body,
+            toolContext.replySubject,
+            template.body + toolContext.quotedOriginal,
             toolContext.messageId,
             toolContext.workspaceResult.workspaceId,
           );
@@ -621,14 +681,15 @@ export async function POST(request: NextRequest) {
 
       sendReplyToUser: tool({
         description:
-          'Send a reply email to the user (not the invoice recipient). Use for general responses.',
+          'Send a reply email to the user (not the invoice recipient). Use for general responses. Subject is auto-set to maintain threading.',
         inputSchema: sendReplyToUserSchema,
-        execute: async ({ subject, body }) => {
+        execute: async ({ body }) => {
           console.log('[AI Email] Tool: sendReplyToUser called');
+          // Use Re: subject for threading and include quoted original
           await sendReply(
             toolContext.email.from,
-            subject,
-            body,
+            toolContext.replySubject,
+            body + toolContext.quotedOriginal,
             toolContext.messageId,
             toolContext.workspaceResult.workspaceId,
           );
@@ -710,10 +771,16 @@ export async function POST(request: NextRequest) {
 
     if (result.text && !sentReply) {
       console.log('[AI Email] Sending AI text response as email');
+      // Include quoted original for context
+      const quotedOriginal = formatQuotedMessage(
+        email.text || '',
+        email.from,
+        new Date(),
+      );
       await sendReply(
         email.from,
-        `Re: ${email.subject || 'Your message'}`,
-        result.text,
+        toolContext.replySubject,
+        result.text + quotedOriginal,
         messageId,
         workspaceResult.workspaceId,
       );
@@ -728,10 +795,13 @@ export async function POST(request: NextRequest) {
         const errorTemplate = emailTemplates.error(
           error instanceof Error ? error.message : undefined,
         );
-        // Maintain thread context by including messageId and workspaceId
+        // Maintain thread context - use Re: subject format
+        const errorSubject = originalSubject
+          ? getReplySubject(originalSubject)
+          : errorTemplate.subject;
         await sendReply(
           senderEmail,
-          errorTemplate.subject,
+          errorSubject,
           errorTemplate.body,
           messageId, // Include In-Reply-To header to maintain thread
           workspaceId, // Use workspace-specific from address
