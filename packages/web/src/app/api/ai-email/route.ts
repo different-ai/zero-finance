@@ -420,12 +420,25 @@ export async function POST(request: NextRequest) {
     // Get sender display name from workspace company info
     const senderDisplayName = getSenderDisplayName(workspaceResult);
 
+    // Extract thread headers for session continuity
+    // When user replies, the In-Reply-To header references the previous message
+    const inReplyTo =
+      email.headers?.['in-reply-to'] || email.headers?.['In-Reply-To'];
+    const references =
+      email.headers?.['references'] || email.headers?.['References'];
+
+    console.log(
+      `[AI Email] Thread headers - In-Reply-To: ${inReplyTo}, References: ${references?.substring(0, 100)}`,
+    );
+
     // Get or create session for this email thread
     const session = await getOrCreateSession({
       senderEmail: email.from,
       threadId: messageId,
       workspaceId: workspaceResult.workspaceId,
       creatorUserId: workspaceResult.workspaceCreatorUserId,
+      inReplyTo,
+      references,
     });
 
     // Add the user's message to the session
