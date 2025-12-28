@@ -486,131 +486,139 @@ export async function POST(request: NextRequest) {
       messageId,
     };
 
-    const result = await generateText({
-      model: openai('gpt-4o'),
-      system: systemPrompt,
-      messages,
-      tools: {
-        extractInvoiceDetails: {
-          description: 'Extract invoice details from a forwarded email',
-          inputSchema: extractInvoiceDetailsSchema,
-          execute: async (
-            params: z.infer<typeof extractInvoiceDetailsSchema>,
-          ) => {
-            await updateSession(toolContext.session.id, {
-              extractedData: params,
-            });
-            return { success: true, extracted: params };
+    console.log('[AI Email] Starting AI processing...');
+
+    let result;
+    try {
+      result = await generateText({
+        model: openai('gpt-4o'),
+        system: systemPrompt,
+        messages,
+        tools: {
+          extractInvoiceDetails: {
+            description: 'Extract invoice details from a forwarded email',
+            inputSchema: extractInvoiceDetailsSchema,
+            execute: async (
+              params: z.infer<typeof extractInvoiceDetailsSchema>,
+            ) => {
+              await updateSession(toolContext.session.id, {
+                extractedData: params,
+              });
+              return { success: true, extracted: params };
+            },
           },
-        },
 
-        createInvoice: {
-          description: 'Create a draft invoice in 0 Finance',
-          inputSchema: createInvoiceSchema,
-          execute: async (params: z.infer<typeof createInvoiceSchema>) => {
-            const invoice = await createInvoiceForUser(
-              toolContext.workspaceResult.workspaceCreatorUserId,
-              toolContext.workspaceResult.workspaceId,
-              params,
-            );
+          createInvoice: {
+            description: 'Create a draft invoice in 0 Finance',
+            inputSchema: createInvoiceSchema,
+            execute: async (params: z.infer<typeof createInvoiceSchema>) => {
+              const invoice = await createInvoiceForUser(
+                toolContext.workspaceResult.workspaceCreatorUserId,
+                toolContext.workspaceResult.workspaceId,
+                params,
+              );
 
-            await updateSession(toolContext.session.id, {
-              invoiceId: invoice.invoiceId,
-            });
+              await updateSession(toolContext.session.id, {
+                invoiceId: invoice.invoiceId,
+              });
 
-            return {
-              success: true,
-              invoiceId: invoice.invoiceId,
-              invoiceLink: invoice.publicLink,
-            };
+              return {
+                success: true,
+                invoiceId: invoice.invoiceId,
+                invoiceLink: invoice.publicLink,
+              };
+            },
           },
-        },
 
-        requestConfirmation: {
-          description:
-            'Ask the user to confirm before sending the invoice. Always use this before sending.',
-          inputSchema: requestConfirmationSchema,
-          execute: async (
-            params: z.infer<typeof requestConfirmationSchema>,
-          ) => {
-            const pendingAction: AiEmailPendingAction = {
-              type: 'send_invoice',
-              ...params,
-            };
+          requestConfirmation: {
+            description:
+              'Ask the user to confirm before sending the invoice. Always use this before sending.',
+            inputSchema: requestConfirmationSchema,
+            execute: async (
+              params: z.infer<typeof requestConfirmationSchema>,
+            ) => {
+              const pendingAction: AiEmailPendingAction = {
+                type: 'send_invoice',
+                ...params,
+              };
 
-            await updateSession(toolContext.session.id, {
-              pendingAction,
-              state: 'awaiting_confirmation',
-            });
+              await updateSession(toolContext.session.id, {
+                pendingAction,
+                state: 'awaiting_confirmation',
+              });
 
-            const template = emailTemplates.confirmationRequest(params);
-            await sendReply(
-              toolContext.email.from,
-              template.subject,
-              template.body,
-              toolContext.messageId,
-              toolContext.workspaceResult.workspaceId,
-            );
+              const template = emailTemplates.confirmationRequest(params);
+              await sendReply(
+                toolContext.email.from,
+                template.subject,
+                template.body,
+                toolContext.messageId,
+                toolContext.workspaceResult.workspaceId,
+              );
 
-            return {
-              success: true,
-              message: 'Confirmation request sent to user',
-            };
+              return {
+                success: true,
+                message: 'Confirmation request sent to user',
+              };
+            },
           },
-        },
 
-        sendReplyToUser: {
-          description:
-            'Send a reply email to the user (not the invoice recipient)',
-          inputSchema: sendReplyToUserSchema,
-          execute: async ({
-            subject,
-            body,
-          }: z.infer<typeof sendReplyToUserSchema>) => {
-            await sendReply(
-              toolContext.email.from,
+          sendReplyToUser: {
+            description:
+              'Send a reply email to the user (not the invoice recipient)',
+            inputSchema: sendReplyToUserSchema,
+            execute: async ({
               subject,
               body,
-              toolContext.messageId,
-              toolContext.workspaceResult.workspaceId,
-            );
-            return { success: true };
+            }: z.infer<typeof sendReplyToUserSchema>) => {
+              await sendReply(
+                toolContext.email.from,
+                subject,
+                body,
+                toolContext.messageId,
+                toolContext.workspaceResult.workspaceId,
+              );
+              return { success: true };
+            },
+          },
+
+          sendInvoiceToRecipient: {
+            description:
+              'Send the invoice link to the client/recipient. Only use after user confirms.',
+            inputSchema: sendInvoiceToRecipientSchema,
+            execute: async (
+              params: z.infer<typeof sendInvoiceToRecipientSchema>,
+            ) => {
+              const template = emailTemplates.invoiceToRecipient({
+                senderName: params.senderName,
+                amount: params.amount,
+                currency: params.currency,
+                description: params.description,
+                invoiceLink: params.invoiceLink,
+                recipientName: params.recipientName,
+              });
+
+              await sendInvoiceEmail(
+                params.recipientEmail,
+                template.subject,
+                template.body,
+                params.senderName,
+              );
+
+              await updateSession(toolContext.session.id, {
+                state: 'completed',
+                pendingAction: null,
+              });
+
+              return { success: true };
+            },
           },
         },
-
-        sendInvoiceToRecipient: {
-          description:
-            'Send the invoice link to the client/recipient. Only use after user confirms.',
-          inputSchema: sendInvoiceToRecipientSchema,
-          execute: async (
-            params: z.infer<typeof sendInvoiceToRecipientSchema>,
-          ) => {
-            const template = emailTemplates.invoiceToRecipient({
-              senderName: params.senderName,
-              amount: params.amount,
-              currency: params.currency,
-              description: params.description,
-              invoiceLink: params.invoiceLink,
-              recipientName: params.recipientName,
-            });
-
-            await sendInvoiceEmail(
-              params.recipientEmail,
-              template.subject,
-              template.body,
-              params.senderName,
-            );
-
-            await updateSession(toolContext.session.id, {
-              state: 'completed',
-              pendingAction: null,
-            });
-
-            return { success: true };
-          },
-        },
-      },
-    });
+      });
+    } catch (aiError) {
+      console.error('[AI Email] AI processing failed:', aiError);
+      throw aiError;
+    }
 
     // 6. Save AI response to session
     if (result.text) {
