@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
-import type { z } from 'zod/v4';
+import type { z } from 'zod';
 import { invoiceDataSchema } from '@/server/routers/invoice-router';
 import { trpc } from '@/utils/trpc';
 
@@ -9,7 +9,7 @@ type InvoiceData = z.infer<typeof invoiceDataSchema>;
 export function useInvoice() {
   const [isLoading, setIsLoading] = useState(false);
   const [isCommitting, setIsCommitting] = useState(false);
-  
+
   const createMutation = trpc.invoice.create.useMutation({
     onSuccess: () => {
       toast.success('Invoice created successfully');
@@ -18,7 +18,7 @@ export function useInvoice() {
       toast.error(`Failed to create invoice: ${error.message}`);
     },
   });
-  
+
   // const commitMutation = trpc.invoice.commitToRequestNetwork.useMutation({
   //   onSuccess: (data) => {
   //     if (data.alreadyCommitted) {
@@ -47,7 +47,7 @@ export function useInvoice() {
       throw error;
     }
   };
-  
+
   // const commitToRequestNetwork = async (invoiceId: string) => {
   //   setIsCommitting(true);
   //   try {
@@ -59,7 +59,7 @@ export function useInvoice() {
   //     throw error;
   //   }
   // };
-  
+
   const isInvoiceCommitted = (invoice: any) => {
     // Check if invoice has been committed to Request Network
     return Boolean(invoice?.requestId);

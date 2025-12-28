@@ -19,9 +19,9 @@ export async function POST(req: Request) {
     }
 
     const result = streamText({
-      model: openai('gpt-5'),
+      model: openai('gpt-4o'),
       system: context,
-      messages: convertToModelMessages(messages),
+      messages: await convertToModelMessages(messages),
       tools: {
         web_search: openai.tools.webSearch({
           searchContextSize: 'high',
