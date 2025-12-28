@@ -373,12 +373,12 @@ export const invoiceRouter = router({
         );
 
         // Parallelize user profile operations
-        const [userProfile] = await Promise.all([
+        const [userProfile, paymentAddress] = await Promise.all([
           userProfileService.getOrCreateProfile(userId, userEmail),
-          // Pre-fetch wallet for future use (optional optimization)
-          userProfileService.getOrCreateWallet(userId).catch((err) => {
+          // Get primary safe address for crypto payments
+          userProfileService.getPaymentAddress(userId).catch((err) => {
             console.warn(
-              '0xHypr Failed to pre-fetch wallet (non-critical):',
+              '0xHypr Failed to get payment address (will use form input):',
               err,
             );
             return null;
@@ -449,6 +449,10 @@ export const invoiceRouter = router({
           decimals,
         );
 
+        // Use payment address from user's primary safe, fallback to form input
+        const cryptoPaymentAddress =
+          paymentAddress || invoiceData.paymentAddress || null;
+
         const requestDataForDb: NewUserRequest = {
           id: crypto.randomUUID(),
           userId: userId,
@@ -462,6 +466,7 @@ export const invoiceRouter = router({
           currencyDecimals: decimals,
           status: 'db_pending', // Start as db_pending
           client: clientName,
+          walletAddress: cryptoPaymentAddress, // Primary safe address for crypto payments
           invoiceData: invoiceData,
         };
 
