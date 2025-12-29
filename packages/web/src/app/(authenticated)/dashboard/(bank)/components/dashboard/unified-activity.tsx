@@ -512,8 +512,8 @@ function TransactionRow({
         </div>
       </AccordionTrigger>
 
-      <AccordionContent className="px-4 pb-4">
-        <div className="ml-[52px] bg-[#F7F7F2] p-4 space-y-3">
+      <AccordionContent className="pb-4">
+        <div className="bg-[#F7F7F2] p-4 space-y-3">
           {/* Agent proposal details */}
           {tx.category === 'agent_proposal' && (
             <>
