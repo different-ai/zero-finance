@@ -10,12 +10,12 @@ interface SEOHeadProps {
 }
 
 export function SEOHead({
-  title = '0 Finance - 8% Yield for Your Startup Treasury',
-  description = 'Earn 8% on your startup treasury with smart contract insurance. No minimums, instant withdrawals, full banking features.',
+  title = '0 Finance - High Yield for Your Startup Treasury',
+  description = 'Earn 4-7% on your startup treasury with smart contract insurance. No minimums, instant withdrawals, full banking features.',
   canonical,
   ogImage = 'https://0.finance/og-image.png',
   noindex = false,
-  keywords = 'startup treasury, high yield savings, 8% APY, startup banking, DeFi for startups',
+  keywords = 'startup treasury, high yield savings, high APY, startup banking, DeFi for startups',
 }: SEOHeadProps) {
   const fullTitle = title.includes('0 Finance')
     ? title

@@ -7,7 +7,7 @@ export function OrganizationSchema() {
     url: 'https://0.finance',
     logo: 'https://0.finance/new-logo-bluer.png',
     description:
-      '8% yield savings account for startups with smart contract insurance',
+      'High yield savings account for startups with smart contract insurance',
     sameAs: [
       'https://twitter.com/0finance',
       'https://linkedin.com/company/0finance',
@@ -36,7 +36,7 @@ export function FinancialServiceSchema() {
       name: '0 Finance',
     },
     description:
-      '8% APY savings account for startups with smart contract insurance, no minimums, instant withdrawals',
+      'High yield savings account for startups with smart contract insurance, no minimums, instant withdrawals',
     areaServed: {
       '@type': 'Country',
       name: 'United States',
@@ -48,7 +48,7 @@ export function FinancialServiceSchema() {
         {
           '@type': 'Offer',
           name: 'High Yield Savings Account',
-          description: '8% target APY with smart contract insurance',
+          description: '4-7% target APY with smart contract insurance',
           price: '0',
           priceCurrency: 'USD',
         },
@@ -109,7 +109,7 @@ export function ProductSchema() {
     '@context': 'https://schema.org',
     '@type': 'Product',
     name: '0 Finance Treasury Management',
-    description: 'High yield savings account for startups with 8% APY',
+    description: 'High yield savings account for startups',
     brand: {
       '@type': 'Brand',
       name: '0 Finance',

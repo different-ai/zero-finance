@@ -4,15 +4,15 @@ import { Button } from '@/components/ui/button';
 import { ArrowRight } from 'lucide-react';
 
 export const metadata: Metadata = {
-  title: 'High Yield Startup Savings Account - 8% APY | 0 Finance',
+  title: 'High Yield Startup Savings Account | 0 Finance',
   description:
-    "Earn 8% on your startup's idle cash with 0 Finance. Double the yield of traditional treasury accounts. Fully insured, zero minimums, Mercury-like experience.",
+    "Earn 4-7% on your startup's idle cash with 0 Finance. Higher yield than traditional treasury accounts. Fully insured, zero minimums, Mercury-like experience.",
   keywords:
-    'high yield startup savings, startup treasury management, 8% APY business account, startup cash management, high yield business savings',
+    'high yield startup savings, startup treasury management, high APY business account, startup cash management, high yield business savings',
   openGraph: {
-    title: "8% Yield for Your Startup's Cash | 0 Finance",
+    title: "High Yield for Your Startup's Cash | 0 Finance",
     description:
-      "Stop earning 4% in treasury accounts. Get 8% yield on your startup's idle cash with full insurance and zero minimums.",
+      "Stop settling for low yields. Get 4-7% on your startup's idle cash with full insurance and zero minimums.",
   },
 };
 
@@ -29,8 +29,8 @@ export default function HighYieldStartupSavingsPage() {
             Stop Leaving Money on the Table
           </h1>
           <p className="mt-6 text-[18px] leading-[1.5] text-[#222] max-w-[65ch]">
-            Earn 8% on your startup's treasury with smart contract insurance -
-            double what traditional banks offer. No minimums, no lockups.
+            Earn 4-7% on your startup's treasury with smart contract insurance -
+            more than traditional banks offer. No minimums, no lockups.
           </p>
           <div className="mt-10 flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6">
             <Link
@@ -83,7 +83,7 @@ export default function HighYieldStartupSavingsPage() {
             </div>
             <div className="bg-white p-6">
               <div className="text-[40px] leading-none font-medium tabular-nums text-[#1B29FF]">
-                8%
+                4-7%
               </div>
               <h3 className="mt-3 text-[16px] font-medium text-[#101010]">
                 0 Finance
@@ -119,7 +119,7 @@ export default function HighYieldStartupSavingsPage() {
                 <li className="flex items-start text-[14px]">
                   <span className="text-[#1B29FF] mr-3 mt-0.5">✓</span>
                   <span className="text-[#101010]/80">
-                    8% target APY with daily compounding
+                    4-7% target APY with daily compounding
                   </span>
                 </li>
                 <li className="flex items-start text-[14px]">
@@ -271,7 +271,7 @@ export default function HighYieldStartupSavingsPage() {
           </h2>
           <p className="mt-4 text-[16px] text-white/90 max-w-[55ch] mx-auto">
             Stop accepting low yields while your VCs expect 10x returns. Join
-            startups earning 8% on their treasury.
+            startups earning more on their treasury.
           </p>
           <div className="mt-8 flex flex-col sm:flex-row justify-center items-center gap-4">
             <Link
@@ -307,7 +307,7 @@ export default function HighYieldStartupSavingsPage() {
             </Button>
           </Link>
           <p className="text-sm text-gray-500 mt-4">
-            No minimums. No lock-ups. Start earning 8% today.
+            No minimums. No lock-ups. Start earning today.
           </p>
         </div>
       </section>

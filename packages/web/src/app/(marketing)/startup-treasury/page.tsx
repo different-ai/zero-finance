@@ -3,15 +3,15 @@ import Link from 'next/link';
 import { Check } from 'lucide-react';
 
 export const metadata: Metadata = {
-  title: 'Startup Treasury Management - 8% Yield, Full Banking | 0 Finance',
+  title: 'Startup Treasury Management - High Yield, Full Banking | 0 Finance',
   description:
-    'Complete treasury management for startups. 8% yield, corporate cards, ACH/wire transfers, multi-currency support. Built by experienced fintech founders.',
+    'Complete treasury management for startups. 4-7% yield, corporate cards, ACH/wire transfers, multi-currency support. Built by experienced fintech founders.',
   keywords:
     'startup treasury management, business cash management, startup banking, corporate treasury, high yield business account',
   openGraph: {
     title: 'Modern Treasury Management for Startups | 0 Finance',
     description:
-      'The only treasury platform that combines 8% yield with full banking features. No minimums, instant setup.',
+      'The only treasury platform that combines high yield with full banking features. No minimums, instant setup.',
   },
 };
 
@@ -29,9 +29,9 @@ export default function StartupTreasuryPage() {
             <span className="block text-[#1B29FF]">Treasury Platform</span>
           </h1>
           <p className="mt-6 text-[18px] leading-[1.5] text-[#222] max-w-[65ch]">
-            The only platform that combines 8% yield with full banking features.
-            Built by experienced founders who understand both DeFi complexity
-            and startup needs.
+            The only platform that combines 4-7% yield with full banking
+            features. Built by experienced founders who understand both DeFi
+            complexity and startup needs.
           </p>
 
           <div className="mt-10 flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6">
@@ -79,14 +79,14 @@ export default function StartupTreasuryPage() {
           <div className="mt-10 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-px bg-[#101010]/10">
             <div className="bg-white p-6">
               <div className="text-[32px] leading-none font-medium text-[#1B29FF]">
-                8%
+                4-7%
               </div>
               <h3 className="mt-3 text-[16px] font-medium text-[#101010]">
                 Target APY
               </h3>
               <p className="mt-2 text-[14px] leading-[1.5] text-[#101010]/70">
-                Double traditional treasury yields with smart contract insurance
-                coverage
+                Higher than traditional treasury yields with smart contract
+                insurance coverage
               </p>
             </div>
 

@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { Header } from './header';
 import { HeroSection } from './hero-section';
 import { WhatYouGetSection } from './what-you-get-section';
+import { TrustedInfrastructureSection } from './trusted-infrastructure-section';
 import { ApiWaitlistSection } from './api-waitlist-section';
 import { FinalCTASection } from './final-cta-section';
 import { DepositModal } from './deposit-modal';
@@ -19,6 +20,7 @@ export default function CryptoLandingPage() {
       <Header />
       <HeroSection />
       <WhatYouGetSection />
+      <TrustedInfrastructureSection />
       <ApiWaitlistSection onSubmit={joinApiWaitlist} />
       {/* <TestimonialSection /> */}
       <FinalCTASection />
