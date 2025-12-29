@@ -12,6 +12,7 @@ import {
   ArrowRight,
   ArrowLeft,
   Loader2,
+  Trash2,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { trpc } from '@/utils/trpc';
@@ -46,6 +47,9 @@ export function InvoiceListContainer() {
     'all' | 'sent' | 'received'
   >('all');
   const [exportingInvoiceId, setExportingInvoiceId] = useState<string | null>(
+    null,
+  );
+  const [deletingInvoiceId, setDeletingInvoiceId] = useState<string | null>(
     null,
   );
 
@@ -116,6 +120,34 @@ export function InvoiceListContainer() {
   };
 
   const utils = trpc.useUtils();
+
+  const deleteMutation = trpc.invoice.delete.useMutation({
+    onSuccess: () => {
+      toast.success('Invoice deleted successfully');
+      utils.invoice.list.invalidate();
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Failed to delete invoice');
+    },
+    onSettled: () => {
+      setDeletingInvoiceId(null);
+    },
+  });
+
+  const handleDelete = async (e: React.MouseEvent, invoice: Invoice) => {
+    e.stopPropagation();
+    if (invoice.status === 'paid') {
+      toast.error('Cannot delete a paid invoice');
+      return;
+    }
+    const confirmed = window.confirm(
+      `Are you sure you want to delete this invoice for ${invoice.amount} ${invoice.currency}?`,
+    );
+    if (!confirmed) return;
+
+    setDeletingInvoiceId(invoice.id);
+    deleteMutation.mutate({ id: invoice.id });
+  };
 
   const handleExportPDF = async (e: React.MouseEvent, invoice: Invoice) => {
     e.stopPropagation();
@@ -468,6 +500,20 @@ export function InvoiceListContainer() {
                             <Download className="h-4 w-4" />
                           )}
                         </button>
+                        {invoice.status !== 'paid' && (
+                          <button
+                            onClick={(e) => handleDelete(e, invoice)}
+                            className="text-red-500/70 hover:text-red-600"
+                            title="Delete invoice"
+                            disabled={deletingInvoiceId === invoice.id}
+                          >
+                            {deletingInvoiceId === invoice.id ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Trash2 className="h-4 w-4" />
+                            )}
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>

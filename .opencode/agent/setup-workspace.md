@@ -12,6 +12,23 @@ tools:
 
 # Setup Workspace - Initialize Outreach Configuration
 
+## Step 0: Identify the User
+
+**ALWAYS START BY ASKING:**
+
+> "Who are you - **Benjamin** or **Raghav**?"
+
+This determines which personal configuration to load:
+
+| Person   | Todo Page                                                                                 | Primary Focus                   |
+| -------- | ----------------------------------------------------------------------------------------- | ------------------------------- |
+| Benjamin | [Benjamin To Dos](https://www.notion.so/Benjamin-To-Dos-2b68ed524fef806395bafa38515b23e4) | Engineering, launches, demos    |
+| Raghav   | (Add URL when available)                                                                  | BD, investor relations, content |
+
+Store the user identity in `.opencode/config/workspace.json` under `"current_user"`.
+
+---
+
 ## Pre-flight Checklist
 
 Before using the outreach pipeline, ensure all MCP servers are configured:
@@ -345,6 +362,24 @@ Write parsed config to `.opencode/config/workspace.json`:
 {
   "initialized_at": "2025-12-09T00:00:00Z",
   "source_page": "https://notion.so/MCP-Skills-...",
+  "current_user": "benjamin",
+
+  "users": {
+    "benjamin": {
+      "name": "Benjamin Shafii",
+      "todo_page": "https://www.notion.so/Benjamin-To-Dos-2b68ed524fef806395bafa38515b23e4"
+    },
+    "raghav": {
+      "name": "Raghav Aggarwal",
+      "todo_page": null
+    }
+  },
+
+  "mega_goal": {
+    "page": "https://www.notion.so/V2-2d28ed524fef803db5a6d5fdbea55bbd",
+    "summary": "Convert $2.2M LOIs → $4M pipeline, 20-30% funded (~$1-1.5M AUM)",
+    "lever": "Launch = trust bottleneck breaker, inbound > outbound"
+  },
 
   "databases": {
     "outreach_tracking": "collection://...",
@@ -487,3 +522,34 @@ After running this agent, all other agents will:
 3. If no → prompt user to run setup-workspace first
 
 This enables the outreach pipeline to work for anyone who forks the repo and creates their own MCP Skills page.
+
+---
+
+## Skills Loaded from MCP Skills Page
+
+### Daily Goal Alignment Review
+
+**Trigger:** "Review my day", "Goal alignment", "Rate my tasks"
+
+**What it does:**
+
+1. Uses `current_user` from config to find the right Todo page
+2. Fetches the Todo page from Notion
+3. Finds the latest date section (e.g., "## Dec 28")
+4. For each completed task, rates:
+   - **What I'll Learn** - Agent guesses at insight gained
+   - **Helps Big Launch?** - Does this learning compound toward THE launch
+   - **Rating** (1-10 scale)
+5. Inserts a "Goal Alignment Scorecard" table in Notion
+6. Adds a Day Score with summary
+
+**Rating Scale:**
+| Score | Meaning |
+|-------|---------|
+| 9-10 | Directly creates launch assets or tests core narrative |
+| 7-8 | Builds trust/polish that compounds to conversion |
+| 5-6 | Useful but indirect (process, logistics) |
+| 3-4 | Feature work that doesn't teach about conversion |
+| 1-2 | Noise - doesn't contribute to AUM or launch clarity |
+
+**Mega Goal Reference:** Loaded from `mega_goal` in config, sourced from Investor Update V2.

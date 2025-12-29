@@ -1,17 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import {
   Dialog,
   DialogContent,
@@ -33,7 +24,6 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import {
-  Plug,
   Key,
   Copy,
   Check,
@@ -43,7 +33,7 @@ import {
   ExternalLink,
   Terminal,
   Mail,
-  Sparkles,
+  Loader2,
 } from 'lucide-react';
 import { trpc } from '@/lib/trpc';
 import { api } from '@/trpc/react';
@@ -63,38 +53,38 @@ function InstallMcpCommand({ apiKey }: { apiKey: string }) {
   };
 
   return (
-    <div className="space-y-3 rounded-lg border bg-muted/30 p-4">
+    <div className="space-y-3 border border-[#101010]/10 bg-[#F7F7F2] p-4">
       <div className="flex items-center gap-2">
-        <Terminal className="h-4 w-4 text-muted-foreground" />
-        <span className="text-sm font-medium">Quick Install</span>
+        <Terminal className="h-4 w-4 text-[#101010]/60" />
+        <span className="text-[13px] font-medium text-[#101010]">
+          Quick Install
+        </span>
       </div>
-      <p className="text-xs text-muted-foreground">
+      <p className="text-[12px] text-[#101010]/60">
         Run this command in your terminal to add 0 Finance to Claude Desktop:
       </p>
       <div className="relative">
-        <pre className="rounded bg-black p-3 pr-12 font-mono text-xs text-green-400 overflow-x-auto whitespace-pre-wrap break-all">
+        <pre className="bg-[#101010] p-3 pr-12 font-mono text-[12px] text-[#10B981] overflow-x-auto whitespace-pre-wrap break-all">
           {installCommand}
         </pre>
-        <Button
-          size="icon"
-          variant="outline"
+        <button
           onClick={handleCopyCommand}
-          className="absolute right-2 top-2 h-8 w-8 bg-black/50 border-gray-600 hover:bg-black/70"
+          className="absolute right-2 top-2 h-8 w-8 flex items-center justify-center bg-[#101010]/50 border border-[#101010]/30 hover:bg-[#101010]/70 transition-colors"
         >
           {copiedCommand ? (
-            <Check className="h-4 w-4 text-green-500" />
+            <Check className="h-4 w-4 text-[#10B981]" />
           ) : (
-            <Copy className="h-4 w-4 text-gray-400" />
+            <Copy className="h-4 w-4 text-white/60" />
           )}
-        </Button>
+        </button>
       </div>
-      <p className="text-xs text-muted-foreground">
+      <p className="text-[12px] text-[#101010]/60">
         For other clients, replace{' '}
-        <code className="rounded bg-muted px-1">claude</code> with:{' '}
-        <code className="rounded bg-muted px-1">cursor</code>,{' '}
-        <code className="rounded bg-muted px-1">vscode</code>,{' '}
-        <code className="rounded bg-muted px-1">windsurf</code>, or{' '}
-        <code className="rounded bg-muted px-1">cline</code>
+        <code className="bg-[#101010]/5 px-1 text-[11px]">claude</code> with:{' '}
+        <code className="bg-[#101010]/5 px-1 text-[11px]">cursor</code>,{' '}
+        <code className="bg-[#101010]/5 px-1 text-[11px]">vscode</code>,{' '}
+        <code className="bg-[#101010]/5 px-1 text-[11px]">windsurf</code>, or{' '}
+        <code className="bg-[#101010]/5 px-1 text-[11px]">cline</code>
       </p>
     </div>
   );
@@ -119,7 +109,7 @@ function EmailVerificationStatus() {
     });
 
   if (isLoading) {
-    return <div className="h-16 animate-pulse rounded-lg bg-muted" />;
+    return <div className="h-16 animate-pulse bg-[#101010]/5" />;
   }
 
   if (!verificationStatus?.email) {
@@ -128,13 +118,15 @@ function EmailVerificationStatus() {
 
   if (verificationStatus.isVerified) {
     return (
-      <div className="flex items-center gap-3 rounded-lg border border-[#10B981]/20 bg-[#10B981]/5 p-4">
-        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#10B981]/10">
+      <div className="flex items-center gap-3 border border-[#10B981]/20 bg-[#10B981]/5 p-4">
+        <div className="flex h-8 w-8 items-center justify-center bg-[#10B981]/10">
           <Check className="h-4 w-4 text-[#10B981]" />
         </div>
         <div className="flex-1">
-          <p className="text-sm font-medium text-[#101010]">Email Verified</p>
-          <p className="text-xs text-[#101010]/60">
+          <p className="text-[13px] font-medium text-[#101010]">
+            Email Verified
+          </p>
+          <p className="text-[12px] text-[#101010]/60">
             You can receive AI responses at {verificationStatus.email}
           </p>
         </div>
@@ -144,74 +136,70 @@ function EmailVerificationStatus() {
 
   if (verificationStatus.status === 'Pending') {
     return (
-      <div className="space-y-3 rounded-lg border border-amber-200 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-950/50">
+      <div className="space-y-3 border border-[#f59e0b]/20 bg-[#f59e0b]/5 p-4">
         <div className="flex items-center gap-3">
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900">
-            <Mail className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+          <div className="flex h-8 w-8 items-center justify-center bg-[#f59e0b]/10">
+            <Mail className="h-4 w-4 text-[#f59e0b]" />
           </div>
           <div className="flex-1">
-            <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
+            <p className="text-[13px] font-medium text-[#101010]">
               Verification Pending
             </p>
-            <p className="text-xs text-amber-700 dark:text-amber-300">
+            <p className="text-[12px] text-[#101010]/60">
               Check your inbox for the verification email
             </p>
           </div>
         </div>
-        <p className="text-xs text-amber-700 dark:text-amber-300">
+        <p className="text-[12px] text-[#101010]/60">
           Click the link in the email from Amazon Web Services to complete
           verification. It may take a few minutes to arrive.
         </p>
-        <Button
-          variant="outline"
-          size="sm"
+        <button
           onClick={() => refetch()}
-          className="w-full border-amber-300 text-amber-800 hover:bg-amber-100 dark:border-amber-700 dark:text-amber-200 dark:hover:bg-amber-900"
+          className="w-full border border-[#f59e0b]/30 bg-white text-[#101010] text-[12px] px-3 py-2 hover:bg-[#f59e0b]/5 transition-colors"
         >
           Check Status
-        </Button>
+        </button>
       </div>
     );
   }
 
   // Not verified - show verification button
   return (
-    <div className="space-y-3 rounded-lg border border-[#101010]/10 bg-[#F7F7F2] p-4">
+    <div className="space-y-3 border border-[#101010]/10 bg-[#F7F7F2] p-4">
       <div className="flex items-center gap-3">
-        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#1B29FF]/10">
+        <div className="flex h-8 w-8 items-center justify-center bg-[#1B29FF]/10">
           <Mail className="h-4 w-4 text-[#1B29FF]" />
         </div>
         <div className="flex-1">
-          <p className="text-sm font-medium text-[#101010]">
+          <p className="text-[13px] font-medium text-[#101010]">
             Verify Your Email
           </p>
-          <p className="text-xs text-[#101010]/60">
+          <p className="text-[12px] text-[#101010]/60">
             Required to receive AI responses
           </p>
         </div>
       </div>
-      <p className="text-xs text-[#101010]/60">
+      <p className="text-[12px] text-[#101010]/60">
         To receive emails from the AI agent, verify your email address.
         You&apos;ll receive a confirmation email from Amazon Web Services.
       </p>
-      <Button
+      <button
         onClick={() => verifyMutation.mutate()}
         disabled={verifyMutation.isPending}
-        className="w-full bg-[#1B29FF] hover:bg-[#1420CC] text-white"
-        size="sm"
+        className="w-full bg-[#1B29FF] hover:bg-[#1420CC] text-white text-[12px] font-medium px-3 py-2 transition-colors disabled:opacity-50"
       >
         {verifyMutation.isPending ? 'Sending...' : 'Send Verification Email'}
-      </Button>
+      </button>
     </div>
   );
 }
 
-function AiEmailCard() {
+function AiEmailSection() {
   const [copiedEmail, setCopiedEmail] = useState(false);
   const { data: currentWorkspace, isLoading } =
     api.workspace.getOrCreateWorkspace.useQuery();
 
-  // Get the AI email domain from environment or use default
   const aiEmailDomain =
     process.env.NEXT_PUBLIC_AI_EMAIL_DOMAIN || 'ai.0.finance';
 
@@ -229,65 +217,65 @@ function AiEmailCard() {
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-purple-600">
-              <Mail className="h-5 w-5 text-white" />
-            </div>
-            <div>
-              <CardTitle className="flex items-center gap-2">
+    <div className="bg-white border border-[#101010]/10">
+      {/* Header */}
+      <div className="p-4 border-b border-[#101010]/10">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center bg-[#1B29FF]/10">
+            <Mail className="h-5 w-5 text-[#1B29FF]" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h3 className="text-[15px] font-medium text-[#101010]">
                 AI Email Agent
-                <Badge
-                  variant="secondary"
-                  className="bg-gradient-to-r from-blue-100 to-purple-100 text-blue-700 dark:from-blue-900 dark:to-purple-900 dark:text-blue-300"
-                >
-                  <Sparkles className="mr-1 h-3 w-3" />
-                  Beta
-                </Badge>
-              </CardTitle>
-              <CardDescription>
-                Create invoices by forwarding emails to your workspace
-              </CardDescription>
+              </h3>
+              <span className="inline-flex items-center px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide bg-[#1B29FF]/10 text-[#1B29FF]">
+                Beta
+              </span>
             </div>
+            <p className="text-[12px] text-[#101010]/60 mt-0.5">
+              Create invoices by forwarding emails to your workspace
+            </p>
           </div>
         </div>
-      </CardHeader>
-      <CardContent className="space-y-4">
+      </div>
+
+      {/* Content */}
+      <div className="p-4 space-y-4">
         {isLoading ? (
-          <div className="h-20 animate-pulse rounded-lg bg-muted" />
+          <div className="h-20 animate-pulse bg-[#101010]/5" />
         ) : aiEmailAddress ? (
           <>
-            {/* Email Verification Status */}
             <EmailVerificationStatus />
 
             <div className="space-y-2">
-              <Label className="text-xs text-muted-foreground">
+              <p className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60">
                 Your AI Email Address
-              </Label>
+              </p>
               <div className="flex items-center gap-2">
-                <div className="flex-1 rounded-lg border bg-muted/50 px-4 py-3">
-                  <code className="text-sm font-medium">{aiEmailAddress}</code>
+                <div className="flex-1 border border-[#101010]/10 bg-[#F7F7F2] px-4 py-3">
+                  <code className="text-[13px] font-medium text-[#101010]">
+                    {aiEmailAddress}
+                  </code>
                 </div>
-                <Button
-                  size="icon"
-                  variant="outline"
+                <button
                   onClick={handleCopyEmail}
-                  className="h-12 w-12"
+                  className="h-12 w-12 flex items-center justify-center border border-[#101010]/10 hover:bg-[#F7F7F2] transition-colors"
                 >
                   {copiedEmail ? (
-                    <Check className="h-4 w-4 text-green-500" />
+                    <Check className="h-4 w-4 text-[#10B981]" />
                   ) : (
-                    <Copy className="h-4 w-4" />
+                    <Copy className="h-4 w-4 text-[#101010]/60" />
                   )}
-                </Button>
+                </button>
               </div>
             </div>
 
-            <div className="rounded-lg bg-gradient-to-r from-blue-50 to-purple-50 p-4 dark:from-blue-950/50 dark:to-purple-950/50">
-              <h4 className="text-sm font-medium">How it works</h4>
-              <ol className="mt-2 list-inside list-decimal space-y-1 text-sm text-muted-foreground">
+            <div className="bg-[#F7F7F2] p-4 space-y-2">
+              <p className="text-[13px] font-medium text-[#101010]">
+                How it works
+              </p>
+              <ol className="list-decimal list-inside space-y-1 text-[12px] text-[#101010]/70">
                 <li>
                   Forward any email with invoice details to your AI email
                   address
@@ -300,22 +288,22 @@ function AiEmailCard() {
               </ol>
             </div>
 
-            <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950/50 dark:text-amber-200">
-              <strong>Tip:</strong> Forward emails from clients with project
-              details, quotes, or agreements. The AI will extract invoice
-              information automatically.
+            <div className="border border-[#f59e0b]/20 bg-[#f59e0b]/5 p-3 text-[12px] text-[#101010]/80">
+              <strong className="text-[#101010]">Tip:</strong> Forward emails
+              from clients with project details, quotes, or agreements. The AI
+              will extract invoice information automatically.
             </div>
           </>
         ) : (
-          <div className="rounded-lg border border-dashed p-6 text-center">
-            <Mail className="mx-auto h-8 w-8 text-muted-foreground/50" />
-            <p className="mt-2 text-sm text-muted-foreground">
+          <div className="border border-dashed border-[#101010]/20 p-6 text-center">
+            <Mail className="mx-auto h-8 w-8 text-[#101010]/30" />
+            <p className="mt-2 text-[13px] text-[#101010]/60">
               Unable to load workspace. Please try refreshing the page.
             </p>
           </div>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
 
@@ -377,133 +365,155 @@ export function IntegrationsClientContent() {
   const revokedKeys = apiKeys?.filter((k) => k.isRevoked) ?? [];
 
   return (
-    <div className="w-full space-y-8 px-6">
+    <div className="pt-6 w-full space-y-8 px-6 max-w-4xl">
+      {/* Page Header */}
       <div>
-        <h1 className="text-3xl font-bold">Integrations</h1>
-        <p className="mt-2 text-muted-foreground">
+        <h1 className="text-[24px] font-medium tracking-[-0.01em] text-[#101010]">
+          Integrations
+        </h1>
+        <p className="mt-1 text-[14px] text-[#101010]/60">
           Connect AI agents and external services to your workspace.
         </p>
       </div>
 
       {/* AI Email Agent Section */}
-      <AiEmailCard />
+      <AiEmailSection />
 
       {/* MCP API Keys Section */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Bot className="h-6 w-6 text-primary" />
-              <div>
-                <CardTitle>AI Agent Access (MCP)</CardTitle>
-                <CardDescription>
-                  Create API keys to allow AI agents to interact with your
-                  account via the Model Context Protocol.
-                </CardDescription>
-              </div>
+      <div className="bg-white border border-[#101010]/10">
+        {/* Header */}
+        <div className="p-4 border-b border-[#101010]/10 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center bg-[#1B29FF]/10">
+              <Bot className="h-5 w-5 text-[#1B29FF]" />
             </div>
-            <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-              <DialogTrigger asChild>
-                <Button size="sm">
-                  <Plus className="mr-2 h-4 w-4" />
-                  Create Key
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-                {newKey ? (
-                  <>
-                    <DialogHeader>
-                      <DialogTitle>API Key Created</DialogTitle>
-                      <DialogDescription>
-                        Copy this key now. It will not be shown again.
-                      </DialogDescription>
-                    </DialogHeader>
-                    <div className="space-y-4 py-4">
-                      <div>
-                        <Label className="text-xs text-muted-foreground">
-                          Your API Key
-                        </Label>
-                        <div className="mt-1 flex items-center gap-2">
-                          <Input
-                            value={newKey}
-                            readOnly
-                            className="font-mono text-sm"
-                          />
-                          <Button
-                            size="icon"
-                            variant="outline"
-                            onClick={handleCopyKey}
-                          >
-                            {copied ? (
-                              <Check className="h-4 w-4 text-green-500" />
-                            ) : (
-                              <Copy className="h-4 w-4" />
-                            )}
-                          </Button>
-                        </div>
-                      </div>
-                      <InstallMcpCommand apiKey={newKey} />
-                      <div className="rounded-lg bg-amber-50 p-3 text-sm text-amber-800 dark:bg-amber-950 dark:text-amber-200">
-                        <strong>Important:</strong> Store this key securely. You
-                        won&apos;t be able to see it again.
-                      </div>
-                    </div>
-                    <DialogFooter>
-                      <Button onClick={handleCloseCreateDialog}>Done</Button>
-                    </DialogFooter>
-                  </>
-                ) : (
-                  <>
-                    <DialogHeader>
-                      <DialogTitle>Create API Key</DialogTitle>
-                      <DialogDescription>
-                        Give your API key a descriptive name to identify it
-                        later.
-                      </DialogDescription>
-                    </DialogHeader>
-                    <div className="space-y-4 py-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="keyName">Key Name</Label>
-                        <Input
-                          id="keyName"
-                          placeholder="e.g., Claude Desktop, Cursor Agent"
-                          value={keyName}
-                          onChange={(e) => setKeyName(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') handleCreateKey();
-                          }}
-                        />
-                      </div>
-                    </div>
-                    <DialogFooter>
-                      <Button
-                        variant="outline"
-                        onClick={() => setIsCreateOpen(false)}
-                      >
-                        Cancel
-                      </Button>
-                      <Button
-                        onClick={handleCreateKey}
-                        disabled={createKeyMutation.isPending}
-                      >
-                        {createKeyMutation.isPending
-                          ? 'Creating...'
-                          : 'Create Key'}
-                      </Button>
-                    </DialogFooter>
-                  </>
-                )}
-              </DialogContent>
-            </Dialog>
+            <div>
+              <h3 className="text-[15px] font-medium text-[#101010]">
+                AI Agent Access (MCP)
+              </h3>
+              <p className="text-[12px] text-[#101010]/60 mt-0.5">
+                Create API keys to allow AI agents to interact with your account
+              </p>
+            </div>
           </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
+          <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+            <DialogTrigger asChild>
+              <button className="bg-[#1B29FF] hover:bg-[#1420CC] text-white text-[12px] font-medium px-3 py-2 transition-colors inline-flex items-center gap-1.5">
+                <Plus className="h-4 w-4" />
+                Create Key
+              </button>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+              {newKey ? (
+                <>
+                  <DialogHeader>
+                    <DialogTitle className="text-[18px] font-medium text-[#101010]">
+                      API Key Created
+                    </DialogTitle>
+                    <DialogDescription className="text-[13px] text-[#101010]/60">
+                      Copy this key now. It will not be shown again.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4">
+                    <div>
+                      <p className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60 mb-1">
+                        Your API Key
+                      </p>
+                      <div className="flex items-center gap-2">
+                        <input
+                          value={newKey}
+                          readOnly
+                          className="flex-1 h-10 px-3 font-mono text-[13px] border border-[#101010]/10 bg-[#F7F7F2] text-[#101010]"
+                        />
+                        <button
+                          onClick={handleCopyKey}
+                          className="h-10 w-10 flex items-center justify-center border border-[#101010]/10 hover:bg-[#F7F7F2] transition-colors"
+                        >
+                          {copied ? (
+                            <Check className="h-4 w-4 text-[#10B981]" />
+                          ) : (
+                            <Copy className="h-4 w-4 text-[#101010]/60" />
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                    <InstallMcpCommand apiKey={newKey} />
+                    <div className="border border-[#f59e0b]/20 bg-[#f59e0b]/5 p-3 text-[12px] text-[#101010]/80">
+                      <strong className="text-[#101010]">Important:</strong>{' '}
+                      Store this key securely. You won&apos;t be able to see it
+                      again.
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <button
+                      onClick={handleCloseCreateDialog}
+                      className="bg-[#1B29FF] hover:bg-[#1420CC] text-white text-[12px] font-medium px-4 py-2 transition-colors"
+                    >
+                      Done
+                    </button>
+                  </DialogFooter>
+                </>
+              ) : (
+                <>
+                  <DialogHeader>
+                    <DialogTitle className="text-[18px] font-medium text-[#101010]">
+                      Create API Key
+                    </DialogTitle>
+                    <DialogDescription className="text-[13px] text-[#101010]/60">
+                      Give your API key a descriptive name to identify it later.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4">
+                    <div className="space-y-2">
+                      <p className="uppercase tracking-[0.14em] text-[11px] text-[#101010]/60">
+                        Key Name
+                      </p>
+                      <input
+                        id="keyName"
+                        placeholder="e.g., Claude Desktop, Cursor Agent"
+                        value={keyName}
+                        onChange={(e) => setKeyName(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') handleCreateKey();
+                        }}
+                        className="w-full h-10 px-3 border border-[#101010]/10 focus:border-[#1B29FF] focus:ring-1 focus:ring-[#1B29FF]/20 text-[14px] placeholder:text-[#101010]/40 transition-colors outline-none"
+                      />
+                    </div>
+                  </div>
+                  <DialogFooter className="gap-2">
+                    <button
+                      onClick={() => setIsCreateOpen(false)}
+                      className="border border-[#101010]/10 hover:bg-[#F7F7F2] text-[#101010] text-[12px] px-4 py-2 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleCreateKey}
+                      disabled={createKeyMutation.isPending}
+                      className="bg-[#1B29FF] hover:bg-[#1420CC] text-white text-[12px] font-medium px-4 py-2 transition-colors disabled:opacity-50 inline-flex items-center gap-2"
+                    >
+                      {createKeyMutation.isPending && (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      )}
+                      {createKeyMutation.isPending
+                        ? 'Creating...'
+                        : 'Create Key'}
+                    </button>
+                  </DialogFooter>
+                </>
+              )}
+            </DialogContent>
+          </Dialog>
+        </div>
+
+        {/* Content */}
+        <div className="p-4 space-y-4">
           {isLoading ? (
-            <div className="text-sm text-muted-foreground">Loading...</div>
+            <div className="text-[13px] text-[#101010]/60">Loading...</div>
           ) : activeKeys.length === 0 ? (
-            <div className="rounded-lg border border-dashed p-6 text-center">
-              <Key className="mx-auto h-8 w-8 text-muted-foreground/50" />
-              <p className="mt-2 text-sm text-muted-foreground">
+            <div className="border border-dashed border-[#101010]/20 p-6 text-center">
+              <Key className="mx-auto h-8 w-8 text-[#101010]/30" />
+              <p className="mt-2 text-[13px] text-[#101010]/60">
                 No API keys yet. Create one to enable AI agent access.
               </p>
             </div>
@@ -512,16 +522,18 @@ export function IntegrationsClientContent() {
               {activeKeys.map((key) => (
                 <div
                   key={key.id}
-                  className="flex items-center justify-between rounded-lg border p-4"
+                  className="flex items-center justify-between border border-[#101010]/10 p-4 hover:bg-[#F7F7F2]/30 transition-colors"
                 >
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
-                      <span className="font-medium">{key.name}</span>
-                      <code className="rounded bg-muted px-2 py-0.5 text-xs">
+                      <span className="text-[14px] font-medium text-[#101010]">
+                        {key.name}
+                      </span>
+                      <code className="bg-[#101010]/5 px-2 py-0.5 text-[11px] font-mono text-[#101010]/70">
                         {key.keyPrefix}...
                       </code>
                     </div>
-                    <div className="text-xs text-muted-foreground">
+                    <div className="text-[11px] text-[#101010]/50">
                       Created{' '}
                       {key.createdAt
                         ? formatDistanceToNow(new Date(key.createdAt), {
@@ -530,8 +542,7 @@ export function IntegrationsClientContent() {
                         : 'recently'}
                       {key.lastUsedAt && (
                         <>
-                          {' '}
-                          &middot; Last used{' '}
+                          {' · Last used '}
                           {formatDistanceToNow(new Date(key.lastUsedAt), {
                             addSuffix: true,
                           })}
@@ -541,27 +552,26 @@ export function IntegrationsClientContent() {
                   </div>
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="text-destructive hover:text-destructive"
-                      >
+                      <button className="h-8 w-8 flex items-center justify-center text-red-500/70 hover:text-red-600 hover:bg-red-50 transition-colors">
                         <Trash2 className="h-4 w-4" />
-                      </Button>
+                      </button>
                     </AlertDialogTrigger>
                     <AlertDialogContent>
                       <AlertDialogHeader>
-                        <AlertDialogTitle>Revoke API Key</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          This will immediately disable the key &quot;
-                          {key.name}&quot;. Any agents using this key will lose
-                          access.
+                        <AlertDialogTitle className="text-[18px] font-medium text-[#101010]">
+                          Revoke API Key
+                        </AlertDialogTitle>
+                        <AlertDialogDescription className="text-[13px] text-[#101010]/60">
+                          This will immediately disable the key &quot;{key.name}
+                          &quot;. Any agents using this key will lose access.
                         </AlertDialogDescription>
                       </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogFooter className="gap-2">
+                        <AlertDialogCancel className="border border-[#101010]/10 hover:bg-[#F7F7F2] text-[#101010] text-[12px] px-4 py-2">
+                          Cancel
+                        </AlertDialogCancel>
                         <AlertDialogAction
-                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          className="bg-red-600 hover:bg-red-700 text-white text-[12px] font-medium px-4 py-2"
                           onClick={() =>
                             revokeKeyMutation.mutate({ keyId: key.id })
                           }
@@ -577,13 +587,15 @@ export function IntegrationsClientContent() {
           )}
 
           {/* MCP Setup Instructions */}
-          <div className="mt-4 rounded-lg bg-muted/50 p-4">
-            <h4 className="text-sm font-medium">How to connect an AI agent</h4>
-            <ol className="mt-2 list-inside list-decimal space-y-1 text-sm text-muted-foreground">
+          <div className="bg-[#F7F7F2] p-4 space-y-2">
+            <p className="text-[13px] font-medium text-[#101010]">
+              How to connect an AI agent
+            </p>
+            <ol className="list-decimal list-inside space-y-1 text-[12px] text-[#101010]/70">
               <li>Create an API key above</li>
               <li>
                 Configure your AI agent with the MCP endpoint:{' '}
-                <code className="rounded bg-muted px-1">
+                <code className="bg-[#101010]/5 px-1 text-[11px] font-mono">
                   {typeof window !== 'undefined'
                     ? `${window.location.origin}/api/mcp`
                     : '/api/mcp'}
@@ -591,7 +603,7 @@ export function IntegrationsClientContent() {
               </li>
               <li>
                 Set the Authorization header:{' '}
-                <code className="rounded bg-muted px-1">
+                <code className="bg-[#101010]/5 px-1 text-[11px] font-mono">
                   Bearer your_api_key
                 </code>
               </li>
@@ -600,7 +612,7 @@ export function IntegrationsClientContent() {
               href="https://modelcontextprotocol.io"
               target="_blank"
               rel="noopener noreferrer"
-              className="mt-2 inline-flex items-center gap-1 text-sm text-primary hover:underline"
+              className="mt-2 inline-flex items-center gap-1 text-[12px] text-[#1B29FF] hover:text-[#1420CC] transition-colors"
             >
               Learn more about MCP
               <ExternalLink className="h-3 w-3" />
@@ -610,7 +622,7 @@ export function IntegrationsClientContent() {
           {/* Revoked Keys (collapsed) */}
           {revokedKeys.length > 0 && (
             <details className="mt-4">
-              <summary className="cursor-pointer text-sm text-muted-foreground hover:text-foreground">
+              <summary className="cursor-pointer text-[12px] text-[#101010]/50 hover:text-[#101010]/70 transition-colors">
                 {revokedKeys.length} revoked key
                 {revokedKeys.length === 1 ? '' : 's'}
               </summary>
@@ -618,16 +630,18 @@ export function IntegrationsClientContent() {
                 {revokedKeys.map((key) => (
                   <div
                     key={key.id}
-                    className="flex items-center justify-between rounded-lg border border-dashed p-3 opacity-50"
+                    className="flex items-center justify-between border border-dashed border-[#101010]/10 p-3 opacity-50"
                   >
                     <div className="space-y-0.5">
                       <div className="flex items-center gap-2">
-                        <span className="text-sm line-through">{key.name}</span>
-                        <Badge variant="secondary" className="text-xs">
+                        <span className="text-[13px] line-through text-[#101010]/60">
+                          {key.name}
+                        </span>
+                        <span className="inline-flex items-center px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide bg-[#101010]/5 text-[#101010]/60">
                           Revoked
-                        </Badge>
+                        </span>
                       </div>
-                      <div className="text-xs text-muted-foreground">
+                      <div className="text-[11px] text-[#101010]/40">
                         {key.revokedAt
                           ? `Revoked ${formatDistanceToNow(new Date(key.revokedAt), { addSuffix: true })}`
                           : 'Revoked'}
@@ -638,37 +652,8 @@ export function IntegrationsClientContent() {
               </div>
             </details>
           )}
-        </CardContent>
-      </Card>
-
-      {/* Legacy Integrations Section */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Plug className="h-6 w-6 text-muted-foreground" />
-              <div>
-                <CardTitle>Email & Document Sync</CardTitle>
-                <CardDescription>
-                  Automatic inbox ingestion and Gmail-based processing has been
-                  retired from the product.
-                </CardDescription>
-              </div>
-            </div>
-            <Badge variant="secondary">Unavailable</Badge>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground">
-            Your workspace now relies on direct uploads and bank-sync
-            automations. If you need a specific integration, drop us a note and
-            we&apos;ll reach out as new connectors come online.
-          </p>
-          <Button className="mt-4" disabled>
-            Connect Service
-          </Button>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 }

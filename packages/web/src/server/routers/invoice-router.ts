@@ -193,7 +193,66 @@ export const invoiceRouter = router({
 
       return { success: true, invoiceId, newStatus: status };
     }),
-  // Example endpoint to list invoices
+
+  // Delete invoice (workspace members can delete invoices in their workspace)
+  delete: protectedProcedure
+    .input(
+      z.object({
+        id: z.string(),
+      }),
+    )
+    .mutation(async ({ input, ctx }) => {
+      const workspaceId = ctx.workspaceId;
+      const { id: invoiceId } = input;
+
+      if (!workspaceId) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Workspace context is required to delete invoices',
+        });
+      }
+
+      // Get the invoice
+      const [invoice] = await db
+        .select()
+        .from(userRequestsTable)
+        .where(eq(userRequestsTable.id, invoiceId))
+        .limit(1);
+
+      if (!invoice) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Invoice not found',
+        });
+      }
+
+      // Verify the invoice belongs to this workspace
+      if (invoice.workspaceId !== workspaceId) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'You can only delete invoices from your workspace',
+        });
+      }
+
+      // Don't allow deleting paid invoices
+      if (invoice.status === 'paid') {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Cannot delete a paid invoice',
+        });
+      }
+
+      // Delete the invoice
+      await db
+        .delete(userRequestsTable)
+        .where(eq(userRequestsTable.id, invoiceId));
+
+      console.log(`Invoice ${invoiceId} deleted from workspace ${workspaceId}`);
+
+      return { success: true, invoiceId };
+    }),
+
+  // List invoices endpoint
   list: protectedProcedure
     .input(
       z.object({
