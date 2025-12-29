@@ -728,8 +728,11 @@ export const invoiceRouter = router({
         );
 
         // Lazily import to avoid bundling openai in edge runtimes if unused.
-        const { myProvider } = await import('@/lib/ai/providers');
+        const { createOpenAI } = await import('@ai-sdk/openai');
         const { generateObject } = await import('ai');
+        const openai = createOpenAI({
+          apiKey: process.env.OPENAI_API_KEY || '',
+        });
 
         // Create a more comprehensive schema that matches the invoice store expectations
         // IMPORTANT: For AI SDK with o3-2025-04-16, all fields must be required with nullable() instead of optional()
@@ -868,7 +871,7 @@ IMPORTANT:
 
 Current date for reference: ${new Date().toISOString().split('T')[0]}`;
 
-        const chatModel = myProvider('gpt-5-mini');
+        const chatModel = openai('gpt-5-mini');
 
         console.log('[AI Prefill] Calling AI model for extraction...');
 
@@ -933,7 +936,7 @@ Extract everything comprehensively - leave no data behind!`,
             });
 
             const fallbackResult = await generateObject({
-              model: myProvider('gpt-5-mini'),
+              model: openai('gpt-5-mini'),
               schema: simpleSchema,
               messages: [
                 {

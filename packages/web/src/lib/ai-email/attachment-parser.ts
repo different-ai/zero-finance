@@ -1,22 +1,21 @@
 /**
  * Attachment Parser for AI Email Agent
  *
- * Extracts text content from email attachments (PDFs, etc.)
- * so the AI can process invoice data from attached files.
+ * Prepares email attachments for native AI processing.
+ * PDFs and images are passed directly to the AI model (GPT-5.2 supports native PDF/image understanding).
+ * Text files are decoded and included as text content.
  */
 
-// pdf-parse v2 uses a class-based API
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const PDFParse = require('pdf-parse').PDFParse;
-
-export interface ParsedAttachment {
+export interface PreparedAttachment {
   filename: string;
   contentType: string;
-  /** Extracted text content from the attachment */
+  /** Base64 encoded content for file types (PDF, images) */
+  base64Content: string | null;
+  /** Decoded text content for text files */
   textContent: string | null;
-  /** Whether parsing was successful */
-  parsed: boolean;
-  /** Error message if parsing failed */
+  /** Whether this attachment can be processed by the AI */
+  supported: boolean;
+  /** Error message if preparation failed */
   error?: string;
 }
 
@@ -27,38 +26,23 @@ export interface EmailAttachment {
 }
 
 /**
- * Parse a PDF attachment and extract its text content.
- *
- * @param base64Content - Base64 encoded PDF content
- * @returns Extracted text or null if parsing fails
+ * Content types that can be passed directly to the AI model as file parts.
+ * GPT-4o/GPT-5 series models natively support these formats.
  */
-async function parsePdf(base64Content: string): Promise<string | null> {
-  try {
-    const buffer = Buffer.from(base64Content, 'base64');
-    const uint8Array = new Uint8Array(buffer);
-
-    // PDFParse constructor takes LoadParameters with data property
-    const parser = new PDFParse({ data: uint8Array });
-    const result = await parser.getText();
-
-    // Clean up parser resources
-    await parser.destroy();
-
-    // TextResult has .text property with concatenated text
-    return result?.text?.trim() || null;
-  } catch (error) {
-    console.error('[AttachmentParser] Failed to parse PDF:', error);
-    return null;
-  }
-}
+const AI_NATIVE_FILE_TYPES = [
+  'application/pdf',
+  'image/jpeg',
+  'image/png',
+  'image/gif',
+  'image/webp',
+];
 
 /**
- * Check if a content type is a PDF.
+ * Check if a content type can be processed natively by the AI model.
  */
-function isPdf(contentType: string): boolean {
-  return (
-    contentType === 'application/pdf' ||
-    contentType.startsWith('application/pdf')
+function isAINativeFileType(contentType: string): boolean {
+  return AI_NATIVE_FILE_TYPES.some(
+    (type) => contentType === type || contentType.startsWith(type),
   );
 }
 
@@ -70,63 +54,56 @@ function isPlainText(contentType: string): boolean {
 }
 
 /**
- * Check if a content type is a supported document format.
+ * Check if a content type is supported for AI processing.
  */
-function isSupportedDocument(contentType: string): boolean {
-  return isPdf(contentType) || isPlainText(contentType);
+function isSupportedType(contentType: string): boolean {
+  return isAINativeFileType(contentType) || isPlainText(contentType);
 }
 
 /**
- * Parse a single attachment and extract its text content.
+ * Prepare a single attachment for AI processing.
  *
- * Currently supports:
- * - PDF files
- * - Plain text files
+ * - PDF and image files: Returns base64 content for native AI file input
+ * - Text files: Decodes and returns text content
+ * - Other types: Marked as unsupported
  *
- * @param attachment - The email attachment to parse
- * @returns Parsed attachment with extracted text
+ * @param attachment - The email attachment to prepare
+ * @returns Prepared attachment ready for AI processing
  */
-export async function parseAttachment(
+export function prepareAttachment(
   attachment: EmailAttachment,
-): Promise<ParsedAttachment> {
+): PreparedAttachment {
   const { filename, content, contentType } = attachment;
 
-  // Handle PDF files
-  if (isPdf(contentType)) {
-    const textContent = await parsePdf(content);
-    if (textContent) {
-      return {
-        filename,
-        contentType,
-        textContent,
-        parsed: true,
-      };
-    }
+  // Handle AI-native file types (PDF, images) - pass through as base64
+  if (isAINativeFileType(contentType)) {
     return {
       filename,
       contentType,
+      base64Content: content,
       textContent: null,
-      parsed: false,
-      error: 'Failed to extract text from PDF',
+      supported: true,
     };
   }
 
-  // Handle plain text files
+  // Handle plain text files - decode to string
   if (isPlainText(contentType)) {
     try {
       const textContent = Buffer.from(content, 'base64').toString('utf-8');
       return {
         filename,
         contentType,
+        base64Content: null,
         textContent: textContent.trim(),
-        parsed: true,
+        supported: true,
       };
     } catch (error) {
       return {
         filename,
         contentType,
+        base64Content: null,
         textContent: null,
-        parsed: false,
+        supported: false,
         error: 'Failed to decode text file',
       };
     }
@@ -136,105 +113,153 @@ export async function parseAttachment(
   return {
     filename,
     contentType,
+    base64Content: null,
     textContent: null,
-    parsed: false,
+    supported: false,
     error: `Unsupported file type: ${contentType}`,
   };
 }
 
 /**
- * Parse all attachments from an email and extract text content.
+ * Prepare all attachments from an email for AI processing.
  *
  * @param attachments - Array of email attachments
- * @returns Array of parsed attachments with extracted text
+ * @returns Array of prepared attachments
  */
-export async function parseAttachments(
+export function prepareAttachments(
   attachments: EmailAttachment[] | undefined,
-): Promise<ParsedAttachment[]> {
+): PreparedAttachment[] {
   if (!attachments || attachments.length === 0) {
     return [];
   }
 
-  const results: ParsedAttachment[] = [];
+  return attachments.map((attachment) => {
+    if (isSupportedType(attachment.contentType)) {
+      return prepareAttachment(attachment);
+    }
 
-  for (const attachment of attachments) {
-    // Only try to parse supported document types
-    if (isSupportedDocument(attachment.contentType)) {
-      const parsed = await parseAttachment(attachment);
-      results.push(parsed);
-    } else {
-      // Skip unsupported types (images, etc.) but log them
-      console.log(
-        `[AttachmentParser] Skipping unsupported attachment: ${attachment.filename} (${attachment.contentType})`,
-      );
-      results.push({
+    // Log and skip unsupported types
+    console.log(
+      `[AttachmentParser] Skipping unsupported attachment: ${attachment.filename} (${attachment.contentType})`,
+    );
+    return {
+      filename: attachment.filename,
+      contentType: attachment.contentType,
+      base64Content: null,
+      textContent: null,
+      supported: false,
+      error: `Unsupported file type: ${attachment.contentType}`,
+    };
+  });
+}
+
+/**
+ * Build AI SDK message content parts from prepared attachments.
+ *
+ * Returns an array of content parts that can be spread into a message's content array:
+ * - File parts for PDFs and images (native AI processing)
+ * - Text parts for text file contents
+ *
+ * @param preparedAttachments - Array of prepared attachments
+ * @returns Array of AI SDK content parts
+ */
+export function buildAttachmentContentParts(
+  preparedAttachments: PreparedAttachment[],
+): Array<
+  | { type: 'file'; data: Buffer; mediaType: string; filename?: string }
+  | { type: 'text'; text: string }
+> {
+  const parts: Array<
+    | { type: 'file'; data: Buffer; mediaType: string; filename?: string }
+    | { type: 'text'; text: string }
+  > = [];
+
+  for (const attachment of preparedAttachments) {
+    if (!attachment.supported) continue;
+
+    // File types (PDF, images) - pass as native file content
+    if (attachment.base64Content) {
+      parts.push({
+        type: 'file',
+        data: Buffer.from(attachment.base64Content, 'base64'),
+        mediaType: attachment.contentType,
         filename: attachment.filename,
-        contentType: attachment.contentType,
-        textContent: null,
-        parsed: false,
-        error: `Unsupported file type: ${attachment.contentType}`,
+      });
+    }
+
+    // Text files - include as text content
+    if (attachment.textContent) {
+      parts.push({
+        type: 'text',
+        text: `\n--- ATTACHMENT: ${attachment.filename} ---\n${attachment.textContent}\n--- END ATTACHMENT ---\n`,
       });
     }
   }
 
-  return results;
+  return parts;
 }
 
 /**
- * Format parsed attachments for AI context.
+ * Format text-only attachments for AI context (legacy format for session storage).
  *
- * Creates a structured summary of attachment contents that
- * can be included in the AI prompt.
+ * Creates a structured summary of text attachment contents.
+ * File attachments (PDF, images) are handled separately via native file input.
  *
- * @param parsedAttachments - Array of parsed attachments
- * @returns Formatted string for AI context, or empty string if no content
+ * @param preparedAttachments - Array of prepared attachments
+ * @returns Formatted string for text attachments, or empty string if none
  */
-export function formatAttachmentsForAI(
-  parsedAttachments: ParsedAttachment[],
+export function formatTextAttachmentsForAI(
+  preparedAttachments: PreparedAttachment[],
 ): string {
-  const successfulParsings = parsedAttachments.filter(
-    (a) => a.parsed && a.textContent,
+  const textAttachments = preparedAttachments.filter(
+    (a) => a.supported && a.textContent,
   );
 
-  if (successfulParsings.length === 0) {
+  if (textAttachments.length === 0) {
     return '';
   }
 
-  const attachmentSections = successfulParsings.map((attachment, index) => {
+  const attachmentSections = textAttachments.map((attachment, index) => {
     return `
---- ATTACHMENT ${index + 1}: ${attachment.filename} ---
+--- TEXT ATTACHMENT ${index + 1}: ${attachment.filename} ---
 ${attachment.textContent}
---- END ATTACHMENT ${index + 1} ---`;
+--- END TEXT ATTACHMENT ${index + 1} ---`;
   });
 
   return `
 
-=== EMAIL ATTACHMENTS ===
-The email included ${parsedAttachments.length} attachment(s). Here is the extracted content:
+=== TEXT ATTACHMENTS ===
 ${attachmentSections.join('\n')}
-=== END ATTACHMENTS ===
-
-IMPORTANT: The above attachment(s) may contain invoice details, amounts, recipient information, 
-or other relevant data. Please analyze both the email body AND the attachment content to 
-extract complete invoice information.`;
+=== END TEXT ATTACHMENTS ===`;
 }
 
 /**
- * Get a summary of attachment parsing results.
+ * Get a summary of attachment preparation results.
  *
- * @param parsedAttachments - Array of parsed attachments
+ * @param preparedAttachments - Array of prepared attachments
  * @returns Summary object with counts
  */
-export function getAttachmentSummary(parsedAttachments: ParsedAttachment[]): {
+export function getAttachmentSummary(
+  preparedAttachments: PreparedAttachment[],
+): {
   total: number;
-  parsed: number;
-  failed: number;
+  supported: number;
+  unsupported: number;
+  fileCount: number;
+  textCount: number;
   types: string[];
 } {
   return {
-    total: parsedAttachments.length,
-    parsed: parsedAttachments.filter((a) => a.parsed).length,
-    failed: parsedAttachments.filter((a) => !a.parsed).length,
-    types: [...new Set(parsedAttachments.map((a) => a.contentType))],
+    total: preparedAttachments.length,
+    supported: preparedAttachments.filter((a) => a.supported).length,
+    unsupported: preparedAttachments.filter((a) => !a.supported).length,
+    fileCount: preparedAttachments.filter((a) => a.base64Content).length,
+    textCount: preparedAttachments.filter((a) => a.textContent).length,
+    types: [...new Set(preparedAttachments.map((a) => a.contentType))],
   };
 }
+
+// Legacy exports for backward compatibility during migration
+export type ParsedAttachment = PreparedAttachment;
+export const parseAttachments = prepareAttachments;
+export const formatAttachmentsForAI = formatTextAttachmentsForAI;

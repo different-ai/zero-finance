@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { generateText, tool, stepCountIs } from 'ai';
-import { openai } from '@/lib/ai/providers';
+import { createOpenAI } from '@ai-sdk/openai';
 import { z } from 'zod';
+
+const openai = createOpenAI({ apiKey: process.env.OPENAI_API_KEY || '' });
 import { headers } from 'next/headers';
 import crypto from 'crypto';
 
@@ -18,8 +20,10 @@ import {
   AI_EMAIL_INBOUND_DOMAIN,
 } from '@/lib/ai-email';
 import {
-  parseAttachments,
-  formatAttachmentsForAI,
+  prepareAttachments,
+  buildAttachmentContentParts,
+  formatTextAttachmentsForAI,
+  getAttachmentSummary,
 } from '@/lib/ai-email/attachment-parser';
 import type {
   AiEmailMessage,
@@ -518,26 +522,30 @@ export async function POST(request: NextRequest) {
       references,
     });
 
-    // Parse any PDF/text attachments from the email
-    const parsedAttachments = await parseAttachments(email.attachments);
-    const attachmentContent = formatAttachmentsForAI(parsedAttachments);
+    // Prepare attachments for native AI processing (PDF, images passed directly to model)
+    const preparedAttachments = prepareAttachments(email.attachments);
+    const attachmentContentParts =
+      buildAttachmentContentParts(preparedAttachments);
+    const textAttachmentContent =
+      formatTextAttachmentsForAI(preparedAttachments);
 
-    if (parsedAttachments.length > 0) {
-      const successCount = parsedAttachments.filter((a) => a.parsed).length;
+    if (preparedAttachments.length > 0) {
+      const summary = getAttachmentSummary(preparedAttachments);
       console.log(
-        `[AI Email] Parsed ${successCount}/${parsedAttachments.length} attachments:`,
-        parsedAttachments.map((a) => ({
+        `[AI Email] Prepared ${summary.supported}/${summary.total} attachments (${summary.fileCount} files, ${summary.textCount} text):`,
+        preparedAttachments.map((a) => ({
           filename: a.filename,
-          parsed: a.parsed,
+          supported: a.supported,
+          hasFile: !!a.base64Content,
           error: a.error,
         })),
       );
     }
 
-    // Add the user's message to the session (including attachment content)
+    // Add the user's message to the session (text content only for storage)
     const userMessage: AiEmailMessage = {
       role: 'user',
-      content: formatEmailForAI(email, attachmentContent),
+      content: formatEmailForAI(email, textAttachmentContent),
       timestamp: new Date().toISOString(),
     };
     await addMessageToSession(session.id, userMessage);
@@ -636,17 +644,44 @@ export async function POST(request: NextRequest) {
       workspaceResult.workspaceName,
     );
 
-    // Build conversation history
-    const messages = (session.messages || []).map((msg) => ({
+    // Build conversation history (historical messages as text)
+    const messages: Array<{
+      role: 'user' | 'assistant';
+      content:
+        | string
+        | Array<
+            | { type: 'text'; text: string }
+            | {
+                type: 'file';
+                data: Buffer;
+                mediaType: string;
+                filename?: string;
+              }
+          >;
+    }> = (session.messages || []).map((msg) => ({
       role: msg.role as 'user' | 'assistant',
       content: msg.content,
     }));
+
+    // Build current message with native file attachments for AI processing
+    const currentMessageContent: Array<
+      | { type: 'text'; text: string }
+      | { type: 'file'; data: Buffer; mediaType: string; filename?: string }
+    > = [
+      { type: 'text', text: userMessage.content },
+      ...attachmentContentParts,
+    ];
 
     if (
       messages.length === 0 ||
       messages[messages.length - 1].content !== userMessage.content
     ) {
-      messages.push({ role: 'user', content: userMessage.content });
+      // If we have file attachments, use multimodal content; otherwise use text
+      if (attachmentContentParts.length > 0) {
+        messages.push({ role: 'user', content: currentMessageContent });
+      } else {
+        messages.push({ role: 'user', content: userMessage.content });
+      }
     }
 
     // Create tool context for closures
