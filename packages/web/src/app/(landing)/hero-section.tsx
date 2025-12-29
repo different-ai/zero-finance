@@ -121,18 +121,7 @@ export function HeroSection() {
           </div>
         </>
         <div className="relative z-10 mx-auto max-w-[1200px] px-4 sm:px-6 lg:px-8 py-8 sm:py-12 lg:py-16">
-          {/* Demo indicator - subtle and premium */}
-          <div className="flex justify-center mb-4">
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-white/80 backdrop-blur-sm border border-[#101010]/10 rounded-full">
-              <div className="w-1.5 h-1.5 bg-[#1B29FF] animate-pulse"></div>
-              <Link
-                className="inline-flex items-center text-[14px] sm:text-[15px] lg:text-[16px] text-[#101010] hover:text-[#1B29FF] underline decoration-[#101010]/30 underline-offset-[4px] hover:decoration-[#1B29FF] transition-colors"
-                href="/dashboard/demo"
-              >
-                Try Live Demo
-              </Link>
-            </div>
-          </div>
+      
 
           <BrowserFrame url="0.finance/dashboard" className="shadow-lg">
             <div className="grid grid-cols-1 lg:grid-cols-12 min-w-[320px]">
