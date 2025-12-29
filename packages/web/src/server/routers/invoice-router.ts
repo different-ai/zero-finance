@@ -210,19 +210,29 @@ export const invoiceRouter = router({
       const { sortBy, sortDirection, filter } = input;
       // const cursor = input.cursor; // Cursor logic removed for now
       const userId = ctx.user.id;
+      const workspaceId = ctx.workspaceId;
+
+      // Workspace is required for invoice listing
+      if (!workspaceId) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Workspace context is required to list invoices',
+        });
+      }
 
       try {
         // Import necessary schema items
         const { companies } = await import('@/db/schema');
         const { inArray, isNull } = await import('drizzle-orm');
 
-        // Get ONLY companies the user OWNS (not just member of)
+        // Get companies within this workspace that the user owns
         const ownedCompanies = await db
           .select({ id: companies.id })
           .from(companies)
           .where(
             and(
               eq(companies.ownerPrivyDid, userId),
+              eq(companies.workspaceId, workspaceId),
               isNull(companies.deletedAt),
             ),
           );
@@ -230,40 +240,35 @@ export const invoiceRouter = router({
         const ownedCompanyIds = ownedCompanies.map((c) => c.id);
 
         // Build query conditions based on filter
+        // ALL queries are scoped to the current workspace
+        // Workspace members can see ALL invoices in their workspace
         let queryConditions;
 
+        // Base condition: always filter by workspace
+        const workspaceCondition = eq(
+          userRequestsTable.workspaceId,
+          workspaceId,
+        );
+
         if (filter === 'sent') {
-          // OUTGOING: Always show invoices I created, regardless of company ownership
-          queryConditions = eq(userRequestsTable.userId, userId);
+          // OUTGOING: Invoices created by anyone in this workspace
+          // (In a workspace context, "sent" means invoices sent FROM this workspace)
+          queryConditions = workspaceCondition;
         } else if (filter === 'received') {
-          // INCOMING: Show invoices directed to my owned companies (created by others)
+          // INCOMING: Invoices received by this workspace (where workspace companies are recipients)
           if (ownedCompanyIds.length === 0) {
-            // No companies = no incoming invoices
+            // No companies = no incoming invoices to show
             queryConditions = eq(userRequestsTable.id, 'no-match'); // Never matches
           } else {
-            // Invoices to my companies that I didn't create
             queryConditions = and(
+              workspaceCondition,
               inArray(userRequestsTable.recipientCompanyId, ownedCompanyIds),
-              ne(userRequestsTable.userId, userId),
             );
           }
         } else {
-          // ALL: Show all invoices I created OR involving my owned companies
-          const conditions = [eq(userRequestsTable.userId, userId)]; // Always include user's invoices
-
-          if (ownedCompanyIds.length > 0) {
-            // Also include invoices involving my companies
-            const companyCondition = or(
-              inArray(userRequestsTable.senderCompanyId, ownedCompanyIds),
-              inArray(userRequestsTable.recipientCompanyId, ownedCompanyIds),
-            );
-            if (companyCondition) {
-              conditions.push(companyCondition);
-            }
-          }
-
-          queryConditions =
-            conditions.length > 1 ? or(...conditions) : conditions[0];
+          // ALL: Show ALL invoices in this workspace
+          // Workspace members can see all workspace invoices
+          queryConditions = workspaceCondition;
         }
 
         // Define sorting column and direction
@@ -325,13 +330,6 @@ export const invoiceRouter = router({
           };
         });
 
-        // --- Logging Added ---
-        console.log(
-          '0xHypr DEBUG - Returning invoices from list endpoint. Sample formatted amounts:',
-          mappedRequests.slice(0, 5).map((r) => r.amount),
-        );
-        // --- End Logging ---
-
         // Simple pagination logic (if needed, implement fully in service)
         // const limitedRequests = requests.slice(0, limit); // Limit is now handled by the DB query
 
@@ -359,9 +357,18 @@ export const invoiceRouter = router({
     .input(invoiceDataSchema)
     .mutation(async ({ input, ctx }) => {
       const userId = ctx.user.id;
+      const workspaceId = ctx.workspaceId;
       // Email is optional - use empty string as fallback for profile service
       const userEmail = ctx.user.email?.address || '';
       const invoiceData = input;
+
+      // Workspace is required for invoice creation
+      if (!workspaceId) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Workspace context is required to create invoices',
+        });
+      }
 
       let dbInvoiceId: string | null = null;
 
@@ -456,6 +463,7 @@ export const invoiceRouter = router({
         const requestDataForDb: NewUserRequest = {
           id: crypto.randomUUID(),
           userId: userId,
+          workspaceId: workspaceId, // Associate invoice with current workspace
           companyId: invoiceData.companyId || null, // The company the user is acting on behalf of
           senderCompanyId: invoiceData.companyId || null, // Company sending the invoice (if user selected one)
           recipientCompanyId: invoiceData.recipientCompanyId || null, // Company receiving the invoice
