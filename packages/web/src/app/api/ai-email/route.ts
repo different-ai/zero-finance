@@ -517,25 +517,44 @@ export async function POST(request: NextRequest) {
           recipientName: action.recipientName,
         });
 
-        await sendInvoiceEmail(
-          action.recipientEmail,
-          invoiceTemplate.subject,
-          invoiceTemplate.body,
-          senderDisplayName,
-        );
+        let emailSentSuccessfully = false;
+        try {
+          await sendInvoiceEmail(
+            action.recipientEmail,
+            invoiceTemplate.subject,
+            invoiceTemplate.body,
+            senderDisplayName,
+          );
+          emailSentSuccessfully = true;
+        } catch (emailError) {
+          console.log(
+            '[AI Email] Email send failed, will provide invoice link for manual forwarding:',
+            emailError,
+          );
+        }
 
-        const sentTemplate = emailTemplates.invoiceSent({
-          recipientEmail: action.recipientEmail,
-          recipientName: action.recipientName,
-          amount: action.amount,
-          currency: action.currency,
-          invoiceLink: action.invoiceLink,
-        });
+        // Choose template based on whether email was sent
+        const responseTemplate = emailSentSuccessfully
+          ? emailTemplates.invoiceSent({
+              recipientEmail: action.recipientEmail,
+              recipientName: action.recipientName,
+              amount: action.amount,
+              currency: action.currency,
+              invoiceLink: action.invoiceLink,
+            })
+          : emailTemplates.invoiceReadyToForward({
+              recipientEmail: action.recipientEmail,
+              recipientName: action.recipientName,
+              amount: action.amount,
+              currency: action.currency,
+              invoiceLink: action.invoiceLink,
+            });
+
         // Use Re: subject for threading
         await sendReply(
           email.from,
           replySubject,
-          sentTemplate.body,
+          responseTemplate.body,
           messageId,
           workspaceResult.workspaceId,
         );
@@ -719,19 +738,41 @@ export async function POST(request: NextRequest) {
             recipientName: params.recipientName,
           });
 
-          await sendInvoiceEmail(
-            params.recipientEmail,
-            template.subject,
-            template.body,
-            params.senderName,
-          );
+          try {
+            await sendInvoiceEmail(
+              params.recipientEmail,
+              template.subject,
+              template.body,
+              params.senderName,
+            );
 
-          await updateSession(toolContext.session.id, {
-            state: 'completed',
-            pendingAction: null,
-          });
+            await updateSession(toolContext.session.id, {
+              state: 'completed',
+              pendingAction: null,
+            });
 
-          return { success: true };
+            return { success: true, emailSent: true };
+          } catch (emailError) {
+            // Email sending failed (likely SES verification issue)
+            // Return success with the invoice link so user can forward manually
+            console.log(
+              '[AI Email] Email send failed, returning invoice link for manual forwarding:',
+              emailError,
+            );
+
+            await updateSession(toolContext.session.id, {
+              state: 'completed',
+              pendingAction: null,
+            });
+
+            return {
+              success: true,
+              emailSent: false,
+              invoiceLink: params.invoiceLink,
+              recipientEmail: params.recipientEmail,
+              message: `Invoice ready! Forward to ${params.recipientEmail}`,
+            };
+          }
         },
       }),
     };

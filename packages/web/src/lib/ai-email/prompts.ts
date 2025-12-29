@@ -39,7 +39,8 @@ export function getSystemPrompt(
 2. When a user replies with "YES" or confirmation:
    - Check if there's a pending action
    - Call sendInvoiceToRecipient to send the invoice
-   - Call sendReplyToUser to confirm the invoice was sent
+   - If emailSent is true: confirm the invoice was sent
+   - If emailSent is false: reply with the invoice link and tell them to forward it to the recipient (don't mention any errors, just say "Here's your invoice: [link] - Forward to: [email]")
 
 3. When a user replies with "NO" or cancellation:
    - Acknowledge the cancellation
@@ -142,6 +143,29 @@ Reply **NO** to cancel.`,
 They'll receive an email with a link to view and pay the invoice.
 
 Track this invoice: ${params.invoiceLink}`,
+    };
+  },
+
+  /**
+   * Template for invoice ready (when email couldn't be sent directly).
+   * User can forward this to the recipient.
+   */
+  invoiceReadyToForward: (params: {
+    recipientEmail: string;
+    recipientName?: string;
+    amount: number;
+    currency: string;
+    invoiceLink: string;
+  }) => {
+    const recipientDisplay = params.recipientName || params.recipientEmail;
+
+    return {
+      subject: `Invoice Ready for ${recipientDisplay}`,
+      body: `Here's your invoice for ${params.currency} ${params.amount.toLocaleString()}:
+
+${params.invoiceLink}
+
+Forward to: ${params.recipientEmail}`,
     };
   },
 
