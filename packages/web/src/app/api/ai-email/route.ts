@@ -17,6 +17,10 @@ import {
   emailTemplates,
   AI_EMAIL_INBOUND_DOMAIN,
 } from '@/lib/ai-email';
+import {
+  parseAttachments,
+  formatAttachmentsForAI,
+} from '@/lib/ai-email/attachment-parser';
 import type {
   AiEmailMessage,
   AiEmailPendingAction,
@@ -514,10 +518,26 @@ export async function POST(request: NextRequest) {
       references,
     });
 
-    // Add the user's message to the session
+    // Parse any PDF/text attachments from the email
+    const parsedAttachments = await parseAttachments(email.attachments);
+    const attachmentContent = formatAttachmentsForAI(parsedAttachments);
+
+    if (parsedAttachments.length > 0) {
+      const successCount = parsedAttachments.filter((a) => a.parsed).length;
+      console.log(
+        `[AI Email] Parsed ${successCount}/${parsedAttachments.length} attachments:`,
+        parsedAttachments.map((a) => ({
+          filename: a.filename,
+          parsed: a.parsed,
+          error: a.error,
+        })),
+      );
+    }
+
+    // Add the user's message to the session (including attachment content)
     const userMessage: AiEmailMessage = {
       role: 'user',
-      content: formatEmailForAI(email),
+      content: formatEmailForAI(email, attachmentContent),
       timestamp: new Date().toISOString(),
     };
     await addMessageToSession(session.id, userMessage);
