@@ -11,8 +11,7 @@
 > Your business savings account is now open source. 0 finance is a stablecoin bank that works like a regular bank. You can send & receive money out via ACH, earn 2-3x the yield compared to regular savings accounts, and fork it!
 
 
-
-<img width="3680" height="2390" alt="image" src="https://github.com/user-attachments/assets/92fe569d-f8bd-4568-b896-f89dc40c7ac0" />
+<img width="1840" height="1195" alt="Screenshot 2025-12-28 at 18 06 16" src="https://github.com/user-attachments/assets/c0b68eb2-1c53-4af5-b452-d78836f10cc3" />
 
 
 
