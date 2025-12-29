@@ -194,16 +194,22 @@ export function parseForwardedEmail(body: string): ParsedForwardedEmail | null {
  * - Who forwarded the email (our user)
  * - Who the original sender is (invoice recipient)
  * - The content and context
+ * - Any attachment contents (PDFs, text files)
  *
- * @param email - Email data from Resend webhook
+ * @param email - Email data from webhook
+ * @param attachmentContent - Optional pre-parsed attachment content string
  * @returns Formatted string for AI context
  */
-export function formatEmailForAI(email: {
-  from: string;
-  subject: string;
-  text: string;
-}): string {
+export function formatEmailForAI(
+  email: {
+    from: string;
+    subject: string;
+    text: string;
+  },
+  attachmentContent?: string,
+): string {
   const parsed = parseForwardedEmail(email.text);
+  const attachmentSection = attachmentContent || '';
 
   if (parsed) {
     const recipientInfo = parsed.originalFromEmail
@@ -224,6 +230,7 @@ ${parsed.originalBody}
 
 USER'S MESSAGE TO YOU:
 ${parsed.userMessage || '(no additional message - please extract invoice details from the forwarded email)'}
+${attachmentSection}
 `.trim();
   }
 
@@ -234,6 +241,7 @@ SUBJECT: ${email.subject}
 
 MESSAGE:
 ${email.text}
+${attachmentSection}
 `.trim();
 }
 
