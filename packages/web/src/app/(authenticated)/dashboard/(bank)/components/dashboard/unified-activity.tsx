@@ -392,8 +392,8 @@ function StatusBadge({ status }: { status: UnifiedTransaction['status'] }) {
     pending: { label: 'Pending', icon: Clock, className: 'text-amber-600' },
     processing: {
       label: 'Processing',
-      icon: Loader2,
-      className: 'text-blue-600 animate-spin',
+      icon: <Loader2 className="h-3.5 w-3.5 animate-spin" />,
+      className: 'text-blue-600',
     },
     completed: {
       label: 'Completed',
