@@ -120,12 +120,52 @@ When searching for a person/company name in bank accounts:
 - Workspace: ${workspaceName}
 `;
 
+  let contextSections = '';
+
+  // Add extracted data context from previous messages
+  if (session.extractedData) {
+    const data = session.extractedData;
+    const extractedParts: string[] = [];
+
+    if (data.recipientEmail)
+      extractedParts.push(`- Recipient Email: ${data.recipientEmail}`);
+    if (data.recipientName)
+      extractedParts.push(`- Recipient Name: ${data.recipientName}`);
+    if (data.recipientCompany)
+      extractedParts.push(`- Company: ${data.recipientCompany}`);
+    if (data.amount !== undefined && data.currency)
+      extractedParts.push(`- Amount: ${data.currency} ${data.amount}`);
+    else if (data.amount !== undefined)
+      extractedParts.push(`- Amount: ${data.amount}`);
+    if (data.description)
+      extractedParts.push(`- Description: ${data.description}`);
+
+    if (extractedParts.length > 0) {
+      contextSections += `
+
+## Previously Extracted Data
+You already extracted this information from earlier in the conversation (e.g., from a forwarded email or attachment):
+${extractedParts.join('\n')}
+
+Use this data when the user asks to create an invoice, payment, or transfer. Do NOT ask the user for information you already have.
+`;
+    }
+  }
+
+  // Add invoice context if one was created
+  if (session.invoiceId) {
+    contextSections += `
+
+## Created Invoice
+An invoice has already been created in this session:
+- Invoice ID: ${session.invoiceId}
+`;
+  }
+
   // Add pending action context if waiting for confirmation
   if (session.state === 'awaiting_confirmation' && session.pendingAction) {
     const action = session.pendingAction;
-    return (
-      basePrompt +
-      `
+    contextSections += `
 
 ## Pending Action
 The user has a pending invoice to send:
@@ -139,11 +179,10 @@ If the user confirms (YES, ok, send it, confirm, etc.), call sendInvoiceToRecipi
 If the user declines (NO, cancel, don't send, stop, etc.), acknowledge and do not send.
 
 IMPORTANT: Look for confirmation keywords in the user's latest message.
-`
-    );
+`;
   }
 
-  return basePrompt;
+  return basePrompt + contextSections;
 }
 
 /**
