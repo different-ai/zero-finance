@@ -22,6 +22,16 @@ import type {
   AiEmailPendingAction,
 } from '@/db/schema/ai-email-sessions';
 import { getEmailProviderSingleton } from '@/lib/email-provider';
+import { getSpendableBalanceByWorkspace } from '@/server/services/spendable-balance';
+import { listBankAccountsByWorkspace } from '@/server/services/bank-accounts';
+import { db } from '@/db';
+import {
+  userDestinationBankAccounts,
+  offrampTransfers,
+  workspaces,
+} from '@/db/schema';
+import { eq, and } from 'drizzle-orm';
+import { alignApi } from '@/server/services/align-api';
 
 // Get the configured email provider (SES or Resend based on EMAIL_PROVIDER env var)
 const emailProvider = getEmailProviderSingleton();
@@ -262,6 +272,23 @@ const sendInvoiceToRecipientSchema = z.object({
   amount: z.number().positive(),
   currency: z.string(),
   description: z.string(),
+});
+
+/**
+ * Schema for proposing a bank transfer.
+ */
+const proposeTransferSchema = z.object({
+  amount_usdc: z.string().describe('Amount in USDC to send (e.g., "1000.00")'),
+  destination_currency: z
+    .enum(['usd', 'eur'])
+    .describe('Target currency for the bank transfer'),
+  saved_bank_account_id: z
+    .string()
+    .describe('ID of the saved bank account to send to'),
+  reason: z
+    .string()
+    .optional()
+    .describe('Why is this transfer being proposed? (shown to user)'),
 });
 
 /**
@@ -771,6 +798,229 @@ export async function POST(request: NextRequest) {
               invoiceLink: params.invoiceLink,
               recipientEmail: params.recipientEmail,
               message: `Invoice ready! Forward to ${params.recipientEmail}`,
+            };
+          }
+        },
+      }),
+
+      // =========================================================================
+      // Transfer Tools
+      // =========================================================================
+
+      getBalance: tool({
+        description:
+          "Get the user's current USDC balance. Returns idle (in Safe), earning (in vaults), and total spendable balance.",
+        inputSchema: z.object({}),
+        execute: async () => {
+          console.log('[AI Email] Tool: getBalance called');
+          const result = await getSpendableBalanceByWorkspace(
+            toolContext.workspaceResult.workspaceId,
+          );
+          return result;
+        },
+      }),
+
+      listSavedBankAccounts: tool({
+        description:
+          "List user's saved bank accounts that can receive transfers. Returns bank accounts with IDs for use in proposeTransfer.",
+        inputSchema: z.object({}),
+        execute: async () => {
+          console.log('[AI Email] Tool: listSavedBankAccounts called');
+
+          // Get workspace to find owner
+          const workspace = await db.query.workspaces.findFirst({
+            where: eq(workspaces.id, toolContext.workspaceResult.workspaceId),
+          });
+
+          if (!workspace) {
+            return {
+              error: 'Workspace not found',
+              bank_accounts: [],
+              count: 0,
+            };
+          }
+
+          // Get destination bank accounts for transfers
+          const bankAccounts = await db
+            .select({
+              id: userDestinationBankAccounts.id,
+              accountName: userDestinationBankAccounts.accountName,
+              accountType: userDestinationBankAccounts.accountType,
+              bankName: userDestinationBankAccounts.bankName,
+              ibanLast4: userDestinationBankAccounts.ibanNumber,
+              accountNumberLast4: userDestinationBankAccounts.accountNumber,
+            })
+            .from(userDestinationBankAccounts)
+            .where(eq(userDestinationBankAccounts.userId, workspace.createdBy));
+
+          const sanitized = bankAccounts.map((acc) => ({
+            id: acc.id,
+            name: acc.accountName || `${acc.bankName || 'Bank'} Account`,
+            type: acc.accountType,
+            bank_name: acc.bankName,
+            last_4:
+              acc.ibanLast4?.slice(-4) ||
+              acc.accountNumberLast4?.slice(-4) ||
+              '****',
+          }));
+
+          return {
+            bank_accounts: sanitized,
+            count: sanitized.length,
+          };
+        },
+      }),
+
+      proposeTransfer: tool({
+        description:
+          'Propose a bank transfer for user approval. The user must approve this in the 0 Finance dashboard before funds are sent. Use this when the user wants to send money to a bank account.',
+        inputSchema: proposeTransferSchema,
+        execute: async (params) => {
+          console.log('[AI Email] Tool: proposeTransfer called with:', params);
+
+          // Get workspace
+          const workspace = await db.query.workspaces.findFirst({
+            where: eq(workspaces.id, toolContext.workspaceResult.workspaceId),
+          });
+
+          if (!workspace) {
+            return { error: 'Workspace not found' };
+          }
+
+          if (!workspace.alignCustomerId) {
+            return {
+              error:
+                'KYC not completed. User must complete KYC in the dashboard before transfers.',
+            };
+          }
+
+          // Get bank account details
+          const bankAccount =
+            await db.query.userDestinationBankAccounts.findFirst({
+              where: and(
+                eq(
+                  userDestinationBankAccounts.id,
+                  params.saved_bank_account_id,
+                ),
+                eq(userDestinationBankAccounts.userId, workspace.createdBy),
+              ),
+            });
+
+          if (!bankAccount) {
+            return { error: 'Bank account not found' };
+          }
+
+          try {
+            // Get a quote from Align
+            const paymentRails =
+              params.destination_currency === 'eur' ? 'sepa' : 'ach';
+
+            const quote = await alignApi.getOfframpQuote(
+              workspace.alignCustomerId,
+              {
+                source_amount: params.amount_usdc,
+                source_token: 'usdc',
+                source_network: 'base',
+                destination_currency: params.destination_currency,
+                destination_payment_rails: paymentRails,
+              },
+            );
+
+            // Build bank account payload for Align
+            const alignBankAccount: import('@/server/services/align-api').AlignDestinationBankAccount =
+              {
+                bank_name: bankAccount.bankName || 'Bank',
+                account_holder_type: bankAccount.accountHolderType as
+                  | 'individual'
+                  | 'business',
+                account_holder_address: {
+                  country: bankAccount.country || 'US',
+                  city: bankAccount.city || '',
+                  street_line_1: bankAccount.streetLine1 || '',
+                  postal_code: bankAccount.postalCode || '',
+                },
+                account_type: bankAccount.accountType as 'us' | 'iban',
+                ...(bankAccount.accountHolderType === 'individual' && {
+                  account_holder_first_name:
+                    bankAccount.accountHolderFirstName ?? undefined,
+                  account_holder_last_name:
+                    bankAccount.accountHolderLastName ?? undefined,
+                }),
+                ...(bankAccount.accountHolderType === 'business' && {
+                  account_holder_business_name:
+                    bankAccount.accountHolderBusinessName ?? undefined,
+                }),
+                ...(bankAccount.accountType === 'us' && {
+                  us: {
+                    account_number: bankAccount.accountNumber!,
+                    routing_number: bankAccount.routingNumber!,
+                  },
+                }),
+                ...(bankAccount.accountType === 'iban' && {
+                  iban: {
+                    iban_number: bankAccount.ibanNumber!.replace(/\s/g, ''),
+                    bic: bankAccount.bicSwift!.replace(/\s/g, ''),
+                  },
+                }),
+              };
+
+            // Create transfer from quote
+            const transfer = await alignApi.createTransferFromQuote(
+              workspace.alignCustomerId,
+              quote.quote_id,
+              alignBankAccount,
+            );
+
+            // Store in our DB with agent proposal flags
+            await db.insert(offrampTransfers).values({
+              userId: workspace.createdBy,
+              workspaceId: toolContext.workspaceResult.workspaceId,
+              alignTransferId: transfer.id,
+              status: transfer.status as any,
+              amountToSend: params.amount_usdc,
+              destinationCurrency: params.destination_currency,
+              destinationPaymentRails: paymentRails,
+              destinationBankAccountId: params.saved_bank_account_id,
+              destinationBankAccountSnapshot: JSON.stringify({
+                bankName: bankAccount.bankName,
+                accountType: bankAccount.accountType,
+                last4:
+                  bankAccount.ibanNumber?.slice(-4) ||
+                  bankAccount.accountNumber?.slice(-4),
+              }),
+              depositAmount: transfer.quote.deposit_amount,
+              depositToken: transfer.quote.deposit_token,
+              depositNetwork: transfer.quote.deposit_network,
+              depositAddress: transfer.quote.deposit_blockchain_address,
+              feeAmount: transfer.quote.fee_amount,
+              quoteExpiresAt: transfer.quote.expires_at
+                ? new Date(transfer.quote.expires_at)
+                : null,
+              // Agent proposal fields
+              proposedByAgent: true,
+              agentProposalMessage:
+                params.reason || 'Proposed via AI Email Agent',
+            });
+
+            return {
+              success: true,
+              proposal_id: transfer.id,
+              status: 'pending_user_approval',
+              message:
+                'Transfer proposed! User must approve in the 0 Finance dashboard.',
+              details: {
+                amount_usdc: params.amount_usdc,
+                destination_currency: params.destination_currency,
+                destination_amount: quote.destination_amount,
+                fee_usdc: transfer.quote.fee_amount,
+                bank_account: bankAccount.bankName,
+                expires_at: transfer.quote.expires_at,
+              },
+            };
+          } catch (error) {
+            console.error('[AI Email] proposeTransfer error:', error);
+            return {
+              error: error instanceof Error ? error.message : 'Unknown error',
             };
           }
         },

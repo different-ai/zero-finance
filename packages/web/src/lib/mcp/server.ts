@@ -6,26 +6,10 @@ import {
   offrampTransfers,
   workspaces,
 } from '@/db/schema';
-import { userSafes } from '@/db/schema/user-safes';
 import { eq, and, desc } from 'drizzle-orm';
-import { createPublicClient, http, formatUnits } from 'viem';
-import { base } from 'viem/chains';
 import { alignApi } from '@/server/services/align-api';
+import { getSpendableBalanceByWorkspace } from '@/server/services/spendable-balance';
 import type { ApiKeyContext } from './api-key';
-
-// USDC on Base
-const USDC_ADDRESS = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913';
-const USDC_DECIMALS = 6;
-
-const ERC20_BALANCE_ABI = [
-  {
-    constant: true,
-    inputs: [{ name: '_owner', type: 'address' }],
-    name: 'balanceOf',
-    outputs: [{ name: 'balance', type: 'uint256' }],
-    type: 'function',
-  },
-] as const;
 
 /**
  * Create an MCP server instance for a specific workspace context
@@ -116,73 +100,19 @@ export function createMcpServer(context: ApiKeyContext) {
   // =========================================================================
   server.tool(
     'get_balance',
-    'Get the current USDC balance available for transfers.',
+    'Get the current USDC balance available for transfers. Returns idle (in Safe), earning (in vaults), and total spendable balance.',
     {},
     async () => {
       try {
-        // Get workspace to find owner
-        const workspace = await db.query.workspaces.findFirst({
-          where: eq(workspaces.id, context.workspaceId),
-        });
-
-        if (!workspace) {
-          return {
-            content: [
-              {
-                type: 'text',
-                text: JSON.stringify({ error: 'Workspace not found' }),
-              },
-            ],
-          };
-        }
-
-        // Find primary safe on Base (chainId 8453)
-        const primarySafe = await db.query.userSafes.findFirst({
-          where: and(
-            eq(userSafes.userDid, workspace.createdBy),
-            eq(userSafes.chainId, 8453),
-            eq(userSafes.safeType, 'primary'),
-          ),
-        });
-
-        if (!primarySafe) {
-          return {
-            content: [
-              {
-                type: 'text',
-                text: JSON.stringify({
-                  error: 'No primary Safe found on Base',
-                  usdc_balance: '0',
-                }),
-              },
-            ],
-          };
-        }
-
-        // Fetch USDC balance
-        const publicClient = createPublicClient({
-          chain: base,
-          transport: http(process.env.NEXT_PUBLIC_BASE_RPC_URL),
-        });
-
-        const balance = await publicClient.readContract({
-          address: USDC_ADDRESS,
-          abi: ERC20_BALANCE_ABI,
-          functionName: 'balanceOf',
-          args: [primarySafe.safeAddress as `0x${string}`],
-        });
-
-        const formattedBalance = formatUnits(balance as bigint, USDC_DECIMALS);
+        const result = await getSpendableBalanceByWorkspace(
+          context.workspaceId,
+        );
 
         return {
           content: [
             {
               type: 'text',
-              text: JSON.stringify({
-                usdc_balance: formattedBalance,
-                safe_address: primarySafe.safeAddress,
-                chain: 'base',
-              }),
+              text: JSON.stringify(result),
             },
           ],
         };
