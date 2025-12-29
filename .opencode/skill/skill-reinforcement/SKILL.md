@@ -1,6 +1,6 @@
 ---
 name: skill-reinforcement
-description: Automatically improve skills after each use by capturing learnings and anti-patterns
+description: Always and Automatically improve skills after each use by capturing learnings and anti-patterns
 license: MIT
 compatibility: opencode
 metadata:

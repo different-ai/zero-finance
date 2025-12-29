@@ -5,7 +5,7 @@ import { Check, X, AlertCircle } from 'lucide-react';
 export const metadata: Metadata = {
   title: 'Compare 0 Finance vs Banks, ETFs, Stocks | Treasury Options',
   description:
-    'Compare 0 Finance 8% yield against Mercury, Brex, traditional banks, money market ETFs, T-Bills, and stocks. See which treasury option is best for your startup.',
+    'Compare 0 Finance 4-7% yield against Mercury, Brex, traditional banks, money market ETFs, T-Bills, and stocks. See which treasury option is best for your startup.',
   keywords:
     '0 finance vs mercury, startup treasury comparison, high yield vs etfs, business savings comparison',
 };
@@ -23,7 +23,7 @@ export default function CompareExtendedPage() {
             Every Treasury Option, Side by Side
           </h1>
           <p className="mt-6 text-[16px] leading-[1.5] text-[#222] max-w-[65ch] mx-auto text-center">
-            From traditional banks to ETFs to stocks - see how 0 Finance's 8%
+            From traditional banks to ETFs to stocks - see how 0 Finance's 4-7%
             yield compares to every option for your startup's treasury.
           </p>
         </div>
@@ -38,10 +38,10 @@ export default function CompareExtendedPage() {
                 Best Yield + Safety
               </h3>
               <p className="mt-2 font-serif text-[24px] text-[#101010]">
-                0 Finance: 8%
+                0 Finance: 4-7%
               </p>
               <p className="mt-1 text-[13px] text-[#101010]/60">
-                From DeFi yields. We insure the underlying funds.
+                Variable DeFi yields with smart contract insurance.
               </p>
             </div>
             <div className="bg-white p-6">
@@ -137,7 +137,7 @@ export default function CompareExtendedPage() {
                     Annual Yield
                   </td>
                   <td className="p-4 text-center bg-[#1B29FF]/5">
-                    <span className="font-bold text-[#1B29FF]">8%</span>
+                    <span className="font-bold text-[#1B29FF]">4-7%*</span>
                   </td>
                   <td className="p-4 text-center">4%</td>
                   <td className="p-4 text-center">4.5%</td>
@@ -559,7 +559,7 @@ export default function CompareExtendedPage() {
             Stop Choosing Between Yield and Access
           </h2>
           <p className="mt-4 text-[16px] text-white/90 max-w-[50ch] mx-auto">
-            Get 8% yield with the banking features you need. No lockups, no
+            Get 4-7% yield with the banking features you need. No lockups, no
             minimums, no complexity.
           </p>
           <div className="mt-8 flex flex-col sm:flex-row justify-center items-center gap-4">

@@ -22,14 +22,22 @@ export function Footer() {
                 finance
               </span>
             </div>
-            <p className="text-sm text-neutral-600">
-              the crypto bank account that earns yield while you bank globally
+            <p className="text-sm text-neutral-600 mb-2">
+              Automated savings for startups and freelancers
+            </p>
+            <p className="text-xs text-neutral-400">
+              A product by Different AI Inc.
             </p>
           </div>
 
           <div>
             <h4 className="font-semibold mb-3 text-neutral-900">Product</h4>
             <ul className="space-y-2 text-sm text-neutral-600">
+              <li>
+                <Link href="/how-it-works" className="hover:text-blue-600">
+                  How It Works
+                </Link>
+              </li>
               <li>
                 <Link href="#pricing" className="hover:text-blue-600">
                   Pricing
@@ -67,16 +75,37 @@ export function Footer() {
             <h4 className="font-semibold mb-3 text-neutral-900">Legal</h4>
             <ul className="space-y-2 text-sm text-neutral-600">
               <li>
-                <span className="text-neutral-400">Coming soon</span>
+                <Link href="/legal" className="hover:text-blue-600">
+                  Legal & Security
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/legal/insurance-terms"
+                  className="hover:text-blue-600"
+                >
+                  Insurance Terms
+                </Link>
               </li>
             </ul>
           </div>
         </div>
 
+        {/* Important Disclosure */}
+        <div className="border-t border-neutral-200 pt-6 mb-6">
+          <p className="text-xs text-neutral-400 max-w-4xl mx-auto text-center leading-relaxed">
+            0 Finance is not a bank. Your funds are held in self-custody
+            wallets, not bank accounts. Not FDIC insured. Yield rates are
+            variable and not guaranteed. Smart contract insurance provided by
+            Chainproof covers technical failures only, not market risks. Digital
+            assets involve risk; past performance does not guarantee future
+            results.
+          </p>
+        </div>
+
         <div className="border-t border-neutral-200 pt-6 text-center">
           <p className="text-sm text-neutral-500">
-            © {new Date().getFullYear()} 0 finance • crypto-native banking with
-            yield
+            © {new Date().getFullYear()} Different AI Inc. • Delaware, USA
           </p>
         </div>
       </div>

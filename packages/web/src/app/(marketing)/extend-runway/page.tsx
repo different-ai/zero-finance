@@ -4,13 +4,13 @@ import Link from 'next/link';
 export const metadata: Metadata = {
   title: 'Extend Your Startup Runway by 6+ Months | 0 Finance',
   description:
-    "Add 6 months to your startup runway without raising. Earn 8% on idle cash vs 4% at traditional banks. That's $80K extra per year on $2M treasury.",
+    'Add months to your startup runway without raising. Earn 4-7% on idle cash vs 0.5% at traditional banks. Higher yields mean more runway.',
   keywords:
     'extend startup runway, startup burn rate, startup treasury yield, increase runway without raising, startup cash management',
   openGraph: {
-    title: 'Add 6 Months to Your Runway Without Raising | 0 Finance',
+    title: 'Add Months to Your Runway Without Raising | 0 Finance',
     description:
-      'Turn your idle cash into extra runway. 8% yield means 2-3 extra months before your next raise.',
+      'Turn your idle cash into extra runway. 4-7% yield means extra months before your next raise.',
   },
 };
 

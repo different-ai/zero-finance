@@ -28,8 +28,8 @@ export default function LegalPage() {
     refetchOnWindowFocus: false,
   });
 
-  // Format APY for display (e.g., 8.5% or "~8%")
-  const displayApy = apyData ? `${apyData.apyPercent.toFixed(1)}%` : '~8%'; // Fallback while loading
+  // Format APY for display (e.g., 5.5% or "4-7%")
+  const displayApy = apyData ? `${apyData.apyPercent.toFixed(1)}%` : '4-7%'; // Fallback while loading
 
   return (
     <div className="min-h-screen w-full bg-[#F7F7F2]">
