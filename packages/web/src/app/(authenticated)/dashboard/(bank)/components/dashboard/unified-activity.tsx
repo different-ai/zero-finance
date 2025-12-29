@@ -84,6 +84,7 @@ interface UnifiedTransaction {
   // Bank-specific fields
   bankName?: string;
   accountMask?: string;
+  accountType?: string;
   recipientName?: string;
   paymentRails?: string;
   fiatAmount?: string;
@@ -242,6 +243,7 @@ function mergeBankAndCryptoTransactions(
       // Bank details
       bankName: bankSnapshot?.bankName,
       accountMask: bankSnapshot?.accountMask,
+      accountType: bankSnapshot?.accountType,
       recipientName: bankSnapshot?.recipientName,
       paymentRails: bankTx.paymentRails?.toUpperCase(),
       fiatAmount: bankTx.secondaryAmount || undefined,
@@ -330,6 +332,7 @@ function mergeBankAndCryptoTransactions(
 function parseBankSnapshot(bankTx: BankTransaction): {
   bankName?: string;
   accountMask?: string;
+  accountType?: string;
   recipientName?: string;
 } | null {
   // Use the bankAccountDetails from the API response
@@ -338,6 +341,7 @@ function parseBankSnapshot(bankTx: BankTransaction): {
   return {
     bankName: bankTx.bankAccountDetails.bankName,
     accountMask: bankTx.bankAccountDetails.accountMask,
+    accountType: bankTx.bankAccountDetails.accountType,
     recipientName: bankTx.bankAccountDetails.recipientName,
   };
 }
@@ -461,8 +465,8 @@ function TransactionRow({
                   disabled={isActionPending}
                   className="h-8 px-3 text-[#1B29FF] border-[#1B29FF]/30 hover:bg-[#1B29FF]/5"
                 >
-                  <Play className="h-3.5 w-3.5 mr-1" />
-                  Approve
+                  <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
+                  Review & Approve
                 </Button>
                 <Button
                   variant="ghost"
@@ -541,6 +545,18 @@ function TransactionRow({
               {tx.bankName && <DetailRow label="Bank" value={tx.bankName} />}
               {tx.accountMask && (
                 <DetailRow label="Account" value={tx.accountMask} />
+              )}
+              {tx.accountType && (
+                <DetailRow
+                  label="Account Type"
+                  value={
+                    tx.accountType === 'iban'
+                      ? 'IBAN (International)'
+                      : tx.accountType === 'us'
+                        ? 'US Bank Account'
+                        : tx.accountType.toUpperCase()
+                  }
+                />
               )}
               {tx.paymentRails && (
                 <DetailRow label="Method" value={tx.paymentRails} />

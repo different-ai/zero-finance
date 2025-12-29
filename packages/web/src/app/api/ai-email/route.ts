@@ -1037,11 +1037,27 @@ export async function POST(request: NextRequest) {
               destinationPaymentRails: paymentRails,
               destinationBankAccountId: params.saved_bank_account_id,
               destinationBankAccountSnapshot: JSON.stringify({
-                bankName: bankAccount.bankName,
-                accountType: bankAccount.accountType,
-                last4:
-                  bankAccount.ibanNumber?.slice(-4) ||
-                  bankAccount.accountNumber?.slice(-4),
+                bank_name: bankAccount.bankName,
+                account_type: bankAccount.accountType,
+                account_holder_type: bankAccount.accountHolderType,
+                account_holder_first_name: bankAccount.accountHolderFirstName,
+                account_holder_last_name: bankAccount.accountHolderLastName,
+                account_holder_business_name:
+                  bankAccount.accountHolderBusinessName,
+                us:
+                  bankAccount.accountType === 'us'
+                    ? {
+                        account_number: bankAccount.accountNumber,
+                        routing_number: bankAccount.routingNumber,
+                      }
+                    : undefined,
+                iban:
+                  bankAccount.accountType === 'iban'
+                    ? {
+                        iban_number: bankAccount.ibanNumber,
+                        bic: bankAccount.bicSwift,
+                      }
+                    : undefined,
               }),
               depositAmount: transfer.quote.deposit_amount,
               depositToken: transfer.quote.deposit_token,
