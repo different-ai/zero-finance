@@ -310,15 +310,11 @@ export const invoiceRouter = router({
               ? formatUnits(req.amount, decimals)
               : '0.00';
 
-          // --- Logging Added ---
-          // console.log(`0xHypr DEBUG - Mapping invoice ${req.id}. Original amount: ${req.amount}, Decimals: ${decimals}, Formatted: ${formattedAmount}`);
-          // --- End Logging ---
-
-          // Determine invoice direction based on who created it
-          // INCOMING: someone else created it
-          // OUTGOING: I created it
+          // Determine invoice direction based on which workspace originated it
+          // SENT: This workspace created the invoice (we're billing someone)
+          // RECEIVED: Another workspace created it (we're being billed)
           const direction: 'sent' | 'received' =
-            req.userId === userId ? 'sent' : 'received';
+            req.workspaceId === workspaceId ? 'sent' : 'received';
 
           return {
             ...req,
