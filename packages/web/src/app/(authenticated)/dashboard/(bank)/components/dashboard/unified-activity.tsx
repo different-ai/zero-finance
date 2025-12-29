@@ -388,31 +388,56 @@ function TransactionIcon({
 }
 
 function StatusBadge({ status }: { status: UnifiedTransaction['status'] }) {
-  const statusConfig = {
-    pending: { label: 'Pending', icon: Clock, className: 'text-amber-600' },
-    processing: {
-      label: 'Processing',
-      icon: <Loader2 className="h-3.5 w-3.5 animate-spin" />,
-      className: 'text-blue-600',
-    },
-    completed: {
-      label: 'Completed',
-      icon: Check,
-      className: 'text-emerald-600',
-    },
-    failed: { label: 'Failed', icon: X, className: 'text-red-600' },
-    canceled: { label: 'Canceled', icon: X, className: 'text-gray-500' },
+  const getIcon = () => {
+    switch (status) {
+      case 'pending':
+        return <Clock className="h-3.5 w-3.5" />;
+      case 'processing':
+        return <Loader2 className="h-3.5 w-3.5 animate-spin" />;
+      case 'completed':
+        return <Check className="h-3.5 w-3.5" />;
+      case 'failed':
+      case 'canceled':
+        return <X className="h-3.5 w-3.5" />;
+    }
   };
 
-  const config = statusConfig[status];
-  const Icon = config.icon;
+  const getClassName = () => {
+    switch (status) {
+      case 'pending':
+        return 'text-amber-600';
+      case 'processing':
+        return 'text-blue-600';
+      case 'completed':
+        return 'text-emerald-600';
+      case 'failed':
+        return 'text-red-600';
+      case 'canceled':
+        return 'text-gray-500';
+    }
+  };
+
+  const getLabel = () => {
+    switch (status) {
+      case 'pending':
+        return 'Pending';
+      case 'processing':
+        return 'Processing';
+      case 'completed':
+        return 'Completed';
+      case 'failed':
+        return 'Failed';
+      case 'canceled':
+        return 'Canceled';
+    }
+  };
 
   return (
     <span
-      className={cn('inline-flex items-center gap-1 text-sm', config.className)}
+      className={cn('inline-flex items-center gap-1 text-sm', getClassName())}
     >
-      <Icon className="h-3.5 w-3.5" />
-      {config.label}
+      {getIcon()}
+      {getLabel()}
     </span>
   );
 }
