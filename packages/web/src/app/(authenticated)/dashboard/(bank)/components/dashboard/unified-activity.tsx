@@ -211,7 +211,10 @@ function mergeBankAndCryptoTransactions(
     if (isAgentProposal && needsAction) {
       category = 'agent_proposal';
       title = 'Pending Approval';
-      subtitle = bankTx.agentProposalMessage || 'Proposed by AI agent';
+      // Show bank destination in subtitle, reasoning goes in expanded details
+      subtitle = bankSnapshot?.bankName
+        ? `transfer to ${bankSnapshot.bankName}${bankSnapshot.recipientName ? ` (${bankSnapshot.recipientName})` : ''} in ${bankTx.secondaryCurrency || 'USD'}`
+        : bankTx.agentProposalMessage || 'Proposed by AI agent';
     } else if (bankTx.type === 'outgoing') {
       category = 'bank_send';
       title = 'Bank Transfer';
@@ -511,6 +514,57 @@ function TransactionRow({
 
       <AccordionContent className="px-4 pb-4">
         <div className="ml-[52px] bg-[#F7F7F2] p-4 space-y-3">
+          {/* Agent proposal details */}
+          {tx.category === 'agent_proposal' && (
+            <>
+              {/* AI Reasoning - highlighted */}
+              {tx.agentProposalMessage && (
+                <div className="bg-violet-50 border border-violet-200 rounded-lg p-3 mb-3">
+                  <div className="flex items-start gap-2">
+                    <Bot className="h-4 w-4 text-violet-600 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <p className="text-[11px] font-medium text-violet-600 uppercase tracking-wide mb-1">
+                        AI Reasoning
+                      </p>
+                      <p className="text-[13px] text-violet-900">
+                        {tx.agentProposalMessage}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Bank account details */}
+              {tx.recipientName && (
+                <DetailRow label="Recipient" value={tx.recipientName} />
+              )}
+              {tx.bankName && <DetailRow label="Bank" value={tx.bankName} />}
+              {tx.accountMask && (
+                <DetailRow label="Account" value={tx.accountMask} />
+              )}
+              {tx.paymentRails && (
+                <DetailRow label="Method" value={tx.paymentRails} />
+              )}
+
+              <div className="border-t border-[#101010]/10 my-3" />
+
+              {/* Amount details */}
+              <DetailRow
+                label="Amount to send"
+                value={`${tx.amount.replace('$', '')} USDC`}
+              />
+              {tx.fiatAmount && tx.fiatCurrency && (
+                <DetailRow
+                  label="They will receive"
+                  value={`${formatCurrencySymbol(tx.fiatCurrency)}${formatAmount(tx.fiatAmount)} ${tx.fiatCurrency}`}
+                />
+              )}
+              {tx.fee && (
+                <DetailRow label="Fee" value={`$${formatAmount(tx.fee)}`} />
+              )}
+            </>
+          )}
+
           {/* Bank transfer details */}
           {(tx.category === 'bank_send' || tx.category === 'bank_receive') && (
             <>
