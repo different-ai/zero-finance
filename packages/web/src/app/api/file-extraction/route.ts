@@ -145,7 +145,7 @@ async function extractInvoiceData(
   try {
     // Use generateObject for structured data extraction
     const { object } = await generateObject({
-      model: openai.responses('gpt-4o'),
+      model: openai.responses('gpt-5.2'),
       schema: z.object({
         invoiceData: z.object({
           // Main priority fields (displayed in preview)

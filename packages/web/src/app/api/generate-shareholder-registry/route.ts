@@ -41,7 +41,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       .join('\n\n');
 
     const result = await generateText({
-      model: openai('gpt-5'),
+      model: openai('gpt-5.2'),
       system: SHAREHOLDER_REGISTRY_PROMPT,
       prompt: `Based on this conversation, generate a shareholder/member registry document:\n\n${conversationContext}`,
       temperature: 0.3,

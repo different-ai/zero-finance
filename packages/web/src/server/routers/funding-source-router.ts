@@ -147,7 +147,7 @@ export const fundingSourceRouter = router({
 
       try {
         const { object } = await generateObject({
-          model: openai('gpt-4o'),
+          model: openai('gpt-5-mini'),
           schema: aiParsingSchema, // Use the flat schema for AI generation
           prompt: `Parse the following bank account details provided by the user. Extract the information according to the schema, paying close attention to identifying numbers like routing numbers, IBANs, sort codes, and account numbers to correctly determine the 'sourceAccountType'. Infer currency if possible (e.g., routing number implies USD, sort code implies GBP). If details are ambiguous or missing, leave the corresponding fields null or undefined. User input: "${input.rawDetails}"`,
           // maxTokens: 1024, // maxTokens is not a direct property here, it should be part of model-specific options if supported

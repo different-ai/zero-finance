@@ -8,15 +8,28 @@ import type { AiProcessedDocument } from './ai-service';
 
 // Schema for classification results (AI SDK 5.0 compatible)
 export const classificationResultSchema = z.object({
-  matchedRules: z.array(z.object({
-    ruleName: z.string(),
-    ruleId: z.string(),
-    confidence: z.number().min(0).max(100),
-    actions: z.array(z.object({
-      type: z.enum(['approve', 'mark_paid', 'add_category', 'add_note', 'set_expense_category', 'dismiss', 'mark_seen', 'schedule_payment']),
-      value: z.string().nullable(), // Changed from optional() to nullable() for AI SDK 5.0 compatibility
-    })),
-  })),
+  matchedRules: z.array(
+    z.object({
+      ruleName: z.string(),
+      ruleId: z.string(),
+      confidence: z.number().min(0).max(100),
+      actions: z.array(
+        z.object({
+          type: z.enum([
+            'approve',
+            'mark_paid',
+            'add_category',
+            'add_note',
+            'set_expense_category',
+            'dismiss',
+            'mark_seen',
+            'schedule_payment',
+          ]),
+          value: z.string().nullable(), // Changed from optional() to nullable() for AI SDK 5.0 compatibility
+        }),
+      ),
+    }),
+  ),
   suggestedCategories: z.array(z.string()),
   shouldAutoApprove: z.boolean(),
   shouldMarkPaid: z.boolean(),
@@ -36,17 +49,19 @@ export type ClassificationResult = z.infer<typeof classificationResultSchema>;
 export async function applyClassificationRules(
   document: AiProcessedDocument,
   userId: string,
-  sourceText?: string
+  sourceText?: string,
 ): Promise<ClassificationResult> {
   try {
     // Fetch user's classification settings
     const classificationSettings = await db
       .select()
       .from(userClassificationSettings)
-      .where(and(
-        eq(userClassificationSettings.userId, userId),
-        eq(userClassificationSettings.enabled, true)
-      ))
+      .where(
+        and(
+          eq(userClassificationSettings.userId, userId),
+          eq(userClassificationSettings.enabled, true),
+        ),
+      )
       .orderBy(asc(userClassificationSettings.priority));
 
     if (classificationSettings.length === 0) {
@@ -65,9 +80,12 @@ export async function applyClassificationRules(
     }
 
     // Build the rules section for the AI
-    const rulesSection = classificationSettings.map((setting, index) => 
-      `Rule ${index + 1} (ID: ${setting.id}, Name: "${setting.name}"): ${setting.prompt}`
-    ).join('\n');
+    const rulesSection = classificationSettings
+      .map(
+        (setting, index) =>
+          `Rule ${index + 1} (ID: ${setting.id}, Name: "${setting.name}"): ${setting.prompt}`,
+      )
+      .join('\n');
 
     // Create a comprehensive document summary for classification
     const documentSummary = `
@@ -84,7 +102,7 @@ ${sourceText ? `Original Text:\n${sourceText.substring(0, 1000)}${sourceText.len
 `;
 
     const { object: classificationResult } = await generateObject({
-      model: openai('o3-2025-04-16'),
+      model: openai('gpt-5-mini'),
       schema: classificationResultSchema,
       messages: [
         {
@@ -127,8 +145,11 @@ ${documentSummary}`,
 
     return classificationResult;
   } catch (error) {
-    console.error('[Classification Service] Error applying classification rules:', error);
-    
+    console.error(
+      '[Classification Service] Error applying classification rules:',
+      error,
+    );
+
     // Return empty result on error
     return {
       matchedRules: [],

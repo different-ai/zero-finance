@@ -59,45 +59,53 @@ Notes:
 // Enhanced schema matching the invoice router
 const aiInvoiceSchema = z.object({
   // Seller info (the company sending the invoice)
-  sellerInfo: z.object({
-    businessName: z.string().nullable(),
-    email: z.string().nullable(),
-    address: z.string().nullable(),
-    city: z.string().nullable(),
-    postalCode: z.string().nullable(),
-    country: z.string().nullable(),
-    phone: z.string().nullable(),
-    taxId: z.string().nullable(),
-  }).nullable(),
-  
+  sellerInfo: z
+    .object({
+      businessName: z.string().nullable(),
+      email: z.string().nullable(),
+      address: z.string().nullable(),
+      city: z.string().nullable(),
+      postalCode: z.string().nullable(),
+      country: z.string().nullable(),
+      phone: z.string().nullable(),
+      taxId: z.string().nullable(),
+    })
+    .nullable(),
+
   // Buyer info (the company receiving/paying the invoice)
-  buyerInfo: z.object({
-    businessName: z.string().nullable(),
-    email: z.string().nullable(),
-    address: z.string().nullable(),
-    city: z.string().nullable(),
-    postalCode: z.string().nullable(),
-    country: z.string().nullable(),
-    contactName: z.string().nullable(),
-    phone: z.string().nullable(),
-    taxId: z.string().nullable(),
-  }).nullable(),
-  
+  buyerInfo: z
+    .object({
+      businessName: z.string().nullable(),
+      email: z.string().nullable(),
+      address: z.string().nullable(),
+      city: z.string().nullable(),
+      postalCode: z.string().nullable(),
+      country: z.string().nullable(),
+      contactName: z.string().nullable(),
+      phone: z.string().nullable(),
+      taxId: z.string().nullable(),
+    })
+    .nullable(),
+
   // Invoice details
   invoiceNumber: z.string().nullable(),
   issuedAt: z.string().nullable(),
   dueDate: z.string().nullable(),
-  
+
   // Items
-  invoiceItems: z.array(z.object({
-    name: z.string(),
-    description: z.string().nullable(),
-    quantity: z.number(),
-    unitPrice: z.string(),
-    tax: z.number().nullable(),
-    total: z.string().nullable(),
-  })).nullable(),
-  
+  invoiceItems: z
+    .array(
+      z.object({
+        name: z.string(),
+        description: z.string().nullable(),
+        quantity: z.number(),
+        unitPrice: z.string(),
+        tax: z.number().nullable(),
+        total: z.string().nullable(),
+      }),
+    )
+    .nullable(),
+
   // Financial summary
   currency: z.string(),
   subtotal: z.string().nullable(),
@@ -105,23 +113,25 @@ const aiInvoiceSchema = z.object({
   totalAmount: z.string().nullable(),
   amount: z.number().nullable(),
   paymentType: z.enum(['crypto', 'fiat']).nullable(),
-  
+
   // Additional
   note: z.string().nullable(),
   terms: z.string().nullable(),
   paymentInstructions: z.string().nullable(),
-  
+
   // Bank details
-  bankDetails: z.object({
-    accountHolder: z.string().nullable(),
-    accountNumber: z.string().nullable(),
-    routingNumber: z.string().nullable(),
-    iban: z.string().nullable(),
-    bic: z.string().nullable(),
-    swiftCode: z.string().nullable(),
-    bankName: z.string().nullable(),
-    bankAddress: z.string().nullable(),
-  }).nullable(),
+  bankDetails: z
+    .object({
+      accountHolder: z.string().nullable(),
+      accountNumber: z.string().nullable(),
+      routingNumber: z.string().nullable(),
+      iban: z.string().nullable(),
+      bic: z.string().nullable(),
+      swiftCode: z.string().nullable(),
+      bankName: z.string().nullable(),
+      bankAddress: z.string().nullable(),
+    })
+    .nullable(),
 });
 
 const systemPrompt = `You are an expert invoice data extraction AI. Extract ALL available structured invoice information from unstructured text. Be thorough and comprehensive.
@@ -204,24 +214,24 @@ async function testInvoiceExtraction() {
     }
 
     console.log('🤖 Calling AI model for extraction...');
-    
-    // Test different models - using gpt-4.1 as specified in CLAUDE.md
-    const modelsToTest = ['gpt-4.1'];
-    
+
+    // Test with gpt-5-mini for invoice extraction
+    const modelsToTest = ['gpt-5-mini'];
+
     for (const modelName of modelsToTest) {
       console.log(`\n🔍 Testing with model: ${modelName}`);
       console.log('-'.repeat(40));
-      
+
       try {
         const startTime = Date.now();
-        
+
         const result = await generateObject({
           model: openai(modelName),
           schema: aiInvoiceSchema,
           messages: [
             {
               role: 'system',
-              content: systemPrompt
+              content: systemPrompt,
             },
             {
               role: 'user',
@@ -238,8 +248,8 @@ async function testInvoiceExtraction() {
 INVOICE TEXT TO EXTRACT FROM:
 ${SAMPLE_INVOICE_TEXT}
 
-Extract everything comprehensively - leave no data behind!`
-            }
+Extract everything comprehensively - leave no data behind!`,
+            },
           ],
         });
 
@@ -249,36 +259,86 @@ Extract everything comprehensively - leave no data behind!`
         console.log(`✅ Extraction completed in ${duration}ms`);
         console.log('\n📊 Extracted Data:');
         console.log(JSON.stringify(result.object, null, 2));
-        
+
         // Analyze extraction quality
         console.log('\n🔍 Extraction Quality Analysis:');
         const extracted = result.object;
-        
+
         const checks = [
-          { field: 'sellerInfo?.businessName', value: extracted.sellerInfo?.businessName, expected: 'Orion Web Infrastructure Ltd.' },
-          { field: 'sellerInfo?.email', value: extracted.sellerInfo?.email, expected: 'billing@oroninfra.com' },
-          { field: 'sellerInfo?.phone', value: extracted.sellerInfo?.phone, expected: '+1 (415) 555-1034' },
-          { field: 'buyerInfo?.businessName', value: extracted.buyerInfo?.businessName, expected: 'Zero Finance Inc.' },
-          { field: 'buyerInfo?.contactName', value: extracted.buyerInfo?.contactName, expected: 'Benjamin Shafii' },
-          { field: 'invoiceNumber', value: extracted.invoiceNumber, expected: 'INV-2025-0711' },
+          {
+            field: 'sellerInfo?.businessName',
+            value: extracted.sellerInfo?.businessName,
+            expected: 'Orion Web Infrastructure Ltd.',
+          },
+          {
+            field: 'sellerInfo?.email',
+            value: extracted.sellerInfo?.email,
+            expected: 'billing@oroninfra.com',
+          },
+          {
+            field: 'sellerInfo?.phone',
+            value: extracted.sellerInfo?.phone,
+            expected: '+1 (415) 555-1034',
+          },
+          {
+            field: 'buyerInfo?.businessName',
+            value: extracted.buyerInfo?.businessName,
+            expected: 'Zero Finance Inc.',
+          },
+          {
+            field: 'buyerInfo?.contactName',
+            value: extracted.buyerInfo?.contactName,
+            expected: 'Benjamin Shafii',
+          },
+          {
+            field: 'invoiceNumber',
+            value: extracted.invoiceNumber,
+            expected: 'INV-2025-0711',
+          },
           { field: 'currency', value: extracted.currency, expected: 'EUR' },
-          { field: 'totalAmount', value: extracted.totalAmount, expected: '450.00' },
-          { field: 'bankDetails?.bankName', value: extracted.bankDetails?.bankName, expected: 'First Horizon Bank' },
-          { field: 'bankDetails?.routingNumber', value: extracted.bankDetails?.routingNumber, expected: '121000358' },
-          { field: 'bankDetails?.accountNumber', value: extracted.bankDetails?.accountNumber, expected: '0987654321' },
-          { field: 'invoiceItems length', value: extracted.invoiceItems?.length, expected: 5 },
+          {
+            field: 'totalAmount',
+            value: extracted.totalAmount,
+            expected: '450.00',
+          },
+          {
+            field: 'bankDetails?.bankName',
+            value: extracted.bankDetails?.bankName,
+            expected: 'First Horizon Bank',
+          },
+          {
+            field: 'bankDetails?.routingNumber',
+            value: extracted.bankDetails?.routingNumber,
+            expected: '121000358',
+          },
+          {
+            field: 'bankDetails?.accountNumber',
+            value: extracted.bankDetails?.accountNumber,
+            expected: '0987654321',
+          },
+          {
+            field: 'invoiceItems length',
+            value: extracted.invoiceItems?.length,
+            expected: 5,
+          },
         ];
 
         let score = 0;
-        checks.forEach(check => {
-          const match = check.value === check.expected || 
-                       (check.field === 'invoiceItems length' && check.value === check.expected);
-          console.log(`  ${match ? '✅' : '❌'} ${check.field}: ${check.value} ${match ? '' : `(expected: ${check.expected})`}`);
+        checks.forEach((check) => {
+          const match =
+            check.value === check.expected ||
+            (check.field === 'invoiceItems length' &&
+              check.value === check.expected);
+          console.log(
+            `  ${match ? '✅' : '❌'} ${check.field}: ${check.value} ${match ? '' : `(expected: ${check.expected})`}`,
+          );
           if (match) score++;
         });
 
-        console.log(`\n📈 Extraction Score: ${score}/${checks.length} (${Math.round(score/checks.length*100)}%)`);
-        
+        console.log(
+          `\n📈 Extraction Score: ${score}/${checks.length} (${Math.round((score / checks.length) * 100)}%)`,
+        );
+
         if (score === checks.length) {
           console.log('🎉 Perfect extraction!');
         } else if (score >= checks.length * 0.8) {
@@ -286,7 +346,6 @@ Extract everything comprehensively - leave no data behind!`
         } else {
           console.log('⚠️  Poor extraction quality - needs improvement');
         }
-        
       } catch (error: any) {
         console.error(`❌ Error with ${modelName}:`, error.message);
         if (error.cause) {
@@ -294,7 +353,6 @@ Extract everything comprehensively - leave no data behind!`
         }
       }
     }
-
   } catch (error: any) {
     console.error('❌ Test failed:', error.message);
     console.error('Stack:', error.stack);
