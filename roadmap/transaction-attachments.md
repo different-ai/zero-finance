@@ -450,16 +450,17 @@ export async function GET(req: NextRequest) {
 
 ### Phase 1 Success
 
-- [ ] Users can upload attachments to outgoing transactions
-- [ ] Attachments visible in transaction detail view
-- [ ] Download works correctly
+- [x] Users can upload attachments to outgoing transactions
+- [x] Attachments visible in transaction detail view
+- [x] Download works correctly
 - [ ] Quinn confirms it meets his needs
 
 ### Phase 2 Success
 
-- [ ] Forwarded invoice PDFs auto-attach
+- [x] Forwarded invoice PDFs auto-attach
+- [x] Attachments visible on invoice detail pages
 - [ ] Invoice → Payment linking works
-- [ ] No manual upload needed for email-created invoices
+- [x] No manual upload needed for email-created invoices
 
 ### Phase 3 Success
 
