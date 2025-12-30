@@ -19,10 +19,8 @@ const nextConfig = {
     tsconfigPath: './tsconfig.next.json',
   },
 
-  // Skip ESLint during build (run separately in CI)
-  eslint: {
-    ignoreDuringBuilds: process.env.SKIP_LINT === 'true',
-  },
+  // Note: eslint config is no longer supported in next.config.js for Next.js 16+
+  // Use next lint CLI options instead
 
   // Reduce output file tracing scope - major build time saver
   // This was taking 49s in traces
@@ -177,11 +175,8 @@ const nextConfig = {
       'posthog-js',
       'react-hook-form',
       'zod',
-      // Additional heavy packages
+      // Additional heavy packages (client-side only - not in serverExternalPackages)
       'viem',
-      'ethers',
-      '@safe-global/protocol-kit',
-      'googleapis',
       'ai',
       '@ai-sdk/openai',
     ],

@@ -70,8 +70,10 @@ migrateProcess.on('error', (err) => {
 });
 
 function startBuild() {
-  console.log('Starting Next.js build...');
-  const buildProcess = spawn('pnpm', ['next', 'build'], {
+  console.log('Starting Next.js build with webpack...');
+  // Use --webpack flag because Turbopack has conflicts with serverExternalPackages
+  // See: https://github.com/vercel/next.js/issues/87342
+  const buildProcess = spawn('pnpm', ['next', 'build', '--webpack'], {
     stdio: 'inherit',
     env: {
       ...process.env,
