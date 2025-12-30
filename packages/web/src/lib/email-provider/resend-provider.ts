@@ -63,13 +63,17 @@ interface ResendReceivedEmail {
 
 /**
  * Resend attachment content response
+ * Note: Resend returns a download_url, not inline base64 content
  */
 interface ResendAttachmentContent {
   object: string;
   id: string;
   filename: string;
-  content: string; // base64 encoded
   content_type: string;
+  content_id?: string;
+  content_disposition?: string;
+  size: number;
+  download_url: string; // URL to download the actual file content
 }
 
 /**
@@ -338,9 +342,9 @@ export class ResendProvider implements EmailProvider {
         const attachmentData =
           (await response.json()) as ResendAttachmentContent;
 
-        if (!attachmentData.content) {
+        if (!attachmentData.download_url) {
           console.error(
-            `[ResendProvider] Attachment ${meta.id} has no content field`,
+            `[ResendProvider] Attachment ${meta.id} has no download_url`,
           );
           console.log(
             '[ResendProvider] Attachment response:',
@@ -349,14 +353,32 @@ export class ResendProvider implements EmailProvider {
           continue;
         }
 
+        // Download the actual file content from the signed URL
+        console.log(
+          `[ResendProvider] Downloading attachment from: ${attachmentData.download_url.substring(0, 100)}...`,
+        );
+        const fileResponse = await fetch(attachmentData.download_url);
+
+        if (!fileResponse.ok) {
+          console.error(
+            `[ResendProvider] Failed to download attachment ${meta.id}:`,
+            fileResponse.status,
+          );
+          continue;
+        }
+
+        // Convert to base64
+        const arrayBuffer = await fileResponse.arrayBuffer();
+        const base64Content = Buffer.from(arrayBuffer).toString('base64');
+
         attachments.push({
           filename: attachmentData.filename || meta.filename,
-          content: attachmentData.content, // base64 encoded
+          content: base64Content,
           contentType: attachmentData.content_type || meta.content_type,
         });
 
         console.log(
-          `[ResendProvider] Successfully fetched attachment: ${meta.filename} (${meta.content_type}, ${attachmentData.content.length} chars base64)`,
+          `[ResendProvider] Successfully fetched attachment: ${meta.filename} (${meta.content_type}, ${base64Content.length} chars base64, ${attachmentData.size} bytes)`,
         );
       } catch (error) {
         console.error(
