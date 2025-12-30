@@ -12,6 +12,7 @@ import { Wallet } from 'lucide-react'; // Import Wallet icon
 import { formatDisplayCurrency } from '@/lib/utils'; // Import the new utility
 import { getCurrencyConfig } from '@/lib/currencies'; // Import currency config
 import WelcomeGradient from '@/app/(landing)/welcome-gradient'; // Import gradient for background
+import { InvoiceAttachments } from './invoice-attachments'; // Import attachments component
 
 // --- Define necessary types locally or import from a SAFE shared location ---
 // Basic structure based on invoiceDataSchema fields used in this component
@@ -545,6 +546,11 @@ const StaticInvoiceDisplay: React.FC<{
               )}
             </div>
           )}
+
+          {/* Attachments Section - shows documents attached via AI email or manually */}
+          <div className="pt-4 sm:pt-6 border-t border-[#101010]/10">
+            <InvoiceAttachments invoiceId={dbInvoiceData.id} />
+          </div>
 
           {/* Payment Info Section (External View Only) - only show if payment info exists */}
           {isExternalView &&
