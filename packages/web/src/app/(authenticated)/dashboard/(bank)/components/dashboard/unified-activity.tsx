@@ -39,6 +39,7 @@ import { SUPPORTED_CHAINS } from '@/lib/constants/chains';
 import { USDC_ADDRESS, USDC_DECIMALS } from '@/lib/constants';
 import { toast } from 'sonner';
 import { ResumeTransferModal } from './resume-transfer-modal';
+import { TransactionAttachments } from './transaction-attachments';
 
 // =============================================================================
 // TYPES
@@ -726,6 +727,22 @@ function TransactionRow({
               </a>
             </div>
           )}
+
+          {/* Attachments section - show for bank sends and crypto sends */}
+          {(tx.category === 'bank_send' || tx.category === 'crypto_send') &&
+            tx.id && (
+              <>
+                <div className="border-t border-[#101010]/10 my-3" />
+                <TransactionAttachments
+                  transactionType={
+                    tx.category === 'bank_send' ? 'offramp' : 'crypto_outgoing'
+                  }
+                  transactionId={
+                    tx.alignTransferId || tx.transactionHash || tx.id
+                  }
+                />
+              </>
+            )}
         </div>
       </AccordionContent>
     </AccordionItem>

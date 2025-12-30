@@ -1529,3 +1529,15 @@ export {
   type AiEmailPendingAction,
   type AiEmailExtractedData,
 } from './schema/ai-email-sessions';
+
+// Transaction Attachments for file storage linked to transactions
+export {
+  transactionAttachments,
+  transactionAttachmentsRelations,
+  ATTACHMENT_TRANSACTION_TYPES,
+  ATTACHMENT_UPLOAD_SOURCES,
+  type TransactionAttachment,
+  type NewTransactionAttachment,
+  type AttachmentTransactionType,
+  type AttachmentUploadSource,
+} from './schema/transaction-attachments';
