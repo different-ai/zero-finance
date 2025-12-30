@@ -6,7 +6,7 @@ export * from './workspace-api-keys';
 export * from './admins';
 export * from './bridge-transactions';
 export * from './user-safes';
-export * from './ai-email-sessions';
+export * from './ai-email-sessions'; // Also exports processedEmailMessages for idempotency
 export * from './transaction-attachments';
 
 // Re-export everything else from main schema, excluding what we've already exported above

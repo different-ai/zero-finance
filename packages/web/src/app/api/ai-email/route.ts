@@ -39,6 +39,7 @@ import {
   workspaces,
   transactionAttachments,
 } from '@/db/schema';
+import { processedEmailMessages } from '@/db/schema/ai-email-sessions';
 import { eq, and, desc, isNull, or, ilike } from 'drizzle-orm';
 import { alignApi } from '@/server/services/align-api';
 import { put } from '@vercel/blob';
@@ -564,6 +565,40 @@ export async function POST(request: NextRequest) {
 
     // Track workspaceId for error handling
     workspaceId = workspaceResult.workspaceId;
+
+    // ==========================================================================
+    // IDEMPOTENCY CHECK: Prevent duplicate webhook processing
+    // Webhooks can be delivered multiple times (retries, duplicates).
+    // Processing the same email twice causes race conditions that corrupt session state.
+    // ==========================================================================
+    const MESSAGE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
+    try {
+      await db.insert(processedEmailMessages).values({
+        messageId,
+        workspaceId: workspaceResult.workspaceId,
+        expiresAt: new Date(Date.now() + MESSAGE_TTL_MS),
+      });
+      console.log(`[AI Email] Processing new message: ${messageId}`);
+    } catch (error: unknown) {
+      // Unique constraint violation = already processed
+      if (
+        error instanceof Error &&
+        (error.message.includes('unique constraint') ||
+          error.message.includes('duplicate key') ||
+          (error as { code?: string }).code === '23505')
+      ) {
+        console.log(
+          `[AI Email] DUPLICATE WEBHOOK - Already processed message: ${messageId}`,
+        );
+        return NextResponse.json({
+          success: true,
+          handled: 'duplicate_skipped',
+          messageId,
+        });
+      }
+      // Re-throw other errors
+      throw error;
+    }
 
     // Get sender display name from workspace company info
     const senderDisplayName = getSenderDisplayName(workspaceResult);

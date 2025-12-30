@@ -1532,12 +1532,15 @@ export {
 export {
   aiEmailSessions,
   aiEmailSessionsRelations,
+  processedEmailMessages, // Idempotency tracking for webhook deduplication
   type AiEmailSession,
   type NewAiEmailSession,
   type AiEmailSessionState,
   type AiEmailMessage,
   type AiEmailPendingAction,
   type AiEmailExtractedData,
+  type ProcessedEmailMessage,
+  type NewProcessedEmailMessage,
 } from './schema/ai-email-sessions';
 
 // Transaction Attachments for file storage linked to transactions

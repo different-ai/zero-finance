@@ -5,9 +5,44 @@ import {
   jsonb,
   uuid,
   index,
+  uniqueIndex,
 } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 import { workspaces } from './workspaces';
+
+/**
+ * Processed Email Messages (Idempotency)
+ *
+ * Tracks which email message IDs have already been processed to prevent
+ * duplicate webhook processing. Webhooks can be delivered multiple times
+ * (retries, duplicates), and processing the same email twice causes race
+ * conditions that corrupt session state.
+ *
+ * TTL: 24 hours (same as session TTL)
+ */
+export const processedEmailMessages = pgTable(
+  'processed_email_messages',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    messageId: text('message_id').notNull(), // Email Message-ID header
+    workspaceId: uuid('workspace_id').notNull(),
+    processedAt: timestamp('processed_at').defaultNow().notNull(),
+    expiresAt: timestamp('expires_at').notNull(), // For cleanup
+  },
+  (table) => [
+    // Unique constraint to prevent duplicates
+    uniqueIndex('idx_processed_email_messages_unique').on(
+      table.messageId,
+      table.workspaceId,
+    ),
+    // For cleanup job
+    index('idx_processed_email_messages_expires').on(table.expiresAt),
+  ],
+);
+
+export type ProcessedEmailMessage = typeof processedEmailMessages.$inferSelect;
+export type NewProcessedEmailMessage =
+  typeof processedEmailMessages.$inferInsert;
 
 /**
  * AI Email Sessions
