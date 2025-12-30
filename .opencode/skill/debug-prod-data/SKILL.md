@@ -270,3 +270,48 @@ vercel env ls --scope prologe | grep VAR_NAME
 - Debugging database/data issues
 - Verifying environment variables
 - Running one-off database scripts
+
+---
+
+## Integration with Testing Strategy
+
+This skill is part of the **testing pyramid**. Use it when:
+
+1. **Staging tests pass but production fails** → Check prod logs
+2. **Need to verify fix in production** → Inspect DB state
+3. **Feature works locally but not in prod** → Compare environments
+
+### Related Skills
+
+| Scenario                           | Skill to Load         |
+| ---------------------------------- | --------------------- |
+| Testing on staging first           | `test-staging-branch` |
+| Making code testable               | `testability`         |
+| After debugging, capture learnings | `skill-reinforcement` |
+
+### Debugging Workflow (Fast → Slow)
+
+```
+1. Check Vercel logs first (fastest)
+2. If unclear, inspect production DB
+3. If still unclear, reproduce locally
+4. After fix, test on staging before prod
+5. Update this skill with new patterns
+```
+
+---
+
+## Learnings Log
+
+> Append new discoveries here
+
+### Template for New Learnings
+
+```markdown
+### YYYY-MM-DD: [Issue Description]
+
+**Symptom**: [What you saw]
+**Root Cause**: [Why it happened]
+**Fix**: [How to resolve]
+**Prevention**: [How to avoid in future]
+```

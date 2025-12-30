@@ -200,12 +200,30 @@ chrome_wait_for({ text: 'Dashboard' });
 // Only snapshot when you need uids
 ```
 
-### Use evaluate_script for Data
+### Use evaluate_script for Data (PREFERRED)
 
 ```javascript
 // Extract data without full snapshot
 chrome_evaluate_script({
   function: `() => document.querySelector('.balance')?.innerText`,
+});
+
+// Check page state without snapshot
+chrome_evaluate_script({
+  function: `() => ({ url: window.location.href, hasText: document.body.innerText.includes('Dashboard') })`,
+});
+
+// Fill form when UIDs are stale
+chrome_evaluate_script({
+  function: `() => {
+    const input = document.querySelector('input[type="text"]');
+    if (input) {
+      input.value = '123456';
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      return 'filled';
+    }
+    return 'no input';
+  }`,
 });
 ```
 
@@ -361,14 +379,34 @@ The OTP is **6 digits** and appears in both:
 2. Email body (requires opening email)
 
 ```javascript
-// Best approach: Search Gmail for recent Privy email
+// BEST: Use evaluate_script to extract OTP without snapshot
 chrome_new_page({
   url: 'https://mail.google.com/mail/u/0/#search/from%3Aprivy+newer_than%3A5m',
 });
-chrome_wait_for({ text: 'verification', timeout: 15000 });
-chrome_take_snapshot();
-// OTP visible in list - parse 6-digit code from snapshot
+chrome_wait_for({ text: 'Inbox', timeout: 15000 });
+
+// Extract OTP directly via script - NO SNAPSHOT NEEDED
+chrome_evaluate_script({
+  function: `() => {
+    const rows = document.querySelectorAll('tr[role="row"]');
+    for (const row of rows) {
+      const text = row.innerText;
+      if (text.includes('Preview | Dev') && text.includes('Your code is')) {
+        const match = text.match(/Your code is (\\d{6})/);
+        if (match) return match[1];
+      }
+    }
+    return null;
+  }`,
+});
+// Returns the 6-digit OTP directly!
 ```
+
+**Key insight**: `evaluate_script` is MUCH cheaper than `take_snapshot`. Use it for:
+
+- Extracting specific data (OTP codes, balances, text)
+- Checking page state (`document.body.innerText.includes('Dashboard')`)
+- Filling forms when UIDs are stale
 
 ### Privy Login Modal UIDs
 

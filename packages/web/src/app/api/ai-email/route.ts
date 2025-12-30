@@ -37,9 +37,12 @@ import {
   userDestinationBankAccounts,
   offrampTransfers,
   workspaces,
+  transactionAttachments,
 } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { alignApi } from '@/server/services/align-api';
+import { put } from '@vercel/blob';
+import type { PreparedAttachment } from '@/lib/ai-email/attachment-parser';
 
 // Get the configured email provider (SES or Resend based on EMAIL_PROVIDER env var)
 const emailProvider = getEmailProviderSingleton();
@@ -325,6 +328,70 @@ function getSenderDisplayName(workspaceResult: {
     return workspaceResult.firstName;
   }
   return workspaceResult.workspaceName;
+}
+
+/**
+ * Store email attachments for an invoice in Vercel Blob and database.
+ * Called after invoice creation to persist forwarded documents.
+ */
+async function storeInvoiceAttachments(
+  invoiceId: string,
+  workspaceId: string,
+  preparedAttachments: PreparedAttachment[],
+): Promise<number> {
+  const supportedAttachments = preparedAttachments.filter(
+    (a) => a.supported && a.base64Content,
+  );
+
+  if (supportedAttachments.length === 0) {
+    return 0;
+  }
+
+  let storedCount = 0;
+
+  for (const attachment of supportedAttachments) {
+    try {
+      // Convert base64 to buffer
+      const fileBuffer = Buffer.from(attachment.base64Content!, 'base64');
+
+      // Upload to Vercel Blob with workspace-scoped path
+      const blob = await put(
+        `attachments/invoice/${invoiceId}/${attachment.filename}`,
+        fileBuffer,
+        {
+          access: 'public',
+          contentType: attachment.contentType,
+          addRandomSuffix: true,
+        },
+      );
+
+      // Store metadata in database
+      await db.insert(transactionAttachments).values({
+        transactionType: 'invoice',
+        transactionId: invoiceId,
+        workspaceId,
+        blobUrl: blob.url,
+        filename: attachment.filename,
+        contentType: attachment.contentType,
+        fileSize: fileBuffer.length,
+        uploadedBy: 'system:ai-email',
+        uploadSource: 'ai_email',
+      });
+
+      storedCount++;
+      console.log(
+        `[AI Email] Stored attachment: ${attachment.filename} for invoice ${invoiceId}`,
+      );
+    } catch (error) {
+      console.error(
+        `[AI Email] Failed to store attachment ${attachment.filename}:`,
+        error,
+      );
+      // Continue with other attachments even if one fails
+    }
+  }
+
+  return storedCount;
 }
 
 export async function POST(request: NextRequest) {
@@ -698,6 +765,7 @@ export async function POST(request: NextRequest) {
       messageId,
       replySubject,
       quotedOriginal,
+      preparedAttachments, // Include attachments for invoice creation
     };
 
     console.log('[AI Email] Starting AI processing with tools...');
@@ -740,10 +808,25 @@ export async function POST(request: NextRequest) {
             invoiceId: invoice.invoiceId,
           });
 
+          // Store email attachments (PDFs, images) with the invoice
+          if (toolContext.preparedAttachments.length > 0) {
+            const storedCount = await storeInvoiceAttachments(
+              invoice.invoiceId,
+              toolContext.workspaceResult.workspaceId,
+              toolContext.preparedAttachments,
+            );
+            console.log(
+              `[AI Email] Stored ${storedCount} attachments for invoice ${invoice.invoiceId}`,
+            );
+          }
+
           return {
             success: true,
             invoiceId: invoice.invoiceId,
             invoiceLink: invoice.publicLink,
+            attachmentsStored: toolContext.preparedAttachments.filter(
+              (a) => a.supported && a.base64Content,
+            ).length,
           };
         },
       }),
