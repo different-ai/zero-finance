@@ -197,15 +197,33 @@ function EmailVerificationStatus() {
 
 function AiEmailSection() {
   const [copiedEmail, setCopiedEmail] = useState(false);
-  const { data: currentWorkspace, isLoading } =
+  const [isRegenerating, setIsRegenerating] = useState(false);
+  const { data: currentWorkspace, isLoading: isLoadingWorkspace } =
     api.workspace.getOrCreateWorkspace.useQuery();
 
-  const aiEmailDomain =
-    process.env.NEXT_PUBLIC_AI_EMAIL_DOMAIN || 'ai.0.finance';
+  const {
+    data: aiEmailData,
+    isLoading: isLoadingEmail,
+    refetch: refetchEmail,
+  } = api.workspace.getAiEmailAddress.useQuery(
+    { workspaceId: currentWorkspace?.workspaceId ?? '' },
+    { enabled: !!currentWorkspace?.workspaceId },
+  );
 
-  const aiEmailAddress = currentWorkspace?.workspaceId
-    ? `${currentWorkspace.workspaceId}@${aiEmailDomain}`
-    : null;
+  const regenerateMutation = api.workspace.regenerateAiEmailHandle.useMutation({
+    onSuccess: () => {
+      toast.success('AI email address regenerated');
+      refetchEmail();
+      setIsRegenerating(false);
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Failed to regenerate email address');
+      setIsRegenerating(false);
+    },
+  });
+
+  const isLoading = isLoadingWorkspace || isLoadingEmail;
+  const aiEmailAddress = aiEmailData?.email ?? null;
 
   const handleCopyEmail = async () => {
     if (aiEmailAddress) {
@@ -214,6 +232,12 @@ function AiEmailSection() {
       toast.success('Email address copied to clipboard');
       setTimeout(() => setCopiedEmail(false), 2000);
     }
+  };
+
+  const handleRegenerate = () => {
+    if (!currentWorkspace?.workspaceId) return;
+    setIsRegenerating(true);
+    regenerateMutation.mutate({ workspaceId: currentWorkspace.workspaceId });
   };
 
   return (
@@ -234,7 +258,7 @@ function AiEmailSection() {
               </span>
             </div>
             <p className="text-[12px] text-[#101010]/60 mt-0.5">
-              Create invoices by forwarding emails to your workspace
+              Create invoices and attach documents by emailing your AI assistant
             </p>
           </div>
         </div>
@@ -261,6 +285,7 @@ function AiEmailSection() {
                 <button
                   onClick={handleCopyEmail}
                   className="h-12 w-12 flex items-center justify-center border border-[#101010]/10 hover:bg-[#F7F7F2] transition-colors"
+                  title="Copy email address"
                 >
                   {copiedEmail ? (
                     <Check className="h-4 w-4 text-[#10B981]" />
@@ -269,6 +294,9 @@ function AiEmailSection() {
                   )}
                 </button>
               </div>
+              <p className="text-[11px] text-[#101010]/50">
+                Only workspace members can send emails to this address.
+              </p>
             </div>
 
             <div className="bg-[#F7F7F2] p-4 space-y-2">
@@ -293,12 +321,62 @@ function AiEmailSection() {
               from clients with project details, quotes, or agreements. The AI
               will extract invoice information automatically.
             </div>
+
+            {/* Regenerate Handle Section */}
+            <details className="mt-4">
+              <summary className="cursor-pointer text-[12px] text-[#101010]/50 hover:text-[#101010]/70 transition-colors">
+                Advanced options
+              </summary>
+              <div className="mt-3 p-3 border border-[#101010]/10 bg-[#F7F7F2]/50 space-y-2">
+                <p className="text-[12px] text-[#101010]/70">
+                  If your AI email address has been compromised or you want a
+                  new one, you can regenerate it. The old address will stop
+                  working immediately.
+                </p>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <button
+                      disabled={isRegenerating}
+                      className="text-[12px] text-red-600 hover:text-red-700 transition-colors disabled:opacity-50 inline-flex items-center gap-1.5"
+                    >
+                      {isRegenerating && (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      )}
+                      Regenerate email address
+                    </button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle className="text-[18px] font-medium text-[#101010]">
+                        Regenerate AI Email Address?
+                      </AlertDialogTitle>
+                      <AlertDialogDescription className="text-[13px] text-[#101010]/60">
+                        This will create a new AI email address and immediately
+                        disable the current one. Any emails sent to the old
+                        address will no longer work.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter className="gap-2">
+                      <AlertDialogCancel className="border border-[#101010]/10 hover:bg-[#F7F7F2] text-[#101010] text-[12px] px-4 py-2">
+                        Cancel
+                      </AlertDialogCancel>
+                      <AlertDialogAction
+                        className="bg-red-600 hover:bg-red-700 text-white text-[12px] font-medium px-4 py-2"
+                        onClick={handleRegenerate}
+                      >
+                        Regenerate
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </div>
+            </details>
           </>
         ) : (
           <div className="border border-dashed border-[#101010]/20 p-6 text-center">
             <Mail className="mx-auto h-8 w-8 text-[#101010]/30" />
             <p className="mt-2 text-[13px] text-[#101010]/60">
-              Unable to load workspace. Please try refreshing the page.
+              Unable to load AI email address. Please try refreshing the page.
             </p>
           </div>
         )}

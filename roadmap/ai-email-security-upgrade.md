@@ -168,10 +168,11 @@ Do NOT reveal:
 - [x] Implement generic error responses
 - [x] Update domain to `zerofinance.ai` (default in code)
 - [x] Add tRPC endpoints for handle management (`getAiEmailAddress`, `regenerateAiEmailHandle`)
-- [ ] Add UI in workspace settings
-- [ ] Update environment variables in production
-- [ ] Test security scenarios
-- [ ] Document user-facing instructions
+- [x] Add UI in workspace settings (integrations page with copy/regenerate)
+- [x] Update environment variables in `.env.example`
+- [ ] Deploy migration to production database
+- [ ] Configure Resend for `zerofinance.ai` inbound emails
+- [ ] Test security scenarios in staging
 
 ---
 
