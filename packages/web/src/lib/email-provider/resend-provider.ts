@@ -88,22 +88,35 @@ interface ResendAttachmentContent {
  * 3. We call Resend API to fetch full email content and attachments
  */
 export class ResendProvider implements EmailProvider {
-  private client: Resend;
+  private _client: Resend | null = null;
   private webhookSecret?: string;
   private svixWebhook?: Webhook;
 
   constructor() {
-    const apiKey = process.env.RESEND_API_KEY;
-    if (!apiKey) {
-      throw new Error('RESEND_API_KEY environment variable is required');
-    }
-    this.client = new Resend(apiKey);
+    // Lazy initialization - don't throw during build time
+    // The client will be initialized on first use
     this.webhookSecret = process.env.RESEND_WEBHOOK_SECRET;
 
     // Initialize Svix webhook verifier if secret is provided
     if (this.webhookSecret) {
       this.svixWebhook = new Webhook(this.webhookSecret);
     }
+  }
+
+  /**
+   * Get the Resend client, initializing lazily on first use.
+   * This allows the provider to be instantiated during build time
+   * without requiring RESEND_API_KEY to be present.
+   */
+  private get client(): Resend {
+    if (!this._client) {
+      const apiKey = process.env.RESEND_API_KEY;
+      if (!apiKey) {
+        throw new Error('RESEND_API_KEY environment variable is required');
+      }
+      this._client = new Resend(apiKey);
+    }
+    return this._client;
   }
 
   async send(options: SendEmailOptions): Promise<SendEmailResult> {
