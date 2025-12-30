@@ -109,6 +109,20 @@ export interface AttachmentTransactionMatch {
 }
 
 /**
+ * Payment account details for sharing
+ */
+export interface PaymentAccountDetails {
+  type: 'us_ach' | 'iban';
+  currency: string;
+  bankName: string | null;
+  routingNumber?: string | null;
+  accountNumber?: string | null;
+  iban?: string | null;
+  bicSwift?: string | null;
+  beneficiaryName: string;
+}
+
+/**
  * Pending action types for confirmation flow
  */
 export type AiEmailPendingAction =
@@ -140,6 +154,29 @@ export type AiEmailPendingAction =
       type: 'remove_attachment';
       bestMatch: AttachmentInfo & { transaction: TransactionMatch };
       alternatives: Array<AttachmentInfo & { transaction: TransactionMatch }>;
+    }
+  | {
+      type: 'send_payment_details';
+      recipientEmail: string;
+      recipientName?: string;
+      usdAccount: {
+        type: 'us_ach';
+        currency: string;
+        bankName: string | null;
+        routingNumber: string | null;
+        accountNumber: string | null;
+        beneficiaryName: string;
+      } | null;
+      eurAccount: {
+        type: 'iban';
+        currency: string;
+        bankName: string | null;
+        iban: string | null;
+        bicSwift: string | null;
+        beneficiaryName: string;
+      } | null;
+      senderName: string;
+      senderCompany?: string;
     };
 
 export interface AiEmailExtractedData {

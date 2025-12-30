@@ -1118,6 +1118,152 @@ export const alignRouter = router({
   }),
 
   /**
+   * Get formatted payment details for the workspace's main bank accounts.
+   * Returns structured USD (ACH) and EUR (IBAN) account details ready for display or sharing.
+   * This centralizes the logic from BankingInstructionsDisplay for server-side use.
+   */
+  getFormattedPaymentDetails: protectedProcedure.query(async ({ ctx }) => {
+    const workspaceId = ctx.workspaceId;
+    if (!workspaceId) {
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Workspace context is unavailable.',
+      });
+    }
+
+    // Get workspace funding sources from DB (filtered by workspace only)
+    const fundingSources = await db.query.userFundingSources.findMany({
+      where: eq(userFundingSources.workspaceId, workspaceId),
+    });
+
+    // Filter for Align-provided sources
+    const alignSources = fundingSources.filter(
+      (source) => source.sourceProvider === 'align',
+    );
+
+    // Get workspace details for beneficiary information and KYC status
+    const workspace = await db.query.workspaces.findFirst({
+      where: eq(workspaces.id, workspaceId),
+      columns: {
+        firstName: true,
+        lastName: true,
+        companyName: true,
+        beneficiaryType: true,
+        kycStatus: true,
+      },
+    });
+
+    const hasCompletedKyc = workspace?.kycStatus === 'approved';
+
+    // Filter accounts based on KYC status
+    const filteredSources = hasCompletedKyc
+      ? alignSources
+      : alignSources.filter((source) => source.accountTier === 'starter');
+
+    // Separate by tier
+    const starterAccounts = filteredSources.filter(
+      (acc) => acc.accountTier === 'starter',
+    );
+    const fullAccounts = filteredSources.filter(
+      (acc) => acc.accountTier === 'full',
+    );
+
+    // Prefer full accounts if available, otherwise use starter
+    const accountsToUse =
+      fullAccounts.length > 0 ? fullAccounts : starterAccounts;
+    const accountTier = fullAccounts.length > 0 ? 'full' : 'starter';
+
+    // Find USD (ACH) and EUR (IBAN) accounts
+    const usdAccount = accountsToUse.find(
+      (acc) => acc.sourceAccountType === 'us_ach',
+    );
+    const eurAccount = accountsToUse.find(
+      (acc) => acc.sourceAccountType === 'iban',
+    );
+
+    // Helper to get beneficiary name (mirrors client-side logic)
+    const getBeneficiaryName = (
+      account: typeof usdAccount,
+      isIban: boolean,
+    ): string => {
+      // SEPA/IBAN accounts route through Bridge
+      if (isIban) {
+        return 'Bridge Building Sp.z.o.o.';
+      }
+      if (account?.sourceBankBeneficiaryName) {
+        return account.sourceBankBeneficiaryName;
+      }
+      // US ACH shows user's name
+      if (workspace?.companyName) {
+        return workspace.companyName;
+      }
+      if (workspace?.firstName && workspace?.lastName) {
+        return `${workspace.firstName} ${workspace.lastName}`;
+      }
+      return 'Your account';
+    };
+
+    // Build structured response
+    const result: {
+      hasAccounts: boolean;
+      accountTier: 'starter' | 'full';
+      hasCompletedKyc: boolean;
+      usdAccount: {
+        type: 'us_ach';
+        currency: string;
+        bankName: string | null;
+        routingNumber: string | null;
+        accountNumber: string | null;
+        beneficiaryName: string;
+      } | null;
+      eurAccount: {
+        type: 'iban';
+        currency: string;
+        bankName: string | null;
+        iban: string | null;
+        bicSwift: string | null;
+        beneficiaryName: string;
+      } | null;
+      workspaceInfo: {
+        companyName: string | null;
+        firstName: string | null;
+        lastName: string | null;
+      };
+    } = {
+      hasAccounts: accountsToUse.length > 0,
+      accountTier,
+      hasCompletedKyc,
+      usdAccount: usdAccount
+        ? {
+            type: 'us_ach',
+            currency: usdAccount.sourceCurrency || 'USD',
+            bankName: usdAccount.sourceBankName,
+            routingNumber: usdAccount.sourceRoutingNumber,
+            accountNumber: usdAccount.sourceAccountNumber,
+            beneficiaryName: getBeneficiaryName(usdAccount, false),
+          }
+        : null,
+      eurAccount: eurAccount
+        ? {
+            type: 'iban',
+            currency: eurAccount.sourceCurrency || 'EUR',
+            bankName: eurAccount.sourceBankName,
+            iban: eurAccount.sourceIban,
+            bicSwift: eurAccount.sourceBicSwift,
+            beneficiaryName: getBeneficiaryName(eurAccount, true),
+          }
+        : null,
+      workspaceInfo: {
+        companyName: workspace?.companyName || null,
+        firstName: workspace?.firstName || null,
+        lastName: workspace?.lastName || null,
+      },
+    };
+
+    return result;
+  }),
+
+  /**
    * Get all virtual accounts from Align API
    */
   getAllVirtualAccounts: protectedProcedure.query(async ({ ctx }) => {

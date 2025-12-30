@@ -32,6 +32,7 @@ export function getSystemPrompt(
 - Propose bank transfers for user approval
 - Attach documents to transactions (receipts, invoices, contracts)
 - List and remove attachments from transactions
+- Get and share payment details (bank account info for receiving payments)
 
 ## CRITICAL: Be Proactive - Use Your Tools First
 ALWAYS use your tools to look up information BEFORE asking the user to provide or confirm it.
@@ -142,6 +143,21 @@ IMPORTANT: When user sends attachments, prefer attachAllDocuments for the best U
    - "Attach these invoices" [3 PDFs] → attachAllDocuments (matches each to best transaction)
    - "Match this invoice" [1 PDF] → attachAllDocuments (works for single files too)
    - "What's attached to my last transfer?" → findTransaction, listAttachments
+
+## Payment Details Flow
+
+1. When user asks for their own payment details:
+   - "What are my payment details?" / "Send me my bank info" / "How can someone pay me?"
+   - Call getPaymentDetails - this sends the details directly to the user (no confirmation needed)
+
+2. When user wants to share payment details with someone else:
+   - "Send my payment details to john@example.com" / "Share my bank info with Acme Corp"
+   - Call sendPaymentDetailsToRecipient - this REQUIRES confirmation before sending
+   - After user confirms with YES, call confirmSendPaymentDetails
+
+3. Payment details include:
+   - USD Account (ACH): Bank name, routing number, account number, beneficiary
+   - EUR Account (IBAN): Bank name, IBAN, BIC/SWIFT, beneficiary
 
 ## Email Formatting Rules
 - NO markdown (no ** or other formatting) - emails should be plain text
@@ -274,6 +290,17 @@ ${action.alternatives.length > 0 ? `- Alternatives:\n${altLabels}` : ''}
 If the user confirms (YES), remove the attachment.
 If the user picks an alternative (A, B, C), remove that attachment instead.
 If the user declines (NO, cancel), do not remove.
+`;
+    } else if (action.type === 'send_payment_details') {
+      contextSections += `
+
+## Pending Action
+The user wants to send their payment details to:
+- Recipient: ${action.recipientName ? `${action.recipientName} (${action.recipientEmail})` : action.recipientEmail}
+- Accounts to share: ${action.usdAccount ? 'USD (ACH)' : ''}${action.usdAccount && action.eurAccount ? ' and ' : ''}${action.eurAccount ? 'EUR (IBAN)' : ''}
+
+If the user confirms (YES), call confirmSendPaymentDetails.
+If the user declines (NO, cancel), do not send.
 `;
     }
   }
@@ -754,5 +781,200 @@ Try being more specific:
     body: `I couldn't find any attachments${params.searchQuery ? ` matching "${params.searchQuery}"` : ''} on your transactions.
 
 To attach a document, forward an email with the file attached and tell me which transaction to attach it to.`,
+  }),
+
+  /**
+   * Template for payment details (sent to user themselves).
+   */
+  paymentDetails: (params: {
+    accountTier: 'starter' | 'full';
+    usdAccount: {
+      bankName: string | null;
+      routingNumber: string | null;
+      accountNumber: string | null;
+      beneficiaryName: string;
+    } | null;
+    eurAccount: {
+      bankName: string | null;
+      iban: string | null;
+      bicSwift: string | null;
+      beneficiaryName: string;
+    } | null;
+    companyName: string | null;
+  }) => {
+    const tierLabel =
+      params.accountTier === 'full' ? 'Full Account' : 'Starter Account';
+    const limitNote =
+      params.accountTier === 'starter'
+        ? '\n\nNote: Starter accounts have a $10,000 deposit limit. Complete KYC verification to remove limits.'
+        : '';
+
+    let body = `Here are your 0 Finance payment details (${tierLabel}):\n`;
+
+    if (params.usdAccount) {
+      body += `
+━━━━━━━━━━━━━━━━━━━━━━━━
+USD Account (ACH & Wire)
+━━━━━━━━━━━━━━━━━━━━━━━━
+Bank Name: ${params.usdAccount.bankName || 'N/A'}
+Routing Number: ${params.usdAccount.routingNumber || 'N/A'}
+Account Number: ${params.usdAccount.accountNumber || 'N/A'}
+Beneficiary: ${params.usdAccount.beneficiaryName}
+`;
+    }
+
+    if (params.eurAccount) {
+      body += `
+━━━━━━━━━━━━━━━━━━━━━━━━
+EUR Account (SEPA / IBAN)
+━━━━━━━━━━━━━━━━━━━━━━━━
+Bank Name: ${params.eurAccount.bankName || 'N/A'}
+IBAN: ${params.eurAccount.iban || 'N/A'}
+BIC/SWIFT: ${params.eurAccount.bicSwift || 'N/A'}
+Beneficiary: ${params.eurAccount.beneficiaryName}
+`;
+    }
+
+    if (!params.usdAccount && !params.eurAccount) {
+      body = `You don't have any payment accounts set up yet. Please complete onboarding to get your bank account details.`;
+    }
+
+    body += limitNote;
+
+    return {
+      subject: 'Your 0 Finance Payment Details',
+      body,
+    };
+  },
+
+  /**
+   * Template for payment details confirmation (before sending to third party).
+   */
+  paymentDetailsConfirmation: (params: {
+    recipientEmail: string;
+    recipientName?: string;
+    accountTier: 'starter' | 'full';
+    usdAccount: {
+      bankName: string | null;
+      routingNumber: string | null;
+      accountNumber: string | null;
+      beneficiaryName: string;
+    } | null;
+    eurAccount: {
+      bankName: string | null;
+      iban: string | null;
+      bicSwift: string | null;
+      beneficiaryName: string;
+    } | null;
+  }) => {
+    const recipient = params.recipientName
+      ? `${params.recipientName} (${params.recipientEmail})`
+      : params.recipientEmail;
+
+    let accountSummary = '';
+    if (params.usdAccount && params.eurAccount) {
+      accountSummary = 'USD (ACH) and EUR (IBAN) accounts';
+    } else if (params.usdAccount) {
+      accountSummary = 'USD (ACH) account';
+    } else if (params.eurAccount) {
+      accountSummary = 'EUR (IBAN) account';
+    }
+
+    return {
+      subject: 'Send payment details?',
+      body: `Send your ${accountSummary} details to ${recipient}?
+
+This will share your bank account information so they can send you payments.
+
+Reply YES to send, or NO to cancel.`,
+    };
+  },
+
+  /**
+   * Template for payment details sent successfully.
+   */
+  paymentDetailsSent: (params: {
+    recipientEmail: string;
+    recipientName?: string;
+  }) => {
+    const recipient = params.recipientName
+      ? `${params.recipientName} (${params.recipientEmail})`
+      : params.recipientEmail;
+
+    return {
+      subject: 'Payment details sent',
+      body: `Done! Your payment details have been sent to ${recipient}.
+
+They can now use these details to send you payments via bank transfer.`,
+    };
+  },
+
+  /**
+   * Template for payment details email sent to third party.
+   */
+  paymentDetailsForRecipient: (params: {
+    senderName: string;
+    senderCompany?: string;
+    usdAccount: {
+      bankName: string | null;
+      routingNumber: string | null;
+      accountNumber: string | null;
+      beneficiaryName: string;
+    } | null;
+    eurAccount: {
+      bankName: string | null;
+      iban: string | null;
+      bicSwift: string | null;
+      beneficiaryName: string;
+    } | null;
+  }) => {
+    const fromLine = params.senderCompany
+      ? `${params.senderName} (${params.senderCompany})`
+      : params.senderName;
+
+    let body = `${fromLine} has shared their payment details with you:\n`;
+
+    if (params.usdAccount) {
+      body += `
+━━━━━━━━━━━━━━━━━━━━━━━━
+USD Account (ACH & Wire)
+━━━━━━━━━━━━━━━━━━━━━━━━
+Bank Name: ${params.usdAccount.bankName || 'N/A'}
+Routing Number: ${params.usdAccount.routingNumber || 'N/A'}
+Account Number: ${params.usdAccount.accountNumber || 'N/A'}
+Beneficiary: ${params.usdAccount.beneficiaryName}
+`;
+    }
+
+    if (params.eurAccount) {
+      body += `
+━━━━━━━━━━━━━━━━━━━━━━━━
+EUR Account (SEPA / IBAN)
+━━━━━━━━━━━━━━━━━━━━━━━━
+Bank Name: ${params.eurAccount.bankName || 'N/A'}
+IBAN: ${params.eurAccount.iban || 'N/A'}
+BIC/SWIFT: ${params.eurAccount.bicSwift || 'N/A'}
+Beneficiary: ${params.eurAccount.beneficiaryName}
+`;
+    }
+
+    body += `
+---
+Sent via 0 Finance (https://0.finance)`;
+
+    return {
+      subject: `Payment details from ${fromLine}`,
+      body,
+    };
+  },
+
+  /**
+   * Template for no payment accounts found.
+   */
+  noPaymentAccounts: () => ({
+    subject: 'No Payment Accounts',
+    body: `You don't have any payment accounts set up yet.
+
+Please complete onboarding at https://0.finance to get your bank account details.`,
   }),
 };

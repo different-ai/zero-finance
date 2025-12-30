@@ -31,7 +31,10 @@ import type {
 } from '@/db/schema/ai-email-sessions';
 import { getEmailProviderSingleton } from '@/lib/email-provider';
 import { getSpendableBalanceByWorkspace } from '@/server/services/spendable-balance';
-import { listBankAccountsByWorkspace } from '@/server/services/bank-accounts';
+import {
+  listBankAccountsByWorkspace,
+  getFormattedPaymentDetailsByWorkspace,
+} from '@/server/services/bank-accounts';
 import { db } from '@/db';
 import {
   userDestinationBankAccounts,
@@ -2342,6 +2345,233 @@ export async function POST(request: NextRequest) {
                 error instanceof Error
                   ? error.message
                   : 'Failed to remove attachment',
+              success: false,
+            };
+          }
+        },
+      }),
+
+      getPaymentDetails: tool({
+        description:
+          "Get the user's payment details (bank account information for receiving payments). Use this when user asks for their payment details, bank info, or how to receive payments. Returns USD (ACH) and EUR (IBAN) account details.",
+        inputSchema: z.object({}),
+        execute: async () => {
+          console.log('[AI Email] Tool: getPaymentDetails called');
+
+          const result = await getFormattedPaymentDetailsByWorkspace(
+            toolContext.workspaceResult.workspaceId,
+          );
+
+          if ('error' in result) {
+            return {
+              error: result.error,
+              success: false,
+            };
+          }
+
+          if (!result.hasAccounts) {
+            // Send email about no accounts
+            const template = emailTemplates.noPaymentAccounts();
+            await sendReply(
+              toolContext.email.from,
+              toolContext.replySubject,
+              template.body,
+              toolContext.messageId,
+              toolContext.workspaceResult.workspaceId,
+              toolContext.sessionThreadId,
+            );
+            return {
+              success: true,
+              message: 'No payment accounts found',
+              hasAccounts: false,
+            };
+          }
+
+          // Send payment details to user
+          const template = emailTemplates.paymentDetails({
+            accountTier: result.accountTier,
+            usdAccount: result.usdAccount,
+            eurAccount: result.eurAccount,
+            companyName: result.workspaceInfo.companyName,
+          });
+
+          await sendReply(
+            toolContext.email.from,
+            toolContext.replySubject,
+            template.body,
+            toolContext.messageId,
+            toolContext.workspaceResult.workspaceId,
+            toolContext.sessionThreadId,
+          );
+
+          return {
+            success: true,
+            message: 'Payment details sent to user',
+            hasAccounts: true,
+            accountTier: result.accountTier,
+            hasUsd: !!result.usdAccount,
+            hasEur: !!result.eurAccount,
+          };
+        },
+      }),
+
+      sendPaymentDetailsToRecipient: tool({
+        description:
+          'Send the user\'s payment details to a third party (e.g., a client who needs to pay them). ALWAYS requires user confirmation before sending. Use this when user says "send my payment details to X" or "share my bank info with X".',
+        inputSchema: z.object({
+          recipientEmail: z
+            .string()
+            .email()
+            .describe('Email address to send payment details to'),
+          recipientName: z
+            .string()
+            .optional()
+            .describe('Name of the recipient (optional)'),
+        }),
+        execute: async (params) => {
+          console.log(
+            '[AI Email] Tool: sendPaymentDetailsToRecipient called with:',
+            params,
+          );
+
+          const result = await getFormattedPaymentDetailsByWorkspace(
+            toolContext.workspaceResult.workspaceId,
+          );
+
+          if ('error' in result) {
+            return {
+              error: result.error,
+              success: false,
+            };
+          }
+
+          if (!result.hasAccounts) {
+            const template = emailTemplates.noPaymentAccounts();
+            await sendReply(
+              toolContext.email.from,
+              toolContext.replySubject,
+              template.body,
+              toolContext.messageId,
+              toolContext.workspaceResult.workspaceId,
+              toolContext.sessionThreadId,
+            );
+            return {
+              success: false,
+              error: 'No payment accounts to share',
+            };
+          }
+
+          // Store pending action for confirmation
+          const pendingAction: AiEmailPendingAction = {
+            type: 'send_payment_details',
+            recipientEmail: params.recipientEmail,
+            recipientName: params.recipientName,
+            usdAccount: result.usdAccount,
+            eurAccount: result.eurAccount,
+            senderName:
+              result.workspaceInfo.companyName ||
+              (result.workspaceInfo.firstName && result.workspaceInfo.lastName
+                ? `${result.workspaceInfo.firstName} ${result.workspaceInfo.lastName}`
+                : 'Unknown'),
+            senderCompany: result.workspaceInfo.companyName || undefined,
+          };
+
+          await updateSession(toolContext.session.id, {
+            pendingAction,
+            state: 'awaiting_confirmation',
+          });
+
+          // Send confirmation request
+          const template = emailTemplates.paymentDetailsConfirmation({
+            recipientEmail: params.recipientEmail,
+            recipientName: params.recipientName,
+            accountTier: result.accountTier,
+            usdAccount: result.usdAccount,
+            eurAccount: result.eurAccount,
+          });
+
+          await sendReply(
+            toolContext.email.from,
+            toolContext.replySubject,
+            template.body + toolContext.quotedOriginal,
+            toolContext.messageId,
+            toolContext.workspaceResult.workspaceId,
+            toolContext.sessionThreadId,
+          );
+
+          return {
+            success: true,
+            message: 'Confirmation request sent to user',
+            awaitingConfirmation: true,
+          };
+        },
+      }),
+
+      confirmSendPaymentDetails: tool({
+        description:
+          'Complete sending payment details after user confirms with YES. Call this when user replies YES to a payment details confirmation.',
+        inputSchema: z.object({}),
+        execute: async () => {
+          console.log('[AI Email] Tool: confirmSendPaymentDetails called');
+
+          const pendingAction = toolContext.session.pendingAction;
+          if (!pendingAction || pendingAction.type !== 'send_payment_details') {
+            return {
+              error: 'No pending payment details to send',
+              success: false,
+            };
+          }
+
+          try {
+            // Send payment details to recipient
+            const recipientTemplate = emailTemplates.paymentDetailsForRecipient(
+              {
+                senderName: pendingAction.senderName,
+                senderCompany: pendingAction.senderCompany,
+                usdAccount: pendingAction.usdAccount,
+                eurAccount: pendingAction.eurAccount,
+              },
+            );
+
+            await emailProvider.send({
+              from: `${pendingAction.senderName} via 0 Finance <payments@ai.0.finance>`,
+              to: pendingAction.recipientEmail,
+              subject: recipientTemplate.subject,
+              text: recipientTemplate.body,
+            });
+
+            // Clear pending action
+            await updateSession(toolContext.session.id, {
+              state: 'completed',
+              pendingAction: null,
+            });
+
+            // Send success confirmation to user
+            const successTemplate = emailTemplates.paymentDetailsSent({
+              recipientEmail: pendingAction.recipientEmail,
+              recipientName: pendingAction.recipientName,
+            });
+
+            await sendReply(
+              toolContext.email.from,
+              toolContext.replySubject,
+              successTemplate.body,
+              toolContext.messageId,
+              toolContext.workspaceResult.workspaceId,
+              toolContext.sessionThreadId,
+            );
+
+            return {
+              success: true,
+              message: `Payment details sent to ${pendingAction.recipientEmail}`,
+            };
+          } catch (error) {
+            console.error('[AI Email] confirmSendPaymentDetails error:', error);
+            return {
+              error:
+                error instanceof Error
+                  ? error.message
+                  : 'Failed to send payment details',
               success: false,
             };
           }
