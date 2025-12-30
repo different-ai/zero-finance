@@ -1,5 +1,11 @@
 # Transaction Attachments - Roadmap
 
+> **Status**: Phase 1 ✅ | Phase 2 ✅ | Phase 2.2 ✅ | Phase 3 & 4 NOT STARTED
+>
+> **Last Updated**: December 2024
+
+---
+
 ## Problem Statement
 
 Quinn's request: "Ability to upload an attachment to a transaction I send, so that the invoice stays stored with the transaction in my history."
@@ -10,28 +16,45 @@ Quinn's request: "Ability to upload an attachment to a transaction I send, so th
 
 ---
 
-## Current State
+## Current State (Updated Dec 2024)
 
-### What We Have
+### What's Implemented ✅
 
-1. **Vercel Blob Storage** - Already configured
-   - Package: `@vercel/blob` installed
-   - Upload route: `/api/upload/route.ts` (generic, 10MB limit)
-   - No blob store created yet (need `BLOB_READ_WRITE_TOKEN`)
+1. **Database Schema** - `packages/web/src/db/schema/transaction-attachments.ts`
+   - Polymorphic attachment linking (invoice, offramp, crypto_incoming, crypto_outgoing, bank_receive)
+   - Workspace scoping with proper indexes
+   - Soft delete support
+   - Upload source tracking (manual, ai_email, mcp)
 
-2. **Transaction History** - `unified-activity.tsx`
-   - Merges bank + crypto transactions
-   - Expandable detail view per transaction
-   - No attachment support
+2. **tRPC Router** - `packages/web/src/server/routers/attachments-router.ts`
+   - `list` - Get attachments for a transaction
+   - `create` - Create attachment record after blob upload
+   - `delete` - Soft delete attachment
+   - `get` - Get single attachment by ID
 
-3. **AI Email Agent** - Already parses attachments!
-   - `attachment-parser.ts` handles PDFs, images, text
-   - Attachments processed by AI for invoice extraction
-   - **Gap**: Attachments discarded after processing, not stored
+3. **Manual Upload UI** - `packages/web/src/app/(authenticated)/dashboard/(bank)/components/dashboard/transaction-attachments.tsx`
+   - File picker with upload
+   - View/download attachments
+   - Delete attachments
 
-4. **MCP Server** - JSON-RPC based
-   - Tools: `list_saved_bank_accounts`, `get_balance`, `propose_bank_transfer`
-   - File uploads possible via base64 but clunky
+4. **AI Email Integration** - `packages/web/src/app/api/ai-email/route.ts`
+   - `storeInvoiceAttachments()` function
+   - Auto-stores PDF/image attachments when AI creates invoice from forwarded email
+
+5. **Invoice Attachments Display** - `packages/web/src/components/invoice/invoice-attachments.tsx`
+   - Read-only view for invoice detail pages
+   - Shows "via email" badge for AI-uploaded attachments
+
+6. **Invoice → Payment Linking** - `packages/web/src/lib/attachments/copy-attachments.ts`
+   - `copyInvoiceAttachmentsToOfframp()` function
+   - Integrated into `align-router.ts` offramp creation procedures
+   - `linkedInvoiceId` field on `offrampTransfers` table
+
+### What's NOT Implemented Yet
+
+1. **UI for Invoice Payment Linking** - Frontend needs to pass `linkedInvoiceId` when creating offramp
+2. **Smart Features** (Phase 3) - AI categorization, smart matching, bulk export
+3. **MCP Integration** (Phase 4) - `attach_document` tool for AI agents
 
 ---
 
@@ -283,32 +306,46 @@ if (invoiceCreated && preparedAttachments.length > 0) {
 }
 ```
 
-#### 2.2 Link Invoice Attachments to Payments
+#### 2.2 Link Invoice Attachments to Payments ✅ IMPLEMENTED
 
-When an invoice is paid (offramp created to pay it):
+When an invoice is paid (offramp created to pay it), attachments are automatically copied.
+
+**Implementation Details:**
+
+1. **Schema Change** - Added `linkedInvoiceId` to `offrampTransfers` table:
+
+   ```typescript
+   // packages/web/src/db/schema.ts
+   linkedInvoiceId: text('linked_invoice_id').references(
+     () => userRequestsTable.id,
+     { onDelete: 'set null' },
+   ),
+   ```
+
+2. **Utility Function** - `packages/web/src/lib/attachments/copy-attachments.ts`:
+
+   ```typescript
+   export async function copyInvoiceAttachmentsToOfframp(
+     invoiceId: string,
+     offrampId: string,
+     workspaceId: string,
+   ): Promise<number>;
+   ```
+
+3. **Integration** - Updated `align-router.ts` procedures:
+   - `createOfframpTransferFromQuote` - accepts optional `linkedInvoiceId`
+   - `createOfframpTransfer` - accepts optional `linkedInvoiceId` in both manual and saved bank account modes
+   - Both procedures automatically copy attachments after offramp creation
+
+**Usage:**
 
 ```typescript
-// When creating offramp for invoice payment:
-if (linkedInvoiceId) {
-  // Copy invoice attachments to the offramp transaction
-  const invoiceAttachments = await db.query.transactionAttachments.findMany({
-    where: and(
-      eq(transactionAttachments.transactionType, 'invoice'),
-      eq(transactionAttachments.transactionId, linkedInvoiceId),
-    ),
-  });
-
-  // Link same blobs to offramp (no re-upload needed)
-  for (const att of invoiceAttachments) {
-    await db.insert(transactionAttachments).values({
-      ...att,
-      id: undefined, // new ID
-      transactionType: 'offramp',
-      transactionId: offrampId,
-      uploadSource: 'ai_email', // inherited
-    });
-  }
-}
+// When creating an offramp to pay an invoice:
+const result = await trpc.align.createOfframpTransferFromQuote.mutate({
+  quoteId: '...',
+  // ... other fields
+  linkedInvoiceId: invoice.id, // Optional: links invoice attachments
+});
 ```
 
 ---

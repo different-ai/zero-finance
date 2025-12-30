@@ -1654,6 +1654,8 @@ export const alignRouter = router({
           'uaefts',
         ]),
         feeAmount: z.string(),
+        // Optional: Link to invoice being paid (for attachment copying)
+        linkedInvoiceId: z.string().uuid().optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -1727,28 +1729,57 @@ export const alignRouter = router({
         );
 
         // Save transfer details to our database
-        await db.insert(offrampTransfers).values({
-          userId: userId,
-          workspaceId: workspace.id,
-          alignTransferId: alignTransfer.id,
-          status: alignTransfer.status as any,
-          amountToSend: input.sourceAmount,
-          destinationCurrency: input.destinationCurrency,
-          destinationPaymentRails: input.destinationPaymentRails,
-          destinationBankAccountSnapshot: JSON.stringify(bankAccount),
-          depositAmount: alignTransfer.quote.deposit_amount,
-          depositToken: alignTransfer.quote.deposit_token,
-          depositNetwork: alignTransfer.quote.deposit_network,
-          depositAddress: alignTransfer.quote.deposit_blockchain_address,
-          feeAmount: input.feeAmount,
-          quoteExpiresAt: alignTransfer.quote.expires_at
-            ? new Date(alignTransfer.quote.expires_at)
-            : null,
-        });
+        const [savedTransfer] = await db
+          .insert(offrampTransfers)
+          .values({
+            userId: userId,
+            workspaceId: workspace.id,
+            alignTransferId: alignTransfer.id,
+            status: alignTransfer.status as any,
+            amountToSend: input.sourceAmount,
+            destinationCurrency: input.destinationCurrency,
+            destinationPaymentRails: input.destinationPaymentRails,
+            destinationBankAccountSnapshot: JSON.stringify(bankAccount),
+            depositAmount: alignTransfer.quote.deposit_amount,
+            depositToken: alignTransfer.quote.deposit_token,
+            depositNetwork: alignTransfer.quote.deposit_network,
+            depositAddress: alignTransfer.quote.deposit_blockchain_address,
+            feeAmount: input.feeAmount,
+            quoteExpiresAt: alignTransfer.quote.expires_at
+              ? new Date(alignTransfer.quote.expires_at)
+              : null,
+            linkedInvoiceId: input.linkedInvoiceId,
+          })
+          .returning();
 
         console.log(
           `[createOfframpTransferFromQuote] Saved transfer ${alignTransfer.id} to DB for user ${userId}`,
         );
+
+        // If linked to an invoice, copy attachments from invoice to offramp
+        if (input.linkedInvoiceId && savedTransfer) {
+          try {
+            const { copyInvoiceAttachmentsToOfframp } = await import(
+              '@/lib/attachments/copy-attachments'
+            );
+            const copiedCount = await copyInvoiceAttachmentsToOfframp(
+              input.linkedInvoiceId,
+              savedTransfer.id,
+              workspace.id,
+            );
+            if (copiedCount > 0) {
+              console.log(
+                `[createOfframpTransferFromQuote] Copied ${copiedCount} attachments from invoice ${input.linkedInvoiceId} to offramp ${savedTransfer.id}`,
+              );
+            }
+          } catch (attachmentError) {
+            // Don't fail the transfer if attachment copying fails
+            console.error(
+              '[createOfframpTransferFromQuote] Failed to copy attachments:',
+              attachmentError,
+            );
+          }
+        }
 
         return {
           alignTransferId: alignTransfer.id,
@@ -1834,6 +1865,8 @@ export const alignRouter = router({
           routingNumber: z.string().optional(),
           ibanNumber: z.string().optional(),
           bicSwift: z.string().optional(), // FE sends bicSwift
+          // Optional: Link to invoice being paid (for attachment copying)
+          linkedInvoiceId: z.string().uuid().optional(),
         }),
         // Option 2: Saved bank account ID
         z.object({
@@ -1871,6 +1904,8 @@ export const alignRouter = router({
             'instant_sepa',
           ]),
           destinationBankAccountId: z.string().uuid('Invalid saved account ID'),
+          // Optional: Link to invoice being paid (for attachment copying)
+          linkedInvoiceId: z.string().uuid().optional(),
         }),
       ]),
     )
@@ -2162,32 +2197,61 @@ export const alignRouter = router({
 
         // Save transfer details to our database
         // Use destructured common fields for DB insert as well
-        await db.insert(offrampTransfers).values({
-          userId: userId,
-          workspaceId: workspace.id,
-          alignTransferId: alignTransfer.id,
-          status: alignTransfer.status as any,
-          amountToSend: amount,
-          destinationCurrency: destinationCurrency,
-          destinationPaymentRails: destinationPaymentRails,
-          // Store snapshot of bank details used (handle both input types)
-          destinationBankAccountSnapshot: JSON.stringify(
-            originalBankAccountSnapshot,
-          ),
-          // Store quote details
-          depositAmount: alignTransfer.quote.deposit_amount,
-          depositToken: alignTransfer.quote.deposit_token,
-          depositNetwork: alignTransfer.quote.deposit_network,
-          depositAddress: alignTransfer.quote.deposit_blockchain_address,
-          feeAmount: alignTransfer.quote.fee_amount,
-          quoteExpiresAt: alignTransfer.quote.expires_at
-            ? new Date(alignTransfer.quote.expires_at)
-            : null,
-        });
+        const [savedTransfer] = await db
+          .insert(offrampTransfers)
+          .values({
+            userId: userId,
+            workspaceId: workspace.id,
+            alignTransferId: alignTransfer.id,
+            status: alignTransfer.status as any,
+            amountToSend: amount,
+            destinationCurrency: destinationCurrency,
+            destinationPaymentRails: destinationPaymentRails,
+            // Store snapshot of bank details used (handle both input types)
+            destinationBankAccountSnapshot: JSON.stringify(
+              originalBankAccountSnapshot,
+            ),
+            // Store quote details
+            depositAmount: alignTransfer.quote.deposit_amount,
+            depositToken: alignTransfer.quote.deposit_token,
+            depositNetwork: alignTransfer.quote.deposit_network,
+            depositAddress: alignTransfer.quote.deposit_blockchain_address,
+            feeAmount: alignTransfer.quote.fee_amount,
+            quoteExpiresAt: alignTransfer.quote.expires_at
+              ? new Date(alignTransfer.quote.expires_at)
+              : null,
+            linkedInvoiceId: input.linkedInvoiceId,
+          })
+          .returning();
 
         console.log(
           `Saved offramp transfer ${alignTransfer.id} to DB for user ${userId}`,
         );
+
+        // If linked to an invoice, copy attachments from invoice to offramp
+        if (input.linkedInvoiceId && savedTransfer) {
+          try {
+            const { copyInvoiceAttachmentsToOfframp } = await import(
+              '@/lib/attachments/copy-attachments'
+            );
+            const copiedCount = await copyInvoiceAttachmentsToOfframp(
+              input.linkedInvoiceId,
+              savedTransfer.id,
+              workspace.id,
+            );
+            if (copiedCount > 0) {
+              console.log(
+                `[createOfframpTransfer] Copied ${copiedCount} attachments from invoice ${input.linkedInvoiceId} to offramp ${savedTransfer.id}`,
+              );
+            }
+          } catch (attachmentError) {
+            // Don't fail the transfer if attachment copying fails
+            console.error(
+              '[createOfframpTransfer] Failed to copy attachments:',
+              attachmentError,
+            );
+          }
+        }
 
         // Return details needed for the next step
         return {

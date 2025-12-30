@@ -407,6 +407,13 @@ export const offrampTransfers = pgTable(
     proposedByAgent: boolean('proposed_by_agent').default(false).notNull(),
     agentProposalMessage: text('agent_proposal_message'), // Context from agent
 
+    // Invoice Linking - for payment linking feature
+    // When an offramp is created to pay an invoice, link them so attachments can be shared
+    linkedInvoiceId: text('linked_invoice_id').references(
+      () => userRequestsTable.id,
+      { onDelete: 'set null' },
+    ),
+
     // Timestamps
     createdAt: timestamp('created_at', { withTimezone: true })
       .defaultNow()
@@ -424,6 +431,9 @@ export const offrampTransfers = pgTable(
       ),
       alignIdIdx: index('offramp_transfers_align_id_idx').on(
         table.alignTransferId,
+      ),
+      linkedInvoiceIdx: index('offramp_transfers_linked_invoice_idx').on(
+        table.linkedInvoiceId,
       ),
     };
   },
