@@ -14,11 +14,11 @@ export { SESProvider } from './ses-provider';
  *   await provider.send({ from, to, subject, text });
  *
  * Environment variables:
- *   EMAIL_PROVIDER: 'resend' | 'ses' (default: 'ses')
+ *   EMAIL_PROVIDER: 'resend' | 'ses' (default: 'resend')
  */
 export function getEmailProvider(): EmailProvider {
   const providerType = (process.env.EMAIL_PROVIDER ||
-    'ses') as EmailProviderType;
+    'resend') as EmailProviderType;
 
   switch (providerType) {
     case 'resend':
@@ -27,9 +27,9 @@ export function getEmailProvider(): EmailProvider {
       return new SESProvider();
     default:
       console.warn(
-        `[EmailProvider] Unknown provider "${providerType}", falling back to SES`,
+        `[EmailProvider] Unknown provider "${providerType}", falling back to Resend`,
       );
-      return new SESProvider();
+      return new ResendProvider();
   }
 }
 
