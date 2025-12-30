@@ -155,6 +155,10 @@ function formatQuotedMessage(
 /**
  * Send an email reply to the user.
  * @param workspaceId - The workspace ID to use in the reply-to address so users can hit "reply"
+ * @param sessionThreadId - The original session's threadId to include in References for thread continuity.
+ *                          This ensures that when the user replies to our email, we can find the original session.
+ *                          Without this, replies would create new sessions because the In-Reply-To header
+ *                          would point to our SES Message-ID, not the original Gmail Message-ID.
  */
 async function sendReply(
   to: string,
@@ -162,11 +166,20 @@ async function sendReply(
   body: string,
   inReplyTo?: string,
   workspaceId?: string,
+  sessionThreadId?: string,
 ): Promise<void> {
   const emailHeaders: Record<string, string> = {};
   if (inReplyTo) {
     emailHeaders['In-Reply-To'] = inReplyTo;
-    emailHeaders['References'] = inReplyTo;
+    // Build References header with both the immediate parent AND the original session threadId
+    // This ensures session lookup can find the original session when user replies
+    // References format: oldest-message-id ... newest-message-id
+    const references: string[] = [];
+    if (sessionThreadId && sessionThreadId !== inReplyTo) {
+      references.push(sessionThreadId);
+    }
+    references.push(inReplyTo);
+    emailHeaders['References'] = references.join(' ');
   }
 
   // Use workspace-specific address so users can hit "reply"
@@ -717,6 +730,7 @@ export async function POST(request: NextRequest) {
             responseTemplate.body,
             messageId,
             workspaceResult.workspaceId,
+            session.threadId,
           );
 
           await updateSession(session.id, {
@@ -733,6 +747,7 @@ export async function POST(request: NextRequest) {
             cancelledTemplate.body,
             messageId,
             workspaceResult.workspaceId,
+            session.threadId,
           );
           await updateSession(session.id, {
             state: 'completed',
@@ -809,6 +824,7 @@ export async function POST(request: NextRequest) {
       replySubject,
       quotedOriginal,
       preparedAttachments, // Include attachments for invoice creation
+      sessionThreadId: session.threadId, // Original session threadId for email threading
     };
 
     console.log('[AI Email] Starting AI processing with tools...');
@@ -901,6 +917,7 @@ export async function POST(request: NextRequest) {
             template.body + toolContext.quotedOriginal,
             toolContext.messageId,
             toolContext.workspaceResult.workspaceId,
+            toolContext.sessionThreadId,
           );
 
           return {
@@ -923,6 +940,7 @@ export async function POST(request: NextRequest) {
             body + toolContext.quotedOriginal,
             toolContext.messageId,
             toolContext.workspaceResult.workspaceId,
+            toolContext.sessionThreadId,
           );
           return { success: true };
         },
@@ -1597,6 +1615,7 @@ export async function POST(request: NextRequest) {
             template.body + toolContext.quotedOriginal,
             toolContext.messageId,
             toolContext.workspaceResult.workspaceId,
+            toolContext.sessionThreadId,
           );
 
           return {
@@ -1782,6 +1801,7 @@ export async function POST(request: NextRequest) {
             template.body + toolContext.quotedOriginal,
             toolContext.messageId,
             toolContext.workspaceResult.workspaceId,
+            toolContext.sessionThreadId,
           );
 
           return {
@@ -1882,6 +1902,7 @@ export async function POST(request: NextRequest) {
             template.body,
             toolContext.messageId,
             toolContext.workspaceResult.workspaceId,
+            toolContext.sessionThreadId,
           );
 
           return {
@@ -1974,6 +1995,7 @@ export async function POST(request: NextRequest) {
               template.body,
               toolContext.messageId,
               toolContext.workspaceResult.workspaceId,
+              toolContext.sessionThreadId,
             );
 
             return {
@@ -2230,6 +2252,7 @@ export async function POST(request: NextRequest) {
             template.body + toolContext.quotedOriginal,
             toolContext.messageId,
             toolContext.workspaceResult.workspaceId,
+            toolContext.sessionThreadId,
           );
 
           return {
@@ -2305,6 +2328,7 @@ export async function POST(request: NextRequest) {
               template.body,
               toolContext.messageId,
               toolContext.workspaceResult.workspaceId,
+              toolContext.sessionThreadId,
             );
 
             return {
@@ -2376,6 +2400,7 @@ export async function POST(request: NextRequest) {
         result.text + quotedOriginal,
         messageId,
         workspaceResult.workspaceId,
+        session.threadId,
       );
     }
 

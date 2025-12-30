@@ -20,12 +20,14 @@ The KYC Status Worker is a scheduled job that periodically checks for users whos
 ## Running the Worker
 
 ### Manually (for testing)
+
 ```bash
 cd packages/web
 pnpm kyc-status:worker
 ```
 
 ### As a Cron Job
+
 The worker is designed to be run as a scheduled cron job. Example cron configuration:
 
 ```bash
@@ -34,16 +36,18 @@ The worker is designed to be run as a scheduled cron job. Example cron configura
 ```
 
 ### Environment Variables Required
+
 - `ALIGN_API_KEY`: API key for Align service
 - `ALIGN_API_BASE_URL`: Base URL for Align API
 - `LOOPS_API_KEY`: API key for Loops email service
 - `NEXT_PUBLIC_PRIVY_APP_ID`: Privy application ID
 - `PRIVY_APP_SECRET`: Privy application secret
-- `DATABASE_URL`: PostgreSQL connection string
+- `POSTGRES_URL`: PostgreSQL connection string
 
 ## Testing
 
 Run the unit tests:
+
 ```bash
 cd packages/web
 pnpm test kyc-status-worker.test.ts
@@ -52,12 +56,14 @@ pnpm test kyc-status-worker.test.ts
 ## Monitoring
 
 The worker logs detailed information about its operations:
+
 - Number of users checked
 - Status changes detected
 - Notifications sent
 - Any errors encountered
 
 Example log output:
+
 ```
 [kyc-status-worker] Starting KYC status check...
 [kyc-status-worker] Found 5 users to check
@@ -75,4 +81,4 @@ Example log output:
 ## Performance Considerations
 
 - The worker includes a 100ms delay between API calls to avoid rate limiting
-- Consider adjusting the cron frequency based on your user volume and API rate limits 
+- Consider adjusting the cron frequency based on your user volume and API rate limits
