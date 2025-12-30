@@ -63,9 +63,10 @@ export interface AttachmentInfo {
 
 /**
  * Attachment-to-transaction match for multi-attach
+ * Stores the temp blob URL so attachment persists across confirmation round-trip
  */
 export interface AttachmentTransactionMatch {
-  attachmentIndex: number;
+  tempBlobUrl: string; // Uploaded to Vercel Blob immediately
   filename: string;
   contentType: string;
   fileSize: number;
@@ -90,7 +91,8 @@ export type AiEmailPendingAction =
       type: 'attach_document';
       bestMatch: TransactionMatch;
       alternatives: TransactionMatch[];
-      attachmentIndex: number; // Index in preparedAttachments
+      // Attachment is uploaded to Vercel Blob immediately so it persists across confirmation round-trip
+      tempBlobUrl: string; // Already uploaded to attachments/temp/{sessionId}/{filename}
       attachmentFilename: string;
       attachmentContentType: string;
       attachmentSize: number;

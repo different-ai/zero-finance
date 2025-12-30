@@ -1499,15 +1499,30 @@ export async function POST(request: NextRequest) {
               });
           })();
 
-          // Store pending action for confirmation
+          // Upload attachment to Vercel Blob IMMEDIATELY so it persists across confirmation round-trip
+          // This is critical: when user replies "YES", the reply email has no attachment
+          const fileBuffer = Buffer.from(attachment.base64Content, 'base64');
+          const tempBlobPath = `attachments/temp/${toolContext.session.id}/${attachment.filename}`;
+
+          console.log(
+            `[AI Email] Uploading attachment to temp blob: ${tempBlobPath}`,
+          );
+          const tempBlob = await put(tempBlobPath, fileBuffer, {
+            access: 'public',
+            contentType: attachment.contentType,
+            addRandomSuffix: true,
+          });
+          console.log(`[AI Email] Uploaded to: ${tempBlob.url}`);
+
+          // Store pending action with blob URL (not attachment index)
           const pendingAction: AiEmailPendingAction = {
             type: 'attach_document',
             bestMatch: result,
             alternatives,
-            attachmentIndex: params.attachmentIndex,
+            tempBlobUrl: tempBlob.url, // Persisted in Vercel Blob
             attachmentFilename: attachment.filename,
             attachmentContentType: attachment.contentType,
-            attachmentSize: attachment.base64Content.length * 0.75, // Approximate decoded size
+            attachmentSize: fileBuffer.length,
           };
 
           await updateSession(toolContext.session.id, {
@@ -1516,9 +1531,7 @@ export async function POST(request: NextRequest) {
           });
 
           // Format file size
-          const fileSizeKB = Math.round(
-            (attachment.base64Content.length * 0.75) / 1024,
-          );
+          const fileSizeKB = Math.round(fileBuffer.length / 1024);
           const fileSize =
             fileSizeKB > 1024
               ? `${(fileSizeKB / 1024).toFixed(1)} MB`
@@ -1638,11 +1651,14 @@ export async function POST(request: NextRequest) {
             };
           });
 
-          // Match each attachment to a transaction
-          // For now, use simple matching: first attachment to first transaction, etc.
-          // In the future, we can use AI to read PDFs and extract vendor/amount for smarter matching
+          // Upload ALL attachments to Vercel Blob IMMEDIATELY
+          // This is critical: when user replies "YES", the reply email has no attachments
+          console.log(
+            `[AI Email] Uploading ${supportedAttachments.length} attachments to temp blob storage`,
+          );
+
           const matches: Array<{
-            attachmentIndex: number;
+            tempBlobUrl: string;
             filename: string;
             contentType: string;
             fileSize: number;
@@ -1651,8 +1667,6 @@ export async function POST(request: NextRequest) {
 
           for (let i = 0; i < supportedAttachments.length; i++) {
             const attachment = supportedAttachments[i];
-            const attachmentIndex =
-              toolContext.preparedAttachments.indexOf(attachment);
 
             // Find best matching transaction (not already used)
             const usedTxIds = matches.map((m) => m.transaction.id);
@@ -1661,11 +1675,27 @@ export async function POST(request: NextRequest) {
             );
 
             if (availableTx) {
+              // Upload to temp blob storage
+              const fileBuffer = Buffer.from(
+                attachment.base64Content!,
+                'base64',
+              );
+              const tempBlobPath = `attachments/temp/${toolContext.session.id}/${attachment.filename}`;
+
+              const tempBlob = await put(tempBlobPath, fileBuffer, {
+                access: 'public',
+                contentType: attachment.contentType,
+                addRandomSuffix: true,
+              });
+              console.log(
+                `[AI Email] Uploaded ${attachment.filename} to: ${tempBlob.url}`,
+              );
+
               matches.push({
-                attachmentIndex,
+                tempBlobUrl: tempBlob.url,
                 filename: attachment.filename,
                 contentType: attachment.contentType,
-                fileSize: Math.round(attachment.base64Content!.length * 0.75),
+                fileSize: fileBuffer.length,
                 transaction: availableTx,
               });
             }
@@ -1678,11 +1708,11 @@ export async function POST(request: NextRequest) {
             };
           }
 
-          // Store pending action
+          // Store pending action with blob URLs (not attachment indices)
           const pendingAction: AiEmailPendingAction = {
             type: 'attach_multiple',
             matches: matches.map((m) => ({
-              attachmentIndex: m.attachmentIndex,
+              tempBlobUrl: m.tempBlobUrl,
               filename: m.filename,
               contentType: m.contentType,
               fileSize: m.fileSize,
@@ -1750,49 +1780,36 @@ export async function POST(request: NextRequest) {
           }> = [];
 
           for (const match of pendingAction.matches) {
-            const attachment =
-              toolContext.preparedAttachments[match.attachmentIndex];
-            if (!attachment || !attachment.base64Content) {
+            // Attachment was already uploaded to temp blob storage when user first sent the email
+            // Now we just need to create the DB record pointing to it
+            // The tempBlobUrl is already a permanent Vercel Blob URL
+
+            if (!match.tempBlobUrl) {
               results.push({
                 filename: match.filename,
                 success: false,
-                error: 'Attachment no longer available',
+                error: 'Attachment blob URL not found in pending action',
               });
               continue;
             }
 
             try {
-              // Upload to Vercel Blob
-              const fileBuffer = Buffer.from(
-                attachment.base64Content,
-                'base64',
-              );
-              const blob = await put(
-                `attachments/${match.transaction.type}/${match.transaction.id}/${attachment.filename}`,
-                fileBuffer,
-                {
-                  access: 'public',
-                  contentType: attachment.contentType,
-                  addRandomSuffix: true,
-                },
-              );
-
-              // Store in database
+              // Store in database - file is already in Vercel Blob from initial upload
               await db.insert(transactionAttachments).values({
                 transactionType: match.transaction.type,
                 transactionId: match.transaction.id,
                 workspaceId: toolContext.workspaceResult.workspaceId,
-                blobUrl: blob.url,
-                filename: attachment.filename,
-                contentType: attachment.contentType,
-                fileSize: fileBuffer.length,
+                blobUrl: match.tempBlobUrl, // Already uploaded during attachAllDocuments
+                filename: match.filename,
+                contentType: match.contentType,
+                fileSize: match.fileSize,
                 uploadedBy: 'system:ai-email',
                 uploadSource: 'ai_email',
               });
 
               results.push({ filename: match.filename, success: true });
               console.log(
-                `[AI Email] Attached ${match.filename} to ${match.transaction.id}`,
+                `[AI Email] Attached ${match.filename} to ${match.transaction.id} (using pre-uploaded blob)`,
               );
             } catch (error) {
               console.error(
@@ -1878,38 +1895,25 @@ export async function POST(request: NextRequest) {
             }
           }
 
-          // Get the attachment from prepared attachments
-          const attachment =
-            toolContext.preparedAttachments[pendingAction.attachmentIndex];
-          if (!attachment || !attachment.base64Content) {
+          // Attachment was already uploaded to temp blob storage when user first sent the email
+          // The tempBlobUrl is stored in the pending action
+          if (!pendingAction.tempBlobUrl) {
             return {
-              error: 'Attachment no longer available',
+              error: 'Attachment blob URL not found in pending action',
               success: false,
             };
           }
 
           try {
-            // Upload to Vercel Blob
-            const fileBuffer = Buffer.from(attachment.base64Content, 'base64');
-            const blob = await put(
-              `attachments/${targetTransaction.type}/${targetTransaction.id}/${attachment.filename}`,
-              fileBuffer,
-              {
-                access: 'public',
-                contentType: attachment.contentType,
-                addRandomSuffix: true,
-              },
-            );
-
-            // Store in database
+            // Store in database - file is already in Vercel Blob from initial upload
             await db.insert(transactionAttachments).values({
               transactionType: targetTransaction.type,
               transactionId: targetTransaction.id,
               workspaceId: toolContext.workspaceResult.workspaceId,
-              blobUrl: blob.url,
-              filename: attachment.filename,
-              contentType: attachment.contentType,
-              fileSize: fileBuffer.length,
+              blobUrl: pendingAction.tempBlobUrl, // Already uploaded during attachDocumentToTransaction
+              filename: pendingAction.attachmentFilename,
+              contentType: pendingAction.attachmentContentType,
+              fileSize: pendingAction.attachmentSize,
               uploadedBy: 'system:ai-email',
               uploadSource: 'ai_email',
             });
@@ -1922,7 +1926,7 @@ export async function POST(request: NextRequest) {
 
             // Send success email
             const template = emailTemplates.attachmentSuccess({
-              filename: attachment.filename,
+              filename: pendingAction.attachmentFilename,
               amount: targetTransaction.amount,
               currency: targetTransaction.currency,
               recipientName: targetTransaction.recipientName,
@@ -1939,8 +1943,8 @@ export async function POST(request: NextRequest) {
 
             return {
               success: true,
-              message: `Attached ${attachment.filename} to ${targetTransaction.currency} ${targetTransaction.amount} payment`,
-              attachmentUrl: blob.url,
+              message: `Attached ${pendingAction.attachmentFilename} to ${targetTransaction.currency} ${targetTransaction.amount} payment`,
+              attachmentUrl: pendingAction.tempBlobUrl,
             };
           } catch (error) {
             console.error('[AI Email] confirmAttachment error:', error);
