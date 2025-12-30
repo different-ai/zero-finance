@@ -30,6 +30,8 @@ export function getSystemPrompt(
 - Check user's balance (idle, earning, and spendable)
 - List saved bank accounts
 - Propose bank transfers for user approval
+- Attach documents to transactions (receipts, invoices, contracts)
+- List and remove attachments from transactions
 
 ## CRITICAL: Be Proactive - Use Your Tools First
 ALWAYS use your tools to look up information BEFORE asking the user to provide or confirm it.
@@ -115,6 +117,31 @@ When searching for a person/company name in bank accounts:
 - earning_balance: USDC in savings vaults (earning yield)
 - spendable_balance: Total available = idle + earning
 
+## Attachment Flow
+1. When a user forwards an email with an attachment and asks to attach it to a transaction:
+   - Call findTransaction to search for the transaction they mention
+   - Call attachDocumentToTransaction with the transaction ID and attachment index
+   - This will send a confirmation email with the best match and alternatives
+   - Wait for user to reply YES, A, B, C, or NO
+
+2. When user confirms attachment (YES or A/B/C):
+   - Call confirmAttachment with their selection
+   - The attachment will be uploaded and linked to the transaction
+
+3. When user asks to remove an attachment:
+   - Call listAttachments to find the attachment
+   - Call removeAttachment with the attachment ID
+   - Wait for user confirmation
+
+4. When user confirms removal (YES or A/B/C):
+   - Call confirmRemoveAttachment with their selection
+
+5. Attachment request patterns:
+   - "Attach this receipt to my payment to Acme" [PDF attached] → findTransaction("Acme"), attachDocumentToTransaction
+   - "Add this invoice to my last transfer" → findTransaction(recent), attachDocumentToTransaction
+   - "What attachments are on my Acme payment?" → findTransaction("Acme"), listAttachments
+   - "Remove the receipt from my Chase transfer" → findTransaction("Chase"), listAttachments, removeAttachment
+
 ## User Context
 - Sender Email: ${session.senderEmail}
 - Workspace: ${workspaceName}
@@ -165,7 +192,9 @@ An invoice has already been created in this session:
   // Add pending action context if waiting for confirmation
   if (session.state === 'awaiting_confirmation' && session.pendingAction) {
     const action = session.pendingAction;
-    contextSections += `
+
+    if (action.type === 'send_invoice') {
+      contextSections += `
 
 ## Pending Action
 The user has a pending invoice to send:
@@ -180,6 +209,47 @@ If the user declines (NO, cancel, don't send, stop, etc.), acknowledge and do no
 
 IMPORTANT: Look for confirmation keywords in the user's latest message.
 `;
+    } else if (action.type === 'attach_document') {
+      const altLabels = action.alternatives
+        .map(
+          (alt, i) =>
+            `  [${String.fromCharCode(65 + i)}] ${alt.currency} ${alt.amount} to ${alt.recipientName || 'Unknown'} (${alt.date})`,
+        )
+        .join('\n');
+
+      contextSections += `
+
+## Pending Action
+The user has a pending attachment to add:
+- File: ${action.attachmentFilename} (${Math.round(action.attachmentSize / 1024)} KB)
+- Best Match: ${action.bestMatch.currency} ${action.bestMatch.amount} to ${action.bestMatch.recipientName || 'Unknown'} (${action.bestMatch.date})
+${action.alternatives.length > 0 ? `- Alternatives:\n${altLabels}` : ''}
+
+If the user confirms (YES), attach to the best match.
+If the user picks an alternative (A, B, C), attach to that transaction.
+If the user declines (NO, cancel), do not attach.
+`;
+    } else if (action.type === 'remove_attachment') {
+      const altLabels = action.alternatives
+        .map(
+          (alt, i) =>
+            `  [${String.fromCharCode(65 + i)}] ${alt.filename} on ${alt.transaction.currency} ${alt.transaction.amount}`,
+        )
+        .join('\n');
+
+      contextSections += `
+
+## Pending Action
+The user wants to remove an attachment:
+- File: ${action.bestMatch.filename}
+- From: ${action.bestMatch.transaction.currency} ${action.bestMatch.transaction.amount} to ${action.bestMatch.transaction.recipientName || 'Unknown'}
+${action.alternatives.length > 0 ? `- Alternatives:\n${altLabels}` : ''}
+
+If the user confirms (YES), remove the attachment.
+If the user picks an alternative (A, B, C), remove that attachment instead.
+If the user declines (NO, cancel), do not remove.
+`;
+    }
   }
 
   return basePrompt + contextSections;
@@ -379,5 +449,142 @@ To send money, first add a bank account in your 0 Finance dashboard:
 1. Go to Settings > Bank Accounts
 2. Add your bank account details
 3. Then reply to this email with your transfer request`,
+  }),
+
+  /**
+   * Template for attachment confirmation request.
+   * Shows best match and alternatives for user to choose.
+   */
+  attachmentConfirmation: (params: {
+    filename: string;
+    fileSize: string;
+    bestMatch: {
+      amount: string;
+      currency: string;
+      recipientName?: string;
+      date: string;
+    };
+    alternatives: Array<{
+      label: string;
+      amount: string;
+      currency: string;
+      recipientName?: string;
+      date: string;
+    }>;
+  }) => {
+    const alternativesList = params.alternatives
+      .map(
+        (alt) =>
+          `  [${alt.label}] ${alt.currency} ${alt.amount} to ${alt.recipientName || 'Unknown'} (${alt.date})`,
+      )
+      .join('\n');
+
+    return {
+      subject: `Attach ${params.filename}?`,
+      body: `I'll attach **${params.filename}** (${params.fileSize}) to this transaction:
+
+→ **BEST MATCH:** ${params.bestMatch.currency} ${params.bestMatch.amount} to ${params.bestMatch.recipientName || 'Unknown'} (${params.bestMatch.date})
+
+${
+  params.alternatives.length > 0
+    ? `Other possibilities:
+${alternativesList}
+
+Reply **YES** to attach to the best match, or **A/B/C** to pick another, or **NO** to cancel.`
+    : `Reply **YES** to attach, or **NO** to cancel.`
+}`,
+    };
+  },
+
+  /**
+   * Template for successful attachment.
+   */
+  attachmentSuccess: (params: {
+    filename: string;
+    amount: string;
+    currency: string;
+    recipientName?: string;
+    date: string;
+  }) => ({
+    subject: `Attached: ${params.filename}`,
+    body: `Done! I've attached **${params.filename}** to your ${params.currency} ${params.amount} payment to ${params.recipientName || 'Unknown'} (${params.date}).
+
+View this transaction in your 0 Finance dashboard to see the attachment.`,
+  }),
+
+  /**
+   * Template for remove attachment confirmation.
+   */
+  removeAttachmentConfirmation: (params: {
+    filename: string;
+    amount: string;
+    currency: string;
+    recipientName?: string;
+    date: string;
+    alternatives: Array<{
+      label: string;
+      filename: string;
+      amount: string;
+      currency: string;
+      recipientName?: string;
+      date: string;
+    }>;
+  }) => {
+    const alternativesList = params.alternatives
+      .map(
+        (alt) =>
+          `  [${alt.label}] ${alt.filename} on ${alt.currency} ${alt.amount} to ${alt.recipientName || 'Unknown'} (${alt.date})`,
+      )
+      .join('\n');
+
+    return {
+      subject: `Remove ${params.filename}?`,
+      body: `I'll remove **${params.filename}** from your ${params.currency} ${params.amount} payment to ${params.recipientName || 'Unknown'} (${params.date}).
+
+${
+  params.alternatives.length > 0
+    ? `Other attachments I found:
+${alternativesList}
+
+Reply **YES** to remove the attachment above, or **A/B/C** to remove a different one, or **NO** to cancel.`
+    : `Reply **YES** to remove, or **NO** to cancel.`
+}`,
+    };
+  },
+
+  /**
+   * Template for successful attachment removal.
+   */
+  removeAttachmentSuccess: (params: {
+    filename: string;
+    amount: string;
+    currency: string;
+    recipientName?: string;
+  }) => ({
+    subject: `Removed: ${params.filename}`,
+    body: `Done! I've removed **${params.filename}** from your ${params.currency} ${params.amount} payment to ${params.recipientName || 'Unknown'}.`,
+  }),
+
+  /**
+   * Template for no transactions found.
+   */
+  noTransactionsFound: (params: { searchQuery?: string }) => ({
+    subject: 'No Transactions Found',
+    body: `I couldn't find any transactions${params.searchQuery ? ` matching "${params.searchQuery}"` : ''}.
+
+Try being more specific with:
+- Recipient name (e.g., "Acme Corp")
+- Amount (e.g., "$500")
+- Date (e.g., "last week", "December 15")`,
+  }),
+
+  /**
+   * Template for no attachments found.
+   */
+  noAttachmentsFound: (params: { searchQuery?: string }) => ({
+    subject: 'No Attachments Found',
+    body: `I couldn't find any attachments${params.searchQuery ? ` matching "${params.searchQuery}"` : ''} on your transactions.
+
+To attach a document, forward an email with the file attached and tell me which transaction to attach it to.`,
   }),
 };

@@ -39,7 +39,7 @@ import {
   workspaces,
   transactionAttachments,
 } from '@/db/schema';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, desc, isNull, or, ilike } from 'drizzle-orm';
 import { alignApi } from '@/server/services/align-api';
 import { put } from '@vercel/blob';
 import type { PreparedAttachment } from '@/lib/ai-email/attachment-parser';
@@ -620,89 +620,97 @@ export async function POST(request: NextRequest) {
     // Prepare reply subject for threading
     const replySubject = getReplySubject(email.subject);
 
-    // Check if this is a simple confirmation reply (YES/NO)
+    // Check if this is a simple confirmation reply (YES/NO/A/B/C)
     const confirmationCheck = parseConfirmationReply(email.text);
     if (
       confirmationCheck.isConfirmation &&
       session.state === 'awaiting_confirmation' &&
       session.pendingAction
     ) {
-      if (confirmationCheck.confirmed) {
-        // User confirmed - send the invoice
-        const action = session.pendingAction;
-        const invoiceTemplate = emailTemplates.invoiceToRecipient({
-          senderName: senderDisplayName,
-          amount: action.amount,
-          currency: action.currency,
-          description: action.description,
-          invoiceLink: action.invoiceLink,
-          recipientName: action.recipientName,
-        });
+      const action = session.pendingAction;
 
-        let emailSentSuccessfully = false;
-        try {
-          await sendInvoiceEmail(
-            action.recipientEmail,
-            invoiceTemplate.subject,
-            invoiceTemplate.body,
-            senderDisplayName,
+      // Handle invoice confirmation
+      if (action.type === 'send_invoice') {
+        if (confirmationCheck.confirmed) {
+          // User confirmed - send the invoice
+          const invoiceTemplate = emailTemplates.invoiceToRecipient({
+            senderName: senderDisplayName,
+            amount: action.amount,
+            currency: action.currency,
+            description: action.description,
+            invoiceLink: action.invoiceLink,
+            recipientName: action.recipientName,
+          });
+
+          let emailSentSuccessfully = false;
+          try {
+            await sendInvoiceEmail(
+              action.recipientEmail,
+              invoiceTemplate.subject,
+              invoiceTemplate.body,
+              senderDisplayName,
+            );
+            emailSentSuccessfully = true;
+          } catch (emailError) {
+            console.log(
+              '[AI Email] Email send failed, will provide invoice link for manual forwarding:',
+              emailError,
+            );
+          }
+
+          // Choose template based on whether email was sent
+          const responseTemplate = emailSentSuccessfully
+            ? emailTemplates.invoiceSent({
+                recipientEmail: action.recipientEmail,
+                recipientName: action.recipientName,
+                amount: action.amount,
+                currency: action.currency,
+                invoiceLink: action.invoiceLink,
+              })
+            : emailTemplates.invoiceReadyToForward({
+                recipientEmail: action.recipientEmail,
+                recipientName: action.recipientName,
+                amount: action.amount,
+                currency: action.currency,
+                invoiceLink: action.invoiceLink,
+              });
+
+          // Use Re: subject for threading
+          await sendReply(
+            email.from,
+            replySubject,
+            responseTemplate.body,
+            messageId,
+            workspaceResult.workspaceId,
           );
-          emailSentSuccessfully = true;
-        } catch (emailError) {
-          console.log(
-            '[AI Email] Email send failed, will provide invoice link for manual forwarding:',
-            emailError,
+
+          await updateSession(session.id, {
+            state: 'completed',
+            pendingAction: null,
+          });
+        } else {
+          // User cancelled
+          const cancelledTemplate = emailTemplates.cancelled();
+          // Use Re: subject for threading
+          await sendReply(
+            email.from,
+            replySubject,
+            cancelledTemplate.body,
+            messageId,
+            workspaceResult.workspaceId,
           );
+          await updateSession(session.id, {
+            state: 'completed',
+            pendingAction: null,
+          });
         }
 
-        // Choose template based on whether email was sent
-        const responseTemplate = emailSentSuccessfully
-          ? emailTemplates.invoiceSent({
-              recipientEmail: action.recipientEmail,
-              recipientName: action.recipientName,
-              amount: action.amount,
-              currency: action.currency,
-              invoiceLink: action.invoiceLink,
-            })
-          : emailTemplates.invoiceReadyToForward({
-              recipientEmail: action.recipientEmail,
-              recipientName: action.recipientName,
-              amount: action.amount,
-              currency: action.currency,
-              invoiceLink: action.invoiceLink,
-            });
-
-        // Use Re: subject for threading
-        await sendReply(
-          email.from,
-          replySubject,
-          responseTemplate.body,
-          messageId,
-          workspaceResult.workspaceId,
-        );
-
-        await updateSession(session.id, {
-          state: 'completed',
-          pendingAction: null,
-        });
-      } else {
-        // User cancelled
-        const cancelledTemplate = emailTemplates.cancelled();
-        // Use Re: subject for threading
-        await sendReply(
-          email.from,
-          replySubject,
-          cancelledTemplate.body,
-          messageId,
-          workspaceResult.workspaceId,
-        );
-        await updateSession(session.id, {
-          state: 'completed',
-          pendingAction: null,
-        });
+        return NextResponse.json({ success: true, handled: 'confirmation' });
       }
 
-      return NextResponse.json({ success: true, handled: 'confirmation' });
+      // Handle attachment confirmation (attach_document or remove_attachment)
+      // These are handled by the AI tools, so let the AI process the reply
+      // The AI will check the pending action and handle A/B/C selection
     }
 
     // Process with AI for invoice extraction and creation
@@ -1175,6 +1183,822 @@ export async function POST(request: NextRequest) {
             console.error('[AI Email] proposeTransfer error:', error);
             return {
               error: error instanceof Error ? error.message : 'Unknown error',
+            };
+          }
+        },
+      }),
+
+      // =========================================================================
+      // Attachment Tools
+      // =========================================================================
+
+      findTransaction: tool({
+        description:
+          "Search user's transaction history to find a specific transaction. Returns best match and alternatives. Use this when user wants to attach a document to a transaction or asks about a specific payment.",
+        inputSchema: z.object({
+          searchQuery: z
+            .string()
+            .optional()
+            .describe(
+              'Search query - recipient name, amount, or description (e.g., "Acme", "$500", "consulting")',
+            ),
+          amount: z.number().optional().describe('Approximate amount to match'),
+          recipientName: z
+            .string()
+            .optional()
+            .describe('Recipient name to match (fuzzy)'),
+          dateRange: z
+            .enum(['last_week', 'last_month', 'last_3_months', 'all'])
+            .optional()
+            .default('last_month')
+            .describe('Date range to search'),
+        }),
+        execute: async (params) => {
+          console.log('[AI Email] Tool: findTransaction called with:', params);
+
+          // Get workspace
+          const workspace = await db.query.workspaces.findFirst({
+            where: eq(workspaces.id, toolContext.workspaceResult.workspaceId),
+          });
+
+          if (!workspace) {
+            return { error: 'Workspace not found', transactions: [] };
+          }
+
+          // Calculate date filter
+          const now = new Date();
+          let dateFilter: Date | null = null;
+          switch (params.dateRange) {
+            case 'last_week':
+              dateFilter = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+              break;
+            case 'last_month':
+              dateFilter = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+              break;
+            case 'last_3_months':
+              dateFilter = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+              break;
+            default:
+              dateFilter = null;
+          }
+
+          // Query offramp transfers
+          const transfers = await db
+            .select({
+              id: offrampTransfers.id,
+              alignTransferId: offrampTransfers.alignTransferId,
+              amount: offrampTransfers.amountToSend,
+              currency: offrampTransfers.destinationCurrency,
+              status: offrampTransfers.status,
+              bankAccountSnapshot:
+                offrampTransfers.destinationBankAccountSnapshot,
+              createdAt: offrampTransfers.createdAt,
+            })
+            .from(offrampTransfers)
+            .where(
+              and(
+                eq(
+                  offrampTransfers.workspaceId,
+                  toolContext.workspaceResult.workspaceId,
+                ),
+                eq(offrampTransfers.status, 'completed'),
+              ),
+            )
+            .orderBy(desc(offrampTransfers.createdAt))
+            .limit(50);
+
+          // Score and rank transactions
+          type ScoredTransaction = {
+            id: string;
+            type: 'offramp';
+            amount: string;
+            currency: string;
+            recipientName?: string;
+            recipientBank?: string;
+            date: string;
+            score: number;
+          };
+
+          const scoredTransactions: ScoredTransaction[] = transfers
+            .filter((tx) => {
+              if (dateFilter && tx.createdAt < dateFilter) return false;
+              return true;
+            })
+            .map((tx) => {
+              let score = 0;
+              const snapshot = tx.bankAccountSnapshot as Record<
+                string,
+                unknown
+              > | null;
+              const recipientName =
+                (snapshot?.account_holder_first_name as string) ||
+                (snapshot?.account_holder_business_name as string) ||
+                '';
+              const bankName = (snapshot?.bank_name as string) || '';
+
+              // Score by recipient name match
+              if (params.recipientName && recipientName) {
+                const searchLower = params.recipientName.toLowerCase();
+                const nameLower = recipientName.toLowerCase();
+                if (
+                  nameLower.includes(searchLower) ||
+                  searchLower.includes(nameLower)
+                ) {
+                  score += 50;
+                }
+              }
+
+              // Score by search query match
+              if (params.searchQuery) {
+                const queryLower = params.searchQuery.toLowerCase();
+                if (recipientName.toLowerCase().includes(queryLower))
+                  score += 40;
+                if (bankName.toLowerCase().includes(queryLower)) score += 20;
+                if (tx.amount.includes(params.searchQuery)) score += 30;
+              }
+
+              // Score by amount match
+              if (params.amount) {
+                const txAmount = parseFloat(tx.amount);
+                const diff = Math.abs(txAmount - params.amount) / params.amount;
+                if (diff < 0.05)
+                  score += 40; // Within 5%
+                else if (diff < 0.1)
+                  score += 20; // Within 10%
+                else if (diff < 0.2) score += 10; // Within 20%
+              }
+
+              // Recency bonus
+              const daysAgo =
+                (now.getTime() - tx.createdAt.getTime()) /
+                (24 * 60 * 60 * 1000);
+              if (daysAgo < 7) score += 10;
+              else if (daysAgo < 30) score += 5;
+
+              return {
+                id: tx.id,
+                type: 'offramp' as const,
+                amount: tx.amount,
+                currency: tx.currency.toUpperCase(),
+                recipientName: recipientName || undefined,
+                recipientBank: bankName || undefined,
+                date: tx.createdAt.toISOString().split('T')[0],
+                score,
+              };
+            })
+            .sort((a, b) => b.score - a.score);
+
+          if (scoredTransactions.length === 0) {
+            return {
+              found: false,
+              message: 'No matching transactions found',
+              transactions: [],
+            };
+          }
+
+          const bestMatch = scoredTransactions[0];
+          const alternatives = scoredTransactions.slice(1, 4); // Up to 3 alternatives
+
+          return {
+            found: true,
+            bestMatch,
+            alternatives,
+            totalFound: scoredTransactions.length,
+          };
+        },
+      }),
+
+      attachDocumentToTransaction: tool({
+        description:
+          'Attach a document (from the email) to a transaction. ALWAYS requires user confirmation. Shows best match and alternatives for user to choose.',
+        inputSchema: z.object({
+          transactionId: z
+            .string()
+            .describe('Transaction ID to attach to (from findTransaction)'),
+          transactionType: z
+            .enum(['offramp', 'crypto_outgoing', 'crypto_incoming'])
+            .default('offramp')
+            .describe('Type of transaction'),
+          attachmentIndex: z
+            .number()
+            .default(0)
+            .describe('Index of attachment from email (0 = first attachment)'),
+        }),
+        execute: async (params) => {
+          console.log(
+            '[AI Email] Tool: attachDocumentToTransaction called with:',
+            params,
+          );
+
+          // Check if we have attachments
+          if (toolContext.preparedAttachments.length === 0) {
+            return {
+              error: 'No attachments found in this email',
+              success: false,
+            };
+          }
+
+          const attachment =
+            toolContext.preparedAttachments[params.attachmentIndex];
+          if (
+            !attachment ||
+            !attachment.supported ||
+            !attachment.base64Content
+          ) {
+            return {
+              error: `Attachment at index ${params.attachmentIndex} not found or not supported`,
+              success: false,
+            };
+          }
+
+          // Find the transaction to get details for confirmation
+          const result = await (async () => {
+            if (params.transactionType === 'offramp') {
+              const tx = await db.query.offrampTransfers.findFirst({
+                where: and(
+                  eq(offrampTransfers.id, params.transactionId),
+                  eq(
+                    offrampTransfers.workspaceId,
+                    toolContext.workspaceResult.workspaceId,
+                  ),
+                ),
+              });
+              if (!tx) return null;
+
+              const snapshot = tx.destinationBankAccountSnapshot as Record<
+                string,
+                unknown
+              > | null;
+              return {
+                id: tx.id,
+                type: 'offramp' as const,
+                amount: tx.amountToSend,
+                currency: tx.destinationCurrency.toUpperCase(),
+                recipientName:
+                  (snapshot?.account_holder_first_name as string) ||
+                  (snapshot?.account_holder_business_name as string) ||
+                  undefined,
+                date: tx.createdAt.toISOString().split('T')[0],
+                score: 100,
+              };
+            }
+            return null;
+          })();
+
+          if (!result) {
+            return {
+              error: 'Transaction not found',
+              success: false,
+            };
+          }
+
+          // Find alternatives (other recent transactions)
+          const alternatives = await (async () => {
+            const transfers = await db
+              .select({
+                id: offrampTransfers.id,
+                amount: offrampTransfers.amountToSend,
+                currency: offrampTransfers.destinationCurrency,
+                bankAccountSnapshot:
+                  offrampTransfers.destinationBankAccountSnapshot,
+                createdAt: offrampTransfers.createdAt,
+              })
+              .from(offrampTransfers)
+              .where(
+                and(
+                  eq(
+                    offrampTransfers.workspaceId,
+                    toolContext.workspaceResult.workspaceId,
+                  ),
+                  eq(offrampTransfers.status, 'completed'),
+                ),
+              )
+              .orderBy(desc(offrampTransfers.createdAt))
+              .limit(5);
+
+            return transfers
+              .filter((tx) => tx.id !== params.transactionId)
+              .slice(0, 3)
+              .map((tx) => {
+                const snapshot = tx.bankAccountSnapshot as Record<
+                  string,
+                  unknown
+                > | null;
+                return {
+                  id: tx.id,
+                  type: 'offramp' as const,
+                  amount: tx.amount,
+                  currency: tx.currency.toUpperCase(),
+                  recipientName:
+                    (snapshot?.account_holder_first_name as string) ||
+                    (snapshot?.account_holder_business_name as string) ||
+                    undefined,
+                  date: tx.createdAt.toISOString().split('T')[0],
+                  score: 50,
+                };
+              });
+          })();
+
+          // Store pending action for confirmation
+          const pendingAction: AiEmailPendingAction = {
+            type: 'attach_document',
+            bestMatch: result,
+            alternatives,
+            attachmentIndex: params.attachmentIndex,
+            attachmentFilename: attachment.filename,
+            attachmentContentType: attachment.contentType,
+            attachmentSize: attachment.base64Content.length * 0.75, // Approximate decoded size
+          };
+
+          await updateSession(toolContext.session.id, {
+            pendingAction,
+            state: 'awaiting_confirmation',
+          });
+
+          // Format file size
+          const fileSizeKB = Math.round(
+            (attachment.base64Content.length * 0.75) / 1024,
+          );
+          const fileSize =
+            fileSizeKB > 1024
+              ? `${(fileSizeKB / 1024).toFixed(1)} MB`
+              : `${fileSizeKB} KB`;
+
+          // Send confirmation email
+          const template = emailTemplates.attachmentConfirmation({
+            filename: attachment.filename,
+            fileSize,
+            bestMatch: {
+              amount: result.amount,
+              currency: result.currency,
+              recipientName: result.recipientName,
+              date: result.date,
+            },
+            alternatives: alternatives.map((alt, i) => ({
+              label: String.fromCharCode(65 + i), // A, B, C
+              amount: alt.amount,
+              currency: alt.currency,
+              recipientName: alt.recipientName,
+              date: alt.date,
+            })),
+          });
+
+          await sendReply(
+            toolContext.email.from,
+            toolContext.replySubject,
+            template.body + toolContext.quotedOriginal,
+            toolContext.messageId,
+            toolContext.workspaceResult.workspaceId,
+          );
+
+          return {
+            success: true,
+            message: 'Confirmation request sent to user',
+            awaitingConfirmation: true,
+          };
+        },
+      }),
+
+      confirmAttachment: tool({
+        description:
+          'Complete the attachment after user confirms. Call this when user replies YES or picks an alternative (A/B/C) to a pending attachment.',
+        inputSchema: z.object({
+          selection: z
+            .enum(['yes', 'a', 'b', 'c'])
+            .describe(
+              'User selection: "yes" for best match, or "a"/"b"/"c" for alternatives',
+            ),
+        }),
+        execute: async (params) => {
+          console.log(
+            '[AI Email] Tool: confirmAttachment called with:',
+            params,
+          );
+
+          const pendingAction = toolContext.session.pendingAction;
+          if (!pendingAction || pendingAction.type !== 'attach_document') {
+            return {
+              error: 'No pending attachment to confirm',
+              success: false,
+            };
+          }
+
+          // Determine which transaction to attach to
+          let targetTransaction = pendingAction.bestMatch;
+          if (params.selection !== 'yes') {
+            const altIndex = params.selection.charCodeAt(0) - 97; // 'a' = 0, 'b' = 1, 'c' = 2
+            if (altIndex >= 0 && altIndex < pendingAction.alternatives.length) {
+              targetTransaction = pendingAction.alternatives[altIndex];
+            } else {
+              return {
+                error: `Invalid selection: ${params.selection}`,
+                success: false,
+              };
+            }
+          }
+
+          // Get the attachment from prepared attachments
+          const attachment =
+            toolContext.preparedAttachments[pendingAction.attachmentIndex];
+          if (!attachment || !attachment.base64Content) {
+            return {
+              error: 'Attachment no longer available',
+              success: false,
+            };
+          }
+
+          try {
+            // Upload to Vercel Blob
+            const fileBuffer = Buffer.from(attachment.base64Content, 'base64');
+            const blob = await put(
+              `attachments/${targetTransaction.type}/${targetTransaction.id}/${attachment.filename}`,
+              fileBuffer,
+              {
+                access: 'public',
+                contentType: attachment.contentType,
+                addRandomSuffix: true,
+              },
+            );
+
+            // Store in database
+            await db.insert(transactionAttachments).values({
+              transactionType: targetTransaction.type,
+              transactionId: targetTransaction.id,
+              workspaceId: toolContext.workspaceResult.workspaceId,
+              blobUrl: blob.url,
+              filename: attachment.filename,
+              contentType: attachment.contentType,
+              fileSize: fileBuffer.length,
+              uploadedBy: 'system:ai-email',
+              uploadSource: 'ai_email',
+            });
+
+            // Clear pending action
+            await updateSession(toolContext.session.id, {
+              state: 'completed',
+              pendingAction: null,
+            });
+
+            // Send success email
+            const template = emailTemplates.attachmentSuccess({
+              filename: attachment.filename,
+              amount: targetTransaction.amount,
+              currency: targetTransaction.currency,
+              recipientName: targetTransaction.recipientName,
+              date: targetTransaction.date,
+            });
+
+            await sendReply(
+              toolContext.email.from,
+              toolContext.replySubject,
+              template.body,
+              toolContext.messageId,
+              toolContext.workspaceResult.workspaceId,
+            );
+
+            return {
+              success: true,
+              message: `Attached ${attachment.filename} to ${targetTransaction.currency} ${targetTransaction.amount} payment`,
+              attachmentUrl: blob.url,
+            };
+          } catch (error) {
+            console.error('[AI Email] confirmAttachment error:', error);
+            return {
+              error:
+                error instanceof Error
+                  ? error.message
+                  : 'Failed to attach document',
+              success: false,
+            };
+          }
+        },
+      }),
+
+      listAttachments: tool({
+        description:
+          "List attachments on a transaction or search for attachments across user's transactions.",
+        inputSchema: z.object({
+          transactionId: z
+            .string()
+            .optional()
+            .describe('Specific transaction ID to list attachments for'),
+          transactionType: z
+            .enum(['offramp', 'crypto_outgoing', 'crypto_incoming', 'invoice'])
+            .optional()
+            .describe('Type of transaction'),
+          searchQuery: z.string().optional().describe('Search by filename'),
+        }),
+        execute: async (params) => {
+          console.log('[AI Email] Tool: listAttachments called with:', params);
+
+          const conditions = [
+            eq(
+              transactionAttachments.workspaceId,
+              toolContext.workspaceResult.workspaceId,
+            ),
+            isNull(transactionAttachments.deletedAt),
+          ];
+
+          if (params.transactionId) {
+            conditions.push(
+              eq(transactionAttachments.transactionId, params.transactionId),
+            );
+          }
+          if (params.transactionType) {
+            conditions.push(
+              eq(
+                transactionAttachments.transactionType,
+                params.transactionType,
+              ),
+            );
+          }
+
+          const attachments = await db
+            .select()
+            .from(transactionAttachments)
+            .where(and(...conditions))
+            .orderBy(desc(transactionAttachments.createdAt))
+            .limit(20);
+
+          // Filter by search query if provided
+          const filtered = params.searchQuery
+            ? attachments.filter((a) =>
+                a.filename
+                  .toLowerCase()
+                  .includes(params.searchQuery!.toLowerCase()),
+              )
+            : attachments;
+
+          return {
+            attachments: filtered.map((a) => ({
+              id: a.id,
+              filename: a.filename,
+              contentType: a.contentType,
+              fileSize: a.fileSize,
+              transactionId: a.transactionId,
+              transactionType: a.transactionType,
+              uploadedAt: a.createdAt.toISOString(),
+              uploadSource: a.uploadSource,
+            })),
+            count: filtered.length,
+          };
+        },
+      }),
+
+      removeAttachment: tool({
+        description:
+          'Remove an attachment from a transaction. Requires user confirmation.',
+        inputSchema: z.object({
+          attachmentId: z
+            .string()
+            .uuid()
+            .describe('ID of the attachment to remove'),
+        }),
+        execute: async (params) => {
+          console.log('[AI Email] Tool: removeAttachment called with:', params);
+
+          // Find the attachment
+          const [attachment] = await db
+            .select()
+            .from(transactionAttachments)
+            .where(
+              and(
+                eq(transactionAttachments.id, params.attachmentId),
+                eq(
+                  transactionAttachments.workspaceId,
+                  toolContext.workspaceResult.workspaceId,
+                ),
+                isNull(transactionAttachments.deletedAt),
+              ),
+            )
+            .limit(1);
+
+          if (!attachment) {
+            return {
+              error: 'Attachment not found',
+              success: false,
+            };
+          }
+
+          // Get transaction details
+          let transactionDetails: {
+            id: string;
+            type: 'offramp' | 'crypto_outgoing' | 'crypto_incoming';
+            amount: string;
+            currency: string;
+            recipientName?: string;
+            date: string;
+            score: number;
+          } | null = null;
+
+          if (attachment.transactionType === 'offramp') {
+            const tx = await db.query.offrampTransfers.findFirst({
+              where: eq(offrampTransfers.id, attachment.transactionId),
+            });
+            if (tx) {
+              const snapshot = tx.destinationBankAccountSnapshot as Record<
+                string,
+                unknown
+              > | null;
+              transactionDetails = {
+                id: tx.id,
+                type: 'offramp',
+                amount: tx.amountToSend,
+                currency: tx.destinationCurrency.toUpperCase(),
+                recipientName:
+                  (snapshot?.account_holder_first_name as string) ||
+                  (snapshot?.account_holder_business_name as string) ||
+                  undefined,
+                date: tx.createdAt.toISOString().split('T')[0],
+                score: 100,
+              };
+            }
+          }
+
+          if (!transactionDetails) {
+            transactionDetails = {
+              id: attachment.transactionId,
+              type: attachment.transactionType as
+                | 'offramp'
+                | 'crypto_outgoing'
+                | 'crypto_incoming',
+              amount: 'Unknown',
+              currency: 'USD',
+              date: attachment.createdAt.toISOString().split('T')[0],
+              score: 100,
+            };
+          }
+
+          // Find other attachments as alternatives
+          const otherAttachments = await db
+            .select()
+            .from(transactionAttachments)
+            .where(
+              and(
+                eq(
+                  transactionAttachments.workspaceId,
+                  toolContext.workspaceResult.workspaceId,
+                ),
+                isNull(transactionAttachments.deletedAt),
+              ),
+            )
+            .orderBy(desc(transactionAttachments.createdAt))
+            .limit(5);
+
+          const alternatives = otherAttachments
+            .filter((a) => a.id !== params.attachmentId)
+            .slice(0, 3)
+            .map((a) => ({
+              id: a.id,
+              filename: a.filename,
+              contentType: a.contentType,
+              fileSize: a.fileSize,
+              blobUrl: a.blobUrl,
+              transaction: {
+                id: a.transactionId,
+                type: a.transactionType as
+                  | 'offramp'
+                  | 'crypto_outgoing'
+                  | 'crypto_incoming',
+                amount: 'Unknown',
+                currency: 'USD',
+                recipientName: undefined as string | undefined,
+                date: a.createdAt.toISOString().split('T')[0],
+                score: 50,
+              },
+            }));
+
+          // Store pending action
+          const pendingAction: AiEmailPendingAction = {
+            type: 'remove_attachment',
+            bestMatch: {
+              id: attachment.id,
+              filename: attachment.filename,
+              contentType: attachment.contentType,
+              fileSize: attachment.fileSize,
+              blobUrl: attachment.blobUrl,
+              transaction: transactionDetails,
+            },
+            alternatives,
+          };
+
+          await updateSession(toolContext.session.id, {
+            pendingAction,
+            state: 'awaiting_confirmation',
+          });
+
+          // Send confirmation email
+          const template = emailTemplates.removeAttachmentConfirmation({
+            filename: attachment.filename,
+            amount: transactionDetails.amount,
+            currency: transactionDetails.currency,
+            recipientName: transactionDetails.recipientName,
+            date: transactionDetails.date,
+            alternatives: alternatives.map((alt, i) => ({
+              label: String.fromCharCode(65 + i),
+              filename: alt.filename,
+              amount: alt.transaction.amount,
+              currency: alt.transaction.currency,
+              recipientName: alt.transaction.recipientName,
+              date: alt.transaction.date,
+            })),
+          });
+
+          await sendReply(
+            toolContext.email.from,
+            toolContext.replySubject,
+            template.body + toolContext.quotedOriginal,
+            toolContext.messageId,
+            toolContext.workspaceResult.workspaceId,
+          );
+
+          return {
+            success: true,
+            message: 'Confirmation request sent to user',
+            awaitingConfirmation: true,
+          };
+        },
+      }),
+
+      confirmRemoveAttachment: tool({
+        description:
+          'Complete the attachment removal after user confirms. Call this when user replies YES or picks an alternative (A/B/C).',
+        inputSchema: z.object({
+          selection: z
+            .enum(['yes', 'a', 'b', 'c'])
+            .describe(
+              'User selection: "yes" for best match, or "a"/"b"/"c" for alternatives',
+            ),
+        }),
+        execute: async (params) => {
+          console.log(
+            '[AI Email] Tool: confirmRemoveAttachment called with:',
+            params,
+          );
+
+          const pendingAction = toolContext.session.pendingAction;
+          if (!pendingAction || pendingAction.type !== 'remove_attachment') {
+            return {
+              error: 'No pending removal to confirm',
+              success: false,
+            };
+          }
+
+          // Determine which attachment to remove
+          let targetAttachment = pendingAction.bestMatch;
+          if (params.selection !== 'yes') {
+            const altIndex = params.selection.charCodeAt(0) - 97;
+            if (altIndex >= 0 && altIndex < pendingAction.alternatives.length) {
+              targetAttachment = pendingAction.alternatives[altIndex];
+            } else {
+              return {
+                error: `Invalid selection: ${params.selection}`,
+                success: false,
+              };
+            }
+          }
+
+          try {
+            // Soft delete the attachment
+            await db
+              .update(transactionAttachments)
+              .set({ deletedAt: new Date() })
+              .where(eq(transactionAttachments.id, targetAttachment.id));
+
+            // Clear pending action
+            await updateSession(toolContext.session.id, {
+              state: 'completed',
+              pendingAction: null,
+            });
+
+            // Send success email
+            const template = emailTemplates.removeAttachmentSuccess({
+              filename: targetAttachment.filename,
+              amount: targetAttachment.transaction.amount,
+              currency: targetAttachment.transaction.currency,
+              recipientName: targetAttachment.transaction.recipientName,
+            });
+
+            await sendReply(
+              toolContext.email.from,
+              toolContext.replySubject,
+              template.body,
+              toolContext.messageId,
+              toolContext.workspaceResult.workspaceId,
+            );
+
+            return {
+              success: true,
+              message: `Removed ${targetAttachment.filename}`,
+            };
+          } catch (error) {
+            console.error('[AI Email] confirmRemoveAttachment error:', error);
+            return {
+              error:
+                error instanceof Error
+                  ? error.message
+                  : 'Failed to remove attachment',
+              success: false,
             };
           }
         },

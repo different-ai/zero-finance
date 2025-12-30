@@ -36,16 +36,59 @@ export interface AiEmailMessage {
   timestamp: string;
 }
 
-export interface AiEmailPendingAction {
-  type: 'send_invoice';
-  invoiceId: string;
-  recipientEmail: string;
-  recipientName?: string;
-  amount: number;
+/**
+ * Transaction match result for attachment operations
+ */
+export interface TransactionMatch {
+  id: string;
+  type: 'offramp' | 'crypto_outgoing' | 'crypto_incoming';
+  amount: string;
   currency: string;
-  description: string;
-  invoiceLink: string;
+  recipientName?: string;
+  recipientBank?: string;
+  date: string;
+  score: number; // Matching confidence score
 }
+
+/**
+ * Attachment info for pending actions
+ */
+export interface AttachmentInfo {
+  id: string;
+  filename: string;
+  contentType: string;
+  fileSize: number;
+  blobUrl: string;
+}
+
+/**
+ * Pending action types for confirmation flow
+ */
+export type AiEmailPendingAction =
+  | {
+      type: 'send_invoice';
+      invoiceId: string;
+      recipientEmail: string;
+      recipientName?: string;
+      amount: number;
+      currency: string;
+      description: string;
+      invoiceLink: string;
+    }
+  | {
+      type: 'attach_document';
+      bestMatch: TransactionMatch;
+      alternatives: TransactionMatch[];
+      attachmentIndex: number; // Index in preparedAttachments
+      attachmentFilename: string;
+      attachmentContentType: string;
+      attachmentSize: number;
+    }
+  | {
+      type: 'remove_attachment';
+      bestMatch: AttachmentInfo & { transaction: TransactionMatch };
+      alternatives: Array<AttachmentInfo & { transaction: TransactionMatch }>;
+    };
 
 export interface AiEmailExtractedData {
   recipientEmail?: string;
