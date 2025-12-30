@@ -103,16 +103,26 @@ export async function getOrCreateSession(params: {
   }
 
   // Also try the current message ID (for the first message in a thread)
-  possibleThreadIds.push(threadId);
+  // Normalize it by stripping angle brackets for consistency
+  const cleanThreadId = threadId.replace(/^<|>$/g, '').trim();
+  possibleThreadIds.push(cleanThreadId);
+
+  // Also add versions WITH angle brackets for backwards compatibility
+  // (some sessions may have been stored with angle brackets)
+  const withBrackets = possibleThreadIds.map((id) =>
+    id.startsWith('<') ? id : `<${id}>`,
+  );
+  const allPossibleIds = [...new Set([...possibleThreadIds, ...withBrackets])];
 
   // Log all possible thread IDs for debugging
   console.log(
-    `[Session] Searching for session with ${possibleThreadIds.length} possible threadIds:`,
-    possibleThreadIds.slice(0, 5), // Log first 5 to avoid spam
+    `[Session] Searching for session with ${allPossibleIds.length} possible threadIds:`,
+    allPossibleIds.slice(0, 8), // Log first 8 to show both versions
   );
 
   // Try to find existing session by any of the thread IDs
-  for (const searchThreadId of possibleThreadIds) {
+  for (const searchThreadId of allPossibleIds) {
+    console.log(`[Session] Trying threadId: "${searchThreadId}"`);
     const [existingSession] = await db
       .select()
       .from(aiEmailSessions)
@@ -125,8 +135,12 @@ export async function getOrCreateSession(params: {
       .limit(1);
 
     if (existingSession) {
+      console.log(
+        `[Session] Found session ${existingSession.id} with threadId: "${existingSession.threadId}"`,
+      );
       // Check if expired
       if (new Date(existingSession.expiresAt) < new Date()) {
+        console.log(`[Session] Session expired, marking and continuing`);
         // Mark as expired and continue searching
         await db
           .update(aiEmailSessions)
@@ -134,7 +148,7 @@ export async function getOrCreateSession(params: {
           .where(eq(aiEmailSessions.id, existingSession.id));
       } else {
         console.log(
-          `[Session] Found existing session via threadId: ${searchThreadId}`,
+          `[Session] Found existing active session via threadId: ${searchThreadId}`,
         );
         return existingSession;
       }
@@ -143,8 +157,11 @@ export async function getOrCreateSession(params: {
 
   // No existing session found - create new one
   // Use the FIRST message ID we find (inReplyTo if available, else current messageId)
-  // This ensures if user starts by replying, we still track the thread correctly
-  const canonicalThreadId = possibleThreadIds[0] || threadId;
+  // NORMALIZE by stripping angle brackets for consistent storage
+  const canonicalThreadId = (possibleThreadIds[0] || cleanThreadId).replace(
+    /^<|>$/g,
+    '',
+  );
 
   console.log(
     `[Session] Creating new session with threadId: ${canonicalThreadId}`,
