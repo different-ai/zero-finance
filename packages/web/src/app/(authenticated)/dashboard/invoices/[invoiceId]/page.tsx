@@ -8,6 +8,7 @@ import InvoiceClient from '@/components/invoice/invoice-client';
 import { ShareInvoiceLink } from '@/components/invoice/share-invoice-link';
 import { PaymentDetailsDisplay } from '@/components/invoice/payment-details-display';
 import { ExportInvoicePDFButton } from '@/components/invoice/export-invoice-pdf-button';
+import { PayInvoiceButton } from '@/components/invoice/pay-invoice-button';
 import { FileText, CreditCard } from 'lucide-react';
 // import { UserRequest } from '@/db/schema'; // Remove DB import
 // import { invoiceDataSchema } from '@/server/routers/invoice-router'; // REMOVE Zod schema import
@@ -210,16 +211,17 @@ export default async function InternalInvoicePage({
   const paymentMethod =
     invoiceDetails?.paymentMethod ||
     (invoiceDetails?.paymentType === 'crypto' ? 'crypto' : 'ach');
-  const isCrypto = paymentMethod === 'crypto' || invoiceDetails?.paymentType === 'crypto';
+  const isCrypto =
+    paymentMethod === 'crypto' || invoiceDetails?.paymentType === 'crypto';
   const paymentAddress = invoiceDetails?.paymentAddress || null;
-  
+
   // Fix crypto network - if it's crypto and network is 'mainnet', try to infer from currency
   let cryptoNetwork = invoiceDetails?.network || null;
   if (isCrypto && cryptoNetwork === 'mainnet') {
     // Default to base for USDC if network is incorrectly set to mainnet
     cryptoNetwork = invoiceDetails?.currency === 'USDC' ? 'base' : 'ethereum';
   }
-  
+
   const currency = invoiceDetails?.currency || rawInvoiceData.currency || 'USD';
 
   console.log('InternalInvoicePage: Payment info:', {
@@ -245,16 +247,36 @@ export default async function InternalInvoicePage({
                   <FileText className="h-6 w-6 text-blue-600" />
                   Invoice
                 </h1>
-                <p className="text-sm text-gray-600 mt-1">Official tax invoice and legal document</p>
+                <p className="text-sm text-gray-600 mt-1">
+                  Official tax invoice and legal document
+                </p>
               </div>
               <div className="flex gap-2">
-                <ExportInvoicePDFButton invoiceId={invoiceId} invoiceData={rawInvoiceData} />
+                <PayInvoiceButton
+                  invoiceId={invoiceId}
+                  amount={invoiceDetails?.amount?.toString()}
+                  currency={currency}
+                  vendorName={
+                    invoiceDetails?.sellerInfo?.businessName ||
+                    invoiceDetails?.sellerInfo?.name
+                  }
+                  description={
+                    invoiceDetails?.note ||
+                    `Invoice ${invoiceDetails?.invoiceNumber || ''}`
+                  }
+                />
+                <ExportInvoicePDFButton
+                  invoiceId={invoiceId}
+                  invoiceData={rawInvoiceData}
+                />
                 <ShareInvoiceLink invoiceId={invoiceId} />
               </div>
             </div>
             <InvoiceClient
               requestId={(rawInvoiceData as UserRequest).id}
-              requestNetworkId={(rawInvoiceData as UserRequest).requestId || undefined}
+              requestNetworkId={
+                (rawInvoiceData as UserRequest).requestId || undefined
+              }
               walletPrivateKey={userWalletKey}
               dbInvoiceData={rawInvoiceData as Omit<UserRequest, 'shareToken'>}
               isExternalView={false}
@@ -263,9 +285,16 @@ export default async function InternalInvoicePage({
         </div>
 
         {(() => {
-          const hasFiatInfo = !isCrypto && paymentDetails && Object.values(paymentDetails).some(Boolean);
-          const hasCryptoInfo = isCrypto && (Boolean(paymentAddress) || Boolean(cryptoNetwork) || Boolean(currency));
-          return (hasFiatInfo || hasCryptoInfo);
+          const hasFiatInfo =
+            !isCrypto &&
+            paymentDetails &&
+            Object.values(paymentDetails).some(Boolean);
+          const hasCryptoInfo =
+            isCrypto &&
+            (Boolean(paymentAddress) ||
+              Boolean(cryptoNetwork) ||
+              Boolean(currency));
+          return hasFiatInfo || hasCryptoInfo;
         })() && (
           <div className="lg:col-span-4 w-full">
             <div className="space-y-3 h-[56px]">
@@ -274,18 +303,22 @@ export default async function InternalInvoicePage({
                   <CreditCard className="h-5 w-5 text-purple-600" />
                   Payment & Actions
                 </h2>
-                <p className="text-sm text-gray-600 mt-1">Payment instructions and transaction options</p>
+                <p className="text-sm text-gray-600 mt-1">
+                  Payment instructions and transaction options
+                </p>
               </div>
               <div className="sticky top-24 space-y-3">
                 <PaymentDetailsDisplay
                   paymentMethod={paymentMethod}
                   paymentDetails={paymentDetails}
-                  paymentAddress={paymentAddress || (isCrypto ? 'Payment address not provided' : null)}
+                  paymentAddress={
+                    paymentAddress ||
+                    (isCrypto ? 'Payment address not provided' : null)
+                  }
                   currency={currency}
                   cryptoNetwork={cryptoNetwork}
                   invoiceNumber={invoiceDetails?.invoiceNumber}
                 />
-            
               </div>
             </div>
           </div>

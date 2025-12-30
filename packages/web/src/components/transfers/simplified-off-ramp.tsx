@@ -222,6 +222,8 @@ interface SimplifiedOffRampProps {
   earningBalance?: number; // USDC in vaults, earning yield
   spendableBalance?: number; // Total (idle + earning)
   vaultPositions?: VaultPosition[]; // For vault withdrawal execution
+  // Invoice linking - when paying an invoice, pass the ID to copy attachments
+  linkedInvoiceId?: string;
 }
 
 type SimplifiedOffRampInnerProps = Omit<SimplifiedOffRampProps, 'mode'>;
@@ -1355,6 +1357,7 @@ function SimplifiedOffRampReal({
   earningBalance,
   spendableBalance,
   vaultPositions,
+  linkedInvoiceId,
 }: SimplifiedOffRampInnerProps) {
   const [currentStep, setCurrentStep] = useState(0);
   const [formStep, setFormStep] = useState(1);
@@ -1899,6 +1902,8 @@ function SimplifiedOffRampReal({
       destinationPaymentRails:
         values.destinationType === 'ach' ? 'ach' : 'sepa',
       feeAmount: currentQuote.feeAmount,
+      // Link to invoice if paying an invoice (copies attachments)
+      linkedInvoiceId,
     });
   };
 
