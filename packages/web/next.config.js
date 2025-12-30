@@ -43,16 +43,42 @@ const nextConfig = {
   },
 
   async rewrites() {
-    return [
-      {
-        source: '/ingest/static/:path*',
-        destination: 'https://us-assets.i.posthog.com/static/:path*',
-      },
-      {
-        source: '/ingest/:path*',
-        destination: 'https://us.i.posthog.com/:path*',
-      },
-    ];
+    return {
+      beforeFiles: [
+        // Rewrite zerofinance.ai to the /ai landing page
+        {
+          source: '/',
+          has: [
+            {
+              type: 'host',
+              value: 'zerofinance.ai',
+            },
+          ],
+          destination: '/ai',
+        },
+        {
+          source: '/',
+          has: [
+            {
+              type: 'host',
+              value: 'www.zerofinance.ai',
+            },
+          ],
+          destination: '/ai',
+        },
+      ],
+      afterFiles: [
+        {
+          source: '/ingest/static/:path*',
+          destination: 'https://us-assets.i.posthog.com/static/:path*',
+        },
+        {
+          source: '/ingest/:path*',
+          destination: 'https://us.i.posthog.com/:path*',
+        },
+      ],
+      fallback: [],
+    };
   },
   skipTrailingSlashRedirect: true,
 
