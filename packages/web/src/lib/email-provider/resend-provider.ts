@@ -182,6 +182,23 @@ export class ResendProvider implements EmailProvider {
       console.log(
         '[ResendProvider] Failed to fetch email content, using webhook metadata',
       );
+
+      // Try to fetch attachments using webhook metadata as fallback
+      const webhookAttachments = event.data.attachments;
+      let attachments: Array<{
+        filename: string;
+        content: string;
+        contentType: string;
+      }> = [];
+
+      if (webhookAttachments && webhookAttachments.length > 0) {
+        console.log(
+          '[ResendProvider] Attempting to fetch attachments from webhook metadata:',
+          webhookAttachments.length,
+        );
+        attachments = await this.fetchAttachments(emailId, webhookAttachments);
+      }
+
       // Return basic info from webhook if API call fails
       return {
         from: event.data.from || '',
@@ -190,14 +207,25 @@ export class ResendProvider implements EmailProvider {
         text: '', // No content available
         headers: {},
         messageId: event.data.message_id || emailId,
+        attachments,
       };
     }
 
-    // Fetch attachments if present
-    const attachments = await this.fetchAttachments(
-      emailId,
-      fullEmail.attachments,
+    // Use attachments from full email response, or fall back to webhook metadata
+    const attachmentMeta =
+      fullEmail.attachments?.length > 0
+        ? fullEmail.attachments
+        : event.data.attachments;
+
+    console.log(
+      '[ResendProvider] Attachment metadata source:',
+      fullEmail.attachments?.length > 0 ? 'fullEmail' : 'webhook',
+      'count:',
+      attachmentMeta?.length || 0,
     );
+
+    // Fetch attachments if present
+    const attachments = await this.fetchAttachments(emailId, attachmentMeta);
 
     console.log('[ResendProvider] Parsed email from:', fullEmail.from);
     console.log('[ResendProvider] Parsed email to:', fullEmail.to);
@@ -267,8 +295,17 @@ export class ResendProvider implements EmailProvider {
     }>
   > {
     if (!attachmentMeta || attachmentMeta.length === 0) {
+      console.log('[ResendProvider] No attachment metadata to fetch');
       return [];
     }
+
+    console.log(
+      `[ResendProvider] Fetching ${attachmentMeta.length} attachments for email ${emailId}`,
+    );
+    console.log(
+      '[ResendProvider] Attachment IDs:',
+      attachmentMeta.map((m) => m.id),
+    );
 
     const attachments: Array<{
       filename: string;
@@ -278,26 +315,39 @@ export class ResendProvider implements EmailProvider {
 
     for (const meta of attachmentMeta) {
       try {
+        const url = `https://api.resend.com/emails/receiving/${emailId}/attachments/${meta.id}`;
+        console.log(`[ResendProvider] Fetching attachment from: ${url}`);
+
         // Fetch attachment content from Resend API
-        const response = await fetch(
-          `https://api.resend.com/emails/receiving/${emailId}/attachments/${meta.id}`,
-          {
-            headers: {
-              Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
-            },
+        const response = await fetch(url, {
+          headers: {
+            Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
           },
-        );
+        });
 
         if (!response.ok) {
+          const errorText = await response.text();
           console.error(
             `[ResendProvider] Failed to fetch attachment ${meta.id}:`,
             response.status,
+            errorText,
           );
           continue;
         }
 
         const attachmentData =
           (await response.json()) as ResendAttachmentContent;
+
+        if (!attachmentData.content) {
+          console.error(
+            `[ResendProvider] Attachment ${meta.id} has no content field`,
+          );
+          console.log(
+            '[ResendProvider] Attachment response:',
+            JSON.stringify(attachmentData).substring(0, 500),
+          );
+          continue;
+        }
 
         attachments.push({
           filename: attachmentData.filename || meta.filename,
@@ -306,7 +356,7 @@ export class ResendProvider implements EmailProvider {
         });
 
         console.log(
-          `[ResendProvider] Fetched attachment: ${meta.filename} (${meta.content_type})`,
+          `[ResendProvider] Successfully fetched attachment: ${meta.filename} (${meta.content_type}, ${attachmentData.content.length} chars base64)`,
         );
       } catch (error) {
         console.error(
@@ -316,6 +366,9 @@ export class ResendProvider implements EmailProvider {
       }
     }
 
+    console.log(
+      `[ResendProvider] Total attachments fetched: ${attachments.length}/${attachmentMeta.length}`,
+    );
     return attachments;
   }
 
