@@ -116,6 +116,13 @@ If yes to any, update the relevant skill file.
 7. Reinforce skills with learnings
 ```
 
+## AI features
+Available models are:
+- gpt-5.2
+- gpt-5-mini
+
+Always use gpt-5.2 for complex tasks and gpt-5-mini for fast actions.
+
 ### Debugging Production
 
 ```
@@ -162,6 +169,9 @@ If yes to any, update the relevant skill file.
 - Testing pyramid strategy
 
 ### skill-reinforcement
+
+Always trigger skill-reinforcement after any skill completes.
+
 
 - Meta-skill for improving other skills
 - Triggers after any skill completes

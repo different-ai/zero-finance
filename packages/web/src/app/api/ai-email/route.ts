@@ -157,7 +157,8 @@ function formatQuotedMessage(
 
 /**
  * Send an email reply to the user.
- * @param workspaceId - The workspace ID to use in the reply-to address so users can hit "reply"
+ * @param aiEmailHandle - The AI email handle (e.g., "ai-emily.jameson") to use in the from address.
+ *                        Falls back to workspaceId for legacy support, then generic "ai" address.
  * @param sessionThreadId - The original session's threadId to include in References for thread continuity.
  *                          This ensures that when the user replies to our email, we can find the original session.
  *                          Without this, replies would create new sessions because the In-Reply-To header
@@ -168,7 +169,7 @@ async function sendReply(
   subject: string,
   body: string,
   inReplyTo?: string,
-  workspaceId?: string,
+  aiEmailHandle?: string | null,
   sessionThreadId?: string,
 ): Promise<void> {
   const emailHeaders: Record<string, string> = {};
@@ -185,9 +186,10 @@ async function sendReply(
     emailHeaders['References'] = references.join(' ');
   }
 
-  // Use workspace-specific address so users can hit "reply"
-  const fromAddress = workspaceId
-    ? `${workspaceId}@${AI_EMAIL_INBOUND_DOMAIN}`
+  // Use human-readable AI email handle (e.g., ai-emily.jameson@zerofinance.ai)
+  // This makes replies work correctly and looks professional
+  const fromAddress = aiEmailHandle
+    ? `${aiEmailHandle}@${AI_EMAIL_INBOUND_DOMAIN}`
     : `ai@${AI_EMAIL_INBOUND_DOMAIN}`;
 
   await emailProvider.send({
@@ -416,6 +418,7 @@ export async function POST(request: NextRequest) {
   let senderEmail = '';
   let messageId: string | undefined;
   let workspaceId: string | undefined;
+  let aiEmailHandle: string | null | undefined;
   let originalSubject: string | undefined;
 
   try {
@@ -579,8 +582,9 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Track workspaceId for error handling
+    // Track workspaceId and aiEmailHandle for error handling
     workspaceId = workspaceResult.workspaceId;
+    aiEmailHandle = workspaceResult.aiEmailHandle;
 
     // ==========================================================================
     // IDEMPOTENCY CHECK: Prevent duplicate webhook processing
@@ -732,7 +736,7 @@ export async function POST(request: NextRequest) {
             replySubject,
             responseTemplate.body,
             messageId,
-            workspaceResult.workspaceId,
+            workspaceResult.aiEmailHandle,
             session.threadId,
           );
 
@@ -749,7 +753,7 @@ export async function POST(request: NextRequest) {
             replySubject,
             cancelledTemplate.body,
             messageId,
-            workspaceResult.workspaceId,
+            workspaceResult.aiEmailHandle,
             session.threadId,
           );
           await updateSession(session.id, {
@@ -919,7 +923,7 @@ export async function POST(request: NextRequest) {
             toolContext.replySubject,
             template.body + toolContext.quotedOriginal,
             toolContext.messageId,
-            toolContext.workspaceResult.workspaceId,
+            toolContext.workspaceResult.aiEmailHandle,
             toolContext.sessionThreadId,
           );
 
@@ -942,7 +946,7 @@ export async function POST(request: NextRequest) {
             toolContext.replySubject,
             body + toolContext.quotedOriginal,
             toolContext.messageId,
-            toolContext.workspaceResult.workspaceId,
+            toolContext.workspaceResult.aiEmailHandle,
             toolContext.sessionThreadId,
           );
           return { success: true };
@@ -1617,7 +1621,7 @@ export async function POST(request: NextRequest) {
             toolContext.replySubject,
             template.body + toolContext.quotedOriginal,
             toolContext.messageId,
-            toolContext.workspaceResult.workspaceId,
+            toolContext.workspaceResult.aiEmailHandle,
             toolContext.sessionThreadId,
           );
 
@@ -1803,7 +1807,7 @@ export async function POST(request: NextRequest) {
             toolContext.replySubject,
             template.body + toolContext.quotedOriginal,
             toolContext.messageId,
-            toolContext.workspaceResult.workspaceId,
+            toolContext.workspaceResult.aiEmailHandle,
             toolContext.sessionThreadId,
           );
 
@@ -1902,16 +1906,16 @@ export async function POST(request: NextRequest) {
           await sendReply(
             toolContext.email.from,
             toolContext.replySubject,
-            template.body,
+            template.body + toolContext.quotedOriginal,
             toolContext.messageId,
-            toolContext.workspaceResult.workspaceId,
+            toolContext.workspaceResult.aiEmailHandle,
             toolContext.sessionThreadId,
           );
 
           return {
             success: true,
-            message: `Attached ${successCount}/${pendingAction.matches.length} files`,
-            results,
+            message: 'Confirmation request sent to user',
+            awaitingConfirmation: true,
           };
         },
       }),
@@ -1995,16 +1999,16 @@ export async function POST(request: NextRequest) {
             await sendReply(
               toolContext.email.from,
               toolContext.replySubject,
-              template.body,
+              template.body + toolContext.quotedOriginal,
               toolContext.messageId,
-              toolContext.workspaceResult.workspaceId,
+              toolContext.workspaceResult.aiEmailHandle,
               toolContext.sessionThreadId,
             );
 
             return {
               success: true,
-              message: `Attached ${pendingAction.attachmentFilename} to ${targetTransaction.currency} ${targetTransaction.amount} payment`,
-              attachmentUrl: pendingAction.tempBlobUrl,
+              message: 'Confirmation request sent to user',
+              awaitingConfirmation: true,
             };
           } catch (error) {
             console.error('[AI Email] confirmAttachment error:', error);
@@ -2254,7 +2258,7 @@ export async function POST(request: NextRequest) {
             toolContext.replySubject,
             template.body + toolContext.quotedOriginal,
             toolContext.messageId,
-            toolContext.workspaceResult.workspaceId,
+            toolContext.workspaceResult.aiEmailHandle,
             toolContext.sessionThreadId,
           );
 
@@ -2330,7 +2334,7 @@ export async function POST(request: NextRequest) {
               toolContext.replySubject,
               template.body,
               toolContext.messageId,
-              toolContext.workspaceResult.workspaceId,
+              toolContext.workspaceResult.aiEmailHandle,
               toolContext.sessionThreadId,
             );
 
@@ -2377,7 +2381,7 @@ export async function POST(request: NextRequest) {
               toolContext.replySubject,
               template.body,
               toolContext.messageId,
-              toolContext.workspaceResult.workspaceId,
+              toolContext.workspaceResult.aiEmailHandle,
               toolContext.sessionThreadId,
             );
             return {
@@ -2400,7 +2404,7 @@ export async function POST(request: NextRequest) {
             toolContext.replySubject,
             template.body,
             toolContext.messageId,
-            toolContext.workspaceResult.workspaceId,
+            toolContext.workspaceResult.aiEmailHandle,
             toolContext.sessionThreadId,
           );
 
@@ -2452,7 +2456,7 @@ export async function POST(request: NextRequest) {
               toolContext.replySubject,
               template.body,
               toolContext.messageId,
-              toolContext.workspaceResult.workspaceId,
+              toolContext.workspaceResult.aiEmailHandle,
               toolContext.sessionThreadId,
             );
             return {
@@ -2495,7 +2499,7 @@ export async function POST(request: NextRequest) {
             toolContext.replySubject,
             template.body + toolContext.quotedOriginal,
             toolContext.messageId,
-            toolContext.workspaceResult.workspaceId,
+            toolContext.workspaceResult.aiEmailHandle,
             toolContext.sessionThreadId,
           );
 
@@ -2557,7 +2561,7 @@ export async function POST(request: NextRequest) {
               toolContext.replySubject,
               successTemplate.body,
               toolContext.messageId,
-              toolContext.workspaceResult.workspaceId,
+              toolContext.workspaceResult.aiEmailHandle,
               toolContext.sessionThreadId,
             );
 
@@ -2629,7 +2633,7 @@ export async function POST(request: NextRequest) {
         toolContext.replySubject,
         result.text + quotedOriginal,
         messageId,
-        workspaceResult.workspaceId,
+        workspaceResult.aiEmailHandle,
         session.threadId,
       );
     }
@@ -2652,7 +2656,7 @@ export async function POST(request: NextRequest) {
           errorSubject,
           errorTemplate.body,
           messageId, // Include In-Reply-To header to maintain thread
-          workspaceId, // Use workspace-specific from address
+          aiEmailHandle, // Use human-readable AI email handle
         );
       }
     } catch {

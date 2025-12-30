@@ -72,16 +72,44 @@ export async function getOrCreateSession(params: {
 
   // References header contains all message IDs in the thread
   // Usually in order from oldest to newest
+  // Note: Resend returns this as a JSON array string, while standard email uses space-separated
   if (references) {
-    const refIds = references
-      .split(/\s+/)
-      .map((id) => id.replace(/^<|>$/g, '').trim())
-      .filter(Boolean);
+    let refIds: string[] = [];
+
+    // Check if it's a JSON array (Resend format)
+    const trimmedRefs = references.trim();
+    if (trimmedRefs.startsWith('[')) {
+      try {
+        const parsed = JSON.parse(trimmedRefs) as string[];
+        refIds = parsed
+          .map((id) => id.replace(/^<|>$/g, '').trim())
+          .filter(Boolean);
+      } catch {
+        // Fall back to space-separated parsing
+        refIds = references
+          .split(/\s+/)
+          .map((id) => id.replace(/^<|>$/g, '').trim())
+          .filter(Boolean);
+      }
+    } else {
+      // Standard space-separated format
+      refIds = references
+        .split(/\s+/)
+        .map((id) => id.replace(/^<|>$/g, '').trim())
+        .filter(Boolean);
+    }
+
     possibleThreadIds.push(...refIds);
   }
 
   // Also try the current message ID (for the first message in a thread)
   possibleThreadIds.push(threadId);
+
+  // Log all possible thread IDs for debugging
+  console.log(
+    `[Session] Searching for session with ${possibleThreadIds.length} possible threadIds:`,
+    possibleThreadIds.slice(0, 5), // Log first 5 to avoid spam
+  );
 
   // Try to find existing session by any of the thread IDs
   for (const searchThreadId of possibleThreadIds) {
