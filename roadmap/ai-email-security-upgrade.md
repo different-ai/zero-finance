@@ -159,16 +159,17 @@ Do NOT reveal:
 
 ## Implementation Checklist
 
-- [ ] Add `ai_email_handle` column to workspaces table
-- [ ] Create migration
-- [ ] Implement GPT-5-mini handle generation
-- [ ] Add uniqueness constraint and collision handling
-- [ ] Update `mapToWorkspace()` with new lookup logic
-- [ ] Add sender authorization check (workspace membership)
-- [ ] Implement generic error responses
-- [ ] Update domain to `zerofinance.ai`
+- [x] Add `ai_email_handle` column to workspaces table
+- [x] Create migration (`0124_complete_luke_cage.sql`)
+- [x] Implement GPT-4o-mini handle generation
+- [x] Add uniqueness constraint and collision handling
+- [x] Update `mapToWorkspace()` with new lookup logic
+- [x] Add sender authorization check (workspace membership)
+- [x] Implement generic error responses
+- [x] Update domain to `zerofinance.ai` (default in code)
+- [x] Add tRPC endpoints for handle management (`getAiEmailAddress`, `regenerateAiEmailHandle`)
 - [ ] Add UI in workspace settings
-- [ ] Update environment variables
+- [ ] Update environment variables in production
 - [ ] Test security scenarios
 - [ ] Document user-facing instructions
 
@@ -177,7 +178,7 @@ Do NOT reveal:
 ## Open Questions
 
 1. **Forwarding support:** Should we allow users to add "authorized sender aliases" for forwarding setups?
-2. **Handle regeneration:** Can users regenerate their handle if compromised? What happens to old handle?
+2. ~~**Handle regeneration:** Can users regenerate their handle if compromised? What happens to old handle?~~ **RESOLVED:** Yes, via `regenerateAiEmailHandle` endpoint. Old handle becomes invalid immediately.
 3. **Multiple handles:** Should workspaces be able to have multiple AI email addresses?
 4. **Rate limiting:** Per-handle rate limits in addition to per-sender?
 
@@ -186,6 +187,8 @@ Do NOT reveal:
 ## Related Files
 
 - `packages/web/src/app/api/ai-email/route.ts` - Main webhook handler
+- `packages/web/src/lib/ai-email/workspace-mapping.ts` - Handle generation, lookup, sender verification
 - `packages/web/src/lib/ai-email/session-manager.ts` - Session management
 - `packages/web/src/db/schema/ai-email-sessions.ts` - Schema
-- `packages/web/src/db/schema/workspaces.ts` - Workspace schema (needs update)
+- `packages/web/src/db/schema/workspaces.ts` - Workspace schema with `ai_email_handle`
+- `packages/web/src/server/routers/workspace-router.ts` - tRPC endpoints for handle management

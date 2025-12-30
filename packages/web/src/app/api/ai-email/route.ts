@@ -539,8 +539,8 @@ export async function POST(request: NextRequest) {
 
     console.log(`[AI Email] Received email from ${email.from} to ${toAddress}`);
 
-    // Map the "to" address to a workspace
-    const workspaceResult = await mapToWorkspace(toAddress);
+    // Map the "to" address to a workspace (with sender verification)
+    const workspaceResult = await mapToWorkspace(toAddress, email.from);
     console.log(
       `[AI Email] mapToWorkspace result:`,
       JSON.stringify(workspaceResult),

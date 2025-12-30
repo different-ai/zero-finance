@@ -1189,4 +1189,139 @@ export const workspaceRouter = router({
 
       return workspace;
     }),
+
+  /**
+   * Get or generate the AI email address for a workspace.
+   * If the workspace doesn't have a handle, generates one using GPT-4o-mini.
+   */
+  getAiEmailAddress: protectedProcedure
+    .input(
+      z.object({
+        workspaceId: z.string().uuid(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const { userId } = ctx;
+
+      if (!userId) {
+        throw new TRPCError({
+          code: 'UNAUTHORIZED',
+          message: 'User not authenticated',
+        });
+      }
+
+      // Verify user is member of workspace
+      const membership = await ctx.db
+        .select()
+        .from(workspaceMembers)
+        .where(
+          and(
+            eq(workspaceMembers.workspaceId, input.workspaceId),
+            eq(workspaceMembers.userId, userId),
+          ),
+        )
+        .limit(1);
+
+      if (!membership.length) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'Not a member of this workspace',
+        });
+      }
+
+      // Import dynamically to avoid circular dependencies
+      const { getOrCreateAiEmailHandle, AI_EMAIL_INBOUND_DOMAIN } =
+        await import('@/lib/ai-email/workspace-mapping');
+
+      const handle = await getOrCreateAiEmailHandle(input.workspaceId);
+
+      if (!handle) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to generate AI email address',
+        });
+      }
+
+      return {
+        handle,
+        email: `${handle}@${AI_EMAIL_INBOUND_DOMAIN}`,
+        domain: AI_EMAIL_INBOUND_DOMAIN,
+      };
+    }),
+
+  /**
+   * Regenerate the AI email handle for a workspace.
+   * This is useful if the current handle is compromised or the user wants a new one.
+   * Only workspace owners/admins can regenerate handles.
+   */
+  regenerateAiEmailHandle: protectedProcedure
+    .input(
+      z.object({
+        workspaceId: z.string().uuid(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const { userId } = ctx;
+
+      if (!userId) {
+        throw new TRPCError({
+          code: 'UNAUTHORIZED',
+          message: 'User not authenticated',
+        });
+      }
+
+      // Verify user is owner or admin of workspace
+      const membership = await ctx.db
+        .select()
+        .from(workspaceMembers)
+        .where(
+          and(
+            eq(workspaceMembers.workspaceId, input.workspaceId),
+            eq(workspaceMembers.userId, userId),
+          ),
+        )
+        .limit(1);
+
+      if (!membership.length) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'Not a member of this workspace',
+        });
+      }
+
+      const role = membership[0].role;
+      if (role !== 'owner' && role !== 'admin') {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message:
+            'Only workspace owners and admins can regenerate AI email handles',
+        });
+      }
+
+      // Import dynamically to avoid circular dependencies
+      const { generateAiEmailHandle, AI_EMAIL_INBOUND_DOMAIN } = await import(
+        '@/lib/ai-email/workspace-mapping'
+      );
+
+      const newHandle = await generateAiEmailHandle(input.workspaceId);
+
+      if (!newHandle) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to generate new AI email handle',
+        });
+      }
+
+      // Update the workspace with the new handle
+      await ctx.db
+        .update(workspaces)
+        .set({ aiEmailHandle: newHandle })
+        .where(eq(workspaces.id, input.workspaceId));
+
+      return {
+        handle: newHandle,
+        email: `${newHandle}@${AI_EMAIL_INBOUND_DOMAIN}`,
+        domain: AI_EMAIL_INBOUND_DOMAIN,
+      };
+    }),
 });

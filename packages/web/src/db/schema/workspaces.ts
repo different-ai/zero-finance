@@ -57,6 +57,12 @@ export const workspaces = pgTable(
     workspaceType: text('workspace_type', {
       enum: ['personal', 'business'],
     }).default('business'),
+
+    // AI Email Handle - human-readable email address for AI agent
+    // Format: ai-{firstname}.{lastname} (e.g., ai-clara.mitchell)
+    // Full email: {handle}@zerofinance.ai
+    // Generated on first access via GPT-4o-mini, unique across all workspaces
+    aiEmailHandle: text('ai_email_handle'),
   },
   (table) => ({
     alignCustomerIdx: uniqueIndex('workspaces_align_customer_id_idx').on(
@@ -65,6 +71,9 @@ export const workspaces = pgTable(
     kycStatusIdx: index('workspaces_kyc_status_idx').on(table.kycStatus),
     alignVirtualAccountIdx: index('workspaces_align_virtual_account_idx').on(
       table.alignVirtualAccountId,
+    ),
+    aiEmailHandleIdx: uniqueIndex('workspaces_ai_email_handle_idx').on(
+      table.aiEmailHandle,
     ),
   }),
 );

@@ -5,22 +5,30 @@
  * create invoices by forwarding emails to their workspace's unique address.
  *
  * Architecture:
- * 1. User forwards email to {workspaceId}@ai.0.finance
+ * 1. User forwards email to ai-{name}@zerofinance.ai (or legacy {workspaceId}@ai.0.finance)
  * 2. Resend catches all emails and sends webhook to /api/ai-email
- * 3. We extract workspaceId from the "to" address
+ * 3. We extract handle from the "to" address and verify sender is workspace member
  * 4. AI processes the email, creates invoice, asks for confirmation
  * 5. User replies YES/NO
  * 6. Invoice is sent or cancelled
  *
- * For security upgrade path (email linking), see:
- * roadmap/ai-email-security-upgrade.md
+ * Security Model:
+ * - Handle-based addressing (human-readable, e.g., ai-clara.mitchell@zerofinance.ai)
+ * - Sender verification (only workspace members can use the AI)
+ * - Generic errors to prevent enumeration attacks
+ *
+ * For security documentation, see: roadmap/ai-email-security-upgrade.md
  */
 
 // Workspace mapping
 export {
   mapToWorkspace,
   extractWorkspaceIdFromEmail,
+  extractLocalPartFromEmail,
   getWorkspaceAiEmailAddress,
+  getLegacyWorkspaceAiEmailAddress,
+  getOrCreateAiEmailHandle,
+  generateAiEmailHandle,
   AI_EMAIL_INBOUND_DOMAIN,
   type WorkspaceMapping,
   type WorkspaceMappingError,
