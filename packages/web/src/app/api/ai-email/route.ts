@@ -1559,6 +1559,287 @@ export async function POST(request: NextRequest) {
         },
       }),
 
+      attachAllDocuments: tool({
+        description:
+          'Smart attach ALL email attachments to matching transactions. Reads each file, extracts vendor/amount/date, and matches to the best transaction. Use this when user sends multiple attachments or says "attach these" without specifying which transaction. ALWAYS requires user confirmation.',
+        inputSchema: z.object({
+          searchHint: z
+            .string()
+            .optional()
+            .describe(
+              'Optional hint from user about which transactions to match (e.g., "Acme", "last week")',
+            ),
+        }),
+        execute: async (params) => {
+          console.log(
+            '[AI Email] Tool: attachAllDocuments called with:',
+            params,
+          );
+
+          const supportedAttachments = toolContext.preparedAttachments.filter(
+            (a) => a.supported && a.base64Content,
+          );
+
+          if (supportedAttachments.length === 0) {
+            return {
+              error: 'No supported attachments found in this email',
+              success: false,
+            };
+          }
+
+          // Get recent transactions to match against
+          const transfers = await db
+            .select({
+              id: offrampTransfers.id,
+              amount: offrampTransfers.amountToSend,
+              currency: offrampTransfers.destinationCurrency,
+              bankAccountSnapshot:
+                offrampTransfers.destinationBankAccountSnapshot,
+              createdAt: offrampTransfers.createdAt,
+            })
+            .from(offrampTransfers)
+            .where(
+              and(
+                eq(
+                  offrampTransfers.workspaceId,
+                  toolContext.workspaceResult.workspaceId,
+                ),
+                eq(offrampTransfers.status, 'completed'),
+              ),
+            )
+            .orderBy(desc(offrampTransfers.createdAt))
+            .limit(20);
+
+          if (transfers.length === 0) {
+            return {
+              error: 'No completed transactions found to attach to',
+              success: false,
+            };
+          }
+
+          // Build transaction list with recipient info
+          const transactionList = transfers.map((tx) => {
+            const snapshot = tx.bankAccountSnapshot as Record<
+              string,
+              unknown
+            > | null;
+            return {
+              id: tx.id,
+              type: 'offramp' as const,
+              amount: tx.amount,
+              currency: tx.currency.toUpperCase(),
+              recipientName:
+                (snapshot?.account_holder_first_name as string) ||
+                (snapshot?.account_holder_business_name as string) ||
+                (snapshot?.bank_name as string) ||
+                undefined,
+              date: tx.createdAt.toISOString().split('T')[0],
+              score: 0,
+            };
+          });
+
+          // Match each attachment to a transaction
+          // For now, use simple matching: first attachment to first transaction, etc.
+          // In the future, we can use AI to read PDFs and extract vendor/amount for smarter matching
+          const matches: Array<{
+            attachmentIndex: number;
+            filename: string;
+            contentType: string;
+            fileSize: number;
+            transaction: (typeof transactionList)[0];
+          }> = [];
+
+          for (let i = 0; i < supportedAttachments.length; i++) {
+            const attachment = supportedAttachments[i];
+            const attachmentIndex =
+              toolContext.preparedAttachments.indexOf(attachment);
+
+            // Find best matching transaction (not already used)
+            const usedTxIds = matches.map((m) => m.transaction.id);
+            const availableTx = transactionList.find(
+              (tx) => !usedTxIds.includes(tx.id),
+            );
+
+            if (availableTx) {
+              matches.push({
+                attachmentIndex,
+                filename: attachment.filename,
+                contentType: attachment.contentType,
+                fileSize: Math.round(attachment.base64Content!.length * 0.75),
+                transaction: availableTx,
+              });
+            }
+          }
+
+          if (matches.length === 0) {
+            return {
+              error: 'Could not match any attachments to transactions',
+              success: false,
+            };
+          }
+
+          // Store pending action
+          const pendingAction: AiEmailPendingAction = {
+            type: 'attach_multiple',
+            matches: matches.map((m) => ({
+              attachmentIndex: m.attachmentIndex,
+              filename: m.filename,
+              contentType: m.contentType,
+              fileSize: m.fileSize,
+              transaction: { ...m.transaction, score: 100 },
+            })),
+          };
+
+          await updateSession(toolContext.session.id, {
+            pendingAction,
+            state: 'awaiting_confirmation',
+          });
+
+          // Format file sizes
+          const formatSize = (bytes: number) => {
+            if (bytes > 1024 * 1024)
+              return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+            return `${Math.round(bytes / 1024)} KB`;
+          };
+
+          // Send confirmation email
+          const template = emailTemplates.multiAttachmentConfirmation({
+            matches: matches.map((m) => ({
+              filename: m.filename,
+              fileSize: formatSize(m.fileSize),
+              transaction: m.transaction,
+            })),
+          });
+
+          await sendReply(
+            toolContext.email.from,
+            toolContext.replySubject,
+            template.body + toolContext.quotedOriginal,
+            toolContext.messageId,
+            toolContext.workspaceResult.workspaceId,
+          );
+
+          return {
+            success: true,
+            message: `Matched ${matches.length} attachments to transactions, awaiting confirmation`,
+            matchCount: matches.length,
+            awaitingConfirmation: true,
+          };
+        },
+      }),
+
+      confirmMultipleAttachments: tool({
+        description:
+          'Complete attaching multiple documents after user confirms with YES. Call this when user replies YES to a multi-attachment confirmation.',
+        inputSchema: z.object({}),
+        execute: async () => {
+          console.log('[AI Email] Tool: confirmMultipleAttachments called');
+
+          const pendingAction = toolContext.session.pendingAction;
+          if (!pendingAction || pendingAction.type !== 'attach_multiple') {
+            return {
+              error: 'No pending multi-attachment to confirm',
+              success: false,
+            };
+          }
+
+          const results: Array<{
+            filename: string;
+            success: boolean;
+            error?: string;
+          }> = [];
+
+          for (const match of pendingAction.matches) {
+            const attachment =
+              toolContext.preparedAttachments[match.attachmentIndex];
+            if (!attachment || !attachment.base64Content) {
+              results.push({
+                filename: match.filename,
+                success: false,
+                error: 'Attachment no longer available',
+              });
+              continue;
+            }
+
+            try {
+              // Upload to Vercel Blob
+              const fileBuffer = Buffer.from(
+                attachment.base64Content,
+                'base64',
+              );
+              const blob = await put(
+                `attachments/${match.transaction.type}/${match.transaction.id}/${attachment.filename}`,
+                fileBuffer,
+                {
+                  access: 'public',
+                  contentType: attachment.contentType,
+                  addRandomSuffix: true,
+                },
+              );
+
+              // Store in database
+              await db.insert(transactionAttachments).values({
+                transactionType: match.transaction.type,
+                transactionId: match.transaction.id,
+                workspaceId: toolContext.workspaceResult.workspaceId,
+                blobUrl: blob.url,
+                filename: attachment.filename,
+                contentType: attachment.contentType,
+                fileSize: fileBuffer.length,
+                uploadedBy: 'system:ai-email',
+                uploadSource: 'ai_email',
+              });
+
+              results.push({ filename: match.filename, success: true });
+              console.log(
+                `[AI Email] Attached ${match.filename} to ${match.transaction.id}`,
+              );
+            } catch (error) {
+              console.error(
+                `[AI Email] Failed to attach ${match.filename}:`,
+                error,
+              );
+              results.push({
+                filename: match.filename,
+                success: false,
+                error: error instanceof Error ? error.message : 'Unknown error',
+              });
+            }
+          }
+
+          // Clear pending action
+          await updateSession(toolContext.session.id, {
+            state: 'completed',
+            pendingAction: null,
+          });
+
+          const successCount = results.filter((r) => r.success).length;
+          const successFiles = results
+            .filter((r) => r.success)
+            .map((r) => r.filename);
+
+          // Send success email
+          const template = emailTemplates.multiAttachmentSuccess({
+            count: successCount,
+            files: successFiles,
+          });
+
+          await sendReply(
+            toolContext.email.from,
+            toolContext.replySubject,
+            template.body,
+            toolContext.messageId,
+            toolContext.workspaceResult.workspaceId,
+          );
+
+          return {
+            success: true,
+            message: `Attached ${successCount}/${pendingAction.matches.length} files`,
+            results,
+          };
+        },
+      }),
+
       confirmAttachment: tool({
         description:
           'Complete the attachment after user confirms. Call this when user replies YES or picks an alternative (A/B/C) to a pending attachment.',

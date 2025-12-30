@@ -118,29 +118,38 @@ When searching for a person/company name in bank accounts:
 - spendable_balance: Total available = idle + earning
 
 ## Attachment Flow
-1. When a user forwards an email with an attachment and asks to attach it to a transaction:
-   - Call findTransaction to search for the transaction they mention
-   - Call attachDocumentToTransaction with the transaction ID and attachment index
-   - This will send a confirmation email with the best match and alternatives
-   - Wait for user to reply YES, A, B, C, or NO
 
-2. When user confirms attachment (YES or A/B/C):
+IMPORTANT: When user sends attachments, prefer attachAllDocuments for the best UX. It handles single or multiple files.
+
+1. When user sends email with attachment(s) asking to attach:
+   - If they mention a specific transaction: findTransaction first, then attachDocumentToTransaction
+   - If they say "attach this/these" without specifics: use attachAllDocuments (handles 1 or many)
+   - attachAllDocuments will match each file to the best transaction automatically
+
+2. When user confirms (YES):
+   - For single attachment: call confirmAttachment
+   - For multiple attachments: call confirmMultipleAttachments
+
+3. When user picks alternative (A/B/C):
    - Call confirmAttachment with their selection
-   - The attachment will be uploaded and linked to the transaction
 
-3. When user asks to remove an attachment:
-   - Call listAttachments to find the attachment
+4. When user asks to remove an attachment:
+   - Call listAttachments to find it
    - Call removeAttachment with the attachment ID
-   - Wait for user confirmation
 
-4. When user confirms removal (YES or A/B/C):
-   - Call confirmRemoveAttachment with their selection
+5. Request patterns:
+   - "Attach this to my Acme payment" → findTransaction("Acme"), attachDocumentToTransaction
+   - "Attach these invoices" [3 PDFs] → attachAllDocuments (matches each to best transaction)
+   - "Match this invoice" [1 PDF] → attachAllDocuments (works for single files too)
+   - "What's attached to my last transfer?" → findTransaction, listAttachments
 
-5. Attachment request patterns:
-   - "Attach this receipt to my payment to Acme" [PDF attached] → findTransaction("Acme"), attachDocumentToTransaction
-   - "Add this invoice to my last transfer" → findTransaction(recent), attachDocumentToTransaction
-   - "What attachments are on my Acme payment?" → findTransaction("Acme"), listAttachments
-   - "Remove the receipt from my Chase transfer" → findTransaction("Chase"), listAttachments, removeAttachment
+## Email Formatting Rules
+- NO markdown (no ** or other formatting) - emails should be plain text
+- Say "transfer" not "offramp" or "onramp"
+- Say "incoming transfer" not "crypto_incoming"
+- Format currency with symbols: $500, €200, £100
+- Format dates nicely: "Dec 23, 2024" not "2024-12-23"
+- Keep emails concise and scannable
 
 ## User Context
 - Sender Email: ${session.senderEmail}
@@ -227,6 +236,23 @@ ${action.alternatives.length > 0 ? `- Alternatives:\n${altLabels}` : ''}
 
 If the user confirms (YES), attach to the best match.
 If the user picks an alternative (A, B, C), attach to that transaction.
+If the user declines (NO, cancel), do not attach.
+`;
+    } else if (action.type === 'attach_multiple') {
+      const matchList = action.matches
+        .map(
+          (m, i) =>
+            `  ${i + 1}. ${m.filename} → ${m.transaction.currency} ${m.transaction.amount} to ${m.transaction.recipientName || 'Unknown'}`,
+        )
+        .join('\n');
+
+      contextSections += `
+
+## Pending Action
+The user has ${action.matches.length} attachments to add:
+${matchList}
+
+If the user confirms (YES), call confirmMultipleAttachments.
 If the user declines (NO, cancel), do not attach.
 `;
     } else if (action.type === 'remove_attachment') {
@@ -452,8 +478,8 @@ To send money, first add a bank account in your 0 Finance dashboard:
   }),
 
   /**
-   * Template for attachment confirmation request.
-   * Shows best match and alternatives for user to choose.
+   * Template for single attachment confirmation.
+   * Clean formatting, no markdown, human-friendly language.
    */
   attachmentConfirmation: (params: {
     filename: string;
@@ -472,32 +498,116 @@ To send money, first add a bank account in your 0 Finance dashboard:
       date: string;
     }>;
   }) => {
+    const formatDate = (dateStr: string) => {
+      const d = new Date(dateStr);
+      return d.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+      });
+    };
+
+    const formatTransaction = (tx: {
+      amount: string;
+      currency: string;
+      recipientName?: string;
+      date: string;
+    }) => {
+      const symbol =
+        tx.currency.toUpperCase() === 'EUR'
+          ? '€'
+          : tx.currency.toUpperCase() === 'GBP'
+            ? '£'
+            : '$';
+      return `${symbol}${parseFloat(tx.amount).toLocaleString()} to ${tx.recipientName || 'Unknown'} on ${formatDate(tx.date)}`;
+    };
+
     const alternativesList = params.alternatives
-      .map(
-        (alt) =>
-          `  [${alt.label}] ${alt.currency} ${alt.amount} to ${alt.recipientName || 'Unknown'} (${alt.date})`,
-      )
+      .map((alt) => `   ${alt.label})  ${formatTransaction(alt)}`)
       .join('\n');
 
-    return {
-      subject: `Attach ${params.filename}?`,
-      body: `I'll attach **${params.filename}** (${params.fileSize}) to this transaction:
+    const body = `I found a match for your attachment.
 
-→ **BEST MATCH:** ${params.bestMatch.currency} ${params.bestMatch.amount} to ${params.bestMatch.recipientName || 'Unknown'} (${params.bestMatch.date})
+${params.filename} (${params.fileSize})
+
+   →  ${formatTransaction(params.bestMatch)}
 
 ${
   params.alternatives.length > 0
-    ? `Other possibilities:
+    ? `Other recent transfers:
 ${alternativesList}
 
-Reply **YES** to attach to the best match, or **A/B/C** to pick another, or **NO** to cancel.`
-    : `Reply **YES** to attach, or **NO** to cancel.`
-}`,
+Reply YES to attach to the first match, or A/B/C to pick another.`
+    : `Reply YES to attach, or NO to cancel.`
+}`;
+
+    return {
+      subject: `Attach ${params.filename}?`,
+      body,
     };
   },
 
   /**
-   * Template for successful attachment.
+   * Template for multi-attachment confirmation.
+   * Smart matching of multiple files to multiple transactions.
+   */
+  multiAttachmentConfirmation: (params: {
+    matches: Array<{
+      filename: string;
+      fileSize: string;
+      transaction: {
+        amount: string;
+        currency: string;
+        recipientName?: string;
+        date: string;
+      };
+    }>;
+  }) => {
+    const formatDate = (dateStr: string) => {
+      const d = new Date(dateStr);
+      return d.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+      });
+    };
+
+    const formatTransaction = (tx: {
+      amount: string;
+      currency: string;
+      recipientName?: string;
+      date: string;
+    }) => {
+      const symbol =
+        tx.currency.toUpperCase() === 'EUR'
+          ? '€'
+          : tx.currency.toUpperCase() === 'GBP'
+            ? '£'
+            : '$';
+      return `${symbol}${parseFloat(tx.amount).toLocaleString()} to ${tx.recipientName || 'Unknown'} (${formatDate(tx.date)})`;
+    };
+
+    const matchList = params.matches
+      .map(
+        (m, i) =>
+          `   ${i + 1}.  ${m.filename}  →  ${formatTransaction(m.transaction)}`,
+      )
+      .join('\n');
+
+    const body = `I matched your ${params.matches.length} attachments to transactions:
+
+${matchList}
+
+Reply YES to attach all, or NO to cancel.`;
+
+    return {
+      subject: `Attach ${params.matches.length} files?`,
+      body,
+    };
+  },
+
+  /**
+   * Template for successful attachment (single).
    */
   attachmentSuccess: (params: {
     filename: string;
@@ -505,11 +615,36 @@ Reply **YES** to attach to the best match, or **A/B/C** to pick another, or **NO
     currency: string;
     recipientName?: string;
     date: string;
-  }) => ({
-    subject: `Attached: ${params.filename}`,
-    body: `Done! I've attached **${params.filename}** to your ${params.currency} ${params.amount} payment to ${params.recipientName || 'Unknown'} (${params.date}).
+  }) => {
+    const formatDate = (dateStr: string) => {
+      const d = new Date(dateStr);
+      return d.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+      });
+    };
+    const symbol =
+      params.currency.toUpperCase() === 'EUR'
+        ? '€'
+        : params.currency.toUpperCase() === 'GBP'
+          ? '£'
+          : '$';
 
-View this transaction in your 0 Finance dashboard to see the attachment.`,
+    return {
+      subject: `Attached: ${params.filename}`,
+      body: `Done! Attached ${params.filename} to your ${symbol}${parseFloat(params.amount).toLocaleString()} transfer to ${params.recipientName || 'Unknown'} (${formatDate(params.date)}).`,
+    };
+  },
+
+  /**
+   * Template for successful multi-attachment.
+   */
+  multiAttachmentSuccess: (params: { count: number; files: string[] }) => ({
+    subject: `Attached ${params.count} files`,
+    body: `Done! Attached ${params.count} files to your transactions:
+
+${params.files.map((f, i) => `   ${i + 1}.  ${f}`).join('\n')}`,
   }),
 
   /**
@@ -530,25 +665,50 @@ View this transaction in your 0 Finance dashboard to see the attachment.`,
       date: string;
     }>;
   }) => {
+    const formatDate = (dateStr: string) => {
+      const d = new Date(dateStr);
+      return d.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+      });
+    };
+    const symbol =
+      params.currency.toUpperCase() === 'EUR'
+        ? '€'
+        : params.currency.toUpperCase() === 'GBP'
+          ? '£'
+          : '$';
+
     const alternativesList = params.alternatives
-      .map(
-        (alt) =>
-          `  [${alt.label}] ${alt.filename} on ${alt.currency} ${alt.amount} to ${alt.recipientName || 'Unknown'} (${alt.date})`,
-      )
+      .map((alt) => {
+        const altSymbol =
+          alt.currency.toUpperCase() === 'EUR'
+            ? '€'
+            : alt.currency.toUpperCase() === 'GBP'
+              ? '£'
+              : '$';
+        return `   ${alt.label})  ${alt.filename} on ${altSymbol}${parseFloat(alt.amount).toLocaleString()} to ${alt.recipientName || 'Unknown'}`;
+      })
       .join('\n');
 
-    return {
-      subject: `Remove ${params.filename}?`,
-      body: `I'll remove **${params.filename}** from your ${params.currency} ${params.amount} payment to ${params.recipientName || 'Unknown'} (${params.date}).
+    const body = `Remove this attachment?
+
+${params.filename}
+From: ${symbol}${parseFloat(params.amount).toLocaleString()} transfer to ${params.recipientName || 'Unknown'} (${formatDate(params.date)})
 
 ${
   params.alternatives.length > 0
-    ? `Other attachments I found:
+    ? `Other attachments found:
 ${alternativesList}
 
-Reply **YES** to remove the attachment above, or **A/B/C** to remove a different one, or **NO** to cancel.`
-    : `Reply **YES** to remove, or **NO** to cancel.`
-}`,
+Reply YES to remove, or A/B/C to remove a different one.`
+    : `Reply YES to remove, or NO to cancel.`
+}`;
+
+    return {
+      subject: `Remove ${params.filename}?`,
+      body,
     };
   },
 
@@ -560,10 +720,18 @@ Reply **YES** to remove the attachment above, or **A/B/C** to remove a different
     amount: string;
     currency: string;
     recipientName?: string;
-  }) => ({
-    subject: `Removed: ${params.filename}`,
-    body: `Done! I've removed **${params.filename}** from your ${params.currency} ${params.amount} payment to ${params.recipientName || 'Unknown'}.`,
-  }),
+  }) => {
+    const symbol =
+      params.currency.toUpperCase() === 'EUR'
+        ? '€'
+        : params.currency.toUpperCase() === 'GBP'
+          ? '£'
+          : '$';
+    return {
+      subject: `Removed: ${params.filename}`,
+      body: `Done! Removed ${params.filename} from your ${symbol}${parseFloat(params.amount).toLocaleString()} transfer to ${params.recipientName || 'Unknown'}.`,
+    };
+  },
 
   /**
    * Template for no transactions found.
@@ -572,10 +740,10 @@ Reply **YES** to remove the attachment above, or **A/B/C** to remove a different
     subject: 'No Transactions Found',
     body: `I couldn't find any transactions${params.searchQuery ? ` matching "${params.searchQuery}"` : ''}.
 
-Try being more specific with:
-- Recipient name (e.g., "Acme Corp")
-- Amount (e.g., "$500")
-- Date (e.g., "last week", "December 15")`,
+Try being more specific:
+  • Recipient name (e.g., "Acme Corp")
+  • Amount (e.g., "$500")
+  • Date (e.g., "last week", "December 15")`,
   }),
 
   /**

@@ -62,6 +62,17 @@ export interface AttachmentInfo {
 }
 
 /**
+ * Attachment-to-transaction match for multi-attach
+ */
+export interface AttachmentTransactionMatch {
+  attachmentIndex: number;
+  filename: string;
+  contentType: string;
+  fileSize: number;
+  transaction: TransactionMatch;
+}
+
+/**
  * Pending action types for confirmation flow
  */
 export type AiEmailPendingAction =
@@ -83,6 +94,10 @@ export type AiEmailPendingAction =
       attachmentFilename: string;
       attachmentContentType: string;
       attachmentSize: number;
+    }
+  | {
+      type: 'attach_multiple';
+      matches: AttachmentTransactionMatch[];
     }
   | {
       type: 'remove_attachment';
