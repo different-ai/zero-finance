@@ -1,9 +1,8 @@
 import { db } from '@/db';
-import { workspaces, workspaceMembers } from '@/db/schema';
-import { eq, and } from 'drizzle-orm';
+import { workspaces, workspaceMembers, users } from '@/db/schema';
+import { eq, and, ilike } from 'drizzle-orm';
 import { generateText } from 'ai';
 import { createOpenAI } from '@ai-sdk/openai';
-import { PrivyClient } from '@privy-io/server-auth';
 
 /**
  * Workspace Mapping for AI Email Agent
@@ -119,58 +118,59 @@ function normalizeUuid(uuid: string): string {
 }
 
 /**
+ * Extract just the email address from a potentially formatted email string.
+ * Handles formats like:
+ * - "ben@example.com"
+ * - "<ben@example.com>"
+ * - "Benjamin Shafii <ben@example.com>"
+ */
+function extractEmailAddress(emailString: string): string {
+  // Try to extract email from angle brackets first
+  const angleMatch = emailString.match(/<([^>]+)>/);
+  if (angleMatch) {
+    return angleMatch[1].toLowerCase().trim();
+  }
+  // Otherwise just clean up the string
+  return emailString.toLowerCase().trim();
+}
+
+/**
  * Check if a sender email belongs to a workspace member.
+ * Uses the users.email column (synced from Privy) for fast database lookup.
  *
  * @param workspaceId - The workspace to check membership for
- * @param senderEmail - The email address of the sender
+ * @param senderEmail - The email address of the sender (may include display name)
  * @returns true if sender is a member, false otherwise
  */
 async function isSenderWorkspaceMember(
   workspaceId: string,
   senderEmail: string,
 ): Promise<boolean> {
-  // Get all members of the workspace
-  const members = await db
-    .select({
-      userId: workspaceMembers.userId,
-    })
+  const normalizedEmail = extractEmailAddress(senderEmail);
+
+  // Single query: join workspace_members with users to check membership + email
+  const result = await db
+    .select({ userId: workspaceMembers.userId })
     .from(workspaceMembers)
-    .where(eq(workspaceMembers.workspaceId, workspaceId));
+    .innerJoin(users, eq(workspaceMembers.userId, users.privyDid))
+    .where(
+      and(
+        eq(workspaceMembers.workspaceId, workspaceId),
+        ilike(users.email, normalizedEmail),
+      ),
+    )
+    .limit(1);
 
-  if (members.length === 0) {
-    return false;
-  }
-
-  // Get Privy client to look up user emails
-  const privyAppId = process.env.NEXT_PUBLIC_PRIVY_APP_ID;
-  const privyAppSecret = process.env.PRIVY_APP_SECRET;
-
-  if (!privyAppId || !privyAppSecret) {
-    console.error(
-      '[AI Email] Missing Privy credentials for sender verification',
+  if (result.length > 0) {
+    console.log(
+      `[AI Email] Sender ${normalizedEmail} verified as workspace member`,
     );
-    return false;
+    return true;
   }
 
-  const privyClient = new PrivyClient(privyAppId, privyAppSecret);
-
-  // Check each member's email against the sender
-  const normalizedSenderEmail = senderEmail.toLowerCase().trim();
-
-  for (const member of members) {
-    try {
-      const user = await privyClient.getUser(member.userId);
-      const userEmail = user.email?.address?.toLowerCase().trim();
-
-      if (userEmail && userEmail === normalizedSenderEmail) {
-        return true;
-      }
-    } catch (error) {
-      // User lookup failed, continue checking other members
-      console.warn(`[AI Email] Failed to lookup user ${member.userId}:`, error);
-    }
-  }
-
+  console.log(
+    `[AI Email] Sender ${normalizedEmail} is NOT a member of workspace ${workspaceId}`,
+  );
   return false;
 }
 

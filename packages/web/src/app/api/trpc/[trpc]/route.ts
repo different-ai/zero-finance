@@ -52,8 +52,10 @@ const handler = async (req: Request) => {
       const { db } = await import('@/db'); // Import db instance
       if (user?.id) {
         try {
+          // Pass user email to sync it to the users table
+          const userEmail = user?.email?.address ?? null;
           const { workspaceId: ensuredWorkspaceId, membership } =
-            await ensureUserWorkspace(db, user.id);
+            await ensureUserWorkspace(db, user.id, userEmail);
           workspaceId = ensuredWorkspaceId;
           workspaceMembershipId = membership.id;
         } catch (workspaceError) {

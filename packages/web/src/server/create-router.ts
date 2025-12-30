@@ -48,8 +48,10 @@ const isAuthed = middleware(async ({ ctx, next }) => {
   let workspaceMembershipId: string | null = ctx.workspaceMembershipId ?? null;
 
   try {
+    // Pass user email to sync it to the users table
+    const userEmail = user?.email?.address ?? null;
     const { workspaceId: ensuredWorkspaceId, membership } =
-      await ensureUserWorkspace(database, privyDid);
+      await ensureUserWorkspace(database, privyDid, userEmail);
     workspaceId = ensuredWorkspaceId;
     workspaceMembershipId = membership.id;
   } catch (workspaceError) {

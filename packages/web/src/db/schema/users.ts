@@ -15,6 +15,8 @@ export const users = pgTable(
     createdAt: timestamp('created_at', { withTimezone: true })
       .defaultNow()
       .notNull(),
+    // Email synced from Privy on login - used for sender verification, notifications
+    email: text('email'),
     firstName: text('first_name'),
     lastName: text('last_name'),
     companyName: text('company_name'),
@@ -54,6 +56,7 @@ export const users = pgTable(
     primaryWorkspaceIdx: index('users_primary_workspace_idx').on(
       table.primaryWorkspaceId,
     ),
+    emailIdx: index('users_email_idx').on(table.email),
   }),
 );
 

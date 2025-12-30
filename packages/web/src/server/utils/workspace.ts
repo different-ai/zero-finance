@@ -173,6 +173,7 @@ async function resolveWorkspaceId(
 export async function ensureUserWorkspace(
   dbExecutor: DatabaseExecutor,
   userId: string,
+  userEmail?: string | null,
 ): Promise<EnsureWorkspaceResult> {
   return dbExecutor.transaction(async (tx: DatabaseExecutor) => {
     const userRows = await tx
@@ -182,6 +183,15 @@ export async function ensureUserWorkspace(
       .limit(1);
 
     let user = userRows[0];
+
+    // Sync email from Privy if provided and different from stored value
+    if (user && userEmail && user.email !== userEmail) {
+      await tx
+        .update(users)
+        .set({ email: userEmail })
+        .where(eq(users.privyDid, userId));
+      user = { ...user, email: userEmail };
+    }
 
     if (!user) {
       const existingMembershipRows = await tx
@@ -209,7 +219,7 @@ export async function ensureUserWorkspace(
 
           const inserted = await tx
             .insert(users)
-            .values({ privyDid: userId, primaryWorkspaceId })
+            .values({ privyDid: userId, primaryWorkspaceId, email: userEmail })
             .onConflictDoNothing()
             .returning();
 
@@ -237,7 +247,11 @@ export async function ensureUserWorkspace(
 
           const insertedUsers = await tx
             .insert(users)
-            .values({ privyDid: userId, primaryWorkspaceId: tempWorkspaceId })
+            .values({
+              privyDid: userId,
+              primaryWorkspaceId: tempWorkspaceId,
+              email: userEmail,
+            })
             .onConflictDoNothing()
             .returning();
 
@@ -270,7 +284,11 @@ export async function ensureUserWorkspace(
 
         const insertedUsers = await tx
           .insert(users)
-          .values({ privyDid: userId, primaryWorkspaceId: tempWorkspaceId })
+          .values({
+            privyDid: userId,
+            primaryWorkspaceId: tempWorkspaceId,
+            email: userEmail,
+          })
           .onConflictDoNothing()
           .returning();
 
