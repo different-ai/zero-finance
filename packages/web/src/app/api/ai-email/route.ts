@@ -2616,9 +2616,18 @@ export async function POST(request: NextRequest) {
     );
 
     // If AI generated text but didn't send a reply via tool, send it now
-    const sentReply =
-      toolCallsMade.includes('sendReplyToUser') ||
-      toolCallsMade.includes('requestConfirmation');
+    // These tools send their own confirmation emails internally:
+    const toolsThatSendReplies = [
+      'sendReplyToUser',
+      'requestConfirmation',
+      'attachDocumentToTransaction',
+      'attachAllDocuments',
+      'confirmAttachment',
+      'confirmMultipleAttachments',
+    ];
+    const sentReply = toolCallsMade.some((tool) =>
+      toolsThatSendReplies.includes(tool),
+    );
 
     if (result.text && !sentReply) {
       console.log('[AI Email] Sending AI text response as email');
