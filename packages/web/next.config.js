@@ -5,6 +5,63 @@ const nextConfig = {
   poweredByHeader: false,
   compress: true,
 
+  // ===========================================
+  // BUILD PERFORMANCE OPTIMIZATIONS
+  // ===========================================
+
+  // Disable source maps in production to reduce build time and bundle size
+  productionBrowserSourceMaps: false,
+
+  // Skip type checking during build (run separately in CI)
+  // This saves ~10-15s on builds
+  typescript: {
+    ignoreBuildErrors: process.env.SKIP_TYPE_CHECK === 'true',
+    tsconfigPath: './tsconfig.next.json',
+  },
+
+  // Skip ESLint during build (run separately in CI)
+  eslint: {
+    ignoreDuringBuilds: process.env.SKIP_LINT === 'true',
+  },
+
+  // Reduce output file tracing scope - major build time saver
+  // This was taking 49s in traces
+  outputFileTracingExcludes: {
+    '*': [
+      // Large dependencies that don't need tracing
+      'node_modules/@swc/**',
+      'node_modules/@esbuild/**',
+      'node_modules/esbuild/**',
+      'node_modules/terser/**',
+      'node_modules/webpack/**',
+      'node_modules/typescript/**',
+      'node_modules/prettier/**',
+      'node_modules/eslint/**',
+      // Test files
+      'node_modules/**/*.test.js',
+      'node_modules/**/*.spec.js',
+      'node_modules/**/__tests__/**',
+      // Documentation
+      'node_modules/**/README.md',
+      'node_modules/**/CHANGELOG.md',
+      'node_modules/**/LICENSE',
+      // Source maps in node_modules
+      'node_modules/**/*.map',
+      // TypeScript source files
+      'node_modules/**/*.ts',
+      'node_modules/**/*.tsx',
+      '!node_modules/**/*.d.ts',
+      // Drizzle migrations not needed at runtime on Vercel
+      'drizzle/**',
+      // Test artifacts
+      'tests/**',
+      'test-artifacts/**',
+      'playwright-report/**',
+      // Scripts not needed at runtime
+      'scripts/**',
+    ],
+  },
+
   images: {
     formats: ['image/avif', 'image/webp'],
     remotePatterns: [
@@ -83,10 +140,9 @@ const nextConfig = {
   skipTrailingSlashRedirect: true,
 
   reactStrictMode: true,
-  typescript: {
-    tsconfigPath: './tsconfig.next.json',
-  },
+
   experimental: {
+    // Optimize barrel imports - reduces module count significantly
     optimizePackageImports: [
       'lucide-react',
       '@radix-ui/react-icons',
@@ -121,17 +177,32 @@ const nextConfig = {
       'posthog-js',
       'react-hook-form',
       'zod',
+      // Additional heavy packages
+      'viem',
+      'ethers',
+      '@safe-global/protocol-kit',
+      'googleapis',
+      'ai',
+      '@ai-sdk/openai',
     ],
   },
+
   // Turbopack configuration
   // Note: pino/thread-stream (transitive dep from @walletconnect/logger via @privy-io/react-auth)
   // have dynamic worker requires that break Turbopack bundling at build time.
   // Issue tracked at: https://github.com/vercel/next.js/issues/87342
   // We use --webpack flag for builds until this is resolved.
   turbopack: {},
+
   outputFileTracingRoot: path.join(__dirname, '../../'),
   staticPageGenerationTimeout: 180,
-  webpack: (config, { webpack, isServer }) => {
+
+  webpack: (config, { webpack, isServer, dev }) => {
+    // Skip heavy optimizations in dev mode
+    if (dev) {
+      return config;
+    }
+
     if (!isServer) {
       config.resolve.fallback = {
         ...config.resolve.fallback,
@@ -153,13 +224,20 @@ const nextConfig = {
       }),
     );
 
+    // Ignore optional dependencies that cause warnings
+    config.plugins.push(
+      new webpack.IgnorePlugin({
+        resourceRegExp: /^(utf-8-validate|bufferutil|encoding)$/,
+      }),
+    );
+
     if (!isServer) {
       config.optimization = {
         ...config.optimization,
         splitChunks: {
           ...config.optimization.splitChunks,
           cacheGroups: {
-            ...config.optimization.splitChunks.cacheGroups,
+            ...config.optimization.splitChunks?.cacheGroups,
             circomlibjs: {
               test: /[\\/]node_modules[\\/]circomlibjs.*[\\/]/,
               name: 'circomlibjs',
@@ -172,6 +250,13 @@ const nextConfig = {
               chunks: 'all',
               priority: 30,
             },
+            // Group vendor chunks for better caching
+            vendor: {
+              test: /[\\/]node_modules[\\/]/,
+              name: 'vendors',
+              chunks: 'all',
+              priority: 10,
+            },
           },
         },
       };
@@ -183,8 +268,13 @@ const nextConfig = {
       moduleIds: 'deterministic',
     };
 
+    // Reduce stats output for faster builds
+    config.stats = 'errors-warnings';
+
     return config;
   },
+
+  // External packages - not bundled, reduces bundle size and build time
   serverExternalPackages: [
     'require-in-the-middle',
     '@metamask/sdk',
@@ -196,6 +286,18 @@ const nextConfig = {
     'pino-roll',
     'thread-stream',
     'sonic-boom',
+    // Heavy server-side packages that don't need bundling
+    'googleapis',
+    'google-auth-library',
+    '@react-pdf/renderer',
+    'jspdf',
+    'jspdf-autotable',
+    'xlsx',
+    'mailparser',
+    'pg',
+    // Crypto libraries
+    '@safe-global/protocol-kit',
+    'ethers',
   ],
 };
 

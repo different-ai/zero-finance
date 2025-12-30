@@ -17,6 +17,11 @@ const MEMORY_LIMIT = TIER_LIMITS[tier] || TIER_LIMITS.pro;
 
 process.env.NODE_OPTIONS = `--max-old-space-size=${MEMORY_LIMIT}`;
 
+// Build performance optimizations
+// Skip type checking and linting in Vercel builds (run in CI separately)
+process.env.SKIP_TYPE_CHECK = 'true';
+process.env.SKIP_LINT = 'true';
+
 const { spawn } = require('child_process');
 
 console.log('Starting Vercel-optimized build process...');
