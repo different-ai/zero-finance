@@ -17,13 +17,20 @@ export { SESProvider } from './ses-provider';
  *   EMAIL_PROVIDER: 'resend' | 'ses' (default: 'resend')
  */
 export function getEmailProvider(): EmailProvider {
-  const providerType = (process.env.EMAIL_PROVIDER ||
-    'resend') as EmailProviderType;
+  const rawProviderType = process.env.EMAIL_PROVIDER || 'resend';
+  // Trim whitespace/newlines that might be in env var
+  const providerType = rawProviderType.trim() as EmailProviderType;
+
+  console.log(
+    `[EmailProvider] Initializing provider: "${providerType}" (raw: "${rawProviderType}")`,
+  );
 
   switch (providerType) {
     case 'resend':
+      console.log('[EmailProvider] ✅ Using Resend provider');
       return new ResendProvider();
     case 'ses':
+      console.log('[EmailProvider] Using AWS SES provider');
       return new SESProvider();
     default:
       console.warn(

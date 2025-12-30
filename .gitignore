@@ -78,3 +78,4 @@ research/
 
 # OpenCode workspace config (contains user-specific Notion IDs)
 .opencode/config/
+.env*.local

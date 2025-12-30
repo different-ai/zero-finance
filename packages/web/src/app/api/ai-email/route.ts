@@ -1271,9 +1271,17 @@ export async function POST(request: NextRequest) {
  * Handle GET requests (for webhook verification if needed)
  */
 export async function GET() {
+  const providerType = (process.env.EMAIL_PROVIDER || 'resend').trim();
   return NextResponse.json({
     status: 'ok',
     service: 'AI Email Invoice Agent',
     domain: AI_EMAIL_INBOUND_DOMAIN,
+    provider: providerType,
+    providerConfigured:
+      providerType === 'resend'
+        ? !!process.env.RESEND_API_KEY
+        : !!(
+            process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY
+          ),
   });
 }
