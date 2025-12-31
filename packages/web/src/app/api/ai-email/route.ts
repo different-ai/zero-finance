@@ -569,6 +569,25 @@ export async function POST(request: NextRequest) {
     senderEmail = email.from;
     originalSubject = email.subject;
 
+    // ==========================================================================
+    // ATTACHMENT TRACKING: Log attachment status immediately after parsing
+    // ==========================================================================
+    const rawAttachmentCount = email.attachments?.length || 0;
+    console.log(`[AI Email] [ATTACHMENT TRACKING] Raw email parsed:`);
+    console.log(
+      `[AI Email] [ATTACHMENT TRACKING]   - Subject: "${email.subject}"`,
+    );
+    console.log(
+      `[AI Email] [ATTACHMENT TRACKING]   - Attachments in email: ${rawAttachmentCount}`,
+    );
+    if (rawAttachmentCount > 0) {
+      email.attachments?.forEach((att, i) => {
+        console.log(
+          `[AI Email] [ATTACHMENT TRACKING]   - Attachment ${i}: "${att.filename}" (${att.contentType}, ${att.content?.length || 0} chars base64)`,
+        );
+      });
+    }
+
     // Check rate limit
     if (isRateLimited(email.from)) {
       console.log(`[AI Email] Rate limited: ${email.from}`);
@@ -676,16 +695,26 @@ export async function POST(request: NextRequest) {
     const textAttachmentContent =
       formatTextAttachmentsForAI(preparedAttachments);
 
+    // ==========================================================================
+    // ATTACHMENT TRACKING: Log prepared attachments status
+    // ==========================================================================
+    console.log(`[AI Email] [ATTACHMENT TRACKING] After prepareAttachments():`);
+    console.log(
+      `[AI Email] [ATTACHMENT TRACKING]   - Prepared count: ${preparedAttachments.length}`,
+    );
     if (preparedAttachments.length > 0) {
       const summary = getAttachmentSummary(preparedAttachments);
       console.log(
-        `[AI Email] Prepared ${summary.supported}/${summary.total} attachments (${summary.fileCount} files, ${summary.textCount} text):`,
-        preparedAttachments.map((a) => ({
-          filename: a.filename,
-          supported: a.supported,
-          hasFile: !!a.base64Content,
-          error: a.error,
-        })),
+        `[AI Email] [ATTACHMENT TRACKING]   - Supported: ${summary.supported}/${summary.total}`,
+      );
+      preparedAttachments.forEach((a, i) => {
+        console.log(
+          `[AI Email] [ATTACHMENT TRACKING]   - Prepared ${i}: "${a.filename}" supported=${a.supported} hasBase64=${!!a.base64Content} base64Len=${a.base64Content?.length || 0} error=${a.error || 'none'}`,
+        );
+      });
+    } else {
+      console.log(
+        `[AI Email] [ATTACHMENT TRACKING]   - NO ATTACHMENTS TO PROCESS`,
       );
     }
 
@@ -1679,14 +1708,33 @@ export async function POST(request: NextRequest) {
           const tempBlobPath = `attachments/temp/${toolContext.session.id}/${attachment.filename}`;
 
           console.log(
-            `[AI Email] Uploading attachment to temp blob: ${tempBlobPath}`,
+            `[AI Email] [ATTACHMENT TRACKING] storeAttachmentAndAskUser uploading:`,
           );
+          console.log(
+            `[AI Email] [ATTACHMENT TRACKING]   - Filename: "${attachment.filename}"`,
+          );
+          console.log(
+            `[AI Email] [ATTACHMENT TRACKING]   - Content-Type: ${attachment.contentType}`,
+          );
+          console.log(
+            `[AI Email] [ATTACHMENT TRACKING]   - Buffer size: ${fileBuffer.length} bytes`,
+          );
+          console.log(
+            `[AI Email] [ATTACHMENT TRACKING]   - Blob path: ${tempBlobPath}`,
+          );
+
           const tempBlob = await put(tempBlobPath, fileBuffer, {
             access: 'public',
             contentType: attachment.contentType,
             addRandomSuffix: true,
           });
-          console.log(`[AI Email] Uploaded to: ${tempBlob.url}`);
+
+          console.log(
+            `[AI Email] [ATTACHMENT TRACKING] BLOB STORED SUCCESSFULLY:`,
+          );
+          console.log(
+            `[AI Email] [ATTACHMENT TRACKING]   - Blob URL: ${tempBlob.url}`,
+          );
 
           // Store pending action with blob URL and candidate transactions
           const pendingAction: AiEmailPendingAction = {
@@ -1742,10 +1790,41 @@ export async function POST(request: NextRequest) {
           );
 
           const pendingAction = toolContext.session.pendingAction;
+
+          // ==========================================================================
+          // ATTACHMENT TRACKING: Log pending action state
+          // ==========================================================================
+          console.log(
+            `[AI Email] [ATTACHMENT TRACKING] attachStoredDocument checking pending action:`,
+          );
+          console.log(
+            `[AI Email] [ATTACHMENT TRACKING]   - Has pendingAction: ${!!pendingAction}`,
+          );
+          console.log(
+            `[AI Email] [ATTACHMENT TRACKING]   - pendingAction type: ${pendingAction?.type || 'none'}`,
+          );
+          if (
+            pendingAction &&
+            pendingAction.type === 'select_transaction_for_attachment'
+          ) {
+            console.log(
+              `[AI Email] [ATTACHMENT TRACKING]   - tempBlobUrl: ${pendingAction.tempBlobUrl || 'MISSING!'}`,
+            );
+            console.log(
+              `[AI Email] [ATTACHMENT TRACKING]   - attachmentFilename: ${pendingAction.attachmentFilename || 'MISSING!'}`,
+            );
+            console.log(
+              `[AI Email] [ATTACHMENT TRACKING]   - attachmentSize: ${pendingAction.attachmentSize || 'MISSING!'}`,
+            );
+          }
+
           if (
             !pendingAction ||
             pendingAction.type !== 'select_transaction_for_attachment'
           ) {
+            console.log(
+              `[AI Email] [ATTACHMENT TRACKING] ERROR: No valid pending action found!`,
+            );
             return {
               error:
                 'No stored attachment found. The user needs to send the attachment again.',
@@ -1754,6 +1833,9 @@ export async function POST(request: NextRequest) {
           }
 
           if (!pendingAction.tempBlobUrl) {
+            console.log(
+              `[AI Email] [ATTACHMENT TRACKING] ERROR: tempBlobUrl is missing from pending action!`,
+            );
             return {
               error: 'Attachment blob URL not found in pending action',
               success: false,
@@ -1780,6 +1862,22 @@ export async function POST(request: NextRequest) {
 
           try {
             // Store in database - file is already in Vercel Blob
+            console.log(
+              `[AI Email] [ATTACHMENT TRACKING] Inserting into transactionAttachments:`,
+            );
+            console.log(
+              `[AI Email] [ATTACHMENT TRACKING]   - transactionType: ${params.transactionType}`,
+            );
+            console.log(
+              `[AI Email] [ATTACHMENT TRACKING]   - transactionId: ${params.transactionId}`,
+            );
+            console.log(
+              `[AI Email] [ATTACHMENT TRACKING]   - blobUrl: ${pendingAction.tempBlobUrl}`,
+            );
+            console.log(
+              `[AI Email] [ATTACHMENT TRACKING]   - filename: ${pendingAction.attachmentFilename}`,
+            );
+
             await db.insert(transactionAttachments).values({
               transactionType: params.transactionType,
               transactionId: params.transactionId,
@@ -1791,6 +1889,13 @@ export async function POST(request: NextRequest) {
               uploadedBy: 'system:ai-email',
               uploadSource: 'ai_email',
             });
+
+            console.log(
+              `[AI Email] [ATTACHMENT TRACKING] DATABASE INSERT SUCCESSFUL!`,
+            );
+            console.log(
+              `[AI Email] [ATTACHMENT TRACKING]   - Attachment "${pendingAction.attachmentFilename}" attached to transaction ${params.transactionId}`,
+            );
 
             // Clear pending action
             await updateSession(toolContext.session.id, {

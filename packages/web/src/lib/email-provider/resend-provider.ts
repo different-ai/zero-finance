@@ -175,6 +175,28 @@ export class ResendProvider implements EmailProvider {
     console.log('[ResendProvider] parseInboundWebhook called');
     console.log('[ResendProvider] Event type:', event.type);
 
+    // ==========================================================================
+    // ATTACHMENT TRACKING: Log webhook payload attachment info
+    // ==========================================================================
+    const webhookAttachmentCount = event.data.attachments?.length || 0;
+    console.log(`[ResendProvider] [ATTACHMENT TRACKING] Webhook payload:`);
+    console.log(
+      `[ResendProvider] [ATTACHMENT TRACKING]   - email_id: ${event.data.email_id}`,
+    );
+    console.log(
+      `[ResendProvider] [ATTACHMENT TRACKING]   - subject: "${event.data.subject}"`,
+    );
+    console.log(
+      `[ResendProvider] [ATTACHMENT TRACKING]   - attachments in webhook: ${webhookAttachmentCount}`,
+    );
+    if (webhookAttachmentCount > 0) {
+      event.data.attachments?.forEach((att, i) => {
+        console.log(
+          `[ResendProvider] [ATTACHMENT TRACKING]   - Webhook attachment ${i}: id="${att.id}" filename="${att.filename}" type="${att.content_type}"`,
+        );
+      });
+    }
+
     // Only handle email.received events
     if (event.type !== 'email.received') {
       console.log(
@@ -234,19 +256,53 @@ export class ResendProvider implements EmailProvider {
         ? fullEmail.attachments
         : event.data.attachments;
 
+    // ==========================================================================
+    // ATTACHMENT TRACKING: Log which source we're using for attachments
+    // ==========================================================================
+    const metaSource =
+      fullEmail.attachments?.length > 0 ? 'fullEmail API' : 'webhook';
     console.log(
-      '[ResendProvider] Attachment metadata source:',
-      fullEmail.attachments?.length > 0 ? 'fullEmail' : 'webhook',
-      'count:',
-      attachmentMeta?.length || 0,
+      `[ResendProvider] [ATTACHMENT TRACKING] Attachment metadata decision:`,
+    );
+    console.log(
+      `[ResendProvider] [ATTACHMENT TRACKING]   - fullEmail.attachments count: ${fullEmail.attachments?.length || 0}`,
+    );
+    console.log(
+      `[ResendProvider] [ATTACHMENT TRACKING]   - webhook attachments count: ${event.data.attachments?.length || 0}`,
+    );
+    console.log(
+      `[ResendProvider] [ATTACHMENT TRACKING]   - Using source: ${metaSource}`,
+    );
+    console.log(
+      `[ResendProvider] [ATTACHMENT TRACKING]   - Final attachmentMeta count: ${attachmentMeta?.length || 0}`,
     );
 
     // Fetch attachments if present
     const attachments = await this.fetchAttachments(emailId, attachmentMeta);
 
+    // ==========================================================================
+    // ATTACHMENT TRACKING: Log final fetched attachments
+    // ==========================================================================
+    console.log(
+      `[ResendProvider] [ATTACHMENT TRACKING] After fetchAttachments():`,
+    );
+    console.log(
+      `[ResendProvider] [ATTACHMENT TRACKING]   - Fetched count: ${attachments.length}`,
+    );
+    if (attachments.length > 0) {
+      attachments.forEach((att, i) => {
+        console.log(
+          `[ResendProvider] [ATTACHMENT TRACKING]   - Fetched ${i}: "${att.filename}" (${att.contentType}, ${att.content.length} chars base64)`,
+        );
+      });
+    } else {
+      console.log(
+        `[ResendProvider] [ATTACHMENT TRACKING]   - NO ATTACHMENTS FETCHED`,
+      );
+    }
+
     console.log('[ResendProvider] Parsed email from:', fullEmail.from);
     console.log('[ResendProvider] Parsed email to:', fullEmail.to);
-    console.log('[ResendProvider] Attachments:', attachments.length, 'fetched');
 
     return {
       from: fullEmail.from,
