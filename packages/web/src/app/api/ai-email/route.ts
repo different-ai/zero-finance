@@ -292,7 +292,7 @@ const createInvoiceSchema = z.object({
   description: z
     .string()
     .describe(
-      'Description of the work/service being invoiced. Do NOT include VAT/Tax IDs here - use recipientTaxId instead.',
+      'Description of the work/service being invoiced. Do NOT include VAT/Tax IDs, payment terms, or notes here.',
     ),
   preferredAccountType: z
     .enum(['us_ach', 'iban'])
@@ -305,6 +305,18 @@ const createInvoiceSchema = z.object({
     .optional()
     .describe(
       'VAT number or Tax ID of the recipient (e.g., "FR12345678901", "DE123456789"). Extract from invoice/email if present.',
+    ),
+  notes: z
+    .string()
+    .optional()
+    .describe(
+      'Additional notes for the invoice - payment terms, special instructions, reference numbers, thank you messages, etc.',
+    ),
+  dueDate: z
+    .string()
+    .optional()
+    .describe(
+      'Payment due date. Can be ISO date (2024-02-15) or terms like "Net 30", "Due on receipt", "Within 14 days".',
     ),
 });
 

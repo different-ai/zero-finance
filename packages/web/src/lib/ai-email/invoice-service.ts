@@ -42,6 +42,10 @@ export interface CreateInvoiceParams {
   preferredAccountType?: 'us_ach' | 'iban';
   /** Optional VAT/Tax ID of the recipient */
   recipientTaxId?: string;
+  /** Optional notes - payment terms, special instructions, reference numbers, etc. */
+  notes?: string;
+  /** Optional due date (ISO string or human readable like "Net 30") */
+  dueDate?: string;
 }
 
 export interface UpdateInvoiceParams {
@@ -246,6 +250,12 @@ export async function createInvoiceForUser(
     currency: params.currency,
     paymentType,
     bankDetails,
+    note: params.notes || undefined,
+    paymentTerms: params.dueDate
+      ? {
+          dueDate: params.dueDate,
+        }
+      : undefined,
   };
 
   // Calculate amount in smallest units
