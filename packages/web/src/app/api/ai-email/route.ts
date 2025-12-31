@@ -10,7 +10,6 @@ import crypto from 'crypto';
 import {
   mapToWorkspace,
   formatEmailForAI,
-  parseConfirmationReply,
   getOrCreateSession,
   addMessageToSession,
   updateSession,
@@ -729,102 +728,8 @@ export async function POST(request: NextRequest) {
     // Prepare reply subject for threading
     const replySubject = getReplySubject(email.subject);
 
-    // Check if this is a simple confirmation reply (YES/NO/A/B/C)
-    const confirmationCheck = parseConfirmationReply(email.text);
-    if (
-      confirmationCheck.isConfirmation &&
-      session.state === 'awaiting_confirmation' &&
-      session.pendingAction
-    ) {
-      const action = session.pendingAction;
-
-      // Handle invoice confirmation
-      if (action.type === 'send_invoice') {
-        if (confirmationCheck.confirmed) {
-          // User confirmed - send the invoice
-          const invoiceTemplate = emailTemplates.invoiceToRecipient({
-            senderName: senderDisplayName,
-            amount: action.amount,
-            currency: action.currency,
-            description: action.description,
-            invoiceLink: action.invoiceLink,
-            recipientName: action.recipientName,
-          });
-
-          let emailSentSuccessfully = false;
-          try {
-            await sendInvoiceEmail(
-              action.recipientEmail,
-              invoiceTemplate.subject,
-              invoiceTemplate.body,
-              senderDisplayName,
-            );
-            emailSentSuccessfully = true;
-          } catch (emailError) {
-            console.log(
-              '[AI Email] Email send failed, will provide invoice link for manual forwarding:',
-              emailError,
-            );
-          }
-
-          // Choose template based on whether email was sent
-          const responseTemplate = emailSentSuccessfully
-            ? emailTemplates.invoiceSent({
-                recipientEmail: action.recipientEmail,
-                recipientName: action.recipientName,
-                amount: action.amount,
-                currency: action.currency,
-                invoiceLink: action.invoiceLink,
-              })
-            : emailTemplates.invoiceReadyToForward({
-                recipientEmail: action.recipientEmail,
-                recipientName: action.recipientName,
-                amount: action.amount,
-                currency: action.currency,
-                invoiceLink: action.invoiceLink,
-              });
-
-          // Use Re: subject for threading
-          await sendReply(
-            email.from,
-            replySubject,
-            responseTemplate.body,
-            messageId,
-            workspaceResult.aiEmailHandle,
-            session.threadId,
-          );
-
-          await updateSession(session.id, {
-            state: 'completed',
-            pendingAction: null,
-          });
-        } else {
-          // User cancelled
-          const cancelledTemplate = emailTemplates.cancelled();
-          // Use Re: subject for threading
-          await sendReply(
-            email.from,
-            replySubject,
-            cancelledTemplate.body,
-            messageId,
-            workspaceResult.aiEmailHandle,
-            session.threadId,
-          );
-          await updateSession(session.id, {
-            state: 'completed',
-            pendingAction: null,
-          });
-        }
-
-        return NextResponse.json({ success: true, handled: 'confirmation' });
-      }
-
-      // Handle attachment confirmation (attach_document or remove_attachment)
-      // These are handled by the AI tools, so let the AI process the reply
-      // The AI will check the pending action and handle A/B/C selection
-    }
-
-    // Process with AI for invoice extraction and creation
+    // Process with AI - no shortcuts, let the LLM handle all intent detection
+    // See: .opencode/skill/ai-email-pipeline/SKILL.md
     const systemPrompt = getSystemPrompt(
       session,
       workspaceResult.workspaceName,

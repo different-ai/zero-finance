@@ -1,0 +1,187 @@
+# AI Email Pipeline
+
+## Core Mental Model
+
+**The AI email system is a conversation, not a state machine.**
+
+Every email is a message in an ongoing conversation. The LLM reads the full context and decides what to do. There are no hardcoded shortcuts, no regex parsing for intent, no branching logic outside the AI.
+
+## Architecture Principle
+
+```
+Email arrives → Parse attachments → Build message history → Send to LLM → LLM calls tools → Done
+```
+
+That's it. The LLM handles:
+
+- Understanding user intent ("yes", "no I mean...", "actually change it to...")
+- Deciding which tools to call
+- Generating responses
+- Handling corrections and clarifications
+
+## Anti-Patterns (NEVER DO THESE)
+
+### 1. Regex-based intent detection
+
+```typescript
+// BAD - This is what broke "no I mean..."
+if (/^no\b/i.test(email.text)) {
+  return handleCancellation();
+}
+```
+
+The LLM understands "no I mean the other one" is a clarification, not a cancellation. Regex doesn't.
+
+### 2. Shortcutting the AI for "simple" cases
+
+```typescript
+// BAD - Bypasses AI reasoning
+if (looksLikeConfirmation(text)) {
+  skipAIAndHandleDirectly();
+}
+```
+
+There are no "simple" cases in human language. Let the AI decide.
+
+### 3. State machine flows
+
+```typescript
+// BAD - Rigid flow that can't handle corrections
+if (state === 'awaiting_confirmation') {
+  if (confirmed) doThing();
+  else cancel();
+}
+```
+
+Humans don't follow state machines. They say "wait actually" or "no change the amount first".
+
+### 4. Parsing email content outside the AI
+
+```typescript
+// BAD - Duplicating AI's job
+const amount = extractAmount(email.text);
+const recipient = extractRecipient(email.text);
+```
+
+The AI extracts information. Give it the raw email and let it work.
+
+## Correct Pattern
+
+```typescript
+// GOOD - Everything goes through the AI
+const messages = buildConversationHistory(session);
+messages.push({
+  role: 'user',
+  content: [
+    { type: 'text', text: formatEmail(email) },
+    ...attachmentParts, // PDFs, images passed natively
+  ],
+});
+
+const result = await generateText({
+  model: openai('gpt-5.2'),
+  system: systemPrompt,
+  messages,
+  tools: aiTools,
+});
+```
+
+## What the System Prompt Should Contain
+
+1. **Identity** - Who the AI is
+2. **Capabilities** - What tools are available (briefly)
+3. **Principles** - How to behave (ask when unclear, never invent data, etc.)
+4. **Context** - Current session state, pending actions, extracted data
+
+The prompt should NOT contain:
+
+- Step-by-step flows ("1. First do X, 2. Then do Y")
+- Rigid decision trees
+- Pattern matching instructions
+
+## Pending Actions
+
+Pending actions (like "invoice awaiting confirmation") are **context for the AI**, not triggers for hardcoded behavior.
+
+```typescript
+// In system prompt:
+`
+## Pending Action
+There's an invoice ready to send:
+- To: john@example.com
+- Amount: $500
+
+The user's latest message will tell you what they want to do with it.
+`;
+```
+
+The AI reads this context and the user's message, then decides:
+
+- "yes" → call sendInvoice tool
+- "no" → acknowledge cancellation
+- "change the amount to $600" → call updateInvoice tool
+- "no I mean send it to jane@example.com" → update recipient, ask for confirmation again
+
+## Attachments
+
+Attachments (PDFs, images) are passed directly to the model as native file parts. The AI reads them.
+
+```typescript
+const attachmentParts = preparedAttachments
+  .filter((a) => a.supported && a.base64Content)
+  .map((a) => ({
+    type: 'file',
+    data: Buffer.from(a.base64Content, 'base64'),
+    mediaType: a.contentType,
+    filename: a.filename,
+  }));
+```
+
+Don't pre-extract data from attachments. Don't summarize them. Pass them raw.
+
+## Session History
+
+The session stores the conversation history. Each email adds a message. The AI sees the full thread.
+
+```typescript
+const messages = session.messages.map((msg) => ({
+  role: msg.role,
+  content: msg.content,
+}));
+```
+
+## Tools
+
+Tools are the AI's hands. They do things:
+
+- `createInvoice` - Creates an invoice
+- `sendInvoice` - Sends an invoice to recipient
+- `getBalance` - Checks user's balance
+- `proposeTransfer` - Proposes a bank transfer
+
+The AI decides when to call them based on the conversation.
+
+## Debugging
+
+When something goes wrong, check:
+
+1. **Did the message reach the AI?** - Look for `generateText()` logs
+2. **What did the AI see?** - Log the messages array
+3. **What tools did it call?** - Log tool invocations
+4. **What was the session state?** - Log pending actions, extracted data
+
+## Key Files
+
+- `packages/web/src/app/api/ai-email/route.ts` - Main webhook handler
+- `packages/web/src/lib/ai-email/prompts.ts` - System prompt
+- `packages/web/src/lib/ai-email/attachment-parser.ts` - Prepares attachments for AI
+- `packages/web/src/lib/ai-email/session.ts` - Session management
+
+## Learnings Log
+
+### 2024-12-31: "no I mean..." bug
+
+- **Problem**: User said "no I mean the [attachment detail] is good" and AI cancelled instead of reading the PDF
+- **Cause**: `parseConfirmationReply()` regex matched `^no\b` and shortcutted the AI
+- **Fix**: Remove all confirmation parsing. Let AI handle everything.
+- **Lesson**: Never bypass the AI for "simple" cases. Human language isn't simple.
