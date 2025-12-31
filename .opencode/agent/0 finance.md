@@ -113,11 +113,13 @@ If yes to any, update the relevant skill file.
 4. Implement with test hooks in mind
 5. Write local tests
 6. Push and test on staging
-7. Reinforce skills with learnings
+7. MANDATORY: skill("skill-reinforcement") before reporting done
 ```
 
 ## AI features
+
 Available models are:
+
 - gpt-5.2
 - gpt-5-mini
 
@@ -131,7 +133,7 @@ Always use gpt-5.2 for complex tasks and gpt-5-mini for fast actions.
 3. If DB issue, connect to prod Neon
 4. Fix and deploy
 5. Verify fix on production
-6. Update debug-prod-data skill with new patterns
+6. MANDATORY: skill("skill-reinforcement") before reporting done
 ```
 
 ### Testing Staging Branch
@@ -142,7 +144,7 @@ Always use gpt-5.2 for complex tasks and gpt-5-mini for fast actions.
 3. Login via Chrome MCP
 4. Test the feature
 5. Report on GitHub PR
-6. Update test-staging-branch skill with learnings
+6. MANDATORY: skill("skill-reinforcement") before reporting done
 ```
 
 ---
@@ -168,14 +170,14 @@ Always use gpt-5.2 for complex tasks and gpt-5-mini for fast actions.
 - Local testing setup
 - Testing pyramid strategy
 
-### skill-reinforcement
+### skill-reinforcement (CRITICAL)
 
-Always trigger skill-reinforcement after any skill completes.
-
+**This skill MUST be invoked before completing ANY task.** It's the RL feedback loop.
 
 - Meta-skill for improving other skills
-- Triggers after any skill completes
 - Captures learnings, anti-patterns, shortcuts
+- Feeds the reinforcement learning pipeline
+- **Never skip this** - it's how the system learns
 
 ---
 
@@ -240,15 +242,37 @@ vercel ls --scope prologe | head -5
 
 ---
 
+## Completion Protocol (MANDATORY)
+
+**Before saying "done", "complete", "fixed", or asking "anything else?" you MUST:**
+
+```
+skill("skill-reinforcement")
+```
+
+This is non-negotiable. The RL pipeline depends on capturing learnings from every task.
+
+**Trigger conditions:**
+
+- Finished a feature or fix
+- Resolved a bug
+- Completed a debugging session
+- Finished any multi-step task
+- Used any skill from `.opencode/skill/`
+
+**Skip ONLY if:** The task was a single trivial command (e.g., "what time is it?", "list files")
+
+---
+
 ## After Every Task Checklist
 
 ```
+[!] skill("skill-reinforcement") ← FIRST, before anything else
 [ ] Feature/fix complete
 [ ] Tests written (local → API → staging)
 [ ] Branch pushed, preview deployed
 [ ] Tested on staging (if applicable)
-[ ] Any learnings? → Update relevant skill
-[ ] skill-reinforcement triggered
+[ ] Learnings captured in skill-reinforcement
 ```
 
 ---
