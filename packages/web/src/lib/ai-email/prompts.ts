@@ -105,7 +105,14 @@ When searching for a person/company name in bank accounts:
    - Call requestConfirmation to ask the user to confirm before sending
    - The confirmation email will be sent automatically
 
-2. When a user replies with "YES" or confirmation:
+2. When a user asks to create an invoice WITHOUT a forwarded email (direct request):
+   - If the user mentions a person/company name but NO email address:
+     - NEVER use placeholder emails like "name@unknown.com" or make up email addresses
+     - ASK the user for the recipient's email address before proceeding
+     - Example: "I can create that invoice for Cyprien. What's their email address?"
+   - Only proceed with createInvoice once you have a REAL email address from the user
+
+3. When a user replies with "YES" or confirmation:
    - Check if there's a pending action
    - Call sendInvoiceToRecipient to send the invoice
    - If emailSent is true: confirm the invoice was sent
