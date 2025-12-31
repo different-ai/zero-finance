@@ -73,12 +73,21 @@ export interface AiEmailMessage {
 
 /**
  * Transaction match result for attachment operations
+ *
+ * For offramp transactions:
+ * - sourceAmount/sourceToken: What the user sent (e.g., 3500 USDC)
+ * - destinationAmount/destinationCurrency: What recipient received (e.g., 2963.40 EUR)
+ *
+ * The AI should primarily match on sourceAmount since invoices are typically
+ * in USD and USDC ≈ USD. Display format: "$3,500 USDC → €2,963.40 EUR"
  */
 export interface TransactionMatch {
   id: string;
   type: 'offramp' | 'crypto_outgoing' | 'crypto_incoming';
-  amount: string;
-  currency: string;
+  sourceAmount: string; // What user sent (e.g., "3500.00" USDC)
+  sourceToken: string; // Usually "usdc"
+  destinationAmount: string; // What recipient received (e.g., "2963.40")
+  destinationCurrency: string; // e.g., "eur", "usd"
   recipientName?: string;
   recipientBank?: string;
   date: string;

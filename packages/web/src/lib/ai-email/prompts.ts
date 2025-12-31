@@ -264,7 +264,7 @@ IMPORTANT: Look for confirmation keywords in the user's latest message.
       const altLabels = action.alternatives
         .map(
           (alt, i) =>
-            `  [${String.fromCharCode(65 + i)}] ${alt.currency} ${alt.amount} to ${alt.recipientName || 'Unknown'} (${alt.date})`,
+            `  [${String.fromCharCode(65 + i)}] $${alt.sourceAmount} USDC → ${alt.destinationCurrency} ${alt.destinationAmount} to ${alt.recipientName || 'Unknown'} (${alt.date})`,
         )
         .join('\n');
 
@@ -273,7 +273,7 @@ IMPORTANT: Look for confirmation keywords in the user's latest message.
 ## Pending Action
 The user has a pending attachment to add:
 - File: ${action.attachmentFilename} (${Math.round(action.attachmentSize / 1024)} KB)
-- Best Match: ${action.bestMatch.currency} ${action.bestMatch.amount} to ${action.bestMatch.recipientName || 'Unknown'} (${action.bestMatch.date})
+- Best Match: $${action.bestMatch.sourceAmount} USDC → ${action.bestMatch.destinationCurrency} ${action.bestMatch.destinationAmount} to ${action.bestMatch.recipientName || 'Unknown'} (${action.bestMatch.date})
 ${action.alternatives.length > 0 ? `- Alternatives:\n${altLabels}` : ''}
 
 If the user confirms (YES), attach to the best match.
@@ -284,7 +284,7 @@ If the user declines (NO, cancel), do not attach.
       const matchList = action.matches
         .map(
           (m, i) =>
-            `  ${i + 1}. ${m.filename} → ${m.transaction.currency} ${m.transaction.amount} to ${m.transaction.recipientName || 'Unknown'}`,
+            `  ${i + 1}. ${m.filename} → $${m.transaction.sourceAmount} USDC → ${m.transaction.destinationCurrency} ${m.transaction.destinationAmount} to ${m.transaction.recipientName || 'Unknown'}`,
         )
         .join('\n');
 
@@ -301,7 +301,7 @@ If the user declines (NO, cancel), do not attach.
       const altLabels = action.alternatives
         .map(
           (alt, i) =>
-            `  [${String.fromCharCode(65 + i)}] ${alt.filename} on ${alt.transaction.currency} ${alt.transaction.amount}`,
+            `  [${String.fromCharCode(65 + i)}] ${alt.filename} on $${alt.transaction.sourceAmount} USDC → ${alt.transaction.destinationCurrency} ${alt.transaction.destinationAmount}`,
         )
         .join('\n');
 
@@ -310,7 +310,7 @@ If the user declines (NO, cancel), do not attach.
 ## Pending Action
 The user wants to remove an attachment:
 - File: ${action.bestMatch.filename}
-- From: ${action.bestMatch.transaction.currency} ${action.bestMatch.transaction.amount} to ${action.bestMatch.transaction.recipientName || 'Unknown'}
+- From: $${action.bestMatch.transaction.sourceAmount} USDC → ${action.bestMatch.transaction.destinationCurrency} ${action.bestMatch.transaction.destinationAmount} to ${action.bestMatch.transaction.recipientName || 'Unknown'}
 ${action.alternatives.length > 0 ? `- Alternatives:\n${altLabels}` : ''}
 
 If the user confirms (YES), remove the attachment.
@@ -561,20 +561,25 @@ To send money, first add a bank account in your 0 Finance dashboard:
   /**
    * Template for single attachment confirmation.
    * Clean formatting, no markdown, human-friendly language.
+   * Shows sourceAmount (USDC sent) as primary, with destinationAmount (fiat received) as context.
    */
   attachmentConfirmation: (params: {
     filename: string;
     fileSize: string;
     bestMatch: {
-      amount: string;
-      currency: string;
+      sourceAmount: string;
+      sourceToken: string;
+      destinationAmount: string;
+      destinationCurrency: string;
       recipientName?: string;
       date: string;
     };
     alternatives: Array<{
       label: string;
-      amount: string;
-      currency: string;
+      sourceAmount: string;
+      sourceToken: string;
+      destinationAmount: string;
+      destinationCurrency: string;
       recipientName?: string;
       date: string;
     }>;
@@ -589,18 +594,22 @@ To send money, first add a bank account in your 0 Finance dashboard:
     };
 
     const formatTransaction = (tx: {
-      amount: string;
-      currency: string;
+      sourceAmount: string;
+      sourceToken: string;
+      destinationAmount: string;
+      destinationCurrency: string;
       recipientName?: string;
       date: string;
     }) => {
-      const symbol =
-        tx.currency.toUpperCase() === 'EUR'
+      // Show source amount (USDC) as primary since that's what user sent
+      const destSymbol =
+        tx.destinationCurrency.toUpperCase() === 'EUR'
           ? '€'
-          : tx.currency.toUpperCase() === 'GBP'
+          : tx.destinationCurrency.toUpperCase() === 'GBP'
             ? '£'
             : '$';
-      return `${symbol}${parseFloat(tx.amount).toLocaleString()} to ${tx.recipientName || 'Unknown'} on ${formatDate(tx.date)}`;
+      const destDisplay = `${destSymbol}${parseFloat(tx.destinationAmount).toLocaleString()} ${tx.destinationCurrency.toUpperCase()}`;
+      return `$${parseFloat(tx.sourceAmount).toLocaleString()} USDC → ${destDisplay} to ${tx.recipientName || 'Unknown'} on ${formatDate(tx.date)}`;
     };
 
     const alternativesList = params.alternatives
@@ -637,8 +646,10 @@ Reply YES to attach to the first match, or A/B/C to pick another.`
       filename: string;
       fileSize: string;
       transaction: {
-        amount: string;
-        currency: string;
+        sourceAmount: string;
+        sourceToken: string;
+        destinationAmount: string;
+        destinationCurrency: string;
         recipientName?: string;
         date: string;
       };
@@ -654,18 +665,21 @@ Reply YES to attach to the first match, or A/B/C to pick another.`
     };
 
     const formatTransaction = (tx: {
-      amount: string;
-      currency: string;
+      sourceAmount: string;
+      sourceToken: string;
+      destinationAmount: string;
+      destinationCurrency: string;
       recipientName?: string;
       date: string;
     }) => {
-      const symbol =
-        tx.currency.toUpperCase() === 'EUR'
+      const destSymbol =
+        tx.destinationCurrency.toUpperCase() === 'EUR'
           ? '€'
-          : tx.currency.toUpperCase() === 'GBP'
+          : tx.destinationCurrency.toUpperCase() === 'GBP'
             ? '£'
             : '$';
-      return `${symbol}${parseFloat(tx.amount).toLocaleString()} to ${tx.recipientName || 'Unknown'} (${formatDate(tx.date)})`;
+      const destDisplay = `${destSymbol}${parseFloat(tx.destinationAmount).toLocaleString()} ${tx.destinationCurrency.toUpperCase()}`;
+      return `$${parseFloat(tx.sourceAmount).toLocaleString()} USDC → ${destDisplay} to ${tx.recipientName || 'Unknown'} (${formatDate(tx.date)})`;
     };
 
     const matchList = params.matches
@@ -692,8 +706,10 @@ Reply YES to attach all, or NO to cancel.`;
    */
   attachmentSuccess: (params: {
     filename: string;
-    amount: string;
-    currency: string;
+    sourceAmount: string;
+    sourceToken: string;
+    destinationAmount: string;
+    destinationCurrency: string;
     recipientName?: string;
     date: string;
   }) => {
@@ -705,16 +721,17 @@ Reply YES to attach all, or NO to cancel.`;
         year: 'numeric',
       });
     };
-    const symbol =
-      params.currency.toUpperCase() === 'EUR'
+    const destSymbol =
+      params.destinationCurrency.toUpperCase() === 'EUR'
         ? '€'
-        : params.currency.toUpperCase() === 'GBP'
+        : params.destinationCurrency.toUpperCase() === 'GBP'
           ? '£'
           : '$';
+    const destDisplay = `${destSymbol}${parseFloat(params.destinationAmount).toLocaleString()} ${params.destinationCurrency.toUpperCase()}`;
 
     return {
       subject: `Attached: ${params.filename}`,
-      body: `Done! Attached ${params.filename} to your ${symbol}${parseFloat(params.amount).toLocaleString()} transfer to ${params.recipientName || 'Unknown'} (${formatDate(params.date)}).`,
+      body: `Done! Attached ${params.filename} to your $${parseFloat(params.sourceAmount).toLocaleString()} USDC → ${destDisplay} transfer to ${params.recipientName || 'Unknown'} (${formatDate(params.date)}).`,
     };
   },
 
@@ -733,15 +750,19 @@ ${params.files.map((f, i) => `   ${i + 1}.  ${f}`).join('\n')}`,
    */
   removeAttachmentConfirmation: (params: {
     filename: string;
-    amount: string;
-    currency: string;
+    sourceAmount: string;
+    sourceToken: string;
+    destinationAmount: string;
+    destinationCurrency: string;
     recipientName?: string;
     date: string;
     alternatives: Array<{
       label: string;
       filename: string;
-      amount: string;
-      currency: string;
+      sourceAmount: string;
+      sourceToken: string;
+      destinationAmount: string;
+      destinationCurrency: string;
       recipientName?: string;
       date: string;
     }>;
@@ -754,29 +775,31 @@ ${params.files.map((f, i) => `   ${i + 1}.  ${f}`).join('\n')}`,
         year: 'numeric',
       });
     };
-    const symbol =
-      params.currency.toUpperCase() === 'EUR'
+    const destSymbol =
+      params.destinationCurrency.toUpperCase() === 'EUR'
         ? '€'
-        : params.currency.toUpperCase() === 'GBP'
+        : params.destinationCurrency.toUpperCase() === 'GBP'
           ? '£'
           : '$';
+    const destDisplay = `${destSymbol}${parseFloat(params.destinationAmount).toLocaleString()} ${params.destinationCurrency.toUpperCase()}`;
 
     const alternativesList = params.alternatives
       .map((alt) => {
-        const altSymbol =
-          alt.currency.toUpperCase() === 'EUR'
+        const altDestSymbol =
+          alt.destinationCurrency.toUpperCase() === 'EUR'
             ? '€'
-            : alt.currency.toUpperCase() === 'GBP'
+            : alt.destinationCurrency.toUpperCase() === 'GBP'
               ? '£'
               : '$';
-        return `   ${alt.label})  ${alt.filename} on ${altSymbol}${parseFloat(alt.amount).toLocaleString()} to ${alt.recipientName || 'Unknown'}`;
+        const altDestDisplay = `${altDestSymbol}${parseFloat(alt.destinationAmount).toLocaleString()} ${alt.destinationCurrency.toUpperCase()}`;
+        return `   ${alt.label})  ${alt.filename} on $${parseFloat(alt.sourceAmount).toLocaleString()} USDC → ${altDestDisplay} to ${alt.recipientName || 'Unknown'}`;
       })
       .join('\n');
 
     const body = `Remove this attachment?
 
 ${params.filename}
-From: ${symbol}${parseFloat(params.amount).toLocaleString()} transfer to ${params.recipientName || 'Unknown'} (${formatDate(params.date)})
+From: $${parseFloat(params.sourceAmount).toLocaleString()} USDC → ${destDisplay} transfer to ${params.recipientName || 'Unknown'} (${formatDate(params.date)})
 
 ${
   params.alternatives.length > 0
@@ -798,19 +821,22 @@ Reply YES to remove, or A/B/C to remove a different one.`
    */
   removeAttachmentSuccess: (params: {
     filename: string;
-    amount: string;
-    currency: string;
+    sourceAmount: string;
+    sourceToken: string;
+    destinationAmount: string;
+    destinationCurrency: string;
     recipientName?: string;
   }) => {
-    const symbol =
-      params.currency.toUpperCase() === 'EUR'
+    const destSymbol =
+      params.destinationCurrency.toUpperCase() === 'EUR'
         ? '€'
-        : params.currency.toUpperCase() === 'GBP'
+        : params.destinationCurrency.toUpperCase() === 'GBP'
           ? '£'
           : '$';
+    const destDisplay = `${destSymbol}${parseFloat(params.destinationAmount).toLocaleString()} ${params.destinationCurrency.toUpperCase()}`;
     return {
       subject: `Removed: ${params.filename}`,
-      body: `Done! Removed ${params.filename} from your ${symbol}${parseFloat(params.amount).toLocaleString()} transfer to ${params.recipientName || 'Unknown'}.`,
+      body: `Done! Removed ${params.filename} from your $${parseFloat(params.sourceAmount).toLocaleString()} USDC → ${destDisplay} transfer to ${params.recipientName || 'Unknown'}.`,
     };
   },
 

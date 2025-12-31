@@ -1332,8 +1332,10 @@ export async function POST(request: NextRequest) {
             .select({
               id: offrampTransfers.id,
               alignTransferId: offrampTransfers.alignTransferId,
-              amount: offrampTransfers.amountToSend,
-              currency: offrampTransfers.destinationCurrency,
+              sourceAmount: offrampTransfers.depositAmount,
+              sourceToken: offrampTransfers.depositToken,
+              destinationAmount: offrampTransfers.amountToSend,
+              destinationCurrency: offrampTransfers.destinationCurrency,
               status: offrampTransfers.status,
               bankAccountSnapshot:
                 offrampTransfers.destinationBankAccountSnapshot,
@@ -1356,8 +1358,10 @@ export async function POST(request: NextRequest) {
           type ScoredTransaction = {
             id: string;
             type: 'offramp';
-            amount: string;
-            currency: string;
+            sourceAmount: string;
+            sourceToken: string;
+            destinationAmount: string;
+            destinationCurrency: string;
             recipientName?: string;
             recipientBank?: string;
             date: string;
@@ -1399,12 +1403,14 @@ export async function POST(request: NextRequest) {
                 if (recipientName.toLowerCase().includes(queryLower))
                   score += 40;
                 if (bankName.toLowerCase().includes(queryLower)) score += 20;
-                if (tx.amount.includes(params.searchQuery)) score += 30;
+                // Match against source amount (USDC) since invoices are typically in USD
+                if (tx.sourceAmount.includes(params.searchQuery)) score += 30;
               }
 
-              // Score by amount match
+              // Score by amount match - use sourceAmount (USDC) since invoices are typically in USD
+              // USDC ≈ USD, so a $3500 invoice should match a 3500 USDC transaction
               if (params.amount) {
-                const txAmount = parseFloat(tx.amount);
+                const txAmount = parseFloat(tx.sourceAmount);
                 const diff = Math.abs(txAmount - params.amount) / params.amount;
                 if (diff < 0.05)
                   score += 40; // Within 5%
@@ -1423,8 +1429,10 @@ export async function POST(request: NextRequest) {
               return {
                 id: tx.id,
                 type: 'offramp' as const,
-                amount: tx.amount,
-                currency: tx.currency.toUpperCase(),
+                sourceAmount: tx.sourceAmount,
+                sourceToken: tx.sourceToken.toUpperCase(),
+                destinationAmount: tx.destinationAmount,
+                destinationCurrency: tx.destinationCurrency.toUpperCase(),
                 recipientName: recipientName || undefined,
                 recipientBank: bankName || undefined,
                 date: tx.createdAt.toISOString().split('T')[0],
@@ -1472,8 +1480,10 @@ export async function POST(request: NextRequest) {
           const transfers = await db
             .select({
               id: offrampTransfers.id,
-              amount: offrampTransfers.amountToSend,
-              currency: offrampTransfers.destinationCurrency,
+              sourceAmount: offrampTransfers.depositAmount,
+              sourceToken: offrampTransfers.depositToken,
+              destinationAmount: offrampTransfers.amountToSend,
+              destinationCurrency: offrampTransfers.destinationCurrency,
               bankAccountSnapshot:
                 offrampTransfers.destinationBankAccountSnapshot,
               createdAt: offrampTransfers.createdAt,
@@ -1545,8 +1555,10 @@ export async function POST(request: NextRequest) {
             return {
               id: tx.id,
               type: 'offramp' as const,
-              amount: tx.amount,
-              currency: tx.currency.toUpperCase(),
+              sourceAmount: tx.sourceAmount,
+              sourceToken: tx.sourceToken.toUpperCase(),
+              destinationAmount: tx.destinationAmount,
+              destinationCurrency: tx.destinationCurrency.toUpperCase(),
               recipientName: recipientName || undefined,
               bankName: bankName || undefined,
               accountType: accountType || undefined,
@@ -1799,8 +1811,10 @@ export async function POST(request: NextRequest) {
             // Send success email
             const template = emailTemplates.attachmentSuccess({
               filename: pendingAction.attachmentFilename,
-              amount: tx.amountToSend,
-              currency: tx.destinationCurrency,
+              sourceAmount: tx.depositAmount,
+              sourceToken: tx.depositToken,
+              destinationAmount: tx.amountToSend,
+              destinationCurrency: tx.destinationCurrency,
               recipientName,
               date: tx.createdAt.toISOString().split('T')[0],
             });
@@ -1896,8 +1910,10 @@ export async function POST(request: NextRequest) {
               return {
                 id: tx.id,
                 type: 'offramp' as const,
-                amount: tx.amountToSend,
-                currency: tx.destinationCurrency.toUpperCase(),
+                sourceAmount: tx.depositAmount,
+                sourceToken: tx.depositToken.toUpperCase(),
+                destinationAmount: tx.amountToSend,
+                destinationCurrency: tx.destinationCurrency.toUpperCase(),
                 recipientName:
                   (snapshot?.account_holder_first_name as string) ||
                   (snapshot?.account_holder_business_name as string) ||
@@ -1921,8 +1937,10 @@ export async function POST(request: NextRequest) {
             const transfers = await db
               .select({
                 id: offrampTransfers.id,
-                amount: offrampTransfers.amountToSend,
-                currency: offrampTransfers.destinationCurrency,
+                sourceAmount: offrampTransfers.depositAmount,
+                sourceToken: offrampTransfers.depositToken,
+                destinationAmount: offrampTransfers.amountToSend,
+                destinationCurrency: offrampTransfers.destinationCurrency,
                 bankAccountSnapshot:
                   offrampTransfers.destinationBankAccountSnapshot,
                 createdAt: offrampTransfers.createdAt,
@@ -1951,8 +1969,10 @@ export async function POST(request: NextRequest) {
                 return {
                   id: tx.id,
                   type: 'offramp' as const,
-                  amount: tx.amount,
-                  currency: tx.currency.toUpperCase(),
+                  sourceAmount: tx.sourceAmount,
+                  sourceToken: tx.sourceToken.toUpperCase(),
+                  destinationAmount: tx.destinationAmount,
+                  destinationCurrency: tx.destinationCurrency.toUpperCase(),
                   recipientName:
                     (snapshot?.account_holder_first_name as string) ||
                     (snapshot?.account_holder_business_name as string) ||
@@ -2006,15 +2026,19 @@ export async function POST(request: NextRequest) {
             filename: attachment.filename,
             fileSize,
             bestMatch: {
-              amount: result.amount,
-              currency: result.currency,
+              sourceAmount: result.sourceAmount,
+              sourceToken: result.sourceToken,
+              destinationAmount: result.destinationAmount,
+              destinationCurrency: result.destinationCurrency,
               recipientName: result.recipientName,
               date: result.date,
             },
             alternatives: alternatives.map((alt, i) => ({
               label: String.fromCharCode(65 + i), // A, B, C
-              amount: alt.amount,
-              currency: alt.currency,
+              sourceAmount: alt.sourceAmount,
+              sourceToken: alt.sourceToken,
+              destinationAmount: alt.destinationAmount,
+              destinationCurrency: alt.destinationCurrency,
               recipientName: alt.recipientName,
               date: alt.date,
             })),
@@ -2069,8 +2093,10 @@ export async function POST(request: NextRequest) {
           const transfers = await db
             .select({
               id: offrampTransfers.id,
-              amount: offrampTransfers.amountToSend,
-              currency: offrampTransfers.destinationCurrency,
+              depositAmount: offrampTransfers.depositAmount,
+              depositToken: offrampTransfers.depositToken,
+              amountToSend: offrampTransfers.amountToSend,
+              destinationCurrency: offrampTransfers.destinationCurrency,
               bankAccountSnapshot:
                 offrampTransfers.destinationBankAccountSnapshot,
               createdAt: offrampTransfers.createdAt,
@@ -2104,8 +2130,10 @@ export async function POST(request: NextRequest) {
             return {
               id: tx.id,
               type: 'offramp' as const,
-              amount: tx.amount,
-              currency: tx.currency.toUpperCase(),
+              sourceAmount: tx.depositAmount,
+              sourceToken: tx.depositToken.toUpperCase(),
+              destinationAmount: tx.amountToSend,
+              destinationCurrency: tx.destinationCurrency.toUpperCase(),
               recipientName:
                 (snapshot?.account_holder_first_name as string) ||
                 (snapshot?.account_holder_business_name as string) ||
@@ -2394,8 +2422,10 @@ export async function POST(request: NextRequest) {
             // Send success email
             const template = emailTemplates.attachmentSuccess({
               filename: pendingAction.attachmentFilename,
-              amount: targetTransaction.amount,
-              currency: targetTransaction.currency,
+              sourceAmount: targetTransaction.sourceAmount,
+              sourceToken: targetTransaction.sourceToken,
+              destinationAmount: targetTransaction.destinationAmount,
+              destinationCurrency: targetTransaction.destinationCurrency,
               recipientName: targetTransaction.recipientName,
               date: targetTransaction.date,
             });
@@ -2537,8 +2567,10 @@ export async function POST(request: NextRequest) {
           let transactionDetails: {
             id: string;
             type: 'offramp' | 'crypto_outgoing' | 'crypto_incoming';
-            amount: string;
-            currency: string;
+            sourceAmount: string;
+            sourceToken: string;
+            destinationAmount: string;
+            destinationCurrency: string;
             recipientName?: string;
             date: string;
             score: number;
@@ -2556,8 +2588,10 @@ export async function POST(request: NextRequest) {
               transactionDetails = {
                 id: tx.id,
                 type: 'offramp',
-                amount: tx.amountToSend,
-                currency: tx.destinationCurrency.toUpperCase(),
+                sourceAmount: tx.depositAmount,
+                sourceToken: tx.depositToken.toUpperCase(),
+                destinationAmount: tx.amountToSend,
+                destinationCurrency: tx.destinationCurrency.toUpperCase(),
                 recipientName:
                   (snapshot?.account_holder_first_name as string) ||
                   (snapshot?.account_holder_business_name as string) ||
@@ -2575,8 +2609,10 @@ export async function POST(request: NextRequest) {
                 | 'offramp'
                 | 'crypto_outgoing'
                 | 'crypto_incoming',
-              amount: 'Unknown',
-              currency: 'USD',
+              sourceAmount: 'Unknown',
+              sourceToken: 'USDC',
+              destinationAmount: 'Unknown',
+              destinationCurrency: 'USD',
               date: attachment.createdAt.toISOString().split('T')[0],
               score: 100,
             };
@@ -2613,8 +2649,10 @@ export async function POST(request: NextRequest) {
                   | 'offramp'
                   | 'crypto_outgoing'
                   | 'crypto_incoming',
-                amount: 'Unknown',
-                currency: 'USD',
+                sourceAmount: 'Unknown',
+                sourceToken: 'USDC',
+                destinationAmount: 'Unknown',
+                destinationCurrency: 'USD',
                 recipientName: undefined as string | undefined,
                 date: a.createdAt.toISOString().split('T')[0],
                 score: 50,
@@ -2643,15 +2681,19 @@ export async function POST(request: NextRequest) {
           // Send confirmation email
           const template = emailTemplates.removeAttachmentConfirmation({
             filename: attachment.filename,
-            amount: transactionDetails.amount,
-            currency: transactionDetails.currency,
+            sourceAmount: transactionDetails.sourceAmount,
+            sourceToken: transactionDetails.sourceToken,
+            destinationAmount: transactionDetails.destinationAmount,
+            destinationCurrency: transactionDetails.destinationCurrency,
             recipientName: transactionDetails.recipientName,
             date: transactionDetails.date,
             alternatives: alternatives.map((alt, i) => ({
               label: String.fromCharCode(65 + i),
               filename: alt.filename,
-              amount: alt.transaction.amount,
-              currency: alt.transaction.currency,
+              sourceAmount: alt.transaction.sourceAmount,
+              sourceToken: alt.transaction.sourceToken,
+              destinationAmount: alt.transaction.destinationAmount,
+              destinationCurrency: alt.transaction.destinationCurrency,
               recipientName: alt.transaction.recipientName,
               date: alt.transaction.date,
             })),
@@ -2728,8 +2770,11 @@ export async function POST(request: NextRequest) {
             // Send success email
             const template = emailTemplates.removeAttachmentSuccess({
               filename: targetAttachment.filename,
-              amount: targetAttachment.transaction.amount,
-              currency: targetAttachment.transaction.currency,
+              sourceAmount: targetAttachment.transaction.sourceAmount,
+              sourceToken: targetAttachment.transaction.sourceToken,
+              destinationAmount: targetAttachment.transaction.destinationAmount,
+              destinationCurrency:
+                targetAttachment.transaction.destinationCurrency,
               recipientName: targetAttachment.transaction.recipientName,
             });
 
