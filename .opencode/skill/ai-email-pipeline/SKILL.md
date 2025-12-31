@@ -150,6 +150,49 @@ const messages = session.messages.map((msg) => ({
 }));
 ```
 
+## Attachment Persistence
+
+**Critical**: Attachments must persist across the conversation.
+
+When an email arrives with a PDF/image:
+
+1. Upload to Vercel Blob immediately
+2. Store metadata in `session.attachments[]`
+
+When a reply arrives:
+
+1. Load ALL stored attachments from Vercel Blob
+2. Include them in the AI message (along with any new attachments)
+3. AI can now "remember" PDFs from earlier in the conversation
+
+```typescript
+// Session stores attachment metadata
+session.attachments = [
+  {
+    filename: 'Invoice.pdf',
+    contentType: 'application/pdf',
+    blobUrl: 'https://xyz.blob.vercel-storage.com/...',
+    size: 33192,
+    messageIndex: 0,
+    uploadedAt: '2024-12-31T...',
+  },
+];
+
+// On reply, fetch and include all attachments
+for (const att of session.attachments) {
+  const response = await fetch(att.blobUrl);
+  const buffer = Buffer.from(await response.arrayBuffer());
+  allAttachmentParts.push({
+    type: 'file',
+    data: buffer,
+    mediaType: att.contentType,
+    filename: att.filename,
+  });
+}
+```
+
+Without this, the AI loses access to PDFs when the user replies.
+
 ## Tools
 
 Tools are the AI's hands. They do things:
@@ -181,7 +224,14 @@ When something goes wrong, check:
 
 ### 2024-12-31: "no I mean..." bug
 
-- **Problem**: User said "no I mean the [attachment detail] is good" and AI cancelled instead of reading the PDF
+- **Problem**: User said "no I mean the Cyprien Farvaque Detail is good" and AI cancelled instead of reading the PDF
 - **Cause**: `parseConfirmationReply()` regex matched `^no\b` and shortcutted the AI
 - **Fix**: Remove all confirmation parsing. Let AI handle everything.
 - **Lesson**: Never bypass the AI for "simple" cases. Human language isn't simple.
+
+### 2024-12-31: Attachments lost on reply
+
+- **Problem**: User sends PDF in email 1, references it in email 2, AI says "what PDF?"
+- **Cause**: Session only stored text content of messages, not attachments. PDFs were passed to AI in real-time but never persisted.
+- **Fix**: Upload attachments to Vercel Blob immediately, store metadata in session.attachments[], fetch and include all stored attachments on every reply.
+- **Lesson**: Conversations span multiple emails. State (including attachments) must persist.
