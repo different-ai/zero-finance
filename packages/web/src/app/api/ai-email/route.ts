@@ -1478,11 +1478,44 @@ export async function POST(request: NextRequest) {
               string,
               unknown
             > | null;
-            const recipientName =
-              (snapshot?.account_holder_first_name as string) ||
-              (snapshot?.account_holder_business_name as string) ||
-              '';
+
+            // Extract recipient name - try business name first, then individual name
+            let recipientName = '';
+            if (snapshot?.account_holder_business_name) {
+              recipientName = snapshot.account_holder_business_name as string;
+            } else if (
+              snapshot?.account_holder_first_name ||
+              snapshot?.account_holder_last_name
+            ) {
+              recipientName = [
+                snapshot.account_holder_first_name,
+                snapshot.account_holder_last_name,
+              ]
+                .filter(Boolean)
+                .join(' ');
+            }
+
+            // Extract address info
+            const address = snapshot?.account_holder_address as Record<
+              string,
+              string
+            > | null;
+            const country = address?.country || '';
+            const city = address?.city || '';
+
+            // Extract bank details
             const bankName = (snapshot?.bank_name as string) || '';
+            const accountType = (snapshot?.account_type as string) || '';
+
+            // Extract account identifiers (masked for security but useful for matching)
+            const usAccount = snapshot?.us as Record<string, string> | null;
+            const ibanAccount = snapshot?.iban as Record<string, string> | null;
+            let accountIdentifier = '';
+            if (usAccount?.routing_number) {
+              accountIdentifier = `US account (routing ****${usAccount.routing_number.slice(-4)})`;
+            } else if (ibanAccount?.iban_number) {
+              accountIdentifier = `IBAN ****${ibanAccount.iban_number.slice(-4)}`;
+            }
 
             return {
               id: tx.id,
@@ -1491,9 +1524,32 @@ export async function POST(request: NextRequest) {
               currency: tx.currency.toUpperCase(),
               recipientName: recipientName || undefined,
               bankName: bankName || undefined,
+              accountType: accountType || undefined,
+              accountIdentifier: accountIdentifier || undefined,
+              country: country || undefined,
+              city: city || undefined,
               date: tx.createdAt.toISOString().split('T')[0],
             };
           });
+
+          // Log transactions with missing recipient names for debugging
+          const missingNames = transfers.filter((tx) => {
+            const s = tx.bankAccountSnapshot as Record<string, unknown> | null;
+            return (
+              !s?.account_holder_business_name &&
+              !s?.account_holder_first_name &&
+              !s?.account_holder_last_name
+            );
+          });
+          if (missingNames.length > 0) {
+            console.log(
+              `[AI Email] ${missingNames.length} transactions missing recipient name. Sample snapshot:`,
+              JSON.stringify(missingNames[0]?.bankAccountSnapshot)?.substring(
+                0,
+                500,
+              ),
+            );
+          }
 
           console.log(
             `[AI Email] listRecentTransactions returning ${transactions.length} transactions`,
