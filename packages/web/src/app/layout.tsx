@@ -10,21 +10,21 @@ import type { Metadata } from 'next';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: '0 Finance - Turn idle cash into headcount',
+  title: '0 Finance - Your bank earns 5%+ on your deposits. You get 0.5%.',
   description:
-    'Your idle cash could hire your next engineer. Open US or EU account numbers, earn 4-7% APY on treasury funds with vetted yield strategies and insurance coverage.',
+    'Keep the difference. Competitive yield, instant withdrawals, $1M insurance. Open US or EU accounts in seconds.',
   keywords: [
-    'idle cash',
-    'treasury funds',
-    'high yield APY',
     'startup treasury',
-    'headcount',
     'high yield savings',
-    'USDC',
     'business banking',
-    'vetted yield',
+    'competitive yield',
+    'instant withdrawals',
     'insurance coverage',
-    'next engineer',
+    'US bank account',
+    'EU bank account',
+    'IBAN',
+    'ACH',
+    'SEPA',
   ],
   authors: [{ name: '0 Finance' }],
   creator: '0 Finance',
@@ -50,9 +50,9 @@ export const metadata: Metadata = {
     ],
   },
   openGraph: {
-    title: '0 Finance - Your idle cash could hire your next engineer',
+    title: '0 Finance - Your bank earns 5%+ on your deposits. You get 0.5%.',
     description:
-      'Open US or EU account numbers, earn 4-7% APY on treasury funds. We place funds into vetted yield strategies with defined insurance coverage, you withdraw any time.',
+      'Keep the difference. Competitive yield, instant withdrawals, $1M insurance. Open US or EU accounts in seconds.',
     url: 'https://0.finance',
     siteName: '0 Finance',
     images: [
@@ -60,7 +60,7 @@ export const metadata: Metadata = {
         url: 'https://0.finance/opengraph-image.png',
         width: 1200,
         height: 630,
-        alt: '0 Finance - Turn idle cash into headcount',
+        alt: '0 Finance - Your bank earns 5%+ on your deposits. You get 0.5%.',
       },
     ],
     locale: 'en_US',
@@ -68,9 +68,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: '0 Finance - Turn idle cash into headcount',
+    title: '0 Finance - Your bank earns 5%+ on your deposits. You get 0.5%.',
     description:
-      'Your idle cash could hire your next engineer. Open US or EU account numbers, earn 4-7% APY on treasury funds with vetted yield strategies.',
+      'Keep the difference. Competitive yield, instant withdrawals, $1M insurance. Open US or EU accounts in seconds.',
     site: '@0finance',
     creator: '@0finance',
     images: ['https://0.finance/opengraph-image.png'],
