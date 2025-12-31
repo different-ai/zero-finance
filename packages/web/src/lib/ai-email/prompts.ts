@@ -122,33 +122,52 @@ When searching for a person/company name in bank accounts:
 
 CRITICAL: YOU must read the attachment and match it to the right transaction. Do NOT blindly trust tool matching.
 
-1. When user sends email with attachment(s) asking to attach:
-   - FIRST: Read the PDF/image attachment carefully. Extract: amount, recipient/vendor name, date, description.
-   - THEN: Call listRecentTransactions to see available transactions
-   - YOU DECIDE: Match the document to the correct transaction based on what you extracted
-   - Call attachDocumentToTransaction with the transaction ID YOU chose
-   - If NO transaction matches (wrong amount, wrong recipient, wrong date range), tell the user: "I couldn't find a matching transaction for this [amount] [vendor] invoice. Your recent transactions are: [list]. Which one should I attach it to?"
+### When user sends email WITH attachment:
 
-2. Matching rules:
+1. FIRST: Read the PDF/image attachment carefully. Extract: amount, recipient/vendor name, date, description.
+2. THEN: Call listRecentTransactions to see available transactions
+3. YOU DECIDE: Match the document to the correct transaction based on what you extracted
+
+**If you find an EXACT match** (amount matches, recipient matches):
+   - Call attachDocumentToTransaction with the transaction ID
+
+**If NO exact match** (ambiguous, multiple possibilities, or nothing close):
+   - Call storeAttachmentAndAskUser - this uploads the file to blob storage and asks the user
+   - Include the extracted details and candidate transactions
+   - The attachment is now STORED and will persist when the user replies
+
+### When user REPLIES with their selection (after you asked):
+
+IMPORTANT: The user's reply email will NOT have the attachment - it was in the original email!
+Check if there's a pending action of type 'select_transaction_for_attachment'.
+
+If yes:
+   - Parse which transaction the user selected (e.g., "the first one", "#2", "the €2,963 one")
+   - Call attachStoredDocument with the transactionId - the blob URL is already stored
+   - Do NOT look for an attachment in this reply email
+
+### Matching rules:
    - Amount should be close (within 10%) or exact
    - Recipient/vendor name should match (fuzzy is ok)
    - Date should be reasonable (invoice date near transaction date)
-   - If NOTHING matches well, ask the user - don't guess
+   - If NOTHING matches well, use storeAttachmentAndAskUser
 
-3. When user confirms (YES):
+### When user confirms (YES) for attach_document pending action:
    - For single attachment: call confirmAttachment
    - For multiple attachments: call confirmMultipleAttachments
 
-4. When user picks alternative (A/B/C):
+### When user picks alternative (A/B/C):
    - Call confirmAttachment with their selection
 
-5. When user asks to remove an attachment:
+### When user asks to remove an attachment:
    - Call listAttachments to find it
    - Call removeAttachment with the attachment ID
 
-6. Request patterns:
+### Request patterns:
    - "Attach this to my Acme payment" → findTransaction("Acme"), attachDocumentToTransaction
-   - "Attach this invoice" [1 PDF] → Read PDF, listRecentTransactions, YOU match, attachDocumentToTransaction
+   - "Attach this invoice" [1 PDF, exact match] → Read PDF, listRecentTransactions, attachDocumentToTransaction
+   - "Attach this invoice" [1 PDF, no exact match] → Read PDF, listRecentTransactions, storeAttachmentAndAskUser
+   - User replies "the second one" → Check pending action, call attachStoredDocument
    - "What's attached to my last transfer?" → findTransaction, listAttachments
 
 ## Payment Details Flow
@@ -308,6 +327,34 @@ The user wants to send their payment details to:
 
 If the user confirms (YES), call confirmSendPaymentDetails.
 If the user declines (NO, cancel), do not send.
+`;
+    } else if (action.type === 'select_transaction_for_attachment') {
+      const txList = action.candidateTransactions
+        .map(
+          (tx, i) =>
+            `  ${i + 1}. ${tx.currency} ${tx.amount} to ${tx.recipientName || 'Unknown'} (${tx.date}) [ID: ${tx.id}]`,
+        )
+        .join('\n');
+
+      contextSections += `
+
+## Pending Action - ATTACHMENT STORED
+You previously asked the user which transaction to attach a document to.
+The attachment is ALREADY UPLOADED to Vercel Blob - you do NOT need the attachment from this email.
+
+- File: ${action.attachmentFilename} (${Math.round(action.attachmentSize / 1024)} KB)
+- Stored at: ${action.tempBlobUrl}
+- Extracted from document: ${action.extractedDetails.vendor ? `Vendor: ${action.extractedDetails.vendor}, ` : ''}${action.extractedDetails.amount ? `Amount: ${action.extractedDetails.currency || ''} ${action.extractedDetails.amount}, ` : ''}${action.extractedDetails.date ? `Date: ${action.extractedDetails.date}` : ''}
+
+Candidate transactions you showed the user:
+${txList}
+
+IMPORTANT: When the user replies with their selection (e.g., "the first one", "attach to #2", "the €2,963 one"):
+1. Parse which transaction they selected from the list above
+2. Call attachStoredDocument with the transactionId from that selection
+3. Do NOT look for an attachment in this email - it's already stored!
+
+If the user declines (NO, cancel), acknowledge and clear the pending action.
 `;
     }
   }

@@ -1587,9 +1587,254 @@ export async function POST(request: NextRequest) {
         },
       }),
 
+      storeAttachmentAndAskUser: tool({
+        description:
+          'Store an attachment from the email and ask the user which transaction to attach it to. Use this when you have read the attachment, found no exact match, and need to ask the user. This uploads the file immediately so it persists when the user replies.',
+        inputSchema: z.object({
+          attachmentIndex: z
+            .number()
+            .default(0)
+            .describe('Index of attachment from email (0 = first attachment)'),
+          extractedDetails: z
+            .object({
+              vendor: z
+                .string()
+                .optional()
+                .describe('Vendor/recipient name from the document'),
+              amount: z
+                .number()
+                .optional()
+                .describe('Amount from the document'),
+              currency: z
+                .string()
+                .optional()
+                .describe('Currency (USD, EUR, etc.)'),
+              date: z.string().optional().describe('Date from the document'),
+              description: z
+                .string()
+                .optional()
+                .describe('Brief description of what the document is'),
+            })
+            .describe('Details you extracted from reading the attachment'),
+          candidateTransactions: z
+            .array(
+              z.object({
+                id: z.string(),
+                amount: z.string(),
+                currency: z.string(),
+                recipientName: z.string().optional(),
+                date: z.string(),
+              }),
+            )
+            .describe(
+              'List of candidate transactions the user can choose from',
+            ),
+          questionForUser: z
+            .string()
+            .describe(
+              'The question to ask the user about which transaction to attach to',
+            ),
+        }),
+        execute: async (params) => {
+          console.log(
+            '[AI Email] Tool: storeAttachmentAndAskUser called with:',
+            params,
+          );
+
+          // Check if we have attachments
+          if (toolContext.preparedAttachments.length === 0) {
+            return {
+              error: 'No attachments found in this email',
+              success: false,
+            };
+          }
+
+          const attachment =
+            toolContext.preparedAttachments[params.attachmentIndex];
+          if (
+            !attachment ||
+            !attachment.supported ||
+            !attachment.base64Content
+          ) {
+            return {
+              error: `Attachment at index ${params.attachmentIndex} not found or not supported`,
+              success: false,
+            };
+          }
+
+          // Upload attachment to Vercel Blob IMMEDIATELY so it persists across confirmation round-trip
+          const fileBuffer = Buffer.from(attachment.base64Content, 'base64');
+          const tempBlobPath = `attachments/temp/${toolContext.session.id}/${attachment.filename}`;
+
+          console.log(
+            `[AI Email] Uploading attachment to temp blob: ${tempBlobPath}`,
+          );
+          const tempBlob = await put(tempBlobPath, fileBuffer, {
+            access: 'public',
+            contentType: attachment.contentType,
+            addRandomSuffix: true,
+          });
+          console.log(`[AI Email] Uploaded to: ${tempBlob.url}`);
+
+          // Store pending action with blob URL and candidate transactions
+          const pendingAction: AiEmailPendingAction = {
+            type: 'select_transaction_for_attachment',
+            tempBlobUrl: tempBlob.url,
+            attachmentFilename: attachment.filename,
+            attachmentContentType: attachment.contentType,
+            attachmentSize: fileBuffer.length,
+            extractedDetails: params.extractedDetails,
+            candidateTransactions: params.candidateTransactions,
+          };
+
+          await updateSession(toolContext.session.id, {
+            pendingAction,
+            state: 'awaiting_confirmation',
+          });
+
+          // Send the question to the user
+          await sendReply(
+            toolContext.email.from,
+            toolContext.replySubject,
+            params.questionForUser + toolContext.quotedOriginal,
+            toolContext.messageId,
+            toolContext.workspaceResult.aiEmailHandle,
+            toolContext.sessionThreadId,
+          );
+
+          return {
+            success: true,
+            message: 'Attachment stored and question sent to user',
+            awaitingUserSelection: true,
+            blobUrl: tempBlob.url,
+          };
+        },
+      }),
+
+      attachStoredDocument: tool({
+        description:
+          'Attach a previously stored document to a transaction. Use this when the user replies with their transaction selection after you asked them with storeAttachmentAndAskUser.',
+        inputSchema: z.object({
+          transactionId: z
+            .string()
+            .describe('Transaction ID the user selected'),
+          transactionType: z
+            .enum(['offramp', 'crypto_outgoing', 'crypto_incoming'])
+            .default('offramp')
+            .describe('Type of transaction'),
+        }),
+        execute: async (params) => {
+          console.log(
+            '[AI Email] Tool: attachStoredDocument called with:',
+            params,
+          );
+
+          const pendingAction = toolContext.session.pendingAction;
+          if (
+            !pendingAction ||
+            pendingAction.type !== 'select_transaction_for_attachment'
+          ) {
+            return {
+              error:
+                'No stored attachment found. The user needs to send the attachment again.',
+              success: false,
+            };
+          }
+
+          if (!pendingAction.tempBlobUrl) {
+            return {
+              error: 'Attachment blob URL not found in pending action',
+              success: false,
+            };
+          }
+
+          // Find the transaction to get details for confirmation message
+          const tx = await db.query.offrampTransfers.findFirst({
+            where: and(
+              eq(offrampTransfers.id, params.transactionId),
+              eq(
+                offrampTransfers.workspaceId,
+                toolContext.workspaceResult.workspaceId,
+              ),
+            ),
+          });
+
+          if (!tx) {
+            return {
+              error: 'Transaction not found',
+              success: false,
+            };
+          }
+
+          try {
+            // Store in database - file is already in Vercel Blob
+            await db.insert(transactionAttachments).values({
+              transactionType: params.transactionType,
+              transactionId: params.transactionId,
+              workspaceId: toolContext.workspaceResult.workspaceId,
+              blobUrl: pendingAction.tempBlobUrl,
+              filename: pendingAction.attachmentFilename,
+              contentType: pendingAction.attachmentContentType,
+              fileSize: pendingAction.attachmentSize,
+              uploadedBy: 'system:ai-email',
+              uploadSource: 'ai_email',
+            });
+
+            // Clear pending action
+            await updateSession(toolContext.session.id, {
+              state: 'completed',
+              pendingAction: null,
+            });
+
+            // Get transaction details for success message
+            const snapshot = tx.destinationBankAccountSnapshot as Record<
+              string,
+              unknown
+            > | null;
+            const recipientName =
+              (snapshot?.account_holder_first_name as string) ||
+              (snapshot?.account_holder_business_name as string) ||
+              'Unknown';
+
+            // Send success email
+            const template = emailTemplates.attachmentSuccess({
+              filename: pendingAction.attachmentFilename,
+              amount: tx.amountToSend,
+              currency: tx.destinationCurrency,
+              recipientName,
+              date: tx.createdAt.toISOString().split('T')[0],
+            });
+
+            await sendReply(
+              toolContext.email.from,
+              toolContext.replySubject,
+              template.body,
+              toolContext.messageId,
+              toolContext.workspaceResult.aiEmailHandle,
+              toolContext.sessionThreadId,
+            );
+
+            return {
+              success: true,
+              message: `Attached ${pendingAction.attachmentFilename} to transaction`,
+              attachmentUrl: pendingAction.tempBlobUrl,
+            };
+          } catch (error) {
+            console.error('[AI Email] attachStoredDocument error:', error);
+            return {
+              error:
+                error instanceof Error
+                  ? error.message
+                  : 'Failed to attach document',
+              success: false,
+            };
+          }
+        },
+      }),
+
       attachDocumentToTransaction: tool({
         description:
-          'Attach a document (from the email) to a transaction. ALWAYS requires user confirmation. Shows best match and alternatives for user to choose.',
+          'Attach a document (from the email) to a transaction. ALWAYS requires user confirmation. Shows best match and alternatives for user to choose. NOTE: Only use this if the current email has an attachment. If asking user to select a transaction, use storeAttachmentAndAskUser instead.',
         inputSchema: z.object({
           transactionId: z
             .string()

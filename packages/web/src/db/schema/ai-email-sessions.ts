@@ -177,6 +177,32 @@ export type AiEmailPendingAction =
       } | null;
       senderName: string;
       senderCompany?: string;
+    }
+  | {
+      /**
+       * User sent an attachment, AI read it, but no exact transaction match found.
+       * AI uploaded the attachment to Vercel Blob and asked user which transaction to attach to.
+       * When user replies with their selection, use attachStoredDocument tool.
+       */
+      type: 'select_transaction_for_attachment';
+      tempBlobUrl: string; // Already uploaded to Vercel Blob
+      attachmentFilename: string;
+      attachmentContentType: string;
+      attachmentSize: number;
+      extractedDetails: {
+        vendor?: string;
+        amount?: number;
+        currency?: string;
+        date?: string;
+        description?: string;
+      };
+      candidateTransactions: Array<{
+        id: string;
+        amount: string;
+        currency: string;
+        recipientName?: string;
+        date: string;
+      }>;
     };
 
 export interface AiEmailExtractedData {
