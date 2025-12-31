@@ -25,6 +25,7 @@ export type PartyInfo = {
   city?: string;
   postalCode?: string;
   country?: string;
+  taxId?: string;
 };
 
 export type ParsedInvoiceDetails = {

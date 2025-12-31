@@ -40,6 +40,8 @@ export interface CreateInvoiceParams {
   senderEmail?: string;
   /** Preferred payment account type: 'us_ach' for USD, 'iban' for EUR. Auto-detected from currency if not specified. */
   preferredAccountType?: 'us_ach' | 'iban';
+  /** Optional VAT/Tax ID of the recipient */
+  recipientTaxId?: string;
 }
 
 export interface UpdateInvoiceParams {
@@ -227,6 +229,7 @@ export async function createInvoiceForUser(
             'street-address': params.billingAddress,
           }
         : undefined,
+      taxId: params.recipientTaxId || undefined,
     },
     invoiceItems: [
       {

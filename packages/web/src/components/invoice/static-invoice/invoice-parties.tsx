@@ -20,6 +20,7 @@ const PartyDisplay: React.FC<PartyDisplayProps> = ({
   const city = party?.city;
   const postalCode = party?.postalCode;
   const country = party?.country;
+  const taxId = party?.taxId;
 
   return (
     <div className="space-y-1">
@@ -49,6 +50,11 @@ const PartyDisplay: React.FC<PartyDisplayProps> = ({
       {country && (
         <p className="text-sm text-neutral-600 dark:text-neutral-400">
           {country}
+        </p>
+      )}
+      {taxId && (
+        <p className="text-sm text-neutral-600 dark:text-neutral-400">
+          VAT/Tax ID: {taxId}
         </p>
       )}
     </div>

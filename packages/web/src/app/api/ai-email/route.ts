@@ -289,12 +289,22 @@ const createInvoiceSchema = z.object({
   recipientCompany: z.string().optional(),
   amount: z.number().positive(),
   currency: z.string(),
-  description: z.string(),
+  description: z
+    .string()
+    .describe(
+      'Description of the work/service being invoiced. Do NOT include VAT/Tax IDs here - use recipientTaxId instead.',
+    ),
   preferredAccountType: z
     .enum(['us_ach', 'iban'])
     .optional()
     .describe(
       'Payment account type: us_ach for USD payments, iban for EUR payments. Auto-detected from currency if not specified.',
+    ),
+  recipientTaxId: z
+    .string()
+    .optional()
+    .describe(
+      'VAT number or Tax ID of the recipient (e.g., "FR12345678901", "DE123456789"). Extract from invoice/email if present.',
     ),
 });
 
