@@ -156,6 +156,28 @@ function formatQuotedMessage(
 }
 
 /**
+ * Convert an AI email handle to a display name.
+ * e.g., "ai-emily.jameson" -> "Emily Jameson"
+ *       "ai-clara.mitchell" -> "Clara Mitchell"
+ */
+function getDisplayNameFromHandle(handle: string | null | undefined): string {
+  if (!handle) {
+    return '0 Finance AI';
+  }
+
+  // Remove "ai-" prefix if present
+  const namePart = handle.startsWith('ai-') ? handle.slice(3) : handle;
+
+  // Split by dot and title case each part
+  const parts = namePart.split('.');
+  const titleCased = parts
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+    .join(' ');
+
+  return titleCased || '0 Finance AI';
+}
+
+/**
  * Send an email reply to the user.
  * @param aiEmailHandle - The AI email handle (e.g., "ai-emily.jameson") to use in the from address.
  *                        Falls back to workspaceId for legacy support, then generic "ai" address.
@@ -192,8 +214,11 @@ async function sendReply(
     ? `${aiEmailHandle}@${AI_EMAIL_INBOUND_DOMAIN}`
     : `ai@${AI_EMAIL_INBOUND_DOMAIN}`;
 
+  // Convert handle to display name (e.g., "ai-emily.jameson" -> "Emily Jameson")
+  const displayName = getDisplayNameFromHandle(aiEmailHandle);
+
   await emailProvider.send({
-    from: `0 Finance AI <${fromAddress}>`,
+    from: `${displayName} <${fromAddress}>`,
     to,
     subject,
     text: body,
