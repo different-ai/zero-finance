@@ -120,28 +120,35 @@ When searching for a person/company name in bank accounts:
 
 ## Attachment Flow
 
-IMPORTANT: When user sends attachments, prefer attachAllDocuments for the best UX. It handles single or multiple files.
+CRITICAL: YOU must read the attachment and match it to the right transaction. Do NOT blindly trust tool matching.
 
 1. When user sends email with attachment(s) asking to attach:
-   - If they mention a specific transaction: findTransaction first, then attachDocumentToTransaction
-   - If they say "attach this/these" without specifics: use attachAllDocuments (handles 1 or many)
-   - attachAllDocuments will match each file to the best transaction automatically
+   - FIRST: Read the PDF/image attachment carefully. Extract: amount, recipient/vendor name, date, description.
+   - THEN: Call listRecentTransactions to see available transactions
+   - YOU DECIDE: Match the document to the correct transaction based on what you extracted
+   - Call attachDocumentToTransaction with the transaction ID YOU chose
+   - If NO transaction matches (wrong amount, wrong recipient, wrong date range), tell the user: "I couldn't find a matching transaction for this [amount] [vendor] invoice. Your recent transactions are: [list]. Which one should I attach it to?"
 
-2. When user confirms (YES):
+2. Matching rules:
+   - Amount should be close (within 10%) or exact
+   - Recipient/vendor name should match (fuzzy is ok)
+   - Date should be reasonable (invoice date near transaction date)
+   - If NOTHING matches well, ask the user - don't guess
+
+3. When user confirms (YES):
    - For single attachment: call confirmAttachment
    - For multiple attachments: call confirmMultipleAttachments
 
-3. When user picks alternative (A/B/C):
+4. When user picks alternative (A/B/C):
    - Call confirmAttachment with their selection
 
-4. When user asks to remove an attachment:
+5. When user asks to remove an attachment:
    - Call listAttachments to find it
    - Call removeAttachment with the attachment ID
 
-5. Request patterns:
+6. Request patterns:
    - "Attach this to my Acme payment" → findTransaction("Acme"), attachDocumentToTransaction
-   - "Attach these invoices" [3 PDFs] → attachAllDocuments (matches each to best transaction)
-   - "Match this invoice" [1 PDF] → attachAllDocuments (works for single files too)
+   - "Attach this invoice" [1 PDF] → Read PDF, listRecentTransactions, YOU match, attachDocumentToTransaction
    - "What's attached to my last transfer?" → findTransaction, listAttachments
 
 ## Payment Details Flow

@@ -1428,6 +1428,84 @@ export async function POST(request: NextRequest) {
         },
       }),
 
+      listRecentTransactions: tool({
+        description:
+          'List recent completed transactions. Use this to see all available transactions when you need to match an attachment. Returns raw list without scoring - YOU decide which transaction best matches the document based on amount, recipient, date.',
+        inputSchema: z.object({
+          limit: z
+            .number()
+            .optional()
+            .default(20)
+            .describe('Max transactions to return (default 20)'),
+        }),
+        execute: async (params) => {
+          console.log(
+            '[AI Email] Tool: listRecentTransactions called with:',
+            params,
+          );
+
+          const transfers = await db
+            .select({
+              id: offrampTransfers.id,
+              amount: offrampTransfers.amountToSend,
+              currency: offrampTransfers.destinationCurrency,
+              bankAccountSnapshot:
+                offrampTransfers.destinationBankAccountSnapshot,
+              createdAt: offrampTransfers.createdAt,
+            })
+            .from(offrampTransfers)
+            .where(
+              and(
+                eq(
+                  offrampTransfers.workspaceId,
+                  toolContext.workspaceResult.workspaceId,
+                ),
+                eq(offrampTransfers.status, 'completed'),
+              ),
+            )
+            .orderBy(desc(offrampTransfers.createdAt))
+            .limit(params.limit || 20);
+
+          if (transfers.length === 0) {
+            return {
+              transactions: [],
+              message: 'No completed transactions found',
+            };
+          }
+
+          const transactions = transfers.map((tx) => {
+            const snapshot = tx.bankAccountSnapshot as Record<
+              string,
+              unknown
+            > | null;
+            const recipientName =
+              (snapshot?.account_holder_first_name as string) ||
+              (snapshot?.account_holder_business_name as string) ||
+              '';
+            const bankName = (snapshot?.bank_name as string) || '';
+
+            return {
+              id: tx.id,
+              type: 'offramp' as const,
+              amount: tx.amount,
+              currency: tx.currency.toUpperCase(),
+              recipientName: recipientName || undefined,
+              bankName: bankName || undefined,
+              date: tx.createdAt.toISOString().split('T')[0],
+            };
+          });
+
+          console.log(
+            `[AI Email] listRecentTransactions returning ${transactions.length} transactions`,
+          );
+
+          return {
+            transactions,
+            count: transactions.length,
+          };
+        },
+      }),
+
       attachDocumentToTransaction: tool({
         description:
           'Attach a document (from the email) to a transaction. ALWAYS requires user confirmation. Shows best match and alternatives for user to choose.',
