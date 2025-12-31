@@ -12,6 +12,9 @@ import {
   Circle,
   Banknote,
   Cpu,
+  Mail,
+  Copy,
+  Check,
 } from 'lucide-react';
 import GeneratedComponent from '@/app/(landing)/welcome-gradient';
 import { cn } from '@/lib/utils';
@@ -20,6 +23,7 @@ import {
   StepStatus,
   usePrimaryAccountSetup,
 } from '@/hooks/use-primary-account-setup';
+import { toast } from 'sonner';
 
 export default function WelcomePage() {
   const router = useRouter();
@@ -28,12 +32,29 @@ export default function WelcomePage() {
   const [workspaceStatus, setWorkspaceStatus] = useState<StepStatus>('pending');
   const [submissionError, setSubmissionError] = useState<string | null>(null);
   const [isSetupComplete, setIsSetupComplete] = useState(false);
+  const [showAiEmailIntro, setShowAiEmailIntro] = useState(false);
   const [fundingMode, setFundingMode] = useState<'bank' | 'crypto'>('bank');
+  const [copiedEmail, setCopiedEmail] = useState(false);
 
   const { data: workspaceData, isLoading: workspaceLoading } =
     api.workspace.getOrCreateWorkspaceV2.useQuery(undefined, {
       enabled: ready && authenticated,
     });
+
+  // Fetch AI email address after setup completes
+  const { data: aiEmailData } = api.workspace.getAiEmailAddress.useQuery(
+    { workspaceId: workspaceData?.workspaceId ?? '' },
+    { enabled: !!workspaceData?.workspaceId && isSetupComplete },
+  );
+
+  const handleCopyEmail = async () => {
+    if (aiEmailData?.email) {
+      await navigator.clipboard.writeText(aiEmailData.email);
+      setCopiedEmail(true);
+      toast.success('Email address copied!');
+      setTimeout(() => setCopiedEmail(false), 2000);
+    }
+  };
 
   const updateCompanyMutation = api.workspace.updateCompanyName.useMutation();
   const {
@@ -91,10 +112,14 @@ export default function WelcomePage() {
     try {
       await runSetup();
       setIsSetupComplete(true);
-      router.push('/dashboard');
+      setShowAiEmailIntro(true);
     } catch (error) {
       console.error('Primary account setup failed:', error);
     }
+  };
+
+  const handleContinueToDashboard = () => {
+    router.push('/dashboard');
   };
 
   const handleRetry = async () => {
@@ -152,6 +177,110 @@ export default function WelcomePage() {
         return <Circle className="h-5 w-5 text-gray-300" />;
     }
   };
+
+  // AI Email Introduction View
+  if (showAiEmailIntro) {
+    return (
+      <section className="relative min-h-screen border-y border-[#101010]/10 bg-white/90 overflow-hidden flex items-center justify-center">
+        <GeneratedComponent className="z-0 bg-[#F6F5EF]" />
+        <div className="relative z-10 w-full max-w-[500px] px-4">
+          <div className="bg-white/95 backdrop-blur-sm border border-[#101010]/10 rounded-lg shadow-[0_2px_8px_rgba(16,16,16,0.04)] p-8 sm:p-10">
+            <div className="space-y-6">
+              {/* Success Header */}
+              <div className="text-center">
+                <div className="mx-auto w-16 h-16 bg-[#10B981]/10 rounded-full flex items-center justify-center mb-4">
+                  <CheckCircle2 className="h-8 w-8 text-[#10B981]" />
+                </div>
+                <p className="uppercase tracking-[0.14em] text-[11px] font-medium text-[#10B981] mb-2">
+                  ACCOUNT READY
+                </p>
+                <h1 className="font-serif text-[32px] sm:text-[40px] leading-[0.96] tracking-[-0.015em] text-[#101010]">
+                  You&apos;re all set!
+                </h1>
+              </div>
+
+              {/* AI Email Feature Intro */}
+              <div className="bg-[#1B29FF]/5 border border-[#1B29FF]/20 rounded-lg p-5 space-y-4">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center bg-[#1B29FF]/10 rounded-full">
+                    <Mail className="h-5 w-5 text-[#1B29FF]" />
+                  </div>
+                  <div>
+                    <h3 className="text-[15px] font-medium text-[#101010]">
+                      Meet your AI assistant
+                    </h3>
+                    <p className="text-[12px] text-[#101010]/60">
+                      Create invoices by forwarding emails
+                    </p>
+                  </div>
+                </div>
+
+                {aiEmailData?.email ? (
+                  <div className="space-y-2">
+                    <p className="text-[11px] uppercase tracking-[0.12em] text-[#101010]/50">
+                      Your AI Email Address
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 bg-white border border-[#101010]/10 px-4 py-3 rounded">
+                        <code className="text-[13px] font-medium text-[#101010]">
+                          {aiEmailData.email}
+                        </code>
+                      </div>
+                      <button
+                        onClick={handleCopyEmail}
+                        className="h-12 w-12 flex items-center justify-center border border-[#101010]/10 rounded hover:bg-[#F7F7F2] transition-colors"
+                        title="Copy email address"
+                      >
+                        {copiedEmail ? (
+                          <Check className="h-4 w-4 text-[#10B981]" />
+                        ) : (
+                          <Copy className="h-4 w-4 text-[#101010]/60" />
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="h-12 animate-pulse bg-[#101010]/5 rounded" />
+                )}
+
+                <div className="space-y-2 pt-2">
+                  <p className="text-[12px] font-medium text-[#101010]/80">
+                    How it works:
+                  </p>
+                  <ol className="list-decimal list-inside space-y-1 text-[12px] text-[#101010]/60">
+                    <li>
+                      Forward any email with invoice details to this address
+                    </li>
+                    <li>AI extracts recipient, amount, and description</li>
+                    <li>Reply YES to send the invoice to your client</li>
+                  </ol>
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="space-y-3">
+                <button
+                  onClick={handleContinueToDashboard}
+                  className="w-full inline-flex items-center justify-center px-6 py-3 text-[15px] font-medium text-white bg-[#0050ff] hover:bg-[#0040dd] rounded-md transition-colors"
+                >
+                  Continue to Dashboard
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </button>
+              </div>
+
+              {/* Footer note */}
+              <p className="text-[12px] text-[#101010]/50 text-center">
+                You can always find your AI email address in{' '}
+                <span className="text-[#101010]/70">
+                  Settings → Integrations
+                </span>
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="relative min-h-screen border-y border-[#101010]/10 bg-white/90 overflow-hidden flex items-center justify-center">
