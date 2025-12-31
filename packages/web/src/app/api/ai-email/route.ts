@@ -3192,6 +3192,35 @@ export async function POST(request: NextRequest) {
 
     let result;
     try {
+      // ==========================================================================
+      // ATTACHMENT TRACKING: Log what's being sent to AI
+      // ==========================================================================
+      console.log('[AI Email] [ATTACHMENT TRACKING] Before generateText():');
+      console.log(
+        `[AI Email] [ATTACHMENT TRACKING]   - attachmentContentParts.length: ${attachmentContentParts.length}`,
+      );
+      console.log(
+        `[AI Email] [ATTACHMENT TRACKING]   - messages.length: ${messages.length}`,
+      );
+      const lastMsg = messages[messages.length - 1];
+      console.log(
+        `[AI Email] [ATTACHMENT TRACKING]   - Last message role: ${lastMsg?.role}`,
+      );
+      console.log(
+        `[AI Email] [ATTACHMENT TRACKING]   - Last message content type: ${Array.isArray(lastMsg?.content) ? 'array (multimodal)' : 'string (text-only)'}`,
+      );
+      if (Array.isArray(lastMsg?.content)) {
+        const fileParts = lastMsg.content.filter(
+          (p: { type: string }) => p.type === 'file',
+        );
+        const textParts = lastMsg.content.filter(
+          (p: { type: string }) => p.type === 'text',
+        );
+        console.log(
+          `[AI Email] [ATTACHMENT TRACKING]   - Last message has ${fileParts.length} file parts, ${textParts.length} text parts`,
+        );
+      }
+
       result = await generateText({
         model: openai('gpt-5.2'),
         system: systemPrompt,

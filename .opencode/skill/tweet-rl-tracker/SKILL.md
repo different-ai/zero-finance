@@ -4,13 +4,15 @@ description: Create and manage a Notion-based tweet performance tracking system 
 license: MIT
 compatibility: opencode
 metadata:
-  service: notion
+  service: notion, chrome-devtools-mcp
   category: content
 ---
 
 ## What I Do
 
 Set up a Notion database to track tweet performance and enable a feedback loop for improving tweet quality over time. This is "poor man's reinforcement learning" - manually logging outcomes to discover what works.
+
+**NEW: Screenshot Capture** - Automatically capture screenshots from tweet links (including video frames at 10 seconds) using Chrome DevTools MCP.
 
 ## The RL Loop
 
@@ -203,3 +205,173 @@ Update the Topic select options based on your niche. Examples:
 - Engagement rates are typically 1-5% - this is normal
 - Compare relative performance, not absolute numbers
 - Consider using a different base metric for "Worked?"
+
+---
+
+## Screenshot Capture with Chrome MCP
+
+### Prerequisites
+
+- Chrome DevTools MCP configured in your MCP client
+- Logged into Twitter/X in the Chrome profile
+
+### Database Field
+
+The Tweets database includes a `Screenshot` field (type: files) to store captured images.
+
+**Data Source ID**: `a6913492-bfdc-4f6a-b539-ea98b57a2738`
+
+### Workflow: Capture Tweet Screenshot
+
+Given a tweet URL like `https://x.com/username/status/1234567890`:
+
+#### Step 1: Navigate to Tweet
+
+```javascript
+// Open new page with the tweet
+new_page({ url: 'https://x.com/username/status/1234567890' });
+
+// Wait for tweet to load
+wait_for({ text: 'Reply' }); // or wait for specific tweet content
+```
+
+#### Step 2: Take Screenshot of Tweet
+
+```javascript
+// Take full page screenshot
+take_screenshot({ fullPage: false });
+
+// Or screenshot specific element (the tweet article)
+take_snapshot(); // Get element uids first
+take_screenshot({ uid: 'tweet-article-uid' });
+```
+
+#### Step 3: For Video Tweets - Capture Frame at 10 Seconds
+
+```javascript
+// 1. Find and click the video to start playing
+take_snapshot();
+click({ uid: 'video-player-uid' });
+
+// 2. Wait 10 seconds for video to play
+// (Use evaluate_script to seek if possible)
+evaluate_script({
+  function: `() => {
+    const video = document.querySelector('video');
+    if (video) {
+      video.currentTime = 10;
+      video.pause();
+      return { success: true, duration: video.duration };
+    }
+    return { success: false };
+  }`,
+});
+
+// 3. Take screenshot of the video frame
+take_screenshot({ fullPage: false });
+```
+
+#### Step 4: Extract Tweet Metadata
+
+```javascript
+evaluate_script({
+  function: `() => {
+    // Extract tweet text
+    const tweetText = document.querySelector('[data-testid="tweetText"]')?.textContent || '';
+    
+    // Extract author
+    const author = document.querySelector('[data-testid="User-Name"]')?.textContent || '';
+    
+    // Extract metrics (likes, retweets, etc.)
+    const metrics = {};
+    document.querySelectorAll('[data-testid="like"], [data-testid="retweet"]').forEach(el => {
+      const label = el.getAttribute('aria-label') || '';
+      if (label.includes('like')) metrics.likes = parseInt(label) || 0;
+      if (label.includes('repost')) metrics.retweets = parseInt(label) || 0;
+    });
+    
+    // Check if video exists
+    const hasVideo = !!document.querySelector('video');
+    const hasImage = !!document.querySelector('[data-testid="tweetPhoto"]');
+    
+    return {
+      text: tweetText,
+      author,
+      metrics,
+      mediaType: hasVideo ? 'Video' : hasImage ? 'Image' : 'None'
+    };
+  }`,
+});
+```
+
+### Complete Example: Add Tweet with Screenshot
+
+```
+User: Add this tweet to the tracker: https://x.com/unvalley_/status/2005899617775542298
+
+Agent workflow:
+1. new_page({ url: 'https://x.com/unvalley_/status/2005899617775542298' })
+2. wait_for({ text: 'Reply' })
+3. take_snapshot() - to see page structure
+4. evaluate_script() - extract tweet text, author, media type
+5. If video: seek to 10s and pause
+6. take_screenshot() - capture the visual
+7. Save screenshot to local file (screenshot is returned as base64)
+8. Create Notion page with extracted data + screenshot file
+```
+
+### Saving Screenshot to Notion
+
+**Important**: Notion's files property requires external URLs. The workflow is:
+
+1. Take screenshot with Chrome MCP (returns base64)
+2. Save to a publicly accessible location (e.g., upload to S3, Cloudinary, or use a temp file host)
+3. Add the URL to the Notion page's Screenshot field
+
+```javascript
+// After taking screenshot, you'll get base64 data
+// Save it locally first:
+const fs = require('fs');
+const screenshotPath = `/tmp/tweet-${Date.now()}.png`;
+fs.writeFileSync(screenshotPath, Buffer.from(base64Data, 'base64'));
+
+// Then upload to your preferred hosting and get URL
+// Finally, create Notion page with the screenshot URL
+```
+
+### Quick Reference: Chrome MCP Tools for Tweet Capture
+
+| Tool              | Purpose                                    |
+| ----------------- | ------------------------------------------ |
+| `new_page`        | Navigate to tweet URL                      |
+| `wait_for`        | Wait for tweet to load                     |
+| `take_snapshot`   | Get accessibility tree (find element uids) |
+| `take_screenshot` | Capture visual screenshot                  |
+| `evaluate_script` | Extract tweet data, control video playback |
+| `click`           | Click play button on video                 |
+
+### Troubleshooting Screenshots
+
+**"Tweet not loading"**
+
+- Check if logged into Twitter in Chrome profile
+- Twitter may require login for some content
+- Try `wait_for` with longer timeout
+
+**"Video won't seek"**
+
+- Some videos are streaming and don't support seeking
+- Try clicking play first, then waiting 10 seconds naturally
+- Use `setTimeout` in evaluate_script if needed
+
+**"Screenshot is blank"**
+
+- Wait longer for content to render
+- Check if page has overlay/modal blocking content
+- Try `fullPage: true` to capture everything
+
+**"Can't upload to Notion"**
+
+- Notion files require external URLs
+- Use a file hosting service (S3, Cloudinary, imgur)
+- Or embed screenshot as image in page content instead
