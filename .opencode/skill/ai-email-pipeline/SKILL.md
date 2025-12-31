@@ -235,3 +235,16 @@ When something goes wrong, check:
 - **Cause**: Session only stored text content of messages, not attachments. PDFs were passed to AI in real-time but never persisted.
 - **Fix**: Upload attachments to Vercel Blob immediately, store metadata in session.attachments[], fetch and include all stored attachments on every reply.
 - **Lesson**: Conversations span multiple emails. State (including attachments) must persist.
+
+### 2024-12-31: Schema changes need migrations
+
+- **Problem**: Added `attachments` column to schema, committed code, but production errored with "column attachments does not exist"
+- **Cause**: Schema file change doesn't automatically update the database. Need to generate and run migration.
+- **Fix**: `pnpm drizzle-kit generate` then `pnpm db:migrate`
+- **Lesson**: Schema changes require TWO steps: (1) update schema file, (2) run migration. Always run migration before pushing code that uses new columns.
+
+### 2024-12-31: Invoice account type selection
+
+- **Problem**: User asked for EUR invoice but it used US bank account
+- **Fix**: Added `preferredAccountType` to createInvoice, auto-detects from currency (EUR→iban), added `updateInvoice` tool to change account after creation
+- **Lesson**: When adding new capabilities, update both the tool schema AND the system prompt so AI knows when/how to use it.
