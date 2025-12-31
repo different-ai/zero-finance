@@ -1,0 +1,1 @@
+ALTER TABLE "ai_email_sessions" ADD COLUMN "attachments" jsonb DEFAULT '[]'::jsonb NOT NULL;
