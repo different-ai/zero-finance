@@ -18,7 +18,7 @@ import {
   /* alignOfframpTransferSchema, */ AlignDestinationBankAccount,
 } from '../services/align-api';
 import { loopsApi, LoopsEvent } from '../services/loops-service';
-import { eq, and, desc, or } from 'drizzle-orm';
+import { eq, and, desc, or, lt } from 'drizzle-orm';
 import { getUser } from '@/lib/auth';
 import {
   prepareTokenTransferData,
@@ -3269,18 +3269,60 @@ export const alignRouter = router({
         });
 
         if (existingTransfer) {
-          // Update basic fields based on latest Align payload
+          // Check if we need to fetch full details (status changed or missing transactionHash)
+          const statusChanged = existingTransfer.status !== transfer.status;
+          const needsTransactionHash =
+            !existingTransfer.transactionHash &&
+            transfer.status === 'completed';
+          const wasStuckProcessing =
+            existingTransfer.status === 'processing' &&
+            transfer.status === 'completed';
+
+          let transactionHash = existingTransfer.transactionHash;
+
+          // Fetch full details if status changed to completed or we're missing the hash
+          if (statusChanged || needsTransactionHash) {
+            try {
+              const fullTransfer = await alignApi.getOfframpTransfer(
+                alignCustomerId as string,
+                transfer.id,
+              );
+              transactionHash = fullTransfer.deposit_transaction_hash ?? null;
+            } catch (err) {
+              console.error(
+                `[syncOfframpTransfers] Failed to fetch full details for ${transfer.id}:`,
+                err,
+              );
+            }
+          }
+
+          // Build update payload
+          const updatePayload: Record<string, unknown> = {
+            status: transfer.status,
+            amountToSend: transfer.amount,
+            destinationCurrency: transfer.destination_currency,
+            depositToken: transfer.source_token,
+            depositNetwork: transfer.source_network,
+            workspaceId: userRecord.primaryWorkspaceId,
+            updatedAt: new Date(),
+          };
+
+          // Update transactionHash if we have it
+          if (transactionHash) {
+            updatePayload.transactionHash = transactionHash;
+          }
+
+          // Un-dismiss if transfer completed (was stuck in processing)
+          if (wasStuckProcessing && existingTransfer.dismissed) {
+            updatePayload.dismissed = false;
+            console.log(
+              `[syncOfframpTransfers] Un-dismissing completed transfer ${transfer.id}`,
+            );
+          }
+
           await db
             .update(offrampTransfers)
-            .set({
-              status: transfer.status,
-              amountToSend: transfer.amount,
-              destinationCurrency: transfer.destination_currency,
-              depositToken: transfer.source_token,
-              depositNetwork: transfer.source_network,
-              workspaceId: userRecord.primaryWorkspaceId,
-              updatedAt: new Date(),
-            })
+            .set(updatePayload)
             .where(eq(offrampTransfers.alignTransferId, transfer.id));
           updatedCount++;
           continue;
@@ -3333,10 +3375,35 @@ export const alignRouter = router({
         }
       }
 
+      // Auto-dismiss transfers stuck in 'processing' for more than 7 days
+      // These are likely failed/abandoned transfers that Align never updated
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+      const staleTransfers = await db
+        .update(offrampTransfers)
+        .set({ dismissed: true, updatedAt: new Date() })
+        .where(
+          and(
+            eq(offrampTransfers.workspaceId, userRecord.primaryWorkspaceId),
+            eq(offrampTransfers.status, 'processing'),
+            eq(offrampTransfers.dismissed, false),
+            lt(offrampTransfers.createdAt, sevenDaysAgo),
+          ),
+        )
+        .returning({ id: offrampTransfers.id });
+
+      if (staleTransfers.length > 0) {
+        console.log(
+          `[syncOfframpTransfers] Auto-dismissed ${staleTransfers.length} stale processing transfers`,
+        );
+      }
+
       return {
         synced: updatedCount,
         inserted: insertedCount,
         total: transfers.length,
+        staleDismissed: staleTransfers.length,
       };
     } catch (error) {
       console.error('Error syncing offramp transfers:', error);
