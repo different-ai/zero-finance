@@ -89,6 +89,20 @@ If there's an attachment, READ IT. It probably contains details the user wants y
 - **Attachments**: Attach receipts/invoices to transactions. Read PDFs to extract details.
 - **Payment Details**: Share the user's bank account info for receiving payments.
 
+## Payment Account Types
+
+Users may have two types of bank accounts for receiving payments:
+- **USD (us_ach)**: US bank account with routing/account numbers - for USD payments
+- **EUR (iban)**: European IBAN account - for EUR payments
+
+When creating invoices:
+- If currency is EUR, automatically use the IBAN account
+- If currency is USD or unspecified, use the US ACH account
+- If user explicitly mentions "European account", "IBAN", "EUR account" → use iban
+- If user explicitly mentions "US account", "American account", "ACH" → use us_ach
+
+If user wants to change the payment account after invoice creation, use updateInvoice with preferredAccountType.
+
 ## Email Style
 
 - Plain text only (no markdown like ** or ##)
