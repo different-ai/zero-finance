@@ -2474,7 +2474,35 @@ export async function POST(request: NextRequest) {
           );
 
           const pendingAction = toolContext.session.pendingAction;
+
+          // ==========================================================================
+          // ATTACHMENT TRACKING: Log pending action state in confirmAttachment
+          // ==========================================================================
+          console.log(
+            `[AI Email] [ATTACHMENT TRACKING] confirmAttachment checking pending action:`,
+          );
+          console.log(
+            `[AI Email] [ATTACHMENT TRACKING]   - Has pendingAction: ${!!pendingAction}`,
+          );
+          console.log(
+            `[AI Email] [ATTACHMENT TRACKING]   - pendingAction type: ${pendingAction?.type || 'none'}`,
+          );
+          if (pendingAction && pendingAction.type === 'attach_document') {
+            console.log(
+              `[AI Email] [ATTACHMENT TRACKING]   - tempBlobUrl: ${pendingAction.tempBlobUrl || 'MISSING!'}`,
+            );
+            console.log(
+              `[AI Email] [ATTACHMENT TRACKING]   - attachmentFilename: ${pendingAction.attachmentFilename || 'MISSING!'}`,
+            );
+            console.log(
+              `[AI Email] [ATTACHMENT TRACKING]   - bestMatch.id: ${pendingAction.bestMatch?.id || 'MISSING!'}`,
+            );
+          }
+
           if (!pendingAction || pendingAction.type !== 'attach_document') {
+            console.log(
+              `[AI Email] [ATTACHMENT TRACKING] ERROR: No valid pending action! Type was: ${pendingAction?.type || 'none'}`,
+            );
             return {
               error: 'No pending attachment to confirm',
               success: false,
@@ -2498,6 +2526,9 @@ export async function POST(request: NextRequest) {
           // Attachment was already uploaded to temp blob storage when user first sent the email
           // The tempBlobUrl is stored in the pending action
           if (!pendingAction.tempBlobUrl) {
+            console.log(
+              `[AI Email] [ATTACHMENT TRACKING] ERROR: tempBlobUrl is missing from pending action!`,
+            );
             return {
               error: 'Attachment blob URL not found in pending action',
               success: false,
@@ -2506,6 +2537,22 @@ export async function POST(request: NextRequest) {
 
           try {
             // Store in database - file is already in Vercel Blob from initial upload
+            console.log(
+              `[AI Email] [ATTACHMENT TRACKING] confirmAttachment inserting into DB:`,
+            );
+            console.log(
+              `[AI Email] [ATTACHMENT TRACKING]   - transactionType: ${targetTransaction.type}`,
+            );
+            console.log(
+              `[AI Email] [ATTACHMENT TRACKING]   - transactionId: ${targetTransaction.id}`,
+            );
+            console.log(
+              `[AI Email] [ATTACHMENT TRACKING]   - blobUrl: ${pendingAction.tempBlobUrl}`,
+            );
+            console.log(
+              `[AI Email] [ATTACHMENT TRACKING]   - filename: ${pendingAction.attachmentFilename}`,
+            );
+
             await db.insert(transactionAttachments).values({
               transactionType: targetTransaction.type,
               transactionId: targetTransaction.id,
@@ -2517,6 +2564,10 @@ export async function POST(request: NextRequest) {
               uploadedBy: 'system:ai-email',
               uploadSource: 'ai_email',
             });
+
+            console.log(
+              `[AI Email] [ATTACHMENT TRACKING] confirmAttachment DB INSERT SUCCESSFUL!`,
+            );
 
             // Clear pending action
             await updateSession(toolContext.session.id, {
