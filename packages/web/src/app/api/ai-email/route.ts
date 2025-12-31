@@ -27,6 +27,7 @@ import {
 import type {
   AiEmailMessage,
   AiEmailPendingAction,
+  SessionAttachment,
 } from '@/db/schema/ai-email-sessions';
 import { getEmailProviderSingleton } from '@/lib/email-provider';
 import { getSpendableBalanceByWorkspace } from '@/server/services/spendable-balance';
@@ -689,7 +690,7 @@ export async function POST(request: NextRequest) {
 
     // Prepare attachments for native AI processing (PDF, images passed directly to model)
     const preparedAttachments = prepareAttachments(email.attachments);
-    const attachmentContentParts =
+    const currentAttachmentParts =
       buildAttachmentContentParts(preparedAttachments);
     const textAttachmentContent =
       formatTextAttachmentsForAI(preparedAttachments);
@@ -716,6 +717,134 @@ export async function POST(request: NextRequest) {
         `[AI Email] [ATTACHMENT TRACKING]   - NO ATTACHMENTS TO PROCESS`,
       );
     }
+
+    // ==========================================================================
+    // ATTACHMENT PERSISTENCE: Upload new attachments to Vercel Blob
+    // This allows the AI to "remember" attachments across conversation replies
+    // ==========================================================================
+    const newSessionAttachments: SessionAttachment[] = [];
+    const supportedAttachments = preparedAttachments.filter(
+      (a) => a.supported && a.base64Content,
+    );
+
+    if (supportedAttachments.length > 0) {
+      console.log(
+        `[AI Email] [ATTACHMENT TRACKING] Uploading ${supportedAttachments.length} attachments to Vercel Blob`,
+      );
+
+      for (const att of supportedAttachments) {
+        try {
+          const buffer = Buffer.from(att.base64Content!, 'base64');
+          const blobPath = `attachments/session/${session.id}/${att.filename}`;
+
+          const blob = await put(blobPath, buffer, {
+            access: 'public',
+            contentType: att.contentType,
+            addRandomSuffix: true, // Prevent collisions if same filename sent twice
+          });
+
+          newSessionAttachments.push({
+            filename: att.filename,
+            contentType: att.contentType,
+            blobUrl: blob.url,
+            size: buffer.length,
+            messageIndex: (session.messages || []).length, // Current message index
+            uploadedAt: new Date().toISOString(),
+          });
+
+          console.log(
+            `[AI Email] [ATTACHMENT TRACKING] Uploaded "${att.filename}" to ${blob.url}`,
+          );
+        } catch (uploadError) {
+          console.error(
+            `[AI Email] [ATTACHMENT TRACKING] Failed to upload "${att.filename}":`,
+            uploadError,
+          );
+        }
+      }
+
+      // Update session with new attachments
+      if (newSessionAttachments.length > 0) {
+        const allAttachments = [
+          ...(session.attachments || []),
+          ...newSessionAttachments,
+        ];
+        await updateSession(session.id, { attachments: allAttachments });
+        console.log(
+          `[AI Email] [ATTACHMENT TRACKING] Session now has ${allAttachments.length} total attachments`,
+        );
+      }
+    }
+
+    // ==========================================================================
+    // ATTACHMENT LOADING: Fetch stored attachments from previous messages
+    // This allows the AI to see PDFs/images from earlier in the conversation
+    // ==========================================================================
+    const storedAttachmentParts: Array<{
+      type: 'file';
+      data: Buffer;
+      mediaType: string;
+      filename?: string;
+    }> = [];
+
+    const storedAttachments = session.attachments || [];
+    if (storedAttachments.length > 0) {
+      console.log(
+        `[AI Email] [ATTACHMENT TRACKING] Loading ${storedAttachments.length} stored attachments from Vercel Blob`,
+      );
+
+      for (const att of storedAttachments) {
+        try {
+          const response = await fetch(att.blobUrl);
+          if (!response.ok) {
+            console.error(
+              `[AI Email] [ATTACHMENT TRACKING] Failed to fetch "${att.filename}": ${response.status}`,
+            );
+            continue;
+          }
+
+          const buffer = Buffer.from(await response.arrayBuffer());
+          storedAttachmentParts.push({
+            type: 'file',
+            data: buffer,
+            mediaType: att.contentType,
+            filename: att.filename,
+          });
+
+          console.log(
+            `[AI Email] [ATTACHMENT TRACKING] Loaded "${att.filename}" (${buffer.length} bytes)`,
+          );
+        } catch (fetchError) {
+          console.error(
+            `[AI Email] [ATTACHMENT TRACKING] Error fetching "${att.filename}":`,
+            fetchError,
+          );
+        }
+      }
+    }
+
+    // Combine stored attachments with current email's attachments
+    // Note: For current email, we use currentAttachmentParts (already in memory)
+    // For stored attachments, we use storedAttachmentParts (fetched from blob)
+    // We need to dedupe - don't include attachments we just uploaded (they're in currentAttachmentParts)
+    const newBlobUrls = new Set(newSessionAttachments.map((a) => a.blobUrl));
+    const previousAttachmentParts = storedAttachmentParts.filter((part) => {
+      // Keep only attachments that weren't just uploaded in this request
+      const matchingStored = storedAttachments.find(
+        (s) => s.filename === part.filename && !newBlobUrls.has(s.blobUrl),
+      );
+      return !!matchingStored;
+    });
+
+    // All attachments for AI: previous (from blob) + current (from email)
+    const allAttachmentParts = [
+      ...previousAttachmentParts,
+      ...currentAttachmentParts,
+    ];
+
+    console.log(
+      `[AI Email] [ATTACHMENT TRACKING] Total attachments for AI: ${allAttachmentParts.length} (${previousAttachmentParts.length} from previous + ${currentAttachmentParts.length} from current)`,
+    );
 
     // Add the user's message to the session (text content only for storage)
     const userMessage: AiEmailMessage = {
@@ -756,20 +885,18 @@ export async function POST(request: NextRequest) {
     }));
 
     // Build current message with native file attachments for AI processing
+    // Include ALL attachments: from previous messages (stored in blob) + current email
     const currentMessageContent: Array<
       | { type: 'text'; text: string }
       | { type: 'file'; data: Buffer; mediaType: string; filename?: string }
-    > = [
-      { type: 'text', text: userMessage.content },
-      ...attachmentContentParts,
-    ];
+    > = [{ type: 'text', text: userMessage.content }, ...allAttachmentParts];
 
     if (
       messages.length === 0 ||
       messages[messages.length - 1].content !== userMessage.content
     ) {
       // If we have file attachments, use multimodal content; otherwise use text
-      if (attachmentContentParts.length > 0) {
+      if (allAttachmentParts.length > 0) {
         messages.push({ role: 'user', content: currentMessageContent });
       } else {
         messages.push({ role: 'user', content: userMessage.content });
@@ -3102,7 +3229,7 @@ export async function POST(request: NextRequest) {
       // ==========================================================================
       console.log('[AI Email] [ATTACHMENT TRACKING] Before generateText():');
       console.log(
-        `[AI Email] [ATTACHMENT TRACKING]   - attachmentContentParts.length: ${attachmentContentParts.length}`,
+        `[AI Email] [ATTACHMENT TRACKING]   - allAttachmentParts.length: ${allAttachmentParts.length}`,
       );
       console.log(
         `[AI Email] [ATTACHMENT TRACKING]   - messages.length: ${messages.length}`,

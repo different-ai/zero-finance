@@ -377,7 +377,12 @@ export async function updateSession(
   updates: Partial<
     Pick<
       AiEmailSession,
-      'state' | 'pendingAction' | 'messages' | 'extractedData' | 'invoiceId'
+      | 'state'
+      | 'pendingAction'
+      | 'messages'
+      | 'extractedData'
+      | 'invoiceId'
+      | 'attachments'
     >
   >,
 ): Promise<AiEmailSession> {

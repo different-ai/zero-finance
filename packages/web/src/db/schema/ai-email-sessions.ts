@@ -224,6 +224,31 @@ export interface AiEmailExtractedData {
   billingAddress?: string;
 }
 
+/**
+ * Stored attachment metadata for session persistence
+ *
+ * When an email arrives with attachments (PDFs, images), we:
+ * 1. Upload them to Vercel Blob immediately
+ * 2. Store the metadata here in the session
+ * 3. On subsequent replies, fetch from blob and include in AI context
+ *
+ * This allows the AI to "remember" attachments across the conversation.
+ */
+export interface SessionAttachment {
+  /** Original filename */
+  filename: string;
+  /** MIME type (application/pdf, image/png, etc.) */
+  contentType: string;
+  /** Vercel Blob URL where the file is stored */
+  blobUrl: string;
+  /** File size in bytes */
+  size: number;
+  /** Index of the message this attachment was sent with (0-based) */
+  messageIndex: number;
+  /** When the attachment was uploaded */
+  uploadedAt: string;
+}
+
 export const aiEmailSessions = pgTable(
   'ai_email_sessions',
   {
@@ -252,6 +277,13 @@ export const aiEmailSessions = pgTable(
 
     // Conversation history for AI context
     messages: jsonb('messages').$type<AiEmailMessage[]>().notNull().default([]),
+
+    // Stored attachments (PDFs, images uploaded to Vercel Blob)
+    // These persist across the conversation so AI can reference them in replies
+    attachments: jsonb('attachments')
+      .$type<SessionAttachment[]>()
+      .notNull()
+      .default([]),
 
     // Extracted invoice data (accumulated across messages)
     extractedData: jsonb('extracted_data').$type<AiEmailExtractedData | null>(),
