@@ -32,8 +32,18 @@ export interface InvoiceDisplayData {
   creationDate?: string | Date;
   status?: string; // e.g., 'pending', 'paid', 'Draft', 'On-Chain' derived status?
   paidAt?: string | Date; // When the invoice was marked as paid
-  sellerInfo?: { businessName?: string; email?: string; address?: any };
-  buyerInfo?: { businessName?: string; email?: string; address?: any };
+  sellerInfo?: {
+    businessName?: string;
+    email?: string;
+    address?: any;
+    taxId?: string;
+  };
+  buyerInfo?: {
+    businessName?: string;
+    email?: string;
+    address?: any;
+    taxId?: string;
+  };
   invoiceItems?: Array<{
     name?: string;
     quantity?: number;
@@ -364,6 +374,11 @@ export function InvoiceDisplay({
             <p className="text-sm text-gray-600 leading-relaxed">
               {formatAddress(invoiceData.sellerInfo?.address)}
             </p>
+            {invoiceData.sellerInfo?.taxId && (
+              <p className="text-sm text-gray-600 leading-relaxed">
+                VAT/Tax ID: {invoiceData.sellerInfo.taxId}
+              </p>
+            )}
           </div>
           <div className="space-y-1">
             <h3 className="text-sm font-semibold text-gray-500 uppercase mb-2">
@@ -378,6 +393,11 @@ export function InvoiceDisplay({
             <p className="text-sm text-gray-600 leading-relaxed">
               {formatAddress(invoiceData.buyerInfo?.address)}
             </p>
+            {invoiceData.buyerInfo?.taxId && (
+              <p className="text-sm text-gray-600 leading-relaxed">
+                VAT/Tax ID: {invoiceData.buyerInfo.taxId}
+              </p>
+            )}
           </div>
         </div>
 
