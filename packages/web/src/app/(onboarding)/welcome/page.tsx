@@ -210,7 +210,7 @@ export default function WelcomePage() {
                       Meet your AI assistant
                     </h3>
                     <p className="text-[12px] text-[#101010]/60">
-                      Create invoices by forwarding emails
+                      Manage your finances securely via email
                     </p>
                   </div>
                 </div>
@@ -245,15 +245,38 @@ export default function WelcomePage() {
 
                 <div className="space-y-2 pt-2">
                   <p className="text-[12px] font-medium text-[#101010]/80">
-                    How it works:
+                    What you can do:
                   </p>
-                  <ol className="list-decimal list-inside space-y-1 text-[12px] text-[#101010]/60">
-                    <li>
-                      Forward any email with invoice details to this address
+                  <ul className="space-y-1.5 text-[12px] text-[#101010]/60">
+                    <li className="flex items-start gap-2">
+                      <span className="text-[#1B29FF] mt-0.5">•</span>
+                      <span>
+                        <strong>Send invoices</strong> — forward emails and
+                        reply YES to send
+                      </span>
                     </li>
-                    <li>AI extracts recipient, amount, and description</li>
-                    <li>Reply YES to send the invoice to your client</li>
-                  </ol>
+                    <li className="flex items-start gap-2">
+                      <span className="text-[#1B29FF] mt-0.5">•</span>
+                      <span>
+                        <strong>Propose payments</strong> — securely request
+                        transfers with human approval
+                      </span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-[#1B29FF] mt-0.5">•</span>
+                      <span>
+                        <strong>Attach receipts</strong> — forward documents to
+                        link to transactions
+                      </span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-[#1B29FF] mt-0.5">•</span>
+                      <span>
+                        <strong>Check balances</strong> — ask about your account
+                        anytime
+                      </span>
+                    </li>
+                  </ul>
                 </div>
               </div>
 
