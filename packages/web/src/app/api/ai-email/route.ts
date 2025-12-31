@@ -828,6 +828,7 @@ export async function POST(request: NextRequest) {
     const systemPrompt = getSystemPrompt(
       session,
       workspaceResult.workspaceName,
+      workspaceResult.aiEmailHandle,
     );
 
     // Build conversation history (historical messages as text)

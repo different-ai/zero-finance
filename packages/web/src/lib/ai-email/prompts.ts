@@ -10,17 +10,60 @@ import type { AiEmailSession } from '@/db/schema/ai-email-sessions';
  */
 
 /**
+ * Parse AI name from email handle.
+ * Handle format: "ai-firstname.lastname" (e.g., "ai-clara.mitchell")
+ * Returns { firstName, lastName, fullName }
+ */
+function parseAiNameFromHandle(handle: string | null): {
+  firstName: string;
+  lastName: string;
+  fullName: string;
+} {
+  if (!handle) {
+    return { firstName: 'AI', lastName: 'Assistant', fullName: 'AI Assistant' };
+  }
+
+  // Remove "ai-" prefix if present
+  const namePart = handle.startsWith('ai-') ? handle.slice(3) : handle;
+
+  // Split by dot: "firstname.lastname"
+  const parts = namePart.split('.');
+  if (parts.length >= 2) {
+    const firstName =
+      parts[0].charAt(0).toUpperCase() + parts[0].slice(1).toLowerCase();
+    const lastName =
+      parts[1].charAt(0).toUpperCase() + parts[1].slice(1).toLowerCase();
+    return { firstName, lastName, fullName: `${firstName} ${lastName}` };
+  }
+
+  // Single name
+  const firstName =
+    namePart.charAt(0).toUpperCase() + namePart.slice(1).toLowerCase();
+  return { firstName, lastName: '', fullName: firstName };
+}
+
+/**
  * Get the system prompt for the AI email agent.
  *
  * @param session - The current email session
  * @param workspaceName - Name of the workspace for context
+ * @param aiEmailHandle - The AI's email handle (e.g., "ai-clara.mitchell")
  * @returns The system prompt string
  */
 export function getSystemPrompt(
   session: AiEmailSession,
   workspaceName: string,
+  aiEmailHandle?: string | null,
 ): string {
-  const basePrompt = `You are the 0 Finance AI email assistant. You help users create invoices and manage bank transfers via email.
+  const aiName = parseAiNameFromHandle(aiEmailHandle ?? null);
+
+  const basePrompt = `You are ${aiName.fullName}, the 0 Finance AI email assistant. You help users create invoices and manage bank transfers via email.
+
+## Your Identity
+- Your name is ${aiName.fullName} (first name: ${aiName.firstName})
+- You work for 0 Finance as an AI assistant
+- Sign off emails casually with just your first name: "${aiName.firstName}"
+- Be friendly and personable - you have a name, use it!
 
 ## Your Capabilities
 - Extract invoice details from forwarded emails
