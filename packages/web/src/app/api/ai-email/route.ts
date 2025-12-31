@@ -1509,6 +1509,7 @@ export async function POST(request: NextRequest) {
           const transfers = await db
             .select({
               id: offrampTransfers.id,
+              alignTransferId: offrampTransfers.alignTransferId,
               sourceAmount: offrampTransfers.depositAmount,
               sourceToken: offrampTransfers.depositToken,
               destinationAmount: offrampTransfers.amountToSend,

@@ -3694,7 +3694,8 @@ export const alignRouter = router({
 
       // Unified transaction type for the response
       type UnifiedTransaction = {
-        id: string;
+        id: string; // Database UUID - primary identifier for all internal operations
+        alignTransferId?: string; // Align API ID - for external API reference
         type: 'incoming' | 'outgoing';
         status: string;
         // Primary amount (what user sent/received in their wallet)
@@ -3845,7 +3846,8 @@ export const alignRouter = router({
           }
 
           transactions.push({
-            id: tx.alignTransferId,
+            id: tx.id, // Use database UUID as primary identifier
+            alignTransferId: tx.alignTransferId, // Keep for reference/external APIs
             type: 'outgoing',
             status: tx.status,
             // For outgoing: primary is what user sent (USDC)

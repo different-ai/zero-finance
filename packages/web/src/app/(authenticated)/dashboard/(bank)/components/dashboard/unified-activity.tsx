@@ -258,7 +258,7 @@ function mergeBankAndCryptoTransactions(
       proposedByAgent: bankTx.proposedByAgent,
       agentProposalMessage: bankTx.agentProposalMessage || undefined,
       needsAction,
-      alignTransferId: bankTx.id,
+      alignTransferId: bankTx.alignTransferId,
     });
   }
 
@@ -737,9 +737,7 @@ function TransactionRow({
                   transactionType={
                     tx.category === 'bank_send' ? 'offramp' : 'crypto_outgoing'
                   }
-                  transactionId={
-                    tx.alignTransferId || tx.transactionHash || tx.id
-                  }
+                  transactionId={tx.id}
                 />
               </>
             )}
