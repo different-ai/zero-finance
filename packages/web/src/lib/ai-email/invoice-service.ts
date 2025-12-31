@@ -38,6 +38,29 @@ export interface CreateInvoiceParams {
   billingAddress?: string;
   /** Email of the person creating the invoice (sender's email from forwarded email) */
   senderEmail?: string;
+  /** Preferred payment account type: 'us_ach' for USD, 'iban' for EUR. Auto-detected from currency if not specified. */
+  preferredAccountType?: 'us_ach' | 'iban';
+}
+
+export interface UpdateInvoiceParams {
+  /** The invoice ID to update */
+  invoiceId: string;
+  /** New recipient email */
+  recipientEmail?: string;
+  /** New recipient name */
+  recipientName?: string;
+  /** New recipient company */
+  recipientCompany?: string;
+  /** New amount */
+  amount?: number;
+  /** New currency */
+  currency?: string;
+  /** New description */
+  description?: string;
+  /** New billing address */
+  billingAddress?: string;
+  /** Change payment account type */
+  preferredAccountType?: 'us_ach' | 'iban';
 }
 
 export interface CreatedInvoice {
@@ -116,7 +139,16 @@ export async function createInvoiceForUser(
     );
   }
 
-  // Get workspace's US bank account for payment details (prefer 'full' tier accounts)
+  // Determine which account type to use
+  // Priority: explicit preference > currency-based detection > default to us_ach
+  let accountType: 'us_ach' | 'iban' = 'us_ach';
+  if (params.preferredAccountType) {
+    accountType = params.preferredAccountType;
+  } else if (params.currency.toUpperCase() === 'EUR') {
+    accountType = 'iban';
+  }
+
+  // Get workspace's bank account for payment details
   const [fundingSource] = await db
     .select({
       accountType: userFundingSources.sourceAccountType,
@@ -131,7 +163,7 @@ export async function createInvoiceForUser(
     .where(
       and(
         eq(userFundingSources.workspaceId, workspaceId),
-        eq(userFundingSources.sourceAccountType, 'us_ach'),
+        eq(userFundingSources.sourceAccountType, accountType),
       ),
     )
     .limit(1);
@@ -283,4 +315,173 @@ export async function getInvoiceById(
 export function getInvoicePublicLink(invoiceId: string): string {
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://0.finance';
   return `${baseUrl}/invoice/${invoiceId}`;
+}
+
+/**
+ * Update an existing invoice.
+ * Only invoices with status 'db_pending' can be updated.
+ *
+ * @param workspaceId - The workspace ID (for authorization)
+ * @param params - Update parameters
+ * @returns The updated invoice details
+ */
+export async function updateInvoiceForUser(
+  workspaceId: string,
+  params: UpdateInvoiceParams,
+): Promise<CreatedInvoice> {
+  // Fetch the existing invoice
+  const [existingInvoice] = await db
+    .select()
+    .from(userRequestsTable)
+    .where(eq(userRequestsTable.id, params.invoiceId))
+    .limit(1);
+
+  if (!existingInvoice) {
+    throw new Error(`Invoice not found: ${params.invoiceId}`);
+  }
+
+  // Verify workspace ownership
+  if (existingInvoice.workspaceId !== workspaceId) {
+    throw new Error('Not authorized to update this invoice');
+  }
+
+  // Only allow updates to pending invoices
+  if (existingInvoice.status !== 'db_pending') {
+    throw new Error(
+      `Cannot update invoice with status '${existingInvoice.status}'. Only pending invoices can be updated.`,
+    );
+  }
+
+  // Get existing invoice data
+  const existingData = existingInvoice.invoiceData as Record<string, unknown>;
+  const existingBuyerInfo = (existingData?.buyerInfo || {}) as Record<
+    string,
+    unknown
+  >;
+  const existingSellerInfo = (existingData?.sellerInfo || {}) as Record<
+    string,
+    unknown
+  >;
+
+  // Determine new values (use provided or keep existing)
+  const newAmount =
+    params.amount ??
+    Number(existingInvoice.amount) /
+      Math.pow(10, existingInvoice.currencyDecimals ?? 2);
+  const newCurrency = params.currency ?? existingInvoice.currency ?? 'USD';
+  const newDescription =
+    params.description ?? existingInvoice.description ?? '';
+  const newRecipientEmail =
+    params.recipientEmail ?? (existingBuyerInfo.email as string) ?? '';
+  const newRecipientName =
+    params.recipientName ?? (existingBuyerInfo.businessName as string);
+  const newRecipientCompany = params.recipientCompany ?? newRecipientName;
+
+  // Handle bank account change if requested
+  let bankDetails = existingData?.bankDetails as Record<string, unknown> | null;
+
+  if (params.preferredAccountType) {
+    // Fetch the requested account type
+    const [fundingSource] = await db
+      .select({
+        accountType: userFundingSources.sourceAccountType,
+        bankName: userFundingSources.sourceBankName,
+        beneficiaryName: userFundingSources.sourceBankBeneficiaryName,
+        accountNumber: userFundingSources.sourceAccountNumber,
+        routingNumber: userFundingSources.sourceRoutingNumber,
+        iban: userFundingSources.sourceIban,
+        bic: userFundingSources.sourceBicSwift,
+      })
+      .from(userFundingSources)
+      .where(
+        and(
+          eq(userFundingSources.workspaceId, workspaceId),
+          eq(userFundingSources.sourceAccountType, params.preferredAccountType),
+        ),
+      )
+      .limit(1);
+
+    if (fundingSource) {
+      bankDetails = {
+        accountHolder:
+          fundingSource.beneficiaryName ||
+          (existingSellerInfo.businessName as string) ||
+          '',
+        bankName: fundingSource.bankName || '',
+        accountNumber: fundingSource.accountNumber || '',
+        routingNumber: fundingSource.routingNumber || '',
+        iban: fundingSource.iban || undefined,
+        bic: fundingSource.bic || undefined,
+      };
+    }
+  }
+
+  // Build updated invoice data
+  const decimals = getCurrencyDecimals(newCurrency);
+  const amountDecimal = new Decimal(newAmount);
+  const amountBigInt = parseUnits(amountDecimal.toFixed(decimals), decimals);
+
+  const updatedInvoiceData = {
+    ...existingData,
+    buyerInfo: {
+      ...existingBuyerInfo,
+      businessName: newRecipientCompany || newRecipientName || '',
+      email: newRecipientEmail,
+      address: params.billingAddress
+        ? { 'street-address': params.billingAddress }
+        : existingBuyerInfo.address,
+    },
+    invoiceItems: [
+      {
+        name: newDescription,
+        quantity: 1,
+        unitPrice: newAmount.toString(),
+        currency: newCurrency,
+        tax: {
+          type: 'percentage' as const,
+          amount: '0',
+        },
+      },
+    ],
+    currency: newCurrency,
+    bankDetails,
+    paymentType: bankDetails ? ('fiat' as const) : ('crypto' as const),
+  };
+
+  // Determine client name for display
+  const clientName =
+    newRecipientCompany || newRecipientName || newRecipientEmail.split('@')[0];
+
+  // Update the database record
+  const [updatedInvoice] = await db
+    .update(userRequestsTable)
+    .set({
+      description: newDescription,
+      amount: amountBigInt,
+      currency: newCurrency,
+      currencyDecimals: decimals,
+      client: clientName,
+      invoiceData: updatedInvoiceData,
+      updatedAt: new Date(),
+    })
+    .where(eq(userRequestsTable.id, params.invoiceId))
+    .returning();
+
+  if (!updatedInvoice) {
+    throw new Error('Failed to update invoice in database');
+  }
+
+  // Generate the public link
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://0.finance';
+  const publicLink = `${baseUrl}/invoice/${updatedInvoice.id}`;
+
+  return {
+    invoiceId: updatedInvoice.id,
+    publicLink,
+    amount: newAmount,
+    currency: newCurrency,
+    recipientEmail: newRecipientEmail,
+    recipientName: newRecipientName || undefined,
+    description: newDescription,
+  };
 }

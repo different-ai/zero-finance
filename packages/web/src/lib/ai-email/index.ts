@@ -63,9 +63,11 @@ export {
 // Invoice service
 export {
   createInvoiceForUser,
+  updateInvoiceForUser,
   getInvoiceById,
   getInvoicePublicLink,
   type CreateInvoiceParams,
+  type UpdateInvoiceParams,
   type CreatedInvoice,
 } from './invoice-service';
 

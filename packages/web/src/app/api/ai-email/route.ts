@@ -14,6 +14,7 @@ import {
   addMessageToSession,
   updateSession,
   createInvoiceForUser,
+  updateInvoiceForUser,
   getSystemPrompt,
   emailTemplates,
   AI_EMAIL_INBOUND_DOMAIN,
@@ -289,6 +290,31 @@ const createInvoiceSchema = z.object({
   amount: z.number().positive(),
   currency: z.string(),
   description: z.string(),
+  preferredAccountType: z
+    .enum(['us_ach', 'iban'])
+    .optional()
+    .describe(
+      'Payment account type: us_ach for USD payments, iban for EUR payments. Auto-detected from currency if not specified.',
+    ),
+});
+
+/**
+ * Schema for updating an existing invoice.
+ */
+const updateInvoiceSchema = z.object({
+  invoiceId: z.string().describe('The ID of the invoice to update'),
+  recipientEmail: z.string().email().optional(),
+  recipientName: z.string().optional(),
+  recipientCompany: z.string().optional(),
+  amount: z.number().positive().optional(),
+  currency: z.string().optional(),
+  description: z.string().optional(),
+  preferredAccountType: z
+    .enum(['us_ach', 'iban'])
+    .optional()
+    .describe(
+      'Change payment account type: us_ach for USD payments, iban for EUR payments.',
+    ),
 });
 
 /**
@@ -980,6 +1006,30 @@ export async function POST(request: NextRequest) {
             attachmentsStored: toolContext.preparedAttachments.filter(
               (a) => a.supported && a.base64Content,
             ).length,
+          };
+        },
+      }),
+
+      updateInvoice: tool({
+        description:
+          'Update an existing draft invoice. Use this when the user wants to change the amount, currency, recipient, description, or payment account type before sending. Only works on pending invoices.',
+        inputSchema: updateInvoiceSchema,
+        execute: async (params) => {
+          console.log('[AI Email] Tool: updateInvoice called with:', params);
+
+          const updatedInvoice = await updateInvoiceForUser(
+            toolContext.workspaceResult.workspaceId,
+            params,
+          );
+
+          return {
+            success: true,
+            invoiceId: updatedInvoice.invoiceId,
+            invoiceLink: updatedInvoice.publicLink,
+            amount: updatedInvoice.amount,
+            currency: updatedInvoice.currency,
+            recipientEmail: updatedInvoice.recipientEmail,
+            description: updatedInvoice.description,
           };
         },
       }),
