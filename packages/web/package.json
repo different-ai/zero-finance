@@ -158,6 +158,7 @@
     "postcss": "catalog:",
     "postcss-load-config": "^6.0.1",
     "prettier": "catalog:",
+    "puppeteer": "^24.34.0",
     "stream-browserify": "^3.0.0",
     "tailwindcss": "catalog:",
     "tsx": "catalog:",

@@ -395,6 +395,63 @@ const proposeTransferSchema = z.object({
 });
 
 /**
+ * Schema for creating a new bank account.
+ */
+const createBankAccountSchema = z.object({
+  account_name: z
+    .string()
+    .describe(
+      'Display name for this account (e.g., "Marcus Chen" or "Chen Design Studio")',
+    ),
+  bank_name: z
+    .string()
+    .describe('Name of the bank (e.g., "First Republic Bank")'),
+  account_holder_type: z
+    .enum(['individual', 'business'])
+    .describe('Whether the account belongs to an individual or a business'),
+  account_holder_first_name: z
+    .string()
+    .optional()
+    .describe(
+      'First name of account holder (required for individual accounts)',
+    ),
+  account_holder_last_name: z
+    .string()
+    .optional()
+    .describe('Last name of account holder (required for individual accounts)'),
+  account_holder_business_name: z
+    .string()
+    .optional()
+    .describe('Business name (required for business accounts)'),
+  country: z.string().describe('Country code (e.g., "US")'),
+  city: z.string().describe('City of the account holder'),
+  street_line_1: z.string().describe('Street address line 1'),
+  street_line_2: z.string().optional().describe('Street address line 2'),
+  postal_code: z.string().describe('Postal/ZIP code'),
+  account_type: z
+    .enum(['us', 'iban'])
+    .describe(
+      'Type of bank account: "us" for US ACH, "iban" for European IBAN',
+    ),
+  account_number: z
+    .string()
+    .optional()
+    .describe('US bank account number (required for US accounts)'),
+  routing_number: z
+    .string()
+    .optional()
+    .describe('US routing number (required for US accounts)'),
+  iban_number: z
+    .string()
+    .optional()
+    .describe('IBAN number (required for IBAN accounts)'),
+  bic_swift: z
+    .string()
+    .optional()
+    .describe('BIC/SWIFT code (required for IBAN accounts)'),
+});
+
+/**
  * AI Email Webhook Handler
  *
  * Receives inbound emails from the configured email provider (SES or Resend)
@@ -1232,6 +1289,123 @@ export async function POST(request: NextRequest) {
           return {
             bank_accounts: sanitized,
             count: sanitized.length,
+          };
+        },
+      }),
+
+      createBankAccount: tool({
+        description:
+          'Create and save a new bank account for transfers. Use this when you have bank details from an invoice or email and need to save them before proposing a transfer. Returns the new bank account ID which can be used with proposeTransfer.',
+        inputSchema: createBankAccountSchema,
+        execute: async (params) => {
+          console.log(
+            '[AI Email] Tool: createBankAccount called with:',
+            params,
+          );
+
+          // Validate required fields based on account holder type
+          if (params.account_holder_type === 'individual') {
+            if (
+              !params.account_holder_first_name ||
+              !params.account_holder_last_name
+            ) {
+              return {
+                error:
+                  'First name and last name are required for individual accounts',
+              };
+            }
+          } else if (params.account_holder_type === 'business') {
+            if (!params.account_holder_business_name) {
+              return {
+                error: 'Business name is required for business accounts',
+              };
+            }
+          }
+
+          // Validate required fields based on account type
+          if (params.account_type === 'us') {
+            if (!params.account_number || !params.routing_number) {
+              return {
+                error:
+                  'Account number and routing number are required for US accounts',
+              };
+            }
+          } else if (params.account_type === 'iban') {
+            if (!params.iban_number || !params.bic_swift) {
+              return {
+                error: 'IBAN and BIC/SWIFT are required for IBAN accounts',
+              };
+            }
+          }
+
+          // Get workspace to find owner
+          const workspace = await db.query.workspaces.findFirst({
+            where: eq(workspaces.id, toolContext.workspaceResult.workspaceId),
+          });
+
+          if (!workspace) {
+            return { error: 'Workspace not found' };
+          }
+
+          const userId = workspace.createdBy;
+
+          // Insert the new bank account
+          const [newAccount] = await db
+            .insert(userDestinationBankAccounts)
+            .values({
+              userId,
+              accountName: params.account_name,
+              bankName: params.bank_name,
+              accountHolderType: params.account_holder_type,
+              accountHolderFirstName:
+                params.account_holder_type === 'individual'
+                  ? params.account_holder_first_name
+                  : null,
+              accountHolderLastName:
+                params.account_holder_type === 'individual'
+                  ? params.account_holder_last_name
+                  : null,
+              accountHolderBusinessName:
+                params.account_holder_type === 'business'
+                  ? params.account_holder_business_name
+                  : null,
+              country: params.country,
+              city: params.city,
+              streetLine1: params.street_line_1,
+              streetLine2: params.street_line_2 ?? null,
+              postalCode: params.postal_code,
+              accountType: params.account_type,
+              accountNumber:
+                params.account_type === 'us' ? params.account_number : null,
+              routingNumber:
+                params.account_type === 'us' ? params.routing_number : null,
+              ibanNumber:
+                params.account_type === 'iban' ? params.iban_number : null,
+              bicSwift:
+                params.account_type === 'iban' ? params.bic_swift : null,
+              isDefault: false,
+            })
+            .returning({
+              id: userDestinationBankAccounts.id,
+              accountName: userDestinationBankAccounts.accountName,
+            });
+
+          console.log('[AI Email] Created bank account:', newAccount);
+
+          return {
+            success: true,
+            bank_account: {
+              id: newAccount.id,
+              name: newAccount.accountName,
+              bank_name: params.bank_name,
+              account_type: params.account_type,
+              last_4:
+                params.account_type === 'iban'
+                  ? params.iban_number?.slice(-4)
+                  : params.account_number?.slice(-4),
+            },
+            message:
+              'Bank account saved. You can now use this ID to propose a transfer.',
           };
         },
       }),

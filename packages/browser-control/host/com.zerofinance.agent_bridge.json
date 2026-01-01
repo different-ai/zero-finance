@@ -1,0 +1,9 @@
+{
+  "name": "com.zerofinance.agent_bridge",
+  "description": "0 Finance Agent Bridge Host",
+  "path": "/Users/benjaminshafii/git/zerofinance/packages/browser-control/host/host_wrapper.sh",
+  "type": "stdio",
+  "allowed_origins": [
+    "chrome-extension://hajbgjgakahfnhadlohbepaggdkjonip/"
+  ]
+}

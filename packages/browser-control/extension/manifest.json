@@ -1,0 +1,17 @@
+{
+  "name": "0 Finance Agent Bridge",
+  "description": "Bridge for local browser control via Native Messaging",
+  "version": "1.0",
+  "manifest_version": 3,
+  "permissions": [
+    "nativeMessaging",
+    "tabs",
+    "scripting",
+    "activeTab",
+    "debugger"
+  ],
+  "host_permissions": ["<all_urls>"],
+  "background": {
+    "service_worker": "background.js"
+  }
+}
