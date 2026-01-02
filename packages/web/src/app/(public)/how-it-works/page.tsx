@@ -373,7 +373,7 @@ export default function HowItWorksPage() {
         <div className="max-w-[1200px] mx-auto">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             <p className="text-[12px] text-[#101010]/50">
-              © 2025 Different AI Inc. All rights reserved.
+              © 2026 Different AI Inc. All rights reserved.
             </p>
             <div className="flex items-center gap-4 text-[12px] text-[#101010]/50">
               <Link href="/legal" className="hover:text-[#101010]">

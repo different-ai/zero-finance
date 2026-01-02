@@ -181,7 +181,7 @@ export function FinalCTASection() {
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div className="flex flex-wrap items-center gap-4 sm:gap-6">
                 <span className="text-[12px] text-[#101010]/60">
-                  © 2025 0 Finance
+                  © 2026 0 Finance
                 </span>
                 <span className="text-[12px] text-[#101010]/40">
                   Savings protected up to $1M through licensed insurance

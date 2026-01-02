@@ -56,7 +56,7 @@ export default function BlogLayout({
         <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="flex justify-between items-center">
             <p className="text-[12px] text-[#101010]/60">
-              © 2025 0 Finance - 8% yield through DeFi protocols with smart
+              © 2026 0 Finance - 8% yield through DeFi protocols with smart
               contract insurance
             </p>
             <div className="flex gap-4">

@@ -91,7 +91,7 @@ export default function CareersPage() {
         }}
       >
         <div className="copyright">
-          © 2025 HYPERSTABLE • OPEN SOURCE • CRYPTO BANKING •{' '}
+          © 2026 HYPERSTABLE • OPEN SOURCE • CRYPTO BANKING •{' '}
           <Link href="/(public)/careers" className="hover:underline">
             Careers
           </Link>
