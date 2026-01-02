@@ -18,6 +18,11 @@ After ANY skill is used, this meta-skill triggers to:
 3. Update the skill file with learnings
 4. Prevent knowledge loss between sessions
 
+**Relationship with `self-improve`:**
+
+- This skill (`skill-reinforcement`) = **WHEN** to update (post-use triggers)
+- The `self-improve` skill = **HOW** to update (templates, structures, decision trees)
+
 ## When to Trigger
 
 **Invoke this skill automatically when:**
@@ -26,6 +31,10 @@ After ANY skill is used, this meta-skill triggers to:
 - A workflow succeeds or fails in a notable way
 - New shortcuts or anti-patterns are discovered
 - Token usage could be reduced with better patterns
+- API behavior differs from documentation
+- Commands fail and I find the fix
+- User confirms something works
+- I do the same task twice (should become a skill/tool)
 
 ## Reinforcement Process
 
@@ -193,12 +202,29 @@ Every skill should have these sections (add if missing):
 
 When reinforcing a skill, check if learnings apply to related skills:
 
-| Skill               | Related Skills       |
-| ------------------- | -------------------- |
-| test-staging-branch | Any Chrome MCP skill |
-| skill-reinforcement | All skills (meta)    |
+| Skill               | Related Skills                  |
+| ------------------- | ------------------------------- |
+| test-staging-branch | Any Chrome MCP skill            |
+| skill-reinforcement | All skills (meta)               |
+| self-improve        | skill-reinforcement (companion) |
+| chrome-devtools-mcp | test-staging-branch, gmail      |
+| safe-infrastructure | new-vault-implementation        |
 
 Cross-pollinate learnings when applicable.
+
+### Deciding What to Create
+
+If reinforcement reveals a need for new capability, use the `self-improve` skill's decision tree:
+
+```
+Need to extend capabilities?
+│
+├─ Just need docs/commands? → SKILL
+├─ Need specialized AI persona? → AGENT
+├─ Need event hooks? → PLUGIN
+├─ Need callable function? → TOOL
+└─ Need external integration? → MCP SERVER
+```
 
 ## Automation Hooks
 
@@ -241,4 +267,23 @@ This skill should also improve itself. Track:
 [ ] Update skill file
 [ ] Validate formatting
 [ ] Done
+```
+
+## Immediate Update Rule
+
+**UPDATE IMMEDIATELY** - Don't wait until end of conversation.
+
+When any of these happen, stop and update the relevant skill:
+
+1. API format is wrong (like `-d` vs `-F` for curl)
+2. Commands fail and I find the fix
+3. User confirms something works
+4. I discover a better/faster way
+5. Something is missing from docs
+
+Example:
+
+```
+❌ "I'll note this for later"
+✅ *immediately edits skill file*
 ```
