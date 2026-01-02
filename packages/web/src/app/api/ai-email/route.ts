@@ -675,6 +675,50 @@ export async function POST(request: NextRequest) {
     originalSubject = email.subject;
 
     // ==========================================================================
+    // SELF-EMAIL LOOP PREVENTION: Ignore emails from AI agent's own addresses
+    // This prevents infinite loops when the AI agent's emails bounce or get
+    // auto-replied to (e.g., out-of-office responses).
+    // ==========================================================================
+    const normalizedSender = senderEmail.toLowerCase();
+    const aiEmailDomain = AI_EMAIL_INBOUND_DOMAIN.toLowerCase();
+
+    // Extract just the email address from potentially formatted sender
+    // e.g., "Emily Jameson <ai-emily.jameson@zerofinance.ai>" -> "ai-emily.jameson@zerofinance.ai"
+    const senderEmailOnly =
+      normalizedSender.match(/<([^>]+)>/)?.[1] || normalizedSender;
+
+    // Check if sender is from our AI email addresses
+    // All addresses the AI agent sends from:
+    // - ai@zerofinance.ai (generic AI address)
+    // - ai-{name}@zerofinance.ai (workspace-specific AI addresses, e.g., ai-emily.jameson@zerofinance.ai)
+    // - invoices@zerofinance.ai (invoice sending address)
+    // - payments@ai.0.finance (payment details address)
+    // - *@ai.0.finance (legacy domain)
+    const isFromAiAgent =
+      // Check for our primary AI email domain (zerofinance.ai)
+      senderEmailOnly.endsWith(`@${aiEmailDomain}`) ||
+      // Check for legacy domain (ai.0.finance)
+      senderEmailOnly.endsWith('@ai.0.finance') ||
+      // Also block common AI/system prefixes on any domain to be extra safe
+      senderEmailOnly.startsWith('ai@') ||
+      senderEmailOnly.startsWith('ai-') ||
+      senderEmailOnly.startsWith('invoices@') ||
+      senderEmailOnly.startsWith('payments@') ||
+      senderEmailOnly.startsWith('noreply@') ||
+      senderEmailOnly.startsWith('no-reply@');
+
+    if (isFromAiAgent) {
+      console.log(
+        `[AI Email] SELF-EMAIL LOOP BLOCKED: Ignoring email from AI agent address: ${senderEmail}`,
+      );
+      return NextResponse.json({
+        success: true,
+        handled: 'self_email_blocked',
+        reason: 'Email from AI agent address ignored to prevent loops',
+      });
+    }
+
+    // ==========================================================================
     // ATTACHMENT TRACKING: Log attachment status immediately after parsing
     // ==========================================================================
     const rawAttachmentCount = email.attachments?.length || 0;
