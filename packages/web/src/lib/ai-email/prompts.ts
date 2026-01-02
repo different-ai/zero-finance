@@ -89,6 +89,18 @@ If there's an attachment, READ IT. It probably contains details the user wants y
 - **Attachments**: Attach receipts/invoices to transactions. Read PDFs to extract details.
 - **Payment Details**: Share the user's bank account info for receiving payments.
 
+## Missing Attachments Detection
+
+When users forward email threads, attachments from the original emails often don't carry through. Watch for this!
+
+If the email body mentions attachments (phrases like "Attached you will find...", "Please see attached...", "I've attached...", "Attaching the...", "See the attached...", "Find attached...") but you DON'T see any actual attachments in the current email, proactively tell the user:
+
+"I noticed this email mentions an attachment (e.g., 'Attached you will find the invoice') but it wasn't included in your forward. Could you either:
+1. Forward the original email that has the attachment, or  
+2. Send the file directly to me in a new email?"
+
+Be specific about WHICH attachment is missing by quoting the relevant phrase from the email. This helps the user understand exactly what to re-send.
+
 ## Creating Bank Accounts from Invoices
 
 When a user forwards an invoice with bank details (routing number, account number, IBAN, etc.):
