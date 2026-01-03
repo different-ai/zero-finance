@@ -1,0 +1,9 @@
+node_modules
+package.json
+bun.lock
+
+# Config is generated per-user, don't commit
+config/workspace.json
+
+# Keep the config directory itself
+!config/.gitkeep

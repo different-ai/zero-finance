@@ -23,6 +23,30 @@ I should use this knowledge to extend my own capabilities when needed.
 
 ---
 
+## Core Principles
+
+This repository is designed to be **self-bootstrapping**. After a fresh `git clone`, it should guide anyone to a fully working state.
+
+1. **Self-aware** - I can reference my own code at `.opencode/` and understand my quirks
+2. **Self-building** - I construct what I need when I need it (skills, tools, agents)
+3. **Self-improving** - I update my own docs, prompts, and skills when things don't work
+4. **Self-fixing** - I detect broken states and attempt repair automatically
+5. **Reconstructable** - I can rebuild state from scratch by prompting for core info
+6. **Portable** - Anyone can fork this repo and make it their own
+7. **Open source** - Everything is shareable and inspectable as-is
+8. **Boring where possible** - Prefer open standards, existing tools, predictable failures
+9. **Graceful degradation** - If credentials are missing, guide the user to obtain them
+
+### What This Means in Practice
+
+- **Fresh clone?** → Run `@bootstrap` to set everything up
+- **Something broke?** → Run `@debug-workspace` to diagnose
+- **Missing feature?** → Create a skill/agent/tool, don't hardcode
+- **Found a better way?** → Update the skill immediately, don't wait
+- **Credentials missing?** → Guide user to get them, don't fail silently
+
+---
+
 ## Self-Improvement Triggers
 
 Update documentation **immediately** when:
@@ -34,6 +58,8 @@ Update documentation **immediately** when:
 5. **User confirms something works** - lock in the correct approach
 6. **Repeated task** - if I do something twice, make it a skill/tool
 7. **Token waste detected** - found a faster way to accomplish the same thing
+8. **Bootstrap issue** - something wasn't covered in setup flow
+9. **Graceful degradation needed** - feature should work without full config
 
 ---
 
@@ -496,7 +522,69 @@ Layer 3: Primary Safe - User's bank account (WHERE FUNDS ARE)
 
 ---
 
-## Integration with skill-reinforcement
+## Bootstrapping Flow
+
+This repo is designed to be fully operational from a fresh `git clone`:
+
+```
+git clone → @bootstrap → working system
+```
+
+### The Bootstrap Agent
+
+Location: `.opencode/agent/bootstrap.md`
+
+What it does:
+
+1. **Detects environment** - Node version, pnpm, Chrome, etc.
+2. **Installs dependencies** - `pnpm install`
+3. **Tests MCP servers** - Exa, Notion, Chrome
+4. **Creates config** - `.opencode/config/workspace.json`
+5. **Sets up env vars** - Creates `.env.local` from template
+6. **Verifies everything** - Type check, lint, build test
+
+### Graceful Degradation
+
+Not everything needs to work for the repo to be useful:
+
+| Component | If Missing                     | Fallback                   |
+| --------- | ------------------------------ | -------------------------- |
+| Exa MCP   | Web research unavailable       | Manual research            |
+| Notion    | CRM/docs unavailable           | Local-only development     |
+| Chrome    | Browser automation unavailable | Manual browser testing     |
+| Database  | Can't run full app             | Can still do frontend work |
+| Privy     | Can't test auth                | Mock auth in dev mode      |
+
+The system should **always tell the user** what's degraded and how to fix it.
+
+### Reconstructing from Scratch
+
+If everything breaks, delete derived files and re-bootstrap:
+
+```bash
+rm -rf node_modules
+rm -rf .opencode/config/workspace.json
+rm packages/web/.env.local
+# Then run @bootstrap
+```
+
+The only things that can't be reconstructed:
+
+- API keys (user must provide)
+- OAuth tokens (user must re-authorize)
+- Database data (must restore from backup)
+
+---
+
+## Integration with Other Meta-Skills
+
+| Skill                 | Role                                        |
+| --------------------- | ------------------------------------------- |
+| `self-improve`        | **HOW** to update (templates, structures)   |
+| `skill-reinforcement` | **WHEN** to update (post-use triggers)      |
+| `@bootstrap`          | **SETUP** from scratch (fresh clone)        |
+| `@debug-workspace`    | **FIX** broken state (diagnose & repair)    |
+| `@setup-workspace`    | **CONFIGURE** from Notion (load MCP Skills) |
 
 After using any skill, the `skill-reinforcement` skill should trigger to:
 
@@ -504,9 +592,6 @@ After using any skill, the `skill-reinforcement` skill should trigger to:
 2. Identify new patterns or shortcuts discovered
 3. Update the skill file with learnings
 4. Prevent knowledge loss between sessions
-
-This `self-improve` skill is the **how** (templates and structure).
-The `skill-reinforcement` skill is the **when** (post-use analysis).
 
 ---
 

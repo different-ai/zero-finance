@@ -1,5 +1,15 @@
 # 0 Finance - AI Agent Guidelines
 
+## Quick Start (Fresh Clone)
+
+```bash
+git clone <repo>
+cd zerofinance
+@bootstrap
+```
+
+The `@bootstrap` agent will detect your environment, install dependencies, test MCP connections, and guide you through any missing credentials.
+
 ## What is 0 Finance?
 
 0 Finance is a bank account that automates your finances:
@@ -9,6 +19,19 @@
 - **Optimize Yield** - AI automatically allocates idle funds to highest-yielding opportunities
 
 This is a Next.js application with smart contract automation for savings management.
+
+## Self-Bootstrapping Principles
+
+This repo is designed to be fully operational from a fresh `git clone`:
+
+1. **Self-aware** - AI can reference its own code in `.opencode/`
+2. **Self-building** - Constructs skills, tools, agents as needed
+3. **Self-improving** - Updates its own docs when things don't work
+4. **Self-fixing** - Detects broken states and attempts repair
+5. **Reconstructable** - Can rebuild from scratch with user input
+6. **Graceful degradation** - Works with partial config, guides to full setup
+
+See `.opencode/skill/self-improve/SKILL.md` for details.
 
 ## Dev server runs on port 3050
 
@@ -62,11 +85,11 @@ Use **Exa MCP tools** for technical implementation when:
 
 **Available Exa Tools** (use these instead of WebFetch for external research):
 
-| Tool                                                      | Use Case                                                                      |
-| --------------------------------------------------------- | ----------------------------------------------------------------------------- |
-| `exa_web_search_exa`                                      | General web search - find documentation, articles, tutorials                  |
-| `exa_crawling_exa`                                        | Extract content from a specific URL (replaces WebFetch for scraping)          |
-| `exa_get_code_context_exa`                                | **Cutting-edge API implementations** - SDK docs, library usage, code examples |
+| Tool                       | Use Case                                                                      |
+| -------------------------- | ----------------------------------------------------------------------------- |
+| `exa_web_search_exa`       | General web search - find documentation, articles, tutorials                  |
+| `exa_crawling_exa`         | Extract content from a specific URL (replaces WebFetch for scraping)          |
+| `exa_get_code_context_exa` | **Cutting-edge API implementations** - SDK docs, library usage, code examples |
 
 **When to use each tool**:
 
