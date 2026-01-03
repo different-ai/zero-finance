@@ -5,7 +5,7 @@
 ### One-Line Install
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/0finance/zerofinance/main/scripts/bootstrap.sh | bash
+curl -fsSL https://raw.githubusercontent.com/different-ai/zero-finance/main/scripts/bootstrap.sh | bash
 ```
 
 This will:
@@ -18,16 +18,16 @@ This will:
 ### Manual Setup
 
 ```bash
-git clone https://github.com/0finance/zerofinance.git
-cd zerofinance
+git clone https://github.com/different-ai/zero-finance.git
+cd zero-finance
 ./scripts/bootstrap.sh
 ```
 
 Or if you already have OpenCode:
 
 ```bash
-git clone https://github.com/0finance/zerofinance.git
-cd zerofinance
+git clone https://github.com/different-ai/zero-finance.git
+cd zero-finance
 pnpm install
 opencode
 # Then type: @bootstrap

@@ -44,7 +44,7 @@
 ### Quick Start (Recommended)
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/0finance/zerofinance/main/scripts/bootstrap.sh | bash
+curl -fsSL https://raw.githubusercontent.com/different-ai/zero-finance/main/scripts/bootstrap.sh | bash
 ```
 
 This one-liner will:
@@ -58,8 +58,8 @@ This one-liner will:
 
 ```bash
 # Clone the repository
-git clone https://github.com/0finance/zerofinance.git
-cd zerofinance
+git clone https://github.com/different-ai/zero-finance.git
+cd zero-finance
 
 # Install dependencies
 pnpm install

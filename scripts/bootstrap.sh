@@ -3,7 +3,7 @@
 # 0 Finance - Self-Bootstrap Script
 #
 # Usage:
-#   curl -fsSL https://raw.githubusercontent.com/0finance/zerofinance/main/scripts/bootstrap.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/different-ai/zero-finance/main/scripts/bootstrap.sh | bash
 #
 # Or if you've already cloned:
 #   ./scripts/bootstrap.sh
@@ -160,8 +160,8 @@ fi
 
 print_step "Setting up repository..."
 
-REPO_URL="https://github.com/0finance/zerofinance.git"
-REPO_DIR="zerofinance"
+REPO_URL="https://github.com/different-ai/zero-finance.git"
+REPO_DIR="zero-finance"
 
 # Check if we're already in the repo
 if [ -f "package.json" ] && grep -q "zero-finance-monorepo" package.json 2>/dev/null; then

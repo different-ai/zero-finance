@@ -7,7 +7,7 @@ This directory contains the AI agent configuration for 0 Finance. After a fresh 
 ### One-Line Install (Recommended)
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/0finance/zerofinance/main/scripts/bootstrap.sh | bash
+curl -fsSL https://raw.githubusercontent.com/different-ai/zero-finance/main/scripts/bootstrap.sh | bash
 ```
 
 This will install everything and launch the bootstrap agent automatically.
@@ -96,11 +96,11 @@ Configured in `opencode.json` at repo root:
 
 ```bash
 # One-liner (installs everything):
-curl -fsSL https://raw.githubusercontent.com/0finance/zerofinance/main/scripts/bootstrap.sh | bash
+curl -fsSL https://raw.githubusercontent.com/different-ai/zero-finance/main/scripts/bootstrap.sh | bash
 
 # Or manually:
-git clone https://github.com/0finance/zerofinance.git
-cd zerofinance
+git clone https://github.com/different-ai/zero-finance.git
+cd zero-finance
 ./scripts/bootstrap.sh
 ```
 
