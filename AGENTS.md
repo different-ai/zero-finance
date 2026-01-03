@@ -35,6 +35,15 @@ opencode
 
 The `@bootstrap` agent will detect your environment, install dependencies, test MCP connections, and guide you through any missing credentials.
 
+### Available Agents
+
+| Agent           | Command            | Purpose                               |
+| --------------- | ------------------ | ------------------------------------- |
+| Bootstrap       | `@bootstrap`       | First-time setup from fresh clone     |
+| Debug           | `@debug`           | Fix dev setup issues (Node, deps, DB) |
+| Debug Workspace | `@debug-workspace` | Test MCP connections, diagnose issues |
+| Sherpa          | `@sherpa`          | Make any repo self-bootstrapping      |
+
 ## What is 0 Finance?
 
 0 Finance is a bank account that automates your finances:

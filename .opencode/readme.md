@@ -45,16 +45,17 @@ This repo is designed to be:
 
 ## Available Agents
 
-| Agent               | Command                 | Purpose                            |
-| ------------------- | ----------------------- | ---------------------------------- |
-| Sherpa              | `@sherpa`               | Make any repo self-bootstrapping   |
-| Bootstrap           | `@bootstrap`            | First-time setup from fresh clone  |
-| Debug Workspace     | `@debug-workspace`      | Test connections, diagnose issues  |
-| Setup Workspace     | `@setup-workspace`      | Load config from Notion MCP Skills |
-| Safe Infrastructure | `@safe-infrastructure`  | Wallet operations, transactions    |
-| Draft Message       | `@draft-message`        | Create outreach messages           |
-| Add Leads           | `@add-leads-to-tracker` | Research and add prospects         |
-| Update CRM          | `@update-crm`           | Log sent messages to Notion        |
+| Agent               | Command                 | Purpose                               |
+| ------------------- | ----------------------- | ------------------------------------- |
+| Sherpa              | `@sherpa`               | Make any repo self-bootstrapping      |
+| Bootstrap           | `@bootstrap`            | First-time setup from fresh clone     |
+| Debug               | `@debug`                | Fix dev setup issues (Node, deps, DB) |
+| Debug Workspace     | `@debug-workspace`      | Test MCP connections, diagnose issues |
+| Setup Workspace     | `@setup-workspace`      | Load config from Notion MCP Skills    |
+| Safe Infrastructure | `@safe-infrastructure`  | Wallet operations, transactions       |
+| Draft Message       | `@draft-message`        | Create outreach messages              |
+| Add Leads           | `@add-leads-to-tracker` | Research and add prospects            |
+| Update CRM          | `@update-crm`           | Log sent messages to Notion           |
 
 ## Directory Structure
 

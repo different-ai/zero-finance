@@ -80,6 +80,11 @@ if command -v node &> /dev/null; then
     if [ "$NODE_MAJOR" -lt 22 ]; then
         print_warning "Node.js version should be >= 22. You have $NODE_VERSION"
         print_warning "Consider upgrading: nvm install 22"
+        echo ""
+        read -p "Continue anyway? (y/N): " CONTINUE
+        if [[ ! "$CONTINUE" =~ ^[Yy]$ ]]; then
+            exit 1
+        fi
     fi
 else
     print_error "Node.js not found"
@@ -203,13 +208,60 @@ print_step "Checking environment configuration..."
 
 if [ -f "packages/web/.env.local" ]; then
     print_success "Environment file exists: packages/web/.env.local"
+    
+    # Check for required variables
+    REQUIRED_VARS=("POSTGRES_URL" "NEXT_PUBLIC_PRIVY_APP_ID" "PRIVY_APP_SECRET")
+    MISSING_VARS=()
+    
+    for var in "${REQUIRED_VARS[@]}"; do
+        if ! grep -q "^${var}=" packages/web/.env.local 2>/dev/null; then
+            MISSING_VARS+=("$var")
+        fi
+    done
+    
+    if [ ${#MISSING_VARS[@]} -gt 0 ]; then
+        print_warning "Missing required environment variables:"
+        for var in "${MISSING_VARS[@]}"; do
+            echo "  - $var"
+        done
+        echo ""
+        echo "The @bootstrap agent will help you configure these."
+    else
+        print_success "All required environment variables are set"
+    fi
 else
     print_warning "No .env.local found"
     if [ -f "packages/web/.env.example" ]; then
         echo "Creating .env.local from .env.example..."
         cp packages/web/.env.example packages/web/.env.local
         print_success "Created packages/web/.env.local (needs configuration)"
+        echo ""
+        echo "You'll need to configure at minimum:"
+        echo "  - POSTGRES_URL (database connection)"
+        echo "  - NEXT_PUBLIC_PRIVY_APP_ID (auth)"
+        echo "  - PRIVY_APP_SECRET (auth)"
+        echo ""
+        echo "The @bootstrap agent will guide you through this."
     fi
+fi
+
+# ============================================
+# Phase 5.5: Check Docker (for local database)
+# ============================================
+
+print_step "Checking Docker (optional, for local database)..."
+
+if command -v docker &> /dev/null; then
+    if docker info &> /dev/null; then
+        print_success "Docker is installed and running"
+    else
+        print_warning "Docker is installed but not running"
+        echo "Start Docker Desktop to use local database mode (pnpm lite)"
+    fi
+else
+    print_warning "Docker not installed (optional)"
+    echo "Without Docker, you'll need an external database (e.g., Neon)"
+    echo "Install Docker from: https://docker.com/get-started"
 fi
 
 # ============================================

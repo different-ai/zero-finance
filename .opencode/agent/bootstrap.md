@@ -73,7 +73,7 @@ Read these files to understand current state:
 - `opencode.json` - MCP server configuration
 - `.opencode/config/workspace.json` - Workspace config (may not exist)
 - `packages/web/.env.local` - Environment variables (may not exist)
-- `.nvmrc` - Required Node version (v23.11.0)
+- `.nvmrc` - Required Node version (v22.11.0)
 - `package.json` - Required pnpm version (9.15.4+)
 
 Also check for Docker:
@@ -513,6 +513,67 @@ Then update .env.local:
 pnpm --filter @zero-finance/web db:migrate
 ```
 
+### Phase 6.5: Database Connection Test
+
+After database setup, verify the connection works:
+
+```bash
+# Test database connection
+cd packages/web && pnpm db:migrate 2>&1 | head -20
+```
+
+**Expected Result:**
+
+- Migrations run successfully OR
+- "No migrations to run" (already up to date)
+
+**If FAIL - Diagnosis:**
+
+**Error: "Connection refused" or "ECONNREFUSED"**
+
+```
+DIAGNOSIS: Database not running or wrong port
+
+FIX for Docker Lite:
+1. Check Docker is running: docker info
+2. Start the database: docker compose -f docker-compose.lite.yml up -d
+3. Wait 5 seconds for startup
+4. Try again
+
+FIX for Neon:
+1. Check POSTGRES_URL in .env.local is correct
+2. Verify the database exists in Neon console
+3. Check your IP isn't blocked (Neon has IP allowlists)
+```
+
+**Error: "Authentication failed"**
+
+```
+DIAGNOSIS: Wrong credentials in POSTGRES_URL
+
+FIX:
+1. For Docker Lite: URL should be postgres://postgres:postgres@localhost:5433/zero_lite
+2. For Neon: Copy the connection string from Neon console again
+3. Make sure there are no extra spaces in the URL
+```
+
+**Error: "Database does not exist"**
+
+```
+DIAGNOSIS: Database not created yet
+
+FIX for Docker Lite:
+1. The database should auto-create on first connection
+2. Try: docker compose -f docker-compose.lite.yml down -v
+3. Then: docker compose -f docker-compose.lite.yml up -d
+4. Wait 5 seconds and try again
+
+FIX for Neon:
+1. Go to Neon console
+2. Create a new database or use the default one
+3. Update POSTGRES_URL with correct database name
+```
+
 ### Phase 7: Verification
 
 Run a comprehensive check:
@@ -532,7 +593,30 @@ vercel whoami
 
 # 5. Build check (if env vars are set)
 # pnpm --filter @zero-finance/web build
+
+# 6. Quick dev server test (optional - starts and stops)
+# timeout 10 pnpm dev || true
 ```
+
+**Quick Dev Server Smoke Test (Optional):**
+
+If all env vars are configured, test that the dev server starts:
+
+```bash
+# Start dev server in background, wait for ready, then stop
+timeout 30 bash -c 'pnpm dev &
+  PID=$!
+  sleep 15
+  curl -s http://localhost:3050 > /dev/null && echo "DEV_SERVER_OK" || echo "DEV_SERVER_FAIL"
+  kill $PID 2>/dev/null
+' || echo "TIMEOUT_OR_ERROR"
+```
+
+If this fails, common issues:
+
+- Missing required env vars (check .env.local)
+- Port 3050 already in use
+- Database not running
 
 ### Phase 8: Final Report
 
@@ -545,7 +629,7 @@ Generate a status report:
 
 | Component  | Status    | Notes                         |
 | ---------- | --------- | ----------------------------- |
-| Node.js    | ✅ v23.11 | Matches .nvmrc                |
+| Node.js    | ✅ v22.11 | Matches .nvmrc                |
 | pnpm       | ✅ 9.15   | Package manager ready         |
 | Vercel CLI | ✅        | Logged in as user@example.com |
 | GitHub CLI | ✅        | Authenticated                 |
