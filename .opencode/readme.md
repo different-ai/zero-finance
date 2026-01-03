@@ -4,18 +4,33 @@ This directory contains the AI agent configuration for 0 Finance. After a fresh 
 
 ## Quick Start
 
+### One-Line Install (Recommended)
+
 ```bash
-# After cloning the repo:
-@bootstrap
+curl -fsSL https://raw.githubusercontent.com/0finance/zerofinance/main/scripts/bootstrap.sh | bash
 ```
 
-This will:
+This will install everything and launch the bootstrap agent automatically.
 
-1. Check your environment (Node, pnpm, Chrome)
+### Manual Setup
+
+```bash
+# If you've already cloned:
+./scripts/bootstrap.sh
+
+# Or if you have OpenCode installed:
+opencode
+# Then type: @bootstrap
+```
+
+The bootstrap process will:
+
+1. Check your environment (Node, pnpm, Chrome, Vercel CLI, GitHub CLI)
 2. Install dependencies
 3. Test MCP server connections
 4. Create workspace configuration
-5. Guide you through any missing credentials
+5. Guide you through credential setup
+6. Set up browser sessions (LinkedIn, etc.)
 
 ## Core Principles
 
@@ -32,6 +47,7 @@ This repo is designed to be:
 
 | Agent               | Command                 | Purpose                            |
 | ------------------- | ----------------------- | ---------------------------------- |
+| Sherpa              | `@sherpa`               | Make any repo self-bootstrapping   |
 | Bootstrap           | `@bootstrap`            | First-time setup from fresh clone  |
 | Debug Workspace     | `@debug-workspace`      | Test connections, diagnose issues  |
 | Setup Workspace     | `@setup-workspace`      | Load config from Notion MCP Skills |
@@ -77,10 +93,14 @@ Configured in `opencode.json` at repo root:
 
 ### First Time Setup
 
-```
-git clone [repo]
+```bash
+# One-liner (installs everything):
+curl -fsSL https://raw.githubusercontent.com/0finance/zerofinance/main/scripts/bootstrap.sh | bash
+
+# Or manually:
+git clone https://github.com/0finance/zerofinance.git
 cd zerofinance
-@bootstrap
+./scripts/bootstrap.sh
 ```
 
 ### Daily Use
@@ -130,3 +150,46 @@ The system works with partial configuration:
 | Full env   | Can't run complete app | Frontend-only dev |
 
 Run `@bootstrap` to see what's configured and what's missing.
+
+---
+
+## Creating Bootstrap Systems for Other Repos
+
+The `@sherpa` agent can make any repository self-bootstrapping like this one.
+
+### Usage
+
+```bash
+# In any repo with OpenCode:
+opencode
+# Then type: @sherpa
+```
+
+### What Sherpa Does
+
+1. **Reads your repo** - AGENTS.md, opencode.json, .env.example, package.json, docker-compose.yml
+2. **Asks what you want** - "What should someone be able to do after bootstrap?"
+3. **Confirms the plan** - Shows what it will create before generating
+4. **Generates the system** - bootstrap.sh, agents, skills, documentation
+
+### What Sherpa Creates
+
+```
+scripts/bootstrap.sh          ← curl-able entry point
+.opencode/agent/bootstrap.md  ← AI setup guide
+.opencode/agent/debug.md      ← Diagnostics agent
+.opencode/skill/self-improve/SKILL.md ← Meta-learning
+.opencode/readme.md           ← Documentation
+```
+
+### The Three Levels
+
+Sherpa structures bootstraps around three levels:
+
+| Level | Name           | Description                                      |
+| ----- | -------------- | ------------------------------------------------ |
+| 1     | **Local**      | Everything on your machine (Docker, mocked APIs) |
+| 2     | **Preview**    | Connected to staging/sandbox services            |
+| 3     | **Production** | Full production config                           |
+
+The generated bootstrap works at any level with graceful degradation.

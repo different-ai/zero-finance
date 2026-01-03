@@ -1,7 +1,7 @@
 ---
 description: Self-bootstrap this repository from a fresh git clone. Detects missing dependencies, guides credential setup, creates required files, and verifies everything works. Run this first after cloning.
 mode: subagent
-model: anthropic/claude-sonnet-4-20250514
+model: anthropic/claude-opus-4-5-20251101
 temperature: 0.2
 tools:
   read: true
@@ -55,6 +55,12 @@ vercel --version 2>/dev/null || echo "NOT_INSTALLED"
 # Check Vercel login status
 vercel whoami 2>/dev/null || echo "NOT_LOGGED_IN"
 
+# Check GitHub CLI
+gh --version 2>/dev/null || echo "NOT_INSTALLED"
+
+# Check GitHub login status
+gh auth status 2>/dev/null || echo "NOT_LOGGED_IN"
+
 # Check if dependencies installed
 ls node_modules 2>/dev/null | head -1 || echo "NOT_INSTALLED"
 
@@ -67,7 +73,16 @@ Read these files to understand current state:
 - `opencode.json` - MCP server configuration
 - `.opencode/config/workspace.json` - Workspace config (may not exist)
 - `packages/web/.env.local` - Environment variables (may not exist)
-- `.nvmrc` - Required Node version
+- `.nvmrc` - Required Node version (v23.11.0)
+- `package.json` - Required pnpm version (9.15.4+)
+
+Also check for Docker:
+
+```bash
+# Check Docker (needed for local database)
+docker --version 2>/dev/null || echo "NOT_INSTALLED"
+docker compose version 2>/dev/null || echo "NOT_INSTALLED"
+```
 
 ### Phase 2: Core Dependencies
 
@@ -138,6 +153,52 @@ Please log in to Vercel:
 vercel login
 
 This opens a browser - authenticate with the account that has access to the 0 Finance project.
+
+IMPORTANT: Use --scope prologe when running Vercel commands:
+vercel ls --scope prologe
+vercel inspect <url> --scope prologe
+```
+
+#### GitHub CLI (Required for PRs and issues)
+
+**Check:** `gh --version` should exist
+
+**If missing:**
+
+```
+MISSING: GitHub CLI
+
+To install:
+brew install gh   # macOS
+# or
+pnpm add -g @cli/cli
+
+Then login:
+gh auth login
+
+Choose:
+- GitHub.com
+- HTTPS
+- Login with a web browser
+```
+
+**If installed but not logged in:**
+
+```bash
+gh auth status
+```
+
+If this fails:
+
+```
+Please log in to GitHub:
+
+gh auth login
+
+This is needed for:
+- Creating pull requests
+- Viewing PR comments and checks
+- Getting deployment URLs from Vercel bot comments
 ```
 
 #### Dependencies (Required)
@@ -350,33 +411,106 @@ Then prompt for critical variables:
 ```
 Environment variables needed for full functionality.
 
-Which features do you need?
+MINIMUM REQUIRED (app won't start without these):
+- POSTGRES_URL - Database connection
+- NEXT_PUBLIC_PRIVY_APP_ID - Auth (get from dashboard.privy.io)
+- PRIVY_APP_SECRET - Auth secret
 
-1. [ ] Local development (DATABASE_URL, etc.)
-2. [ ] Privy authentication (PRIVY_APP_ID, PRIVY_APP_SECRET)
-3. [ ] Blockchain (RPC URLs, wallet keys)
-4. [ ] Email (Resend API key)
-5. [ ] All of the above
+HIGHLY RECOMMENDED (core features):
+- NEXT_PUBLIC_BASE_RPC_URL - Blockchain RPC (get from Alchemy/Infura)
+- BASE_RPC_URL - Server-side RPC
+- DEPLOYER_PRIVATE_KEY - For wallet deployment
 
-For each selected, I'll tell you what's needed and where to get it.
+Which setup do you need?
+
+1. Lite Mode (crypto-only, local dev)
+   → Just need: POSTGRES_URL, PRIVY_APP_ID, PRIVY_APP_SECRET
+
+2. Full Development
+   → Add: RPC URLs, DEPLOYER_PRIVATE_KEY, OPENAI_API_KEY
+
+3. Production-like
+   → Add: CRON_SECRET, ADMIN_SECRET_TOKEN, webhook secrets
+
+4. I'll configure manually
+   → I'll open .env.local for you to edit
 ```
+
+**For each variable, explain where to get it:**
+
+| Variable                 | Where to Get                                      |
+| ------------------------ | ------------------------------------------------- |
+| POSTGRES_URL             | https://console.neon.tech or local Docker         |
+| NEXT_PUBLIC_PRIVY_APP_ID | https://dashboard.privy.io → App Settings         |
+| PRIVY_APP_SECRET         | https://dashboard.privy.io → App Settings         |
+| NEXT_PUBLIC_BASE_RPC_URL | https://dashboard.alchemy.com → Create App → Base |
+| DEPLOYER_PRIVATE_KEY     | Generate new wallet, fund with small ETH for gas  |
+| OPENAI_API_KEY           | https://platform.openai.com/api-keys              |
+| RESEND_API_KEY           | https://resend.com/api-keys                       |
 
 **Graceful degradation:** Create `.env.local` with placeholders and comments explaining each variable.
 
-### Phase 6: Database Setup (Optional)
+### Phase 6: Database Setup
 
 If user selected local development:
 
 ```
 DATABASE SETUP
 
-Option A: Docker (recommended for local dev)
-  pnpm lite:start  # Starts Postgres in Docker
+Option A: Docker Lite Mode (recommended for local dev)
+  pnpm lite
 
-Option B: External database
-  Set DATABASE_URL in .env.local
+  This will:
+  1. Start Postgres in Docker (port 5433)
+  2. Run database migrations
+  3. Start the dev server
 
-Which option? (a/b): _
+  The database is stored in ./data/postgres-lite/
+
+Option B: Neon (cloud PostgreSQL - recommended for production-like)
+  1. Go to https://console.neon.tech
+  2. Create a new project
+  3. Copy the connection string
+  4. Set POSTGRES_URL in .env.local
+
+Option C: Existing database
+  Set POSTGRES_URL in .env.local to your database
+
+Which option? (a/b/c): _
+```
+
+**If Docker selected, verify:**
+
+```bash
+# Check Docker is running
+docker info 2>/dev/null || echo "Docker not running - please start Docker Desktop"
+
+# Start the lite stack
+pnpm lite
+```
+
+**If Neon selected:**
+
+```
+NEON SETUP
+
+1. Go to https://console.neon.tech
+2. Sign up / log in with GitHub
+3. Create a new project (name: "zero-finance-dev")
+4. Copy the connection string (looks like: postgres://user:pass@host/db?sslmode=require)
+5. Paste it here: _
+```
+
+Then update .env.local:
+
+```bash
+# Update POSTGRES_URL in .env.local
+```
+
+**Run migrations:**
+
+```bash
+pnpm --filter @zero-finance/web db:migrate
 ```
 
 ### Phase 7: Verification
@@ -409,14 +543,16 @@ Generate a status report:
 
 ### Environment
 
-| Component  | Status   | Notes                         |
-| ---------- | -------- | ----------------------------- |
-| Node.js    | ✅ 22.11 | Matches .nvmrc                |
-| pnpm       | ✅ 9.x   | Package manager ready         |
-| Vercel CLI | ✅       | Logged in as user@example.com |
-| Deps       | ✅       | node_modules installed        |
-| TypeScript | ✅       | No type errors                |
-| Chrome     | ✅       | Browser automation ready      |
+| Component  | Status    | Notes                         |
+| ---------- | --------- | ----------------------------- |
+| Node.js    | ✅ v23.11 | Matches .nvmrc                |
+| pnpm       | ✅ 9.15   | Package manager ready         |
+| Vercel CLI | ✅        | Logged in as user@example.com |
+| GitHub CLI | ✅        | Authenticated                 |
+| Docker     | ✅        | Running, ready for lite mode  |
+| Deps       | ✅        | node_modules installed        |
+| TypeScript | ✅        | No type errors                |
+| Chrome     | ✅        | Browser automation ready      |
 
 ### MCP Servers
 
@@ -428,11 +564,12 @@ Generate a status report:
 
 ### Authenticated Sessions
 
-| Service  | Status | Notes                   |
-| -------- | ------ | ----------------------- |
-| LinkedIn | ✅     | Logged in, can research |
-| Vercel   | ✅     | Can deploy and preview  |
-| Gmail    | ⚠️     | Not set up (optional)   |
+| Service  | Status | Notes                            |
+| -------- | ------ | -------------------------------- |
+| LinkedIn | ✅     | Logged in, can research profiles |
+| Vercel   | ✅     | Can deploy and view previews     |
+| GitHub   | ✅     | Can create PRs and view issues   |
+| Gmail    | ⚠️     | Not set up (optional for OTP)    |
 
 ### Configuration
 
@@ -442,20 +579,36 @@ Generate a status report:
 | workspace.json | ✅ Created |
 | .env.local     | ⚠️ Partial |
 
+### Environment Variables Status
+
+| Variable                 | Status | Notes              |
+| ------------------------ | ------ | ------------------ |
+| POSTGRES_URL             | ✅     | Neon connected     |
+| NEXT_PUBLIC_PRIVY_APP_ID | ✅     | Auth configured    |
+| PRIVY_APP_SECRET         | ✅     | Auth configured    |
+| NEXT_PUBLIC_BASE_RPC_URL | ⚠️     | Using public RPC   |
+| DEPLOYER_PRIVATE_KEY     | ❌     | Needed for wallets |
+| OPENAI_API_KEY           | ⚠️     | Optional for AI    |
+
 ### Next Steps
 
-1. [ ] Create MCP Skills page in Notion (see template below)
-2. [ ] Run `@setup-workspace` to load Notion config
-3. [ ] Add missing env vars: PRIVY_APP_ID, DATABASE_URL
-4. [ ] Run `pnpm dev` to start development server
+1. [ ] Add DEPLOYER_PRIVATE_KEY for wallet creation
+2. [ ] Create MCP Skills page in Notion (run `@setup-workspace` for template)
+3. [ ] Run `pnpm dev` to start development server
+4. [ ] Test with `@debug-workspace`
 
 ### Quick Commands
 
 ```bash
-pnpm dev          # Start dev server (port 3050)
-pnpm lite:start   # Start Docker services
-pnpm typecheck    # Check TypeScript
-@debug-workspace  # Test all connections
+pnpm dev              # Start dev server (port 3050)
+pnpm lite             # Start Docker + migrations + dev server
+pnpm lite:stop        # Stop Docker services
+pnpm lite:clean       # Reset Docker volumes (fresh DB)
+pnpm typecheck        # Check TypeScript
+vercel ls --scope prologe  # List deployments
+gh pr list            # List open PRs
+@debug-workspace      # Test all connections
+@setup-workspace      # Load config from Notion
 ```
 ````
 
@@ -542,3 +695,56 @@ The only things that can't be reconstructed are:
 - Database data (must restore from backup)
 
 Everything else is derivable from the git repo + user input.
+
+---
+
+## What Requires Manual Setup
+
+Some things can't be automated and require manual steps:
+
+### Accounts to Create (one-time)
+
+| Service | URL                   | What You Get                   |
+| ------- | --------------------- | ------------------------------ |
+| Privy   | dashboard.privy.io    | PRIVY_APP_ID, PRIVY_APP_SECRET |
+| Neon    | console.neon.tech     | POSTGRES_URL                   |
+| Alchemy | dashboard.alchemy.com | RPC URLs for Base/Arbitrum     |
+| Exa     | dashboard.exa.ai      | EXA_API_KEY                    |
+| Vercel  | vercel.com            | Deployment access              |
+| Resend  | resend.com            | RESEND_API_KEY (for emails)    |
+| OpenAI  | platform.openai.com   | OPENAI_API_KEY (for AI)        |
+
+### Browser Sessions (once per machine)
+
+| Service  | Why Needed                          |
+| -------- | ----------------------------------- |
+| LinkedIn | Research prospects without scraping |
+| Gmail    | Extract OTP codes for testing       |
+| Vercel   | Deploy and view preview URLs        |
+| GitHub   | Create PRs, view issues             |
+
+### Notion Setup (once per workspace)
+
+1. Create "MCP Skills" page with configuration tables
+2. Create Outreach Tracking database
+3. Create ICP definition pages
+4. Run `@setup-workspace` to load config
+
+---
+
+## Feature Availability by Config Level
+
+| Feature               | Lite Mode | Dev Mode | Full Mode |
+| --------------------- | --------- | -------- | --------- |
+| Local development     | ✅        | ✅       | ✅        |
+| Database (Docker)     | ✅        | ✅       | ✅        |
+| Database (Neon)       | ❌        | ✅       | ✅        |
+| Privy auth            | ❌        | ✅       | ✅        |
+| Blockchain RPC        | ⚠️ Public | ✅       | ✅        |
+| Wallet deployment     | ❌        | ✅       | ✅        |
+| AI features (OpenAI)  | ❌        | ⚠️       | ✅        |
+| Email (Resend)        | ❌        | ⚠️       | ✅        |
+| Outreach pipeline     | ❌        | ⚠️       | ✅        |
+| Production deployment | ❌        | ❌       | ✅        |
+
+Legend: ✅ = Available, ⚠️ = Partial/Optional, ❌ = Not available

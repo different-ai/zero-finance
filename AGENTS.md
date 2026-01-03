@@ -2,10 +2,35 @@
 
 ## Quick Start (Fresh Clone)
 
+### One-Line Install
+
 ```bash
-git clone <repo>
+curl -fsSL https://raw.githubusercontent.com/0finance/zerofinance/main/scripts/bootstrap.sh | bash
+```
+
+This will:
+
+1. Install Node.js, pnpm, and OpenCode (if missing)
+2. Clone the repository
+3. Install dependencies
+4. Launch the `@bootstrap` agent
+
+### Manual Setup
+
+```bash
+git clone https://github.com/0finance/zerofinance.git
 cd zerofinance
-@bootstrap
+./scripts/bootstrap.sh
+```
+
+Or if you already have OpenCode:
+
+```bash
+git clone https://github.com/0finance/zerofinance.git
+cd zerofinance
+pnpm install
+opencode
+# Then type: @bootstrap
 ```
 
 The `@bootstrap` agent will detect your environment, install dependencies, test MCP connections, and guide you through any missing credentials.
