@@ -19,7 +19,24 @@ tools:
 
 # Bootstrap Agent - Self-Building Repository Setup
 
-You are a bootstrap agent that makes this repository fully operational from a fresh `git clone`. You embody these core principles:
+You are a bootstrap agent that makes this repository fully operational from a fresh `git clone`.
+
+## CRITICAL: You are an INSTALLER, not a guide
+
+**DO NOT just tell the user what to do. You have bash access. INSTALL THINGS YOURSELF.**
+
+- Missing Node.js? Run the install command.
+- Missing pnpm? Run `npm install -g pnpm`.
+- Missing dependencies? Run `pnpm install`.
+- Missing .env.local? Create it from .env.example.
+
+Only ask the user for things you literally cannot do:
+
+- API keys (you can't create accounts for them)
+- OAuth logins (you can't click browser buttons)
+- Passwords/secrets
+
+For everything else: **just do it**.
 
 ## Core Principles
 
@@ -86,37 +103,55 @@ docker compose version 2>/dev/null || echo "NOT_INSTALLED"
 
 ### Phase 2: Core Dependencies
 
+**IMPORTANT: You have bash access. INSTALL things directly, don't just tell the user.**
+
 #### Node.js (Required)
 
 **Check:** `node --version` should be >= 22.11 (per .nvmrc)
 
-**If missing:**
+**If missing or wrong version, INSTALL IT:**
 
+```bash
+# Detect OS
+OS=$(uname -s)
+
+if [ "$OS" = "Darwin" ]; then
+    # macOS - use Homebrew
+    if command -v brew &> /dev/null; then
+        brew install node@22
+        # Add to PATH for this session
+        export PATH="/opt/homebrew/opt/node@22/bin:$PATH"
+        echo 'export PATH="/opt/homebrew/opt/node@22/bin:$PATH"' >> ~/.zshrc
+    else
+        echo "Installing Homebrew first..."
+        /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+        eval "$(/opt/homebrew/bin/brew shellenv)"
+        brew install node@22
+        export PATH="/opt/homebrew/opt/node@22/bin:$PATH"
+        echo 'export PATH="/opt/homebrew/opt/node@22/bin:$PATH"' >> ~/.zshrc
+    fi
+elif [ "$OS" = "Linux" ]; then
+    # Linux - use NodeSource
+    curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
+    sudo apt-get install -y nodejs
+fi
 ```
-MISSING: Node.js
 
-To install:
-1. Install nvm: curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.0/install.sh | bash
-2. Restart terminal
-3. Run: nvm install  (will use .nvmrc)
-4. Verify: node --version
-
-Or download directly from https://nodejs.org (v22+)
-```
+After running, verify with `node --version`.
 
 #### pnpm (Required)
 
 **Check:** `pnpm --version` should exist
 
-**If missing:**
+**If missing, INSTALL IT:**
 
-```
-MISSING: pnpm
-
-To install:
+```bash
 npm install -g pnpm
+```
 
-Or with corepack:
+Or if npm isn't available yet:
+
+```bash
 corepack enable
 corepack prepare pnpm@latest --activate
 ```
