@@ -31,6 +31,57 @@ OS="unknown"
 echo -e "${BLUE}==>${NC} OS: $OS"
 
 # ============================================
+# Phase 0: Ensure zsh is installed and default
+# ============================================
+
+if command -v zsh &> /dev/null; then
+    echo -e "${GREEN}✓${NC} zsh: $(zsh --version | head -1)"
+else
+    echo -e "${BLUE}==>${NC} Installing zsh..."
+    if [ "$OS" = "macos" ]; then
+        # zsh is default on macOS, but just in case
+        brew install zsh 2>/dev/null || true
+    elif [ "$OS" = "linux" ]; then
+        sudo apt-get update && sudo apt-get install -y zsh 2>/dev/null || \
+        sudo yum install -y zsh 2>/dev/null || \
+        sudo pacman -S --noconfirm zsh 2>/dev/null || {
+            echo -e "${YELLOW}⚠${NC} Could not install zsh automatically"
+        }
+    fi
+    
+    if command -v zsh &> /dev/null; then
+        echo -e "${GREEN}✓${NC} zsh installed"
+    fi
+fi
+
+# Set zsh as default shell if it isn't already
+if command -v zsh &> /dev/null; then
+    CURRENT_SHELL=$(basename "$SHELL")
+    if [ "$CURRENT_SHELL" != "zsh" ]; then
+        ZSH_PATH=$(which zsh)
+        echo -e "${BLUE}==>${NC} Setting zsh as default shell..."
+        
+        # Add zsh to /etc/shells if not present
+        if ! grep -q "$ZSH_PATH" /etc/shells 2>/dev/null; then
+            echo "$ZSH_PATH" | sudo tee -a /etc/shells > /dev/null 2>&1 || true
+        fi
+        
+        # Change default shell
+        chsh -s "$ZSH_PATH" 2>/dev/null && \
+            echo -e "${GREEN}✓${NC} Default shell set to zsh (restart terminal to apply)" || \
+            echo -e "${YELLOW}⚠${NC} Run manually: chsh -s $ZSH_PATH"
+    else
+        echo -e "${GREEN}✓${NC} zsh is already default shell"
+    fi
+fi
+
+# Create .zshrc if it doesn't exist
+if [ ! -f "$HOME/.zshrc" ]; then
+    touch "$HOME/.zshrc"
+    echo -e "${GREEN}✓${NC} Created ~/.zshrc"
+fi
+
+# ============================================
 # Phase 1: Node.js
 # ============================================
 
