@@ -40,6 +40,13 @@ print_error() {
     echo -e "${RED}✗${NC} $1"
 }
 
+# Check if running interactively (not piped)
+if [ -t 0 ]; then
+    INTERACTIVE=true
+else
+    INTERACTIVE=false
+fi
+
 # Banner
 echo ""
 echo -e "${BLUE}╔═══════════════════════════════════════════════════════════╗${NC}"
@@ -80,28 +87,107 @@ if command -v node &> /dev/null; then
     if [ "$NODE_MAJOR" -lt 22 ]; then
         print_warning "Node.js version should be >= 22. You have $NODE_VERSION"
         print_warning "Consider upgrading: nvm install 22"
-        echo ""
-        read -p "Continue anyway? (y/N): " CONTINUE
-        if [[ ! "$CONTINUE" =~ ^[Yy]$ ]]; then
-            exit 1
+        if [ "$INTERACTIVE" = true ]; then
+            echo ""
+            read -p "Continue anyway? (y/N): " CONTINUE
+            if [[ ! "$CONTINUE" =~ ^[Yy]$ ]]; then
+                exit 1
+            fi
+        else
+            print_warning "Continuing with older Node.js version..."
         fi
     fi
 else
     print_error "Node.js not found"
     echo ""
-    echo "To install Node.js:"
-    echo "  1. Install nvm: curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.0/install.sh | bash"
-    echo "  2. Restart terminal"
-    echo "  3. Run: nvm install 22"
-    echo ""
-    echo "Or download from: https://nodejs.org"
-    echo ""
-    read -p "Press Enter after installing Node.js, or Ctrl+C to exit..."
     
-    # Re-check
-    if ! command -v node &> /dev/null; then
-        print_error "Node.js still not found. Please install and try again."
-        exit 1
+    # Try to auto-install Node.js
+    if [ "$OS" = "macos" ]; then
+        # Check for Homebrew
+        if command -v brew &> /dev/null; then
+            print_step "Installing Node.js via Homebrew..."
+            brew install node@22
+            brew link node@22 --force --overwrite
+            
+            # Re-check
+            if command -v node &> /dev/null; then
+                NODE_VERSION=$(node --version)
+                print_success "Node.js installed: $NODE_VERSION"
+            else
+                print_error "Failed to install Node.js via Homebrew"
+                exit 1
+            fi
+        else
+            print_warning "Homebrew not found. Installing Homebrew first..."
+            /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+            
+            # Add Homebrew to PATH for this session
+            if [ -f "/opt/homebrew/bin/brew" ]; then
+                eval "$(/opt/homebrew/bin/brew shellenv)"
+            elif [ -f "/usr/local/bin/brew" ]; then
+                eval "$(/usr/local/bin/brew shellenv)"
+            fi
+            
+            print_step "Installing Node.js via Homebrew..."
+            brew install node@22
+            brew link node@22 --force --overwrite
+            
+            if command -v node &> /dev/null; then
+                NODE_VERSION=$(node --version)
+                print_success "Node.js installed: $NODE_VERSION"
+            else
+                print_error "Failed to install Node.js"
+                echo ""
+                echo "Please install Node.js manually:"
+                echo "  brew install node@22"
+                echo "  brew link node@22 --force"
+                echo ""
+                echo "Then re-run this script."
+                exit 1
+            fi
+        fi
+    elif [ "$OS" = "linux" ]; then
+        print_step "Installing Node.js via nvm..."
+        curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.0/install.sh | bash
+        
+        # Load nvm for this session
+        export NVM_DIR="$HOME/.nvm"
+        [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+        
+        nvm install 22
+        nvm use 22
+        
+        if command -v node &> /dev/null; then
+            NODE_VERSION=$(node --version)
+            print_success "Node.js installed: $NODE_VERSION"
+        else
+            print_error "Failed to install Node.js via nvm"
+            echo ""
+            echo "Please install Node.js manually and re-run this script."
+            exit 1
+        fi
+    else
+        echo "To install Node.js:"
+        echo "  1. Install nvm: curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.0/install.sh | bash"
+        echo "  2. Restart terminal"
+        echo "  3. Run: nvm install 22"
+        echo ""
+        echo "Or download from: https://nodejs.org"
+        echo ""
+        
+        if [ "$INTERACTIVE" = true ]; then
+            read -p "Press Enter after installing Node.js, or Ctrl+C to exit..."
+            
+            # Re-check
+            if ! command -v node &> /dev/null; then
+                print_error "Node.js still not found. Please install and try again."
+                exit 1
+            fi
+        else
+            print_error "Cannot auto-install Node.js on this platform."
+            echo "Please install Node.js manually and re-run this script."
+            exit 1
+        fi
     fi
 fi
 
@@ -191,9 +277,13 @@ print_step "Installing dependencies..."
 
 if [ -d "node_modules" ] && [ -f "pnpm-lock.yaml" ]; then
     print_success "Dependencies appear to be installed"
-    read -p "Reinstall? (y/N): " REINSTALL
-    if [[ "$REINSTALL" =~ ^[Yy]$ ]]; then
-        pnpm install
+    if [ "$INTERACTIVE" = true ]; then
+        read -p "Reinstall? (y/N): " REINSTALL
+        if [[ "$REINSTALL" =~ ^[Yy]$ ]]; then
+            pnpm install
+        fi
+    else
+        print_warning "Skipping reinstall in non-interactive mode"
     fi
 else
     pnpm install
@@ -300,23 +390,29 @@ echo -e "${GREEN}║${NC}                                                       
 echo -e "${GREEN}╚═══════════════════════════════════════════════════════════╝${NC}"
 echo ""
 
-read -p "Press Enter to launch OpenCode, or Ctrl+C to exit..."
-
 # Check if opencode is available
 if command -v opencode &> /dev/null; then
-    # Launch OpenCode with the bootstrap prompt
-    echo ""
-    print_step "Launching OpenCode..."
-    echo ""
-    
-    # Start OpenCode and send the bootstrap command
-    opencode --prompt "@bootstrap"
+    if [ "$INTERACTIVE" = true ]; then
+        read -p "Press Enter to launch OpenCode, or Ctrl+C to exit..."
+        echo ""
+        print_step "Launching OpenCode..."
+        echo ""
+        opencode --prompt "@bootstrap"
+    else
+        echo ""
+        print_success "Bootstrap complete! To finish setup, run:"
+        echo ""
+        echo "  cd $REPO_ROOT"
+        echo "  opencode --prompt \"@bootstrap\""
+        echo ""
+    fi
 else
     print_warning "OpenCode not in PATH. Try running manually:"
     echo ""
     echo "  cd $REPO_ROOT"
-    echo "  opencode"
+    echo "  export PATH=\"\$HOME/.local/bin:\$PATH\""
+    echo "  opencode --prompt \"@bootstrap\""
     echo ""
-    echo "Then type: @bootstrap"
+    echo "Or restart your terminal first to pick up the new PATH."
     echo ""
 fi
