@@ -76,7 +76,7 @@ export const devRouter = router({
       log(`   Created workspace: ${workspaceId}`);
     } else {
       log(`   User exists: ${user.privyDid}`);
-      // Ensure workspace exists
+      // Ensure workspace exists and has alignCustomerId set
       const workspace = await db.query.workspaces.findFirst({
         where: eq(workspaces.id, user.primaryWorkspaceId),
       });
@@ -89,6 +89,13 @@ export const devRouter = router({
           alignCustomerId: 'mock_customer_id',
         });
         log(`   Re-created missing workspace: ${user.primaryWorkspaceId}`);
+      } else if (!workspace.alignCustomerId) {
+        // Update existing workspace to have mock alignCustomerId for demo mode
+        await db
+          .update(workspaces)
+          .set({ alignCustomerId: 'mock_customer_id' })
+          .where(eq(workspaces.id, user.primaryWorkspaceId));
+        log(`   Updated workspace with mock alignCustomerId`);
       }
     }
 
