@@ -146,7 +146,9 @@ export default async function DashboardPage(props: {
             </Suspense>
 
             {/* Savings/Yield Section */}
-            <SavingsSection />
+            <SavingsSection
+              mode={userId === 'did:privy:demo_user' ? 'demo' : 'real'}
+            />
 
             {/* Transactions Section */}
             <div className="">

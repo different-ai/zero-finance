@@ -80,7 +80,7 @@ export function DashboardSummaryWrapper({
 
   // Calculate total savings balance from vault positions (earning balance)
   const earningBalance = useMemo(() => {
-    if (isDemoMode) return 901323.0;
+    if (isDemoMode) return 1000000.0; // $1M earning in demo mode
     if (!userPositions) return 0;
 
     return userPositions.reduce((total, position) => {
@@ -89,7 +89,8 @@ export function DashboardSummaryWrapper({
   }, [userPositions, isDemoMode]);
 
   // Idle balance = USDC in Safe (not earning)
-  const idleBalance = checkingBalanceUsd;
+  // In demo mode, show $200k idle for total of $1.2M spendable
+  const idleBalance = isDemoMode ? 200000.0 : checkingBalanceUsd;
 
   // Spendable = Total (Earning + Idle)
   const spendableBalance = earningBalance + idleBalance;
