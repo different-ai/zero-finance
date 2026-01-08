@@ -38,6 +38,20 @@ export function Sidebar() {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const { isTechnical } = useBimodal();
+  const [isDevUser, setIsDevUser] = useState(false);
+
+  useEffect(() => {
+    if (
+      process.env.NODE_ENV === 'development' &&
+      document.cookie.includes('x-dev-user-id')
+    ) {
+      setIsDevUser(true);
+    }
+  }, []);
+
+  const showUser = authenticated || isDevUser;
+  const displayUser =
+    user || (isDevUser ? { email: { address: 'demo@0.finance' } } : null);
 
   // Fetch workspace data
   const { data: workspaceData } = api.workspace.getOrCreateWorkspace.useQuery();
@@ -138,7 +152,6 @@ export function Sidebar() {
             {isTechnical ? 'ZERO::FINANCE' : 'finance'}
           </span>
         </div>
-        
       </Link>
 
       {/* Navigation */}
@@ -270,7 +283,7 @@ export function Sidebar() {
             : 'border-[#101010]/10 bg-[#F7F7F2]',
         )}
       >
-        {authenticated && user && (
+        {showUser && displayUser && (
           <div className="p-4 bg-zinc-50">
             <div className="relative" ref={dropdownRef}>
               <button
@@ -287,7 +300,7 @@ export function Sidebar() {
                       isTechnical ? 'bg-[#1B29FF]' : 'bg-[#0050ff]',
                     )}
                   >
-                    {user?.email?.address?.[0]?.toUpperCase() || (
+                    {displayUser?.email?.address?.[0]?.toUpperCase() || (
                       <User className="h-5 w-5" />
                     )}
                   </div>
@@ -305,7 +318,7 @@ export function Sidebar() {
                       isTechnical && 'font-mono',
                     )}
                   >
-                    {user?.email?.address?.split('@')[0] || 'User'}
+                    {displayUser?.email?.address?.split('@')[0] || 'User'}
                   </p>
                   {workspaceData?.workspace?.name && (
                     <p

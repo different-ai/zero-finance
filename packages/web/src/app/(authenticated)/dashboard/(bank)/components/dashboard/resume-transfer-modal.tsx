@@ -11,13 +11,20 @@ import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { trpc } from '@/utils/trpc';
 import { api } from '@/trpc/react';
-import { Loader2, AlertCircle, ArrowRight, ExternalLink } from 'lucide-react';
+import {
+  Loader2,
+  AlertCircle,
+  ArrowRight,
+  ExternalLink,
+  ArrowDown,
+} from 'lucide-react';
 import { useSmartWallets } from '@privy-io/react-auth/smart-wallets';
 import Safe from '@safe-global/protocol-kit';
 import { encodeFunctionData, type Address } from 'viem';
 import { SAFE_ABI } from '@/lib/sponsor-tx/core';
 import { toast } from 'sonner';
 import { useBimodal } from '@/components/ui/bimodal';
+import { cn } from '@/lib/utils';
 
 // Helper to build prevalidated signature for Safe
 function buildPrevalidatedSig(ownerAddress: string): `0x${string}` {
@@ -73,8 +80,8 @@ export function ResumeTransferModal({
     });
 
   const handleSendFunds = async () => {
-    if (!primarySafeAddress || !smartClient?.account || !transfer) {
-      toast.error('Required information is missing.');
+    if (!transfer) {
+      toast.error('Transfer details not found.');
       return;
     }
 
@@ -82,6 +89,27 @@ export function ResumeTransferModal({
     setError(null);
 
     try {
+      // Mock Mode Bypass - check this FIRST before requiring real wallet infrastructure
+      if (transferId.startsWith('mock_')) {
+        setLoadingMessage('Signing transaction...');
+        // Fake delay
+        await new Promise((resolve) => setTimeout(resolve, 1500));
+
+        setLoadingMessage('Finalizing...');
+        const mockHash = `0x_mock_hash_${Date.now()}`;
+        await completeTransferMutation.mutateAsync({
+          alignTransferId: transferId,
+          depositTransactionHash: mockHash,
+        });
+        setTxHash(mockHash);
+        return;
+      }
+
+      // For real transfers, we need wallet infrastructure
+      if (!primarySafeAddress || !smartClient?.account) {
+        throw new Error('Wallet not connected. Please refresh and try again.');
+      }
+
       setLoadingMessage('Preparing transaction...');
       const preparedData = await prepareTxMutation.mutateAsync({
         alignTransferId: transferId,
@@ -99,12 +127,12 @@ export function ResumeTransferModal({
 
       setLoadingMessage('Creating transaction...');
       const safeTransaction = await safeSdk.createTransaction({
-        transactions: [preparedData],
+        transactions: [preparedData as any],
       });
       safeTransaction.data.safeTxGas = BigInt(220000).toString();
 
       setLoadingMessage('Signing transaction...');
-      const ownerAddress = smartClient.account.address;
+      const ownerAddress = smartClient!.account.address;
       safeTransaction.addSignature({
         signer: ownerAddress,
         data: buildPrevalidatedSig(ownerAddress),
@@ -128,7 +156,7 @@ export function ResumeTransferModal({
       });
 
       setLoadingMessage('Sending transaction...');
-      const txResponse = await smartClient.sendTransaction({
+      const txResponse = await smartClient!.sendTransaction({
         to: primarySafeAddress as Address,
         data: encodedExecData as `0x${string}`,
       });
@@ -149,9 +177,9 @@ export function ResumeTransferModal({
   if (!transfer) {
     return (
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md bg-white border border-[#101010]/10 shadow-none rounded-sm">
           <div className="flex justify-center items-center py-12">
-            <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+            <Loader2 className="h-6 w-6 animate-spin text-[#101010]/20" />
           </div>
         </DialogContent>
       </Dialog>
@@ -173,44 +201,46 @@ export function ResumeTransferModal({
   if (txHash) {
     return (
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="sm:max-w-md">
-          <div className="flex flex-col items-center justify-center py-8 space-y-6">
-            <div className="h-16 w-16 rounded-full bg-green-100 flex items-center justify-center">
-              <svg
-                className="h-8 w-8 text-green-600"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M5 13l4 4L19 7"
-                />
-              </svg>
+        <DialogContent className="sm:max-w-md bg-white border border-[#101010]/10 shadow-none rounded-sm p-8">
+          <div className="flex flex-col items-center justify-center space-y-6">
+            <div className="h-16 w-16 rounded-full bg-[#10b981]/10 flex items-center justify-center">
+              <div className="h-8 w-8 text-[#10b981]">
+                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M5 13l4 4L19 7"
+                  />
+                </svg>
+              </div>
             </div>
             <div className="text-center space-y-2">
-              <h3 className="text-xl font-semibold text-gray-900">
+              <h3 className="text-[18px] font-semibold text-[#101010]">
                 Transfer Processing
               </h3>
-              <p className="text-sm text-gray-500">
-                Your transfer is being processed. Funds will arrive in 1-2
-                business days.
+              <p className="text-[13px] text-[#101010]/60 max-w-[240px] mx-auto">
+                Your funds are on the way. They will arrive in 1-2 business
+                days.
               </p>
             </div>
+
             {isTechnical && (
               <a
                 href={`https://basescan.org/tx/${txHash}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 text-sm text-[#1B29FF] hover:text-[#1420CC]"
+                className="inline-flex items-center gap-2 text-[12px] font-mono text-[#1B29FF] hover:underline"
               >
-                <span>View on Basescan</span>
-                <ExternalLink className="h-3.5 w-3.5" />
+                <span>TX::VIEW_ON_SCAN</span>
+                <ExternalLink className="h-3 w-3" />
               </a>
             )}
-            <Button onClick={onClose} className="w-full">
+
+            <Button
+              onClick={onClose}
+              className="w-full bg-[#1B29FF] hover:bg-[#1420CC] text-white rounded-sm h-10 font-medium text-[13px]"
+            >
               Done
             </Button>
           </div>
@@ -221,140 +251,224 @@ export function ResumeTransferModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Resume Transfer</DialogTitle>
+      <DialogContent
+        className={cn(
+          'sm:max-w-md bg-white border border-[#101010]/10 shadow-none p-0 gap-0',
+          isTechnical ? 'rounded-none border-[#1B29FF]/20' : 'rounded-sm',
+        )}
+      >
+        <DialogHeader className="p-6 pb-2">
+          <DialogTitle
+            className={cn(
+              'text-[18px] font-medium text-[#101010]',
+              isTechnical && 'font-mono text-[#1B29FF]',
+            )}
+          >
+            {isTechnical ? 'EXECUTE::TRANSFER' : 'Resume Transfer'}
+          </DialogTitle>
         </DialogHeader>
 
-        {isExpired ? (
-          <div className="py-6 space-y-4">
-            <Alert className="bg-amber-50 border-amber-200">
-              <AlertCircle className="h-4 w-4 text-amber-600" />
-              <AlertDescription className="text-amber-800">
-                This transfer&apos;s quote has expired. Please dismiss this
-                transfer and create a new one.
-              </AlertDescription>
-            </Alert>
-            <Button variant="outline" onClick={onClose} className="w-full">
-              Close
-            </Button>
-          </div>
-        ) : (
-          <div className="space-y-6 py-4">
-            {/* Transfer summary */}
-            <div className="space-y-4">
-              {/* You send */}
-              <div className="bg-gray-50 rounded-xl p-4">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs text-gray-500 uppercase tracking-wider">
-                    You send
-                  </span>
-                  <span className="text-xs font-medium text-gray-600 bg-gray-200 px-2 py-0.5 rounded">
-                    USDC
-                  </span>
-                </div>
-                <p className="text-2xl font-bold tabular-nums text-gray-900">
-                  {depositAmount.toLocaleString('en-US', {
-                    minimumFractionDigits: 2,
-                  })}
-                </p>
-                {feeAmount > 0 && (
-                  <p className="text-xs text-gray-500 mt-1">
-                    Includes{' '}
-                    {feeAmount.toLocaleString('en-US', {
-                      minimumFractionDigits: 2,
-                    })}{' '}
-                    USDC fee
-                  </p>
-                )}
-              </div>
-
-              {/* Arrow */}
-              <div className="flex justify-center">
-                <div className="h-8 w-8 rounded-full bg-gray-100 flex items-center justify-center">
-                  <ArrowRight className="h-4 w-4 text-gray-400 rotate-90" />
-                </div>
-              </div>
-
-              {/* Bank receives */}
-              <div className="bg-green-50 border border-green-200 rounded-xl p-4">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs text-green-700 uppercase tracking-wider">
-                    Bank receives
-                  </span>
-                  <span className="text-xs font-medium text-green-700 bg-green-200 px-2 py-0.5 rounded">
-                    {destinationCurrency}
-                  </span>
-                </div>
-                <p className="text-2xl font-bold tabular-nums text-green-700">
-                  {currencySymbol}
-                  {Number(transfer.amount || 0).toLocaleString('en-US', {
-                    minimumFractionDigits: 2,
-                  })}
-                </p>
-                <p className="text-xs text-green-600 mt-1">
-                  Arrives in 1-2 business days
-                </p>
-              </div>
-            </div>
-
-            {/* Details - only show in technical mode */}
-            {isTechnical && (
-              <div className="bg-white border border-gray-200 rounded-lg p-3 space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-500">Network</span>
-                  <span className="font-medium text-gray-900">
-                    {(transfer.deposit_network || 'BASE').toUpperCase()}
-                  </span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-500">Deposit Address</span>
-                  <span className="font-mono text-xs text-gray-600 truncate max-w-[180px]">
-                    {transfer.deposit_address}
-                  </span>
-                </div>
-              </div>
-            )}
-
-            {error && (
-              <Alert className="bg-red-50 border-red-200">
-                <AlertCircle className="h-4 w-4 text-red-600" />
-                <AlertDescription className="text-red-700 text-sm">
-                  {error}
+        <div className="p-6 pt-2 space-y-6">
+          {isExpired ? (
+            <div className="py-2 space-y-4">
+              <Alert className="bg-amber-50/50 border-amber-200/60 rounded-sm">
+                <AlertCircle className="h-4 w-4 text-amber-600" />
+                <AlertDescription className="text-amber-800 text-[13px]">
+                  This quote has expired. Please create a new transfer.
                 </AlertDescription>
               </Alert>
-            )}
-
-            {/* Actions */}
-            <div className="space-y-3">
               <Button
-                onClick={handleSendFunds}
-                disabled={isLoading}
-                className="w-full bg-[#1B29FF] hover:bg-[#1420CC] text-white h-12"
-              >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    {loadingMessage}
-                  </>
-                ) : (
-                  <>
-                    Confirm & Send
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </>
-                )}
-              </Button>
-              <Button
-                variant="ghost"
+                variant="outline"
                 onClick={onClose}
-                disabled={isLoading}
-                className="w-full text-gray-500"
+                className="w-full h-10 rounded-sm text-[13px]"
               >
-                Cancel
+                Close
               </Button>
             </div>
-          </div>
-        )}
+          ) : (
+            <>
+              {/* Transfer Details Card */}
+              <div
+                className={cn(
+                  'border relative',
+                  isTechnical
+                    ? 'border-[#1B29FF]/20 bg-[#1B29FF]/5'
+                    : 'border-[#101010]/10 bg-[#F7F7F2]',
+                )}
+              >
+                {/* You Send Section */}
+                <div className="p-5">
+                  <div className="flex items-center justify-between mb-2">
+                    <span
+                      className={cn(
+                        'text-[10px] uppercase tracking-[0.14em]',
+                        isTechnical
+                          ? 'font-mono text-[#1B29FF]/70'
+                          : 'text-[#101010]/60',
+                      )}
+                    >
+                      You Send
+                    </span>
+                    <span
+                      className={cn(
+                        'px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide',
+                        isTechnical
+                          ? 'bg-[#1B29FF]/10 text-[#1B29FF] font-mono'
+                          : 'bg-[#2775ca]/10 text-[#2775ca] rounded-sm',
+                      )}
+                    >
+                      USDC
+                    </span>
+                  </div>
+                  <p
+                    className={cn(
+                      'text-[24px] font-semibold tabular-nums text-[#101010]',
+                      isTechnical && 'font-mono text-[#1B29FF]',
+                    )}
+                  >
+                    {depositAmount.toLocaleString('en-US', {
+                      minimumFractionDigits: 2,
+                    })}
+                  </p>
+                  {feeAmount > 0 && (
+                    <p className="text-[11px] text-[#101010]/40 mt-1">
+                      Includes{' '}
+                      {feeAmount.toLocaleString('en-US', {
+                        minimumFractionDigits: 2,
+                      })}{' '}
+                      USDC fee
+                    </p>
+                  )}
+                </div>
+
+                {/* Divider with Arrow */}
+                <div className="relative h-px bg-[#101010]/10 flex justify-center">
+                  <div
+                    className={cn(
+                      'absolute -top-3 p-1.5 border border-[#101010]/10',
+                      isTechnical
+                        ? 'bg-white border-[#1B29FF]/20 text-[#1B29FF]'
+                        : 'bg-white text-[#101010]/40 rounded-full',
+                    )}
+                  >
+                    <ArrowDown className="h-3 w-3" />
+                  </div>
+                </div>
+
+                {/* Bank Receives Section */}
+                <div className="p-5">
+                  <div className="flex items-center justify-between mb-2">
+                    <span
+                      className={cn(
+                        'text-[10px] uppercase tracking-[0.14em]',
+                        isTechnical
+                          ? 'font-mono text-[#1B29FF]/70'
+                          : 'text-[#101010]/60',
+                      )}
+                    >
+                      Bank Receives
+                    </span>
+                    <span
+                      className={cn(
+                        'px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide',
+                        isTechnical
+                          ? 'bg-[#1B29FF]/10 text-[#1B29FF] font-mono'
+                          : 'bg-[#10b981]/10 text-[#10b981] rounded-sm',
+                      )}
+                    >
+                      {destinationCurrency}
+                    </span>
+                  </div>
+                  <p
+                    className={cn(
+                      'text-[24px] font-semibold tabular-nums text-[#10b981]',
+                      isTechnical && 'font-mono',
+                    )}
+                  >
+                    {currencySymbol}
+                    {Number(transfer.amount || 0).toLocaleString('en-US', {
+                      minimumFractionDigits: 2,
+                    })}
+                  </p>
+                  <p className="text-[11px] text-[#10b981] mt-1 flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#10b981]" />
+                    Arrives in 1-2 business days
+                  </p>
+                </div>
+              </div>
+
+              {/* Technical Details */}
+              {isTechnical && (
+                <div className="border border-[#1B29FF]/20 bg-white p-3 space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="font-mono text-[10px] text-[#1B29FF]/50 uppercase">
+                      NETWORK
+                    </span>
+                    <span className="font-mono text-[10px] text-[#1B29FF]">
+                      {(transfer.deposit_network || 'BASE').toUpperCase()}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="font-mono text-[10px] text-[#1B29FF]/50 uppercase">
+                      DEPOSIT_ADDR
+                    </span>
+                    <span className="font-mono text-[10px] text-[#1B29FF] truncate max-w-[150px]">
+                      {transfer.deposit_address}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {error && (
+                <Alert className="bg-red-50/50 border-red-200/60 rounded-sm">
+                  <AlertCircle className="h-4 w-4 text-red-600" />
+                  <AlertDescription className="text-red-700 text-[13px]">
+                    {error}
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              {/* Actions */}
+              <div className="space-y-3 pt-2">
+                <Button
+                  onClick={handleSendFunds}
+                  disabled={isLoading}
+                  className={cn(
+                    'w-full h-11 text-[13px] font-medium transition-all',
+                    isTechnical
+                      ? 'bg-white border border-[#1B29FF] text-[#1B29FF] hover:bg-[#1B29FF]/5 rounded-none uppercase font-mono'
+                      : 'bg-[#1B29FF] hover:bg-[#1420CC] text-white rounded-sm',
+                  )}
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      {loadingMessage}
+                    </>
+                  ) : (
+                    <>
+                      Confirm & Send
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </>
+                  )}
+                </Button>
+                <Button
+                  variant="ghost"
+                  onClick={onClose}
+                  disabled={isLoading}
+                  className={cn(
+                    'w-full h-10 text-[12px]',
+                    isTechnical
+                      ? 'text-[#1B29FF]/60 hover:text-[#1B29FF] rounded-none uppercase font-mono'
+                      : 'text-[#101010]/60 hover:text-[#101010] hover:bg-transparent',
+                  )}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </>
+          )}
+        </div>
       </DialogContent>
     </Dialog>
   );

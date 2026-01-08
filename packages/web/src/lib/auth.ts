@@ -13,7 +13,9 @@ try {
   if (privyAppId && privyAppSecret) {
     privyClient = new PrivyClient(privyAppId, privyAppSecret);
   } else {
-    console.warn('Privy environment variables are missing. Authentication will be disabled.');
+    console.warn(
+      'Privy environment variables are missing. Authentication will be disabled.',
+    );
   }
 } catch (error) {
   console.error('Failed to initialize Privy client:', error);
@@ -35,12 +37,21 @@ export async function getUserId(): Promise<string | null> {
   try {
     // In Next.js 14, cookies() returns a Promise
     const cookieStore = await cookies();
+
+    // Check for dev mode impersonation cookie
+    if (process.env.NODE_ENV === 'development') {
+      const devUserId = cookieStore.get('x-dev-user-id')?.value;
+      if (devUserId) {
+        return devUserId;
+      }
+    }
+
     const authorizationToken = cookieStore.get('privy-token')?.value;
-    
+
     if (!authorizationToken || !privyClient) {
       return null;
     }
-    
+
     // Verify the token and get the user
     const { userId } = await privyClient.verifyAuthToken(authorizationToken);
     return userId;
@@ -72,18 +83,36 @@ export async function isAuthenticated(): Promise<boolean> {
  */
 export async function getUser() {
   const userId = await getUserId();
-  
+
   if (!userId) {
     return null;
   }
-  
+
+  // Mock user for dev mode
+  if (
+    process.env.NODE_ENV === 'development' &&
+    userId === 'did:privy:demo_user'
+  ) {
+    return {
+      id: userId,
+      email: { address: 'demo@0.finance' },
+      wallet: { address: '0x954A329e1e59101DF529CC54A54666A0b36Cae22' }, // Mock Safe address as wallet for simplicity
+      linkedAccounts: [
+        {
+          type: 'smart_wallet',
+          address: '0x954A329e1e59101DF529CC54A54666A0b36Cae22', // Mock Safe
+        },
+      ],
+    };
+  }
+
   try {
     // Check if privyClient is properly initialized
     if (!privyClient || typeof privyClient.getUser !== 'function') {
       console.error('Privy client is not properly initialized');
       return null;
     }
-    
+
     const user = await privyClient.getUser(userId);
     return user;
   } catch (error) {

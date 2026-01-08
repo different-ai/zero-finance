@@ -198,9 +198,8 @@ function mergeBankAndCryptoTransactions(
       usedCryptoHashes.add(matchingCrypto.hash);
     }
 
-    // Parse bank account snapshot if available
-    const bankSnapshot =
-      bankTx.source === 'offramp_transfer' ? parseBankSnapshot(bankTx) : null;
+    // Parse bank account snapshot if available (API now sends bankAccountDetails directly)
+    const bankSnapshot = bankTx.bankAccountDetails || null;
 
     const isAgentProposal = bankTx.proposedByAgent;
     const needsAction =
@@ -328,23 +327,6 @@ function mergeBankAndCryptoTransactions(
   unified.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
 
   return unified;
-}
-
-function parseBankSnapshot(bankTx: BankTransaction): {
-  bankName?: string;
-  accountMask?: string;
-  accountType?: string;
-  recipientName?: string;
-} | null {
-  // Use the bankAccountDetails from the API response
-  if (!bankTx.bankAccountDetails) return null;
-
-  return {
-    bankName: bankTx.bankAccountDetails.bankName,
-    accountMask: bankTx.bankAccountDetails.accountMask,
-    accountType: bankTx.bankAccountDetails.accountType,
-    recipientName: bankTx.bankAccountDetails.recipientName,
-  };
 }
 
 // =============================================================================
@@ -481,30 +463,29 @@ function TransactionRow({
             {/* Agent proposal actions */}
             {tx.category === 'agent_proposal' && tx.needsAction && (
               <div
-                className="flex items-center gap-2"
+                className="flex items-center gap-1.5 flex-shrink-0"
                 onClick={(e) => e.stopPropagation()}
               >
                 <Button
-                  variant="outline"
                   size="sm"
                   onClick={onApprove}
                   disabled={isActionPending}
-                  className="h-8 px-3 text-[#1B29FF] border-[#1B29FF]/30 hover:bg-[#1B29FF]/5"
+                  className="h-7 px-2.5 bg-[#1B29FF] hover:bg-[#1420CC] text-white text-[11px] font-medium rounded-sm"
                 >
-                  <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
-                  Review & Approve
+                  <Play className="h-3 w-3 mr-1 fill-current" />
+                  <span className="hidden sm:inline">Approve</span>
                 </Button>
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={onDismiss}
                   disabled={isActionPending}
-                  className="h-8 w-8 p-0 text-gray-400 hover:text-gray-600"
+                  className="h-7 w-7 p-0 text-[#101010]/40 hover:text-[#101010]/60 hover:bg-[#101010]/5 rounded-sm"
                 >
                   {isActionPending ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
                   ) : (
-                    <X className="h-4 w-4" />
+                    <X className="h-3.5 w-3.5" />
                   )}
                 </Button>
               </div>

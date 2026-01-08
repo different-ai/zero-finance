@@ -1033,13 +1033,21 @@ async function proposeBankTransfer(
       destinationCurrency: destination_currency,
       destinationPaymentRails: paymentRails,
       destinationBankAccountId: saved_bank_account_id,
-      destinationBankAccountSnapshot: JSON.stringify({
-        bankName: bankAccount.bankName,
-        accountType: bankAccount.accountType,
-        last4:
-          bankAccount.ibanNumber?.slice(-4) ||
-          bankAccount.accountNumber?.slice(-4),
-      }),
+      destinationBankAccountSnapshot: {
+        // Use snake_case to match Align API format expected by getBankingHistory
+        bank_name: bankAccount.bankName,
+        account_type: bankAccount.accountType,
+        account_holder_type: bankAccount.accountHolderType,
+        account_holder_first_name: bankAccount.accountHolderFirstName,
+        account_holder_last_name: bankAccount.accountHolderLastName,
+        account_holder_business_name: bankAccount.accountHolderBusinessName,
+        us: bankAccount.accountNumber
+          ? { account_number: bankAccount.accountNumber }
+          : undefined,
+        iban: bankAccount.ibanNumber
+          ? { iban_number: bankAccount.ibanNumber }
+          : undefined,
+      },
       depositAmount: amount_usdc, // Simplified for mock
       depositToken: 'USDC',
       depositNetwork: 'BASE',
