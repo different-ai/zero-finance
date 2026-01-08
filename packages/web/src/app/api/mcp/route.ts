@@ -889,25 +889,31 @@ async function getBalance(
       ),
     });
 
-    // Get in-flight transfers to subtract from available balance
-    // NOTE: 'pending' = awaiting user approval (funds NOT moved yet)
-    //       'processing' = user approved, funds being sent (funds ARE committed)
-    // Only subtract 'processing' transfers - those are the ones where funds are committed
-    const inFlightTransfers = await db.query.offrampTransfers.findMany({
+    // Get all non-dismissed transfers to calculate balance
+    // NOTE: 'pending' = awaiting user approval (funds NOT moved yet) - don't subtract
+    //       'processing' = user approved, funds being sent (funds ARE committed) - subtract
+    //       'completed' = done, money already sent - subtract
+    const allTransfers = await db.query.offrampTransfers.findMany({
       where: and(
         eq(offrampTransfers.workspaceId, context.workspaceId),
         eq(offrampTransfers.dismissed, false),
-        eq(offrampTransfers.status, 'processing'), // Only processing, NOT pending
       ),
     });
 
-    const inFlightAmount = inFlightTransfers.reduce(
-      (sum, t) => sum + parseFloat(t.depositAmount || '0'),
-      0,
-    );
+    // Calculate amounts by status
+    const completedAmount = allTransfers
+      .filter((t) => t.status === 'completed')
+      .reduce((sum, t) => sum + parseFloat(t.depositAmount || '0'), 0);
 
-    // Base mock balance is $1.2M, subtract in-flight transfers
-    const availableBalance = Math.max(0, 1200000 - inFlightAmount);
+    const processingAmount = allTransfers
+      .filter((t) => t.status === 'processing')
+      .reduce((sum, t) => sum + parseFloat(t.depositAmount || '0'), 0);
+
+    // Total deducted = completed + processing (pending doesn't count)
+    const totalDeducted = completedAmount + processingAmount;
+
+    // Base mock balance is $1.2M, subtract completed + processing transfers
+    const availableBalance = Math.max(0, 1200000 - totalDeducted);
 
     return {
       content: [
@@ -915,7 +921,8 @@ async function getBalance(
           type: 'text',
           text: JSON.stringify({
             usdc_balance: availableBalance.toFixed(2),
-            in_flight_transfers: inFlightAmount.toFixed(2),
+            completed_transfers: completedAmount.toFixed(2),
+            processing_transfers: processingAmount.toFixed(2),
             safe_address:
               primarySafe?.safeAddress ||
               '0x954A329e1e59101DF529CC54A54666A0b36Cae22',

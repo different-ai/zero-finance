@@ -232,37 +232,54 @@ export const devRouter = router({
       };
     }
 
-    // Get in-flight transfers to subtract from idle balance
-    // NOTE: 'pending' = awaiting user approval (funds NOT moved yet)
-    //       'processing' = user approved, funds being sent (funds ARE committed)
-    //       'completed' = done
-    // Only subtract 'processing' transfers - those are the ones where funds are committed
-    const inFlightTransfers = await db.query.offrampTransfers.findMany({
+    // Get all non-dismissed transfers to calculate balance
+    // NOTE: 'pending' = awaiting user approval (funds NOT moved yet) - don't subtract
+    //       'processing' = user approved, funds being sent (funds ARE committed) - subtract
+    //       'completed' = done, money already sent - subtract
+    const allTransfers = await db.query.offrampTransfers.findMany({
       where: and(
         eq(offrampTransfers.workspaceId, user.primaryWorkspaceId),
         eq(offrampTransfers.dismissed, false),
-        eq(offrampTransfers.status, 'processing'), // Only processing, NOT pending
       ),
     });
 
-    const inFlightAmount = inFlightTransfers.reduce(
-      (sum, t) => sum + parseFloat(t.depositAmount || '0'),
-      0,
-    );
+    // Calculate amounts by status
+    const completedAmount = allTransfers
+      .filter((t) => t.status === 'completed')
+      .reduce((sum, t) => sum + parseFloat(t.depositAmount || '0'), 0);
 
-    // Base mock balances
+    const processingAmount = allTransfers
+      .filter((t) => t.status === 'processing')
+      .reduce((sum, t) => sum + parseFloat(t.depositAmount || '0'), 0);
+
+    const pendingAmount = allTransfers
+      .filter((t) => t.status === 'pending')
+      .reduce((sum, t) => sum + parseFloat(t.depositAmount || '0'), 0);
+
+    // Base mock balances (starting point)
     const BASE_EARNING = 1000000; // $1M in vaults
     const BASE_IDLE = 200000; // $200k idle
 
-    // Only subtract processing transfers (funds committed but not yet settled)
-    const idleBalance = Math.max(0, BASE_IDLE - inFlightAmount);
-    const spendableBalance = BASE_EARNING + idleBalance;
+    // Subtract completed + processing from idle balance (money that's gone or committed)
+    // Pending transfers don't reduce balance - user hasn't approved yet
+    const totalDeducted = completedAmount + processingAmount;
+    const idleBalance = Math.max(0, BASE_IDLE - totalDeducted);
+
+    // If idle is depleted, start deducting from earning
+    const earningBalance = Math.max(
+      0,
+      BASE_EARNING - Math.max(0, totalDeducted - BASE_IDLE),
+    );
+
+    const spendableBalance = earningBalance + idleBalance;
 
     return {
-      earningBalance: BASE_EARNING,
+      earningBalance,
       idleBalance,
       spendableBalance,
-      inFlightAmount,
+      completedAmount,
+      processingAmount,
+      pendingAmount,
     };
   }),
 });
