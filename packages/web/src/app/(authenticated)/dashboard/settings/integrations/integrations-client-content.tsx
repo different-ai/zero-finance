@@ -53,7 +53,7 @@ function InstallMcpCommand({ apiKey }: { apiKey: string }) {
   const isTestToken = apiKey.startsWith('zf_test_');
   const tokenType = isTestToken ? 'Test' : 'Live';
 
-  const installCommand = `npx install-mcp @anthropic-ai/mcp-server-sse --url ${baseUrl}/api/mcp -H "Authorization: Bearer ${apiKey}" --client claude`;
+  const installCommand = `npx install-mcp ${baseUrl}/api/mcp --client claude --header "Authorization: Bearer ${apiKey}"`;
 
   const handleCopyCommand = async () => {
     await navigator.clipboard.writeText(installCommand);
