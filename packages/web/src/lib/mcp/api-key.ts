@@ -99,12 +99,16 @@ export async function validateApiKey(
     .execute()
     .catch((err) => console.error('Failed to update API key last used:', err));
 
+  // Test tokens (zf_test_*) enable mock mode - bypasses real blockchain/KYC calls
+  const isMockMode = rawKey.startsWith(KEY_PREFIX_TEST);
+
   return {
     workspaceId: key.workspaceId,
     workspaceName: key.workspaceName,
     keyId: key.keyId,
     keyName: key.keyName,
     alignCustomerId: key.alignCustomerId,
+    isMockMode,
   };
 }
 
