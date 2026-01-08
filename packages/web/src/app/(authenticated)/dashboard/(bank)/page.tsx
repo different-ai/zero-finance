@@ -146,6 +146,15 @@ export default async function DashboardPage(props: {
             </Suspense>
 
             {/* Savings/Yield Section */}
+            {(() => {
+              console.log(
+                '[Dashboard] userId:',
+                userId,
+                'isDemoUser:',
+                userId === 'did:privy:demo_user',
+              );
+              return null;
+            })()}
             <SavingsSection
               mode={userId === 'did:privy:demo_user' ? 'demo' : 'real'}
             />
