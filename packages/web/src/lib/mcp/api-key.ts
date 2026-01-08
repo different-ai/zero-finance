@@ -13,6 +13,7 @@ export interface ApiKeyContext {
   keyId: string;
   keyName: string;
   alignCustomerId: string | null;
+  isMockMode?: boolean;
 }
 
 /**
@@ -109,6 +110,8 @@ export async function validateApiKey(
 
 /**
  * Create a new API key for a workspace
+ * In development mode, creates test tokens (zf_test_)
+ * In production, creates live tokens (zf_live_)
  */
 export async function createApiKey(params: {
   workspaceId: string;
@@ -116,7 +119,8 @@ export async function createApiKey(params: {
   createdBy: string; // Privy DID
   expiresAt?: Date;
 }): Promise<{ rawKey: string; keyId: string }> {
-  const { rawKey, keyPrefix, keyHash } = generateApiKey();
+  const isTest = process.env.NODE_ENV === 'development';
+  const { rawKey, keyPrefix, keyHash } = generateApiKey(isTest);
 
   const [inserted] = await db
     .insert(workspaceApiKeys)
