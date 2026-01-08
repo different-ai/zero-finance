@@ -445,13 +445,14 @@ export async function POST(request: NextRequest) {
             {
               name: 'attach_document',
               description:
-                'Attach a document to a transaction. Accepts base64 file content or URL.',
+                'Attach a document to a transaction. Accepts base64 file content or URL. IMPORTANT: Use the transaction_id (UUID) returned from propose_bank_transfer, NOT the proposal_id.',
               inputSchema: {
                 type: 'object',
                 properties: {
                   transaction_id: {
                     type: 'string',
-                    description: 'ID of the transaction to attach to',
+                    description:
+                      'UUID of the transaction to attach to. Use the transaction_id from propose_bank_transfer response.',
                   },
                   transaction_type: {
                     type: 'string',
@@ -1048,43 +1049,46 @@ async function proposeBankTransfer(
 
   // Mock Mode: Skip Align API
   if (context.isMockMode) {
-    const mockTransferId = `mock_tx_${Date.now()}`;
+    const mockAlignTransferId = `mock_tx_${Date.now()}`;
     const mockDepositAddress = '0x1234567890123456789012345678901234567890';
     const feeAmount = '0.50';
 
-    await db.insert(offrampTransfers).values({
-      userId: workspace.createdBy,
-      workspaceId: context.workspaceId,
-      alignTransferId: mockTransferId,
-      status: 'pending',
-      amountToSend: amount_usdc,
-      destinationCurrency: destination_currency,
-      destinationPaymentRails: paymentRails,
-      destinationBankAccountId: saved_bank_account_id,
-      destinationBankAccountSnapshot: {
-        // Use snake_case to match Align API format expected by getBankingHistory
-        bank_name: bankAccount.bankName,
-        account_type: bankAccount.accountType,
-        account_holder_type: bankAccount.accountHolderType,
-        account_holder_first_name: bankAccount.accountHolderFirstName,
-        account_holder_last_name: bankAccount.accountHolderLastName,
-        account_holder_business_name: bankAccount.accountHolderBusinessName,
-        us: bankAccount.accountNumber
-          ? { account_number: bankAccount.accountNumber }
-          : undefined,
-        iban: bankAccount.ibanNumber
-          ? { iban_number: bankAccount.ibanNumber }
-          : undefined,
-      },
-      depositAmount: amount_usdc, // Simplified for mock
-      depositToken: 'USDC',
-      depositNetwork: 'BASE',
-      depositAddress: mockDepositAddress,
-      feeAmount: feeAmount,
-      quoteExpiresAt: new Date(Date.now() + 3600000), // 1 hour
-      proposedByAgent: true,
-      agentProposalMessage: reason || 'Proposed via MCP agent',
-    });
+    const [insertedTransfer] = await db
+      .insert(offrampTransfers)
+      .values({
+        userId: workspace.createdBy,
+        workspaceId: context.workspaceId,
+        alignTransferId: mockAlignTransferId,
+        status: 'pending',
+        amountToSend: amount_usdc,
+        destinationCurrency: destination_currency,
+        destinationPaymentRails: paymentRails,
+        destinationBankAccountId: saved_bank_account_id,
+        destinationBankAccountSnapshot: {
+          // Use snake_case to match Align API format expected by getBankingHistory
+          bank_name: bankAccount.bankName,
+          account_type: bankAccount.accountType,
+          account_holder_type: bankAccount.accountHolderType,
+          account_holder_first_name: bankAccount.accountHolderFirstName,
+          account_holder_last_name: bankAccount.accountHolderLastName,
+          account_holder_business_name: bankAccount.accountHolderBusinessName,
+          us: bankAccount.accountNumber
+            ? { account_number: bankAccount.accountNumber }
+            : undefined,
+          iban: bankAccount.ibanNumber
+            ? { iban_number: bankAccount.ibanNumber }
+            : undefined,
+        },
+        depositAmount: amount_usdc, // Simplified for mock
+        depositToken: 'USDC',
+        depositNetwork: 'BASE',
+        depositAddress: mockDepositAddress,
+        feeAmount: feeAmount,
+        quoteExpiresAt: new Date(Date.now() + 3600000), // 1 hour
+        proposedByAgent: true,
+        agentProposalMessage: reason || 'Proposed via MCP agent',
+      })
+      .returning({ id: offrampTransfers.id });
 
     return {
       content: [
@@ -1092,10 +1096,11 @@ async function proposeBankTransfer(
           type: 'text',
           text: JSON.stringify({
             success: true,
-            proposal_id: mockTransferId,
+            transaction_id: insertedTransfer.id, // UUID for attach_document
+            proposal_id: mockAlignTransferId, // Keep for backwards compatibility
             status: 'pending_user_approval',
             message:
-              'Transfer proposed. User must approve in the 0 Finance dashboard.',
+              'Transfer proposed. User must approve in the 0 Finance dashboard. Use transaction_id to attach documents.',
             details: {
               amount_usdc,
               destination_currency,
@@ -1160,33 +1165,36 @@ async function proposeBankTransfer(
     alignBankAccount,
   );
 
-  await db.insert(offrampTransfers).values({
-    userId: workspace.createdBy,
-    workspaceId: context.workspaceId,
-    alignTransferId: transfer.id,
-    status: transfer.status as any,
-    amountToSend: amount_usdc,
-    destinationCurrency: destination_currency,
-    destinationPaymentRails: paymentRails,
-    destinationBankAccountId: saved_bank_account_id,
-    destinationBankAccountSnapshot: JSON.stringify({
-      bankName: bankAccount.bankName,
-      accountType: bankAccount.accountType,
-      last4:
-        bankAccount.ibanNumber?.slice(-4) ||
-        bankAccount.accountNumber?.slice(-4),
-    }),
-    depositAmount: transfer.quote.deposit_amount,
-    depositToken: transfer.quote.deposit_token,
-    depositNetwork: transfer.quote.deposit_network,
-    depositAddress: transfer.quote.deposit_blockchain_address,
-    feeAmount: transfer.quote.fee_amount,
-    quoteExpiresAt: transfer.quote.expires_at
-      ? new Date(transfer.quote.expires_at)
-      : null,
-    proposedByAgent: true,
-    agentProposalMessage: reason || 'Proposed via MCP agent',
-  });
+  const [insertedTransfer] = await db
+    .insert(offrampTransfers)
+    .values({
+      userId: workspace.createdBy,
+      workspaceId: context.workspaceId,
+      alignTransferId: transfer.id,
+      status: transfer.status as any,
+      amountToSend: amount_usdc,
+      destinationCurrency: destination_currency,
+      destinationPaymentRails: paymentRails,
+      destinationBankAccountId: saved_bank_account_id,
+      destinationBankAccountSnapshot: JSON.stringify({
+        bankName: bankAccount.bankName,
+        accountType: bankAccount.accountType,
+        last4:
+          bankAccount.ibanNumber?.slice(-4) ||
+          bankAccount.accountNumber?.slice(-4),
+      }),
+      depositAmount: transfer.quote.deposit_amount,
+      depositToken: transfer.quote.deposit_token,
+      depositNetwork: transfer.quote.deposit_network,
+      depositAddress: transfer.quote.deposit_blockchain_address,
+      feeAmount: transfer.quote.fee_amount,
+      quoteExpiresAt: transfer.quote.expires_at
+        ? new Date(transfer.quote.expires_at)
+        : null,
+      proposedByAgent: true,
+      agentProposalMessage: reason || 'Proposed via MCP agent',
+    })
+    .returning({ id: offrampTransfers.id });
 
   return {
     content: [
@@ -1194,10 +1202,11 @@ async function proposeBankTransfer(
         type: 'text',
         text: JSON.stringify({
           success: true,
-          proposal_id: transfer.id,
+          transaction_id: insertedTransfer.id, // UUID for attach_document
+          proposal_id: transfer.id, // Keep for backwards compatibility (Align ID)
           status: 'pending_user_approval',
           message:
-            'Transfer proposed. User must approve in the 0 Finance dashboard.',
+            'Transfer proposed. User must approve in the 0 Finance dashboard. Use transaction_id to attach documents.',
           details: {
             amount_usdc,
             destination_currency,
