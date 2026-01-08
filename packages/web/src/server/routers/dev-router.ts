@@ -8,8 +8,9 @@ import {
   userSafes,
   userWalletsTable,
   userProfilesTable,
+  offrampTransfers,
 } from '@/db/schema';
-import { eq } from 'drizzle-orm';
+import { eq, and, inArray } from 'drizzle-orm';
 import { randomBytes } from 'crypto';
 
 // Constants for demo data
@@ -201,6 +202,67 @@ export const devRouter = router({
       userDid: DEMO_USER_DID,
       workspaceId: user!.primaryWorkspaceId,
       logs,
+    };
+  }),
+
+  /**
+   * Get mock balances for demo mode
+   * Returns balances with pending transfers already subtracted
+   */
+  getMockBalances: publicProcedure.query(async () => {
+    // Only allow in development
+    if (process.env.NODE_ENV !== 'development') {
+      throw new TRPCError({
+        code: 'FORBIDDEN',
+        message: 'This endpoint is only available in development mode',
+      });
+    }
+
+    // Get demo user's workspace
+    const user = await db.query.users.findFirst({
+      where: eq(users.privyDid, DEMO_USER_DID),
+    });
+
+    if (!user?.primaryWorkspaceId) {
+      return {
+        earningBalance: 1000000,
+        idleBalance: 200000,
+        spendableBalance: 1200000,
+        pendingAmount: 0,
+      };
+    }
+
+    // Get in-flight transfers to subtract from idle balance
+    // NOTE: 'pending' = awaiting user approval (funds NOT moved yet)
+    //       'processing' = user approved, funds being sent (funds ARE committed)
+    //       'completed' = done
+    // Only subtract 'processing' transfers - those are the ones where funds are committed
+    const inFlightTransfers = await db.query.offrampTransfers.findMany({
+      where: and(
+        eq(offrampTransfers.workspaceId, user.primaryWorkspaceId),
+        eq(offrampTransfers.dismissed, false),
+        eq(offrampTransfers.status, 'processing'), // Only processing, NOT pending
+      ),
+    });
+
+    const inFlightAmount = inFlightTransfers.reduce(
+      (sum, t) => sum + parseFloat(t.depositAmount || '0'),
+      0,
+    );
+
+    // Base mock balances
+    const BASE_EARNING = 1000000; // $1M in vaults
+    const BASE_IDLE = 200000; // $200k idle
+
+    // Only subtract processing transfers (funds committed but not yet settled)
+    const idleBalance = Math.max(0, BASE_IDLE - inFlightAmount);
+    const spendableBalance = BASE_EARNING + idleBalance;
+
+    return {
+      earningBalance: BASE_EARNING,
+      idleBalance,
+      spendableBalance,
+      inFlightAmount,
     };
   }),
 });

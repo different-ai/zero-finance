@@ -9,7 +9,7 @@ import {
 } from '@/db/schema';
 import { transactionAttachments } from '@/db/schema/transaction-attachments';
 import { userSafes } from '@/db/schema/user-safes';
-import { eq, and, desc, isNull } from 'drizzle-orm';
+import { eq, and, desc, isNull, inArray } from 'drizzle-orm';
 import { createPublicClient, http, formatUnits } from 'viem';
 import { base } from 'viem/chains';
 import { alignApi } from '@/server/services/align-api';
@@ -879,7 +879,7 @@ async function getBalance(
     };
   }
 
-  // Mock Mode: Return hardcoded balance
+  // Mock Mode: Return hardcoded balance minus pending transfers
   if (context.isMockMode) {
     const primarySafe = await db.query.userSafes.findFirst({
       where: and(
@@ -889,12 +889,33 @@ async function getBalance(
       ),
     });
 
+    // Get in-flight transfers to subtract from available balance
+    // NOTE: 'pending' = awaiting user approval (funds NOT moved yet)
+    //       'processing' = user approved, funds being sent (funds ARE committed)
+    // Only subtract 'processing' transfers - those are the ones where funds are committed
+    const inFlightTransfers = await db.query.offrampTransfers.findMany({
+      where: and(
+        eq(offrampTransfers.workspaceId, context.workspaceId),
+        eq(offrampTransfers.dismissed, false),
+        eq(offrampTransfers.status, 'processing'), // Only processing, NOT pending
+      ),
+    });
+
+    const inFlightAmount = inFlightTransfers.reduce(
+      (sum, t) => sum + parseFloat(t.depositAmount || '0'),
+      0,
+    );
+
+    // Base mock balance is $1.2M, subtract in-flight transfers
+    const availableBalance = Math.max(0, 1200000 - inFlightAmount);
+
     return {
       content: [
         {
           type: 'text',
           text: JSON.stringify({
-            usdc_balance: '1200000.00', // Mock: $1.2M USDC for testing
+            usdc_balance: availableBalance.toFixed(2),
+            in_flight_transfers: inFlightAmount.toFixed(2),
             safe_address:
               primarySafe?.safeAddress ||
               '0x954A329e1e59101DF529CC54A54666A0b36Cae22',
