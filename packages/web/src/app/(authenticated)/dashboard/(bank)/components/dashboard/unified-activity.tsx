@@ -709,14 +709,19 @@ function TransactionRow({
             </div>
           )}
 
-          {/* Attachments section - show for bank sends and crypto sends */}
-          {(tx.category === 'bank_send' || tx.category === 'crypto_send') &&
+          {/* Attachments section - show for bank sends, crypto sends, and agent proposals */}
+          {(tx.category === 'bank_send' ||
+            tx.category === 'crypto_send' ||
+            tx.category === 'agent_proposal') &&
             tx.id && (
               <>
                 <div className="border-t border-[#101010]/10 my-3" />
                 <TransactionAttachments
                   transactionType={
-                    tx.category === 'bank_send' ? 'offramp' : 'crypto_outgoing'
+                    tx.category === 'bank_send' ||
+                    tx.category === 'agent_proposal'
+                      ? 'offramp'
+                      : 'crypto_outgoing'
                   }
                   transactionId={tx.id}
                 />

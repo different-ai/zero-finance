@@ -1084,7 +1084,7 @@ async function proposeBankTransfer(
         depositNetwork: 'BASE',
         depositAddress: mockDepositAddress,
         feeAmount: feeAmount,
-        quoteExpiresAt: new Date(Date.now() + 3600000), // 1 hour
+        quoteExpiresAt: null, // Mock transfers don't expire
         proposedByAgent: true,
         agentProposalMessage: reason || 'Proposed via MCP agent',
       })
@@ -1107,7 +1107,7 @@ async function proposeBankTransfer(
               destination_amount: amount_usdc, // Simplified
               fee_usdc: feeAmount,
               bank_account: bankAccount.bankName,
-              expires_at: new Date(Date.now() + 3600000).toISOString(),
+              expires_at: null, // Mock transfers don't expire
             },
           }),
         },
