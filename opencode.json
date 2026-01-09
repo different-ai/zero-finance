@@ -11,14 +11,6 @@
       "url": "https://mcp.notion.com/mcp",
       "enabled": true
     },
-    "chrome": {
-      "type": "local",
-      "command": [
-        "bash",
-        "-c",
-        "source ~/.nvm/nvm.sh && npx -y chrome-devtools-mcp@latest"
-      ]
-    },
     "zero-finance": {
       "type": "remote",
       "url": "https://www.0.finance/api/mcp",
@@ -28,5 +20,5 @@
       "enabled": true
     }
   },
-  
+  "plugin": ["@different-ai/opencode-browser"]
 }
