@@ -78,21 +78,32 @@ export function DashboardSummaryWrapper({
     },
   );
 
+  // In demo mode, fetch balances from dev router (handles pending transfer subtraction)
+  const { data: mockBalances } = trpc.dev.getMockBalances.useQuery(undefined, {
+    enabled: isDemoMode,
+    refetchInterval: 5000, // Refresh frequently to reflect pending transfers
+  });
+
   // Calculate total savings balance from vault positions (earning balance)
   const earningBalance = useMemo(() => {
-    if (isDemoMode) return 901323.0;
+    if (isDemoMode) return mockBalances?.earningBalance ?? 1000000.0;
     if (!userPositions) return 0;
 
     return userPositions.reduce((total, position) => {
       return total + (position.assetsUsd || 0);
     }, 0);
-  }, [userPositions, isDemoMode]);
+  }, [userPositions, isDemoMode, mockBalances?.earningBalance]);
 
   // Idle balance = USDC in Safe (not earning)
-  const idleBalance = checkingBalanceUsd;
+  // In demo mode, this comes from the dev router which subtracts pending transfers
+  const idleBalance = isDemoMode
+    ? (mockBalances?.idleBalance ?? 200000.0)
+    : checkingBalanceUsd;
 
   // Spendable = Total (Earning + Idle)
-  const spendableBalance = earningBalance + idleBalance;
+  const spendableBalance = isDemoMode
+    ? (mockBalances?.spendableBalance ?? 1200000.0)
+    : earningBalance + idleBalance;
 
   // Build vault positions with APY for transfer flow (Base chain only)
   // Note: vaultStats is optional - we can still withdraw without APY data

@@ -43,7 +43,17 @@ import { formatDistanceToNow } from 'date-fns';
 function InstallMcpCommand({ apiKey }: { apiKey: string }) {
   const [copiedCommand, setCopiedCommand] = useState(false);
 
-  const installCommand = `npx install-mcp https://www.0.finance/api/mcp --client claude --header "Authorization: Bearer ${apiKey}"`;
+  // In development, point to localhost:3050
+  const baseUrl =
+    process.env.NODE_ENV === 'development'
+      ? 'http://localhost:3050'
+      : 'https://www.0.finance';
+
+  // Determine if this is a test or live token based on prefix
+  const isTestToken = apiKey.startsWith('zf_test_');
+  const tokenType = isTestToken ? 'Test' : 'Live';
+
+  const installCommand = `npx install-mcp ${baseUrl}/api/mcp --client claude --header "Authorization: Bearer ${apiKey}"`;
 
   const handleCopyCommand = async () => {
     await navigator.clipboard.writeText(installCommand);
@@ -58,6 +68,11 @@ function InstallMcpCommand({ apiKey }: { apiKey: string }) {
         <Terminal className="h-4 w-4 text-[#101010]/60" />
         <span className="text-[13px] font-medium text-[#101010]">
           Quick Install
+        </span>
+        <span
+          className={`inline-flex items-center px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide ${isTestToken ? 'bg-[#f59e0b]/10 text-[#f59e0b]' : 'bg-[#10B981]/10 text-[#10B981]'}`}
+        >
+          {tokenType} Token
         </span>
       </div>
       <p className="text-[12px] text-[#101010]/60">
@@ -79,12 +94,8 @@ function InstallMcpCommand({ apiKey }: { apiKey: string }) {
         </button>
       </div>
       <p className="text-[12px] text-[#101010]/60">
-        For other clients, replace{' '}
-        <code className="bg-[#101010]/5 px-1 text-[11px]">claude</code> with:{' '}
-        <code className="bg-[#101010]/5 px-1 text-[11px]">cursor</code>,{' '}
-        <code className="bg-[#101010]/5 px-1 text-[11px]">vscode</code>,{' '}
-        <code className="bg-[#101010]/5 px-1 text-[11px]">windsurf</code>, or{' '}
-        <code className="bg-[#101010]/5 px-1 text-[11px]">cline</code>
+        This command uses install-mcp to configure Claude Desktop with your 0
+        Finance account.
       </p>
     </div>
   );

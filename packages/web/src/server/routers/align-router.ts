@@ -2432,12 +2432,43 @@ export const alignRouter = router({
         alignTransferId: z.string(),
         depositTransactionHash: z
           .string()
-          .regex(/^0x[a-fA-F0-9]{64}$/, 'Invalid transaction hash'),
+          .regex(
+            /^(0x[a-fA-F0-9]{64}|0x_mock_hash_[a-zA-Z0-9_]+)$/,
+            'Invalid transaction hash',
+          ),
       }),
     )
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.user.id;
       const workspaceId = ctx.workspaceId;
+
+      // Mock Mode Bypass
+      if (input.alignTransferId.startsWith('mock_')) {
+        const internalTransfer = await db.query.offrampTransfers.findFirst({
+          where: eq(offrampTransfers.alignTransferId, input.alignTransferId),
+        });
+
+        if (!internalTransfer) {
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'Mock transfer not found',
+          });
+        }
+
+        await db
+          .update(offrampTransfers)
+          .set({
+            status: 'completed',
+            transactionHash: input.depositTransactionHash,
+            updatedAt: new Date(),
+          })
+          .where(eq(offrampTransfers.id, internalTransfer.id));
+
+        return {
+          alignTransferId: input.alignTransferId,
+          status: 'completed',
+        };
+      }
 
       const user = await db.query.users.findFirst({
         where: eq(users.privyDid, userId),
@@ -3866,7 +3897,8 @@ export const alignRouter = router({
           let bankAccountDetails: UnifiedTransaction['bankAccountDetails'] =
             null;
           if (tx.destinationBankAccountSnapshot) {
-            const snapshot = tx.destinationBankAccountSnapshot as {
+            // Handle both string (legacy/double-encoded) and object formats
+            let snapshot: {
               bank_name?: string;
               account_holder_first_name?: string;
               account_holder_last_name?: string;
@@ -3876,6 +3908,16 @@ export const alignRouter = router({
               us?: { account_number?: string };
               iban?: { iban_number?: string };
             };
+
+            if (typeof tx.destinationBankAccountSnapshot === 'string') {
+              try {
+                snapshot = JSON.parse(tx.destinationBankAccountSnapshot);
+              } catch {
+                snapshot = {};
+              }
+            } else {
+              snapshot = tx.destinationBankAccountSnapshot as typeof snapshot;
+            }
 
             // Build recipient name
             let recipientName: string | undefined;

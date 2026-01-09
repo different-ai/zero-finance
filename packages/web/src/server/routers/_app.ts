@@ -22,6 +22,7 @@ import { invoicePreferencesRouter } from './invoice-preferences-router';
 import { workspaceRouter } from './workspace-router';
 import { vaultAnalyticsRouter } from './vault-analytics-router';
 import { attachmentsRouter } from './attachments-router';
+import { devRouter } from './dev-router';
 
 /**
  * This is the primary router for your server.
@@ -56,6 +57,7 @@ export const appRouter = router({
   workspace: workspaceRouter,
   vaultAnalytics: vaultAnalyticsRouter,
   attachments: attachmentsRouter,
+  dev: devRouter,
 });
 
 // Export type definition of API

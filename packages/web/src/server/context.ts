@@ -48,8 +48,24 @@ export const createContext = async ({
   let workspaceId: string | null = null;
   let workspaceMembershipId: string | null = null;
   try {
-    // getUserId uses next/headers cookies() which works server-side
-    userId = await getUserId();
+    // Check for dev mode impersonation cookie
+    if (process.env.NODE_ENV === 'development') {
+      const cookieStore = await import('next/headers').then((mod) =>
+        mod.cookies(),
+      );
+      const devUserId = cookieStore.get('x-dev-user-id')?.value;
+      if (devUserId) {
+        console.log(`[Dev] Impersonating user: ${devUserId}`);
+        userId = devUserId;
+      }
+    }
+
+    // If not impersonating, try standard auth
+    if (!userId) {
+      // getUserId uses next/headers cookies() which works server-side
+      userId = await getUserId();
+    }
+
     console.log(`0xHypr - userId fetched in context: ${userId}`);
     if (userId) {
       // Fetch and cache full user object from Privy ONCE per request
