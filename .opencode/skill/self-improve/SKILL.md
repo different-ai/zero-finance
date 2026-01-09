@@ -622,3 +622,40 @@ This skill should also improve itself. Track:
 - Better templates or examples found
 - Project-specific knowledge worth preserving
 - Integration patterns with other skills
+
+---
+
+## Learnings Log
+
+### 2026-01-08: Two-Layer Skill Pattern for Notion-Backed Skills
+
+**Context**: Created `company-admin` skill that pulls data from Notion
+
+**Pattern**: For skills that rely on external data (Notion, databases, etc.), create TWO layers:
+
+1. **Notion page section** (in MCP Skills page) - Runtime context the AI fetches
+2. **Local skill file** (`.opencode/skill/*/SKILL.md`) - OpenCode-specific instructions
+
+**Why both?**
+
+- Notion page: Can be updated by anyone, provides live data
+- Local skill: Works offline, has code examples, integrates with skill tool
+
+**Example structure**:
+
+```
+Notion MCP Skills page:
+  ## Company Admin
+  - Trigger keywords
+  - Key resources table
+  - Company details table
+  - How it works
+
+Local .opencode/skill/company-admin/SKILL.md:
+  - Page IDs for direct fetch
+  - Code examples
+  - Security rules
+  - Anti-patterns
+```
+
+**Gotcha**: The skill tool's available skills list may be cached. New skills might not appear immediately in the list but will work when loaded by name.
