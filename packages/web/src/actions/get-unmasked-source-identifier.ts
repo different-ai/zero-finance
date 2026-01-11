@@ -3,14 +3,8 @@
 import { db } from '@/db';
 import { userFundingSources } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
-import { PrivyClient } from '@privy-io/server-auth';
 import { cookies } from 'next/headers';
-
-// Initialize PrivyClient - use correct env var and ensure PRIVY_APP_SECRET is set
-const privy = new PrivyClient(
-  process.env.NEXT_PUBLIC_PRIVY_APP_ID || '', // Corrected env variable name
-  process.env.PRIVY_APP_SECRET || '',
-);
+import { getPrivyClient } from '@/lib/auth';
 
 // Define the return type for the unmasked identifier
 export type UnmaskedSourceIdentifier = {
@@ -20,7 +14,9 @@ export type UnmaskedSourceIdentifier = {
 } | null;
 
 // Rename function and update return type
-export async function getUnmaskedSourceIdentifier(fundingSourceId: string): Promise<UnmaskedSourceIdentifier> {
+export async function getUnmaskedSourceIdentifier(
+  fundingSourceId: string,
+): Promise<UnmaskedSourceIdentifier> {
   // Correctly await cookies()
   const cookieStore = await cookies(); // Added await
   const token = cookieStore.get('privy-token')?.value; // Adjust cookie name if needed
@@ -30,9 +26,14 @@ export async function getUnmaskedSourceIdentifier(fundingSourceId: string): Prom
     return null;
   }
 
+  const privy = await getPrivyClient();
+  if (!privy) {
+    console.error('Privy client not configured');
+    return null;
+  }
+
   let verifiedClaims;
   try {
-    // Use privyClient instance to verify
     verifiedClaims = await privy.verifyAuthToken(token);
   } catch (error) {
     console.error('Auth token verification failed:', error);
@@ -40,10 +41,12 @@ export async function getUnmaskedSourceIdentifier(fundingSourceId: string): Prom
   }
 
   // Assuming the DID is in userId field of the verified claims
-  const privyDid = verifiedClaims.userId; 
+  const privyDid = verifiedClaims.userId;
 
   if (!privyDid) {
-    console.error('Could not extract privyDid (userId) from verified token claims');
+    console.error(
+      'Could not extract privyDid (userId) from verified token claims',
+    );
     return null;
   }
 
@@ -66,8 +69,8 @@ export async function getUnmaskedSourceIdentifier(fundingSourceId: string): Prom
       .where(
         and(
           eq(userFundingSources.id, fundingSourceId),
-          eq(userFundingSources.userPrivyDid, privyDid)
-        )
+          eq(userFundingSources.userPrivyDid, privyDid),
+        ),
       )
       .limit(1);
 
@@ -87,21 +90,28 @@ export async function getUnmaskedSourceIdentifier(fundingSourceId: string): Prom
 
       if (identifier) {
         // Return the full object including routing number if available
-        return { 
-          identifier: identifier, 
+        return {
+          identifier: identifier,
           routingNumber: routingNumber ?? undefined, // Ensure undefined if null
-          type: source.accountType 
+          type: source.accountType,
         };
       } else {
-        console.warn(`Could not determine unmasked identifier for source ${fundingSourceId} of type ${source.accountType}`);
+        console.warn(
+          `Could not determine unmasked identifier for source ${fundingSourceId} of type ${source.accountType}`,
+        );
         return null;
       }
     } else {
-      console.warn(`No source found for id ${fundingSourceId} owned by user ${privyDid}`);
+      console.warn(
+        `No source found for id ${fundingSourceId} owned by user ${privyDid}`,
+      );
       return null;
     }
   } catch (error) {
-    console.error(`Error fetching unmasked identifier for source ${fundingSourceId}:`, error);
-    return null; 
+    console.error(
+      `Error fetching unmasked identifier for source ${fundingSourceId}:`,
+      error,
+    );
+    return null;
   }
-} 
+}

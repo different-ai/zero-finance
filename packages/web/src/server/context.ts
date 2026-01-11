@@ -42,52 +42,27 @@ export const createContext = async ({
   req,
   res,
 }: CreateContextOptions): Promise<Context> => {
-  console.log('0xHypr - createContext called (with userId fetch attempt)');
   let userId: string | null = null;
   let user: any | null = null;
   let workspaceId: string | null = null;
   let workspaceMembershipId: string | null = null;
+
   try {
-    // Check for dev mode impersonation cookie
-    if (process.env.NODE_ENV === 'development') {
-      const cookieStore = await import('next/headers').then((mod) =>
-        mod.cookies(),
-      );
-      const devUserId = cookieStore.get('x-dev-user-id')?.value;
-      if (devUserId) {
-        console.log(`[Dev] Impersonating user: ${devUserId}`);
-        userId = devUserId;
-      }
-    }
+    // getUserId handles dev impersonation in development
+    userId = await getUserId();
 
-    // If not impersonating, try standard auth
-    if (!userId) {
-      // getUserId uses next/headers cookies() which works server-side
-      userId = await getUserId();
-    }
-
-    console.log(`0xHypr - userId fetched in context: ${userId}`);
     if (userId) {
-      // Fetch and cache full user object from Privy ONCE per request
-      // This avoids hitting rate limits from multiple getUser() calls
+      // Fetch and cache full user object ONCE per request.
+      // Prefer fetching by DID to avoid re-reading cookies / re-verifying tokens.
       try {
-        const { getUser } = await import('@/lib/auth');
-        user = await getUser();
-        if (!user) {
-          console.warn(`0xHypr - getUser returned null for userId: ${userId}`);
-        }
+        const { getUserById } = await import('@/lib/auth');
+        user = await getUserById(userId);
       } catch (userError: any) {
-        console.error('0xHypr - Error fetching user in context:', userError);
-        // If rate limited, log but don't fail - we still have userId
-        if (userError?.type === 'too_many_requests') {
-          console.warn(
-            '0xHypr - Rate limited by Privy, continuing with userId only',
-          );
-        }
+        console.error('Error fetching user in context:', userError);
       }
     }
   } catch (error) {
-    console.error('0xHypr - Error fetching userId in context:', error);
+    console.error('Error fetching userId in context:', error);
   }
 
   // Simple console logger implementation
