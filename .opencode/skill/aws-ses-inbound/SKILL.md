@@ -8,6 +8,30 @@ metadata:
   category: email
 ---
 
+## Skill Contract
+
+### Purpose
+
+- Configure SES inbound email reception with SNS webhook delivery.
+
+### Inputs
+
+- AWS credentials, verified domain, and HTTPS webhook endpoint.
+
+### Outputs
+
+- Active receipt rule set and confirmed SNS subscription.
+
+### Completion Signals
+
+- `complete` when the rule set is active and SNS shows confirmed subscription.
+- `continue` when awaiting DNS verification or subscription confirmation.
+- `error` on permission failures or invalid credentials.
+
+### Credential Missing Behavior
+
+- If AWS credentials are missing, ask the user and stop.
+
 ## What I Do
 
 Set up Amazon SES (Simple Email Service) for receiving inbound emails and forwarding them to a webhook via SNS (Simple Notification Service). This is commonly used for:
