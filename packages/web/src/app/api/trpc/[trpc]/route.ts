@@ -1,6 +1,6 @@
 import { fetchRequestHandler } from '@trpc/server/adapters/fetch';
 import { appRouter } from '@/server/routers/_app';
-import { getUser } from '@/lib/auth';
+import { getUserById, getUserId } from '@/lib/auth';
 import type { Context } from '@/server/context';
 import { ensureUserWorkspace } from '@/server/utils/workspace';
 
@@ -42,8 +42,10 @@ const handler = async (req: Request) => {
       let user = null;
       let workspaceId: string | null = null;
       let workspaceMembershipId: string | null = null;
+
       try {
-        user = await getUser();
+        const userId = await getUserId();
+        user = userId ? await getUserById(userId) : null;
       } catch (error) {
         console.warn('Failed to get user in tRPC context', error);
       }

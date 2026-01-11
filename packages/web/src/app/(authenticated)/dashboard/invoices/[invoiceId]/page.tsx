@@ -2,7 +2,6 @@ import React from 'react';
 import { notFound } from 'next/navigation';
 import { appRouter } from '@/server/routers/_app'; // Import the main router
 // import { createContext } from '@/server/context'; // Remove manual context import
-import { userProfileService } from '@/lib/user-profile-service';
 import { getUserId } from '@/lib/auth'; // Need getUserId here now
 import InvoiceClient from '@/components/invoice/invoice-client';
 import { ShareInvoiceLink } from '@/components/invoice/share-invoice-link';
@@ -21,15 +20,18 @@ interface InvoiceDetailsType {
   meta?: { format?: string; version?: string };
   creationDate?: string;
   invoiceNumber?: string;
+  amount?: string | number;
   sellerInfo?: {
-    /* ... */
+    businessName?: string;
+    name?: string;
+    email?: string;
   };
   buyerInfo?: {
-    /* ... */
+    businessName?: string;
+    name?: string;
+    email?: string;
   };
-  invoiceItems?: Array<{
-    /* ... */
-  }>;
+  invoiceItems?: Array<Record<string, unknown>>;
   paymentTerms?: { dueDate?: string };
   note?: string;
   terms?: string;
@@ -96,6 +98,8 @@ export default async function InternalInvoicePage({
 
   // --- Server-Side Data Fetching & Auth ---
   let rawInvoiceData: UserRequest | null = null;
+  // Note: wallet private key is intentionally not fetched here.
+  // Client invoice components do not accept it as a prop, and payments flow via other mechanisms.
   let userWalletKey: string | null = null;
   let fetchError: string | null = null;
 
@@ -141,16 +145,9 @@ export default async function InternalInvoicePage({
       `InternalInvoicePage: Successfully fetched invoice ${invoiceId} for user ${currentUserId}`,
     );
 
-    // 4. Fetch user wallet key (since user is authorized)
-    const wallet = await userProfileService.getOrCreateWallet(currentUserId);
-    userWalletKey = wallet.privateKey;
-
-    if (!userWalletKey) {
-      // Handle specific case of wallet retrieval failure
-      throw new Error(
-        'Failed to retrieve user wallet key after successful auth.',
-      );
-    }
+    // Note: We do not fetch wallet private key here.
+    // This page uses invoice + payment flows that don't require passing a raw key into the client component.
+    userWalletKey = 'not-used';
   } catch (error: any) {
     // Log the specific error that occurred during the try block
     console.error(`Error loading invoice ${invoiceId} for user:`, error);
@@ -179,7 +176,7 @@ export default async function InternalInvoicePage({
 
   // If we got here, we are authorized and have data + wallet key
   // Minor redundant check for safety
-  if (!rawInvoiceData || !userWalletKey) {
+  if (!rawInvoiceData) {
     console.error(
       'InternalInvoicePage: Data or wallet key missing unexpectedly just before render.',
     );
@@ -254,7 +251,7 @@ export default async function InternalInvoicePage({
               <div className="flex gap-2">
                 <PayInvoiceButton
                   invoiceId={invoiceId}
-                  amount={invoiceDetails?.amount?.toString()}
+                  amount={rawInvoiceData.amount ?? undefined}
                   currency={currency}
                   vendorName={
                     invoiceDetails?.sellerInfo?.businessName ||
@@ -274,10 +271,6 @@ export default async function InternalInvoicePage({
             </div>
             <InvoiceClient
               requestId={(rawInvoiceData as UserRequest).id}
-              requestNetworkId={
-                (rawInvoiceData as UserRequest).requestId || undefined
-              }
-              walletPrivateKey={userWalletKey}
               dbInvoiceData={rawInvoiceData as Omit<UserRequest, 'shareToken'>}
               isExternalView={false}
             />

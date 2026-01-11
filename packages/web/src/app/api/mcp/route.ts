@@ -48,17 +48,14 @@ async function authenticateRequest(request: NextRequest) {
   }
   const apiKey = authHeader.slice(7);
 
-  // Backdoor for testing
-  if (apiKey === 'sk_test_magic_key') {
-    // We need a valid workspace ID that exists in the DB for foreign key constraints
-    // Let's try to find one, or use a hardcoded one if we know it exists.
-    // Since I can't query DB here easily without async inside this sync-ish flow (it is async),
-    // I'll just return a mock context and hope the tools handle "workspace not found" gracefully
-    // or I'll use the ID from the script output if I had one.
-    // Actually, the tools query the DB using `context.workspaceId`.
-    // So I need a REAL workspace ID.
-
-    // Let's fetch the first workspace from DB
+  // Dev-only magic key (explicitly configured) for local testing.
+  // Avoid hardcoded keys so this can't be abused in production.
+  const devMagicKey = process.env.MCP_DEV_MAGIC_KEY;
+  if (
+    process.env.NODE_ENV === 'development' &&
+    devMagicKey &&
+    apiKey === devMagicKey
+  ) {
     const workspace = await db.query.workspaces.findFirst({
       where: eq(workspaces.name, 'Demo Workspace'),
     });
@@ -66,8 +63,8 @@ async function authenticateRequest(request: NextRequest) {
       return {
         workspaceId: workspace.id,
         workspaceName: workspace.name || 'Test Workspace',
-        keyId: 'test-key-id',
-        keyName: 'Magic Key',
+        keyId: 'dev-magic-key',
+        keyName: 'Dev Magic Key',
         alignCustomerId: workspace.alignCustomerId,
         isMockMode: true,
       };
@@ -2500,15 +2497,29 @@ async function dismissProposal(
 /**
  * OPTIONS /api/mcp - CORS preflight
  */
-export async function OPTIONS() {
+export async function OPTIONS(request: NextRequest) {
+  const origin = request.headers.get('origin');
+  const allowlist = (process.env.MCP_ALLOWED_ORIGINS || '')
+    .split(',')
+    .map((v) => v.trim())
+    .filter(Boolean);
+
+  const allowedOrigin =
+    !origin || allowlist.length === 0
+      ? '*' // non-browser or not configured
+      : allowlist.includes(origin)
+        ? origin
+        : 'null';
+
   return new NextResponse(null, {
     status: 204,
     headers: {
-      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Origin': allowedOrigin,
       'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
       'Access-Control-Allow-Headers':
         'Content-Type, Authorization, mcp-session-id',
       'Access-Control-Expose-Headers': 'Mcp-Session-Id',
+      Vary: 'Origin',
     },
   });
 }

@@ -3,6 +3,16 @@
 import { cookies } from 'next/headers';
 import { PrivyClient } from '@privy-io/server-auth';
 
+const PRIVY_TOKEN_COOKIE = 'privy-token';
+const DEV_USER_ID_COOKIE = 'x-dev-user-id';
+
+const IS_DEVELOPMENT = process.env.NODE_ENV === 'development';
+const DEV_IMPERSONATION_ENABLED =
+  IS_DEVELOPMENT && process.env.DEV_IMPERSONATION_ENABLED === 'true';
+
+const DEMO_USER_DID = 'did:privy:demo_user';
+const DEMO_SAFE_ADDRESS = '0x954A329e1e59101DF529CC54A54666A0b36Cae22';
+
 // Check for required environment variables
 const privyAppId = process.env.NEXT_PUBLIC_PRIVY_APP_ID;
 const privyAppSecret = process.env.PRIVY_APP_SECRET;
@@ -35,24 +45,22 @@ export async function getPrivyClient(): Promise<PrivyClient | null> {
  */
 export async function getUserId(): Promise<string | null> {
   try {
-    // In Next.js 14, cookies() returns a Promise
     const cookieStore = await cookies();
 
-    // Check for dev mode impersonation cookie
-    if (process.env.NODE_ENV === 'development') {
-      const devUserId = cookieStore.get('x-dev-user-id')?.value;
+    // Dev-only impersonation. Disabled by default.
+    if (DEV_IMPERSONATION_ENABLED) {
+      const devUserId = cookieStore.get(DEV_USER_ID_COOKIE)?.value;
       if (devUserId) {
         return devUserId;
       }
     }
 
-    const authorizationToken = cookieStore.get('privy-token')?.value;
+    const authorizationToken = cookieStore.get(PRIVY_TOKEN_COOKIE)?.value;
 
     if (!authorizationToken || !privyClient) {
       return null;
     }
 
-    // Verify the token and get the user
     const { userId } = await privyClient.verifyAuthToken(authorizationToken);
     return userId;
   } catch (error) {
@@ -78,59 +86,89 @@ export async function isAuthenticated(): Promise<boolean> {
   return !!userId;
 }
 
-/**
- * Gets user data from Privy
- */
-export async function getUser() {
-  const userId = await getUserId();
+function buildDemoUser(userId: string) {
+  return {
+    id: userId,
+    email: { address: 'demo@0.finance' },
+    wallet: { address: DEMO_SAFE_ADDRESS },
+    linkedAccounts: [
+      {
+        type: 'smart_wallet',
+        address: DEMO_SAFE_ADDRESS,
+      },
+    ],
+  };
+}
 
+/**
+ * Gets user data from Privy by DID.
+ * Prefer this over `getUser()` when you already have a DID.
+ */
+export async function getUserById(userId: string) {
   if (!userId) {
     return null;
   }
 
-  // Mock user for dev mode
-  if (
-    process.env.NODE_ENV === 'development' &&
-    userId === 'did:privy:demo_user'
-  ) {
-    return {
-      id: userId,
-      email: { address: 'demo@0.finance' },
-      wallet: { address: '0x954A329e1e59101DF529CC54A54666A0b36Cae22' }, // Mock Safe address as wallet for simplicity
-      linkedAccounts: [
-        {
-          type: 'smart_wallet',
-          address: '0x954A329e1e59101DF529CC54A54666A0b36Cae22', // Mock Safe
-        },
-      ],
-    };
+  // Keep demo mocking, but tie it to explicit impersonation.
+  if (DEV_IMPERSONATION_ENABLED && userId === DEMO_USER_DID) {
+    return buildDemoUser(userId);
+  }
+
+  if (!privyClient || typeof privyClient.getUser !== 'function') {
+    console.warn('Privy client is not initialized; cannot fetch user');
+    return null;
   }
 
   try {
-    // Check if privyClient is properly initialized
-    if (!privyClient || typeof privyClient.getUser !== 'function') {
-      console.error('Privy client is not properly initialized');
-      return null;
-    }
-
-    const user = await privyClient.getUser(userId);
-    return user;
+    return await privyClient.getUser(userId);
   } catch (error) {
     console.error('Error fetching Privy user:', error);
     return null;
   }
 }
 
-export const auth = async () => {
-  // Placeholder for authentication logic
-  // In a real app, this would interact with your auth provider (e.g., NextAuth.js, Privy)
-  // For now, returning a mock session for chat API to proceed
-  console.warn('[Placeholder] Using mock auth() in @/lib/auth.ts');
+/**
+ * Gets user data from Privy based on the current request's auth state.
+ */
+export async function getUser() {
+  const userId = await getUserId();
+  if (!userId) {
+    return null;
+  }
+
+  return getUserById(userId);
+}
+
+export type AuthSession = {
+  user: {
+    id: string;
+    email?: string | null;
+  };
+};
+
+/**
+ * Session helper used by server components/routes that expect a NextAuth-like shape.
+ *
+ * In production this returns a real user session (or null).
+ * In development you can opt into a mock session via `MOCK_AUTH_SESSION=true`.
+ */
+export const auth = async (): Promise<AuthSession | null> => {
+  const user = await getUser();
+
+  if (!user) {
+    if (IS_DEVELOPMENT && process.env.MOCK_AUTH_SESSION === 'true') {
+      return { user: { id: 'mock-user-id' } };
+    }
+    return null;
+  }
+
+  const email =
+    typeof user.email === 'string' ? user.email : (user.email?.address ?? null);
+
   return {
     user: {
-      id: 'mock-user-id',
-      // Add other user properties if your session expects them
+      id: user.id,
+      email,
     },
-    // Add other session properties if expected
   };
 };
