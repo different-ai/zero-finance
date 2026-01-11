@@ -67,6 +67,57 @@ This repo is designed to be fully operational from a fresh `git clone`:
 
 See `.opencode/skill/self-improve/SKILL.md` for details.
 
+## Agent-Native Architecture
+
+### Core Principles
+
+- **Parity** - Any UI action must be possible via tools.
+- **Granularity** - Tools are atomic primitives; logic stays in prompts.
+- **Composability** - New workflows should be new prompts, not new code.
+- **Emergent capability** - Atomic tools enable unexpected outcomes.
+- **Prompt is the workflow** - Natural language defines multi-step flows.
+
+### Capability Map (Template)
+
+| User Action | Agent Method                         |
+| ----------- | ------------------------------------ |
+| Create item | `write`/create tool                  |
+| Update item | `edit`/update tool                   |
+| Delete item | delete tool or explicit removal flow |
+| Search      | `glob`/`grep` or domain search tool  |
+
+### Tool Design Rules
+
+- Provide CRUD completeness for every entity the agent touches.
+- Prefer atomic tools; avoid workflow-shaped tools that hide judgment.
+- Keep primitives available even when you add domain shortcuts.
+- Prefer dynamic capability discovery for external APIs when possible.
+
+### Completion Signals
+
+- Tools and skills must define explicit completion signals.
+- Use clear success/continue/complete semantics; avoid heuristic stopping.
+- If a task is blocked, return a recoverable status and ask for next steps.
+
+### Credential Policy
+
+- If credentials are missing, explicitly ask the user for them.
+- State the exact env var names and the storage location.
+- When a skill declares a collocated `.env`, use that path.
+
+### SKILL.md Standard
+
+Every skill should include:
+
+- Purpose and scope
+- Inputs and outputs
+- Entities + CRUD coverage
+- Tools used (atomic only)
+- Completion criteria
+- Credential requirements
+- Error handling
+- Example prompts
+
 ## Dev server runs on port 3050
 
 ```bash

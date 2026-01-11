@@ -1,5 +1,54 @@
 # AI Email Pipeline
 
+## Skill Contract
+
+### Purpose
+
+- Run the inbound/outbound AI email workflow for 0 Finance.
+
+### Inputs
+
+- Inbound webhook payload (Resend or SES).
+- Session state + attachments.
+- Workspace mapping + AI email handle.
+
+### Outputs
+
+- Updated session state, created/updated invoices/transfers, outbound replies.
+
+### Entities + CRUD Coverage
+
+- Session: create/get/update via `packages/web/src/lib/ai-email/session.ts`; delete not supported.
+- Message: create (append), read (history), update (follow-up), delete not supported.
+- Attachment: create (persist), read (load), update not used, delete not supported.
+- Invoice draft: create/update/send via tools.
+
+### Tools Used (Atomic)
+
+- `extractInvoiceDetails`, `createInvoice`, `updateInvoice`, `requestConfirmation`, `sendReplyToUser`.
+- `sendInvoiceToRecipient`, `getBalance`, `listSavedBankAccounts`, `createBankAccount`, `proposeTransfer`.
+
+### Completion Signals
+
+- `complete` when a reply is sent or a pending action is finalized.
+- `continue` when awaiting user confirmation or clarification.
+- `error` on provider failures or invalid webhook signatures.
+
+### Credentials & Config
+
+- Resend: `RESEND_API_KEY`, `RESEND_WEBHOOK_SECRET`.
+- SES: `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_DEFAULT_REGION`.
+- `EMAIL_PROVIDER` = `resend` or `ses`.
+- `AI_EMAIL_INBOUND_DOMAIN` default `zerofinance.ai`.
+
+### Missing Credential Behavior
+
+- If provider credentials are missing, ask the user and stop.
+
+### Canonical Inbox
+
+- `ben-agent@zerofinance.ai`.
+
 ## Core Mental Model
 
 **The AI email system is a conversation, not a state machine.**

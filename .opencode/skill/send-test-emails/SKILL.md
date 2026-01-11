@@ -2,6 +2,34 @@
 
 Send test/mock emails programmatically using Resend for demos, testing AI email agent, or video recordings.
 
+## Skill Contract
+
+### Purpose
+
+- Send realistic test emails into the AI inbox for demos and pipeline validation.
+
+### Inputs
+
+- Recipient address, subject, and HTML/text body.
+
+### Outputs
+
+- Resend message ID for traceability.
+
+### Canonical Inbox
+
+- `ben-agent@zerofinance.ai`.
+
+### Credentials
+
+- Requires `RESEND_API_KEY` in `.opencode/skill/send-test-emails/.env`.
+- If missing, ask the user to provide it and stop.
+
+### Completion Signals
+
+- `complete` when the message ID is returned.
+- `error` when the send fails.
+
 ## Quick One-Liner
 
 ```bash
@@ -10,13 +38,13 @@ import { Resend } from 'resend';
 import { config } from 'dotenv';
 import * as path from 'path';
 
-config({ path: path.join(process.cwd(), '.env.production.local') });
+config({ path: path.join(process.cwd(), '../../.opencode/skill/send-test-emails/.env') });
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 resend.emails.send({
   from: 'Sender Name <sender@zerofinance.ai>',
-  to: 'ben@0.finance',
+  to: 'ben-agent@zerofinance.ai',
   subject: 'Your subject here',
   html: '<p>Your HTML content</p>',
 }).then(r => console.log('✅ Sent:', r.data?.id));
@@ -48,7 +76,7 @@ await browser.close();
 // Send with attachment
 await resend.emails.send({
   from: 'Name <name@zerofinance.ai>',
-  to: 'ben@0.finance',
+  to: 'ben-agent@zerofinance.ai',
   subject: 'Invoice attached',
   html: '<p>See attached invoice</p>',
   attachments: [
@@ -78,13 +106,16 @@ cd packages/web && npx tsx scripts/send-mock-emails.ts
 
 The Resend API key is in:
 
-- `.env.production.local` - `RESEND_API_KEY`
+- `.opencode/skill/send-test-emails/.env` - `RESEND_API_KEY`
 
 Load it with:
 
 ```typescript
 import { config } from 'dotenv';
-config({ path: '.env.production.local' });
+import * as path from 'path';
+config({
+  path: path.join(process.cwd(), '../../.opencode/skill/send-test-emails/.env'),
+});
 ```
 
 ## Common Use Cases
@@ -95,7 +126,7 @@ Send an email to your AI agent address to test invoice creation:
 
 ```bash
 # Send to your AI email agent
-to: 'ai-ben@zerofinance.ai'
+to: 'ben-agent@zerofinance.ai'
 ```
 
 ### 2. Mock Client Emails for Demos
