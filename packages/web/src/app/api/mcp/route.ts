@@ -807,7 +807,7 @@ async function handleToolCall(
 // Tool implementations
 // =========================================================================
 
-async function listSavedBankAccounts(
+export async function listSavedBankAccounts(
   context: NonNullable<Awaited<ReturnType<typeof validateApiKey>>>,
 ) {
   const workspace = await db.query.workspaces.findFirst({
@@ -859,7 +859,7 @@ async function listSavedBankAccounts(
   };
 }
 
-async function getBalance(
+export async function getBalance(
   context: NonNullable<Awaited<ReturnType<typeof validateApiKey>>>,
 ) {
   const workspace = await db.query.workspaces.findFirst({
@@ -982,7 +982,7 @@ async function getBalance(
   };
 }
 
-async function proposeBankTransfer(
+export async function proposeBankTransfer(
   context: NonNullable<Awaited<ReturnType<typeof validateApiKey>>>,
   args: {
     amount_usdc: string;
@@ -1218,7 +1218,7 @@ async function proposeBankTransfer(
   };
 }
 
-async function createBankAccount(
+export async function createBankAccount(
   context: NonNullable<Awaited<ReturnType<typeof validateApiKey>>>,
   args: {
     account_name: string;
@@ -1403,7 +1403,7 @@ async function createBankAccount(
   };
 }
 
-async function listProposals(
+export async function listProposals(
   context: NonNullable<Awaited<ReturnType<typeof validateApiKey>>>,
   args: { include_completed?: boolean },
 ) {
@@ -1468,7 +1468,7 @@ async function listProposals(
 // Invoice Tool Implementations
 // =========================================================================
 
-async function createInvoice(
+export async function createInvoice(
   context: NonNullable<Awaited<ReturnType<typeof validateApiKey>>>,
   args: {
     recipient_email: string;
@@ -1551,7 +1551,7 @@ async function createInvoice(
   }
 }
 
-async function updateInvoice(
+export async function updateInvoice(
   context: NonNullable<Awaited<ReturnType<typeof validateApiKey>>>,
   args: {
     invoice_id: string;
@@ -1626,7 +1626,7 @@ async function updateInvoice(
   }
 }
 
-async function listInvoices(
+export async function listInvoices(
   context: NonNullable<Awaited<ReturnType<typeof validateApiKey>>>,
   args: {
     status?: 'db_pending' | 'pending' | 'paid' | 'canceled';
@@ -1698,7 +1698,7 @@ async function listInvoices(
   };
 }
 
-async function getInvoice(
+export async function getInvoice(
   context: NonNullable<Awaited<ReturnType<typeof validateApiKey>>>,
   args: { invoice_id: string },
 ) {
@@ -1772,7 +1772,7 @@ async function getInvoice(
   };
 }
 
-async function sendInvoice(
+export async function sendInvoice(
   context: NonNullable<Awaited<ReturnType<typeof validateApiKey>>>,
   args: { invoice_id: string },
 ) {
@@ -1896,12 +1896,9 @@ async function sendInvoice(
 // Transaction Tool Implementations
 // =========================================================================
 
-async function listTransactions(
+export async function listTransactions(
   context: NonNullable<Awaited<ReturnType<typeof validateApiKey>>>,
-  args: {
-    status?: 'pending' | 'completed' | 'failed';
-    limit?: number;
-  },
+  args: { status?: 'pending' | 'completed' | 'failed'; limit?: number },
 ) {
   const { status, limit = 20 } = args;
 
@@ -1958,7 +1955,7 @@ async function listTransactions(
   };
 }
 
-async function getTransaction(
+export async function getTransaction(
   context: NonNullable<Awaited<ReturnType<typeof validateApiKey>>>,
   args: { transaction_id: string },
 ) {
@@ -2036,7 +2033,7 @@ function getMimeType(filename: string): string {
   return mimeTypes[ext || ''] || 'application/octet-stream';
 }
 
-async function attachDocument(
+export async function attachDocument(
   context: NonNullable<Awaited<ReturnType<typeof validateApiKey>>>,
   args: {
     transaction_id: string;
@@ -2213,7 +2210,7 @@ async function attachDocument(
   }
 }
 
-async function listAttachments(
+export async function listAttachments(
   context: NonNullable<Awaited<ReturnType<typeof validateApiKey>>>,
   args: {
     transaction_id?: string;
@@ -2275,7 +2272,7 @@ async function listAttachments(
   };
 }
 
-async function removeAttachment(
+export async function removeAttachment(
   context: NonNullable<Awaited<ReturnType<typeof validateApiKey>>>,
   args: { attachment_id: string },
 ) {
@@ -2321,7 +2318,7 @@ async function removeAttachment(
 // Payment Details Tool Implementations
 // =========================================================================
 
-async function getPaymentDetails(
+export async function getPaymentDetails(
   context: NonNullable<Awaited<ReturnType<typeof validateApiKey>>>,
 ) {
   try {
@@ -2372,7 +2369,7 @@ async function getPaymentDetails(
   }
 }
 
-async function sharePaymentDetails(
+export async function sharePaymentDetails(
   context: NonNullable<Awaited<ReturnType<typeof validateApiKey>>>,
   args: { recipient_email: string; recipient_name?: string },
 ) {
@@ -2452,7 +2449,7 @@ async function sharePaymentDetails(
 // Proposal Management Tool Implementations
 // =========================================================================
 
-async function dismissProposal(
+export async function dismissProposal(
   context: NonNullable<Awaited<ReturnType<typeof validateApiKey>>>,
   args: { proposal_id: string },
 ) {

@@ -1,6 +1,5 @@
 {
   "$schema": "https://vercel.com/schemas/project.json",
-  "ignoreCommand": "npx --yes turbo-ignore --fallback=HEAD~1",
   "buildCommand": "pnpm build",
   "installCommand": "cd ../.. && pnpm install",
   "framework": "nextjs"

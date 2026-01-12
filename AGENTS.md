@@ -309,7 +309,6 @@ For detailed implementation patterns, see `.claude/agents/safe-infrastructure.md
 ## Testing Guidelines
 
 - Run Vitest via `pnpm --filter @zero-finance/web test` or `test:watch`; keep assertions deterministic and mock remote services in `src/test`.
-- End-to-end coverage uses Playwright specs in `packages/web/tests`; execute `pnpm --filter @zero-finance/web exec playwright test --config playwright.config.ts` when verifying flows.
 - Database or schema edits require matching Drizzle migrations (`pnpm --filter @zero-finance/web db:migrate:*`) so CI environments stay reproducible.
 
 ## Commit & Pull Request Guidelines

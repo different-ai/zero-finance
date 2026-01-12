@@ -42,6 +42,7 @@ export {
   offrampTransfers,
   onrampTransfers,
   allocationStrategies,
+  actionProposals,
   userFundingSourcesRelations,
   userDestinationBankAccountsRelations,
   offrampTransfersRelations,
@@ -57,6 +58,8 @@ export {
   type NewOnrampTransfer,
   type AllocationStrategy,
   type NewAllocationStrategy,
+  type ActionProposal,
+  type NewActionProposal,
 
   // Earn tables
   earnDeposits,
