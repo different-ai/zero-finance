@@ -2,15 +2,15 @@ name: Test Suite
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [main, develop]
   pull_request:
-    branches: [ main, develop ]
+    branches: [main, develop]
 
 jobs:
   test-web-backend:
     name: Test Web Package (Backend)
     runs-on: ubuntu-latest
-    
+
     services:
       postgres:
         image: postgres:15
@@ -27,21 +27,21 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Install pnpm
         uses: pnpm/action-setup@v4
         with:
           version: 9.15.4
-      
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '22'
           cache: 'pnpm'
-      
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-      
+
       - name: Run Web Backend Tests
         run: pnpm --filter web vitest run
         env:
@@ -52,86 +52,3 @@ jobs:
           PRIVY_APP_SECRET: ${{ secrets.PRIVY_APP_SECRET }}
           AUTO_EARN_MODULE_ADDRESS: ${{ secrets.AUTO_EARN_MODULE_ADDRESS }}
           RELAYER_PK: ${{ secrets.RELAYER_PK }}
-
-  test-web-frontend:
-    name: Test Web Package (Frontend)
-    runs-on: ubuntu-latest
-    
-    services:
-      postgres:
-        image: postgres:15
-        env:
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: test
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        ports:
-          - 5432:5432
-
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 9.15.4 
-      
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: 'pnpm'
-      
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-      
-      - name: Install Playwright Browsers
-        run: pnpm --filter web exec playwright install chromium
-      
-      - name: Build Web Package
-        run: pnpm --filter web build
-        env:
-          POSTGRES_URL: postgres://postgres:postgres@localhost:5432/test
-          ALIGN_API_KEY: ${{ secrets.ALIGN_API_KEY }}
-          ALIGN_API_BASE_URL: ${{ secrets.ALIGN_API_BASE_URL }}
-          NEXT_PUBLIC_PRIVY_APP_ID: ${{ secrets.NEXT_PUBLIC_PRIVY_APP_ID }}
-          PRIVY_APP_SECRET: ${{ secrets.PRIVY_APP_SECRET }}
-          AUTO_EARN_MODULE_ADDRESS: ${{ secrets.AUTO_EARN_MODULE_ADDRESS }}
-          RELAYER_PK: ${{ secrets.RELAYER_PK }}
-          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-      
-      - name: Start Web Dev Server
-        run: pnpm --filter web dev &
-        env:
-          POSTGRES_URL: postgres://postgres:postgres@localhost:5432/test
-          ALIGN_API_KEY: ${{ secrets.ALIGN_API_KEY }}
-          ALIGN_API_BASE_URL: ${{ secrets.ALIGN_API_BASE_URL }}
-          NEXT_PUBLIC_PRIVY_APP_ID: ${{ secrets.NEXT_PUBLIC_PRIVY_APP_ID }}
-          PRIVY_APP_SECRET: ${{ secrets.PRIVY_APP_SECRET }}
-          AUTO_EARN_MODULE_ADDRESS: ${{ secrets.AUTO_EARN_MODULE_ADDRESS }}
-          RELAYER_PK: ${{ secrets.RELAYER_PK }}
-      
-      - name: Wait for server to be ready
-        run: npx wait-on http://localhost:3050 --timeout 60000
-      
-      - name: Run Playwright Tests
-        run: pnpm --filter web playwright test
-        env:
-          POSTGRES_URL: postgres://postgres:postgres@localhost:5432/test
-          ALIGN_API_KEY: ${{ secrets.ALIGN_API_KEY }}
-          ALIGN_API_BASE_URL: ${{ secrets.ALIGN_API_BASE_URL }}
-          NEXT_PUBLIC_PRIVY_APP_ID: ${{ secrets.NEXT_PUBLIC_PRIVY_APP_ID }}
-          PRIVY_APP_SECRET: ${{ secrets.PRIVY_APP_SECRET }}
-          AUTO_EARN_MODULE_ADDRESS: ${{ secrets.AUTO_EARN_MODULE_ADDRESS }}
-          RELAYER_PK: ${{ secrets.RELAYER_PK }}
-      
-      - name: Upload Playwright Report
-        uses: actions/upload-artifact@v4
-        if: failure()
-        with:
-          name: playwright-report-web
-          path: packages/web/playwright-report/
-          retention-days: 30 

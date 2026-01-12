@@ -22,6 +22,7 @@ import { invoicePreferencesRouter } from './invoice-preferences-router';
 import { workspaceRouter } from './workspace-router';
 import { vaultAnalyticsRouter } from './vault-analytics-router';
 import { attachmentsRouter } from './attachments-router';
+import { actionProposalsRouter } from './action-proposals-router';
 import { devRouter } from './dev-router';
 
 /**
@@ -45,6 +46,7 @@ export const appRouter = router({
     emailVerification: emailVerificationRouter,
   }),
   align: alignRouter,
+  actionProposals: actionProposalsRouter,
   admin: adminRouter,
   user: userRouter,
   earn: earnRouter,

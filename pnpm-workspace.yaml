@@ -17,9 +17,6 @@ catalog:
   next: 16.0.8
   eslint-config-next: ^16.0.0
 
-  # Testing
-  '@playwright/test': ^1.51.0
-
   # Forms
   react-hook-form: ^7.53.0
   '@hookform/resolvers': ^3.9.0

@@ -25,17 +25,18 @@ import {
   X,
   Play,
 } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { useBimodal } from '@/components/ui/bimodal';
-import { formatUnits, type Address } from 'viem';
+import type { MetaTransactionData } from '@safe-global/safe-core-sdk-types';
+import {
+  encodeFunctionData,
+  erc20Abi,
+  formatUnits,
+  parseAbi,
+  type Address,
+} from 'viem';
 import { SUPPORTED_CHAINS } from '@/lib/constants/chains';
+import { useSafeRelay } from '@/hooks/use-safe-relay';
 import { USDC_ADDRESS, USDC_DECIMALS } from '@/lib/constants';
 import { toast } from 'sonner';
 import { ResumeTransferModal } from './resume-transfer-modal';
@@ -47,6 +48,8 @@ import { TransactionAttachments } from './transaction-attachments';
 
 type BankTransaction =
   RouterOutputs['align']['getBankingHistory']['transactions'][number];
+
+type ActionProposal = RouterOutputs['actionProposals']['list'][number];
 
 interface CryptoTransaction {
   type: 'incoming' | 'outgoing' | 'module' | 'creation';
@@ -108,7 +111,21 @@ interface UnifiedTransaction {
   // For pending offramps that need action
   needsAction?: boolean;
   alignTransferId?: string;
+
+  // Action proposal metadata (crypto/savings)
+  proposalId?: string;
+  proposalType?:
+    | 'bank_transfer'
+    | 'crypto_transfer'
+    | 'savings_deposit'
+    | 'savings_withdraw';
+  proposalPayload?: Record<string, unknown>;
 }
+
+const ERC4626_ABI = parseAbi([
+  'function deposit(uint256 assets, address receiver) returns (uint256)',
+  'function withdraw(uint256 assets, address receiver, address owner) returns (uint256)',
+]);
 
 // =============================================================================
 // HELPERS
@@ -175,6 +192,40 @@ function truncateAddress(address: string): string {
   return `${address.slice(0, 6)}...${address.slice(-4)}`;
 }
 
+function normalizeProposalPayload(
+  payload: ActionProposal['payload'],
+): Record<string, unknown> {
+  if (!payload) return {};
+  if (typeof payload === 'string') {
+    try {
+      return JSON.parse(payload) as Record<string, unknown>;
+    } catch (error) {
+      return {};
+    }
+  }
+  return payload as Record<string, unknown>;
+}
+
+function mapProposalStatus(
+  status: ActionProposal['status'],
+): UnifiedTransaction['status'] {
+  switch (status) {
+    case 'pending':
+      return 'pending';
+    case 'approved':
+      return 'processing';
+    case 'executed':
+      return 'completed';
+    case 'rejected':
+    case 'failed':
+      return 'failed';
+    case 'canceled':
+      return 'canceled';
+    default:
+      return 'pending';
+  }
+}
+
 // =============================================================================
 // TRANSACTION MERGING LOGIC
 // =============================================================================
@@ -182,6 +233,7 @@ function truncateAddress(address: string): string {
 function mergeBankAndCryptoTransactions(
   bankTxs: BankTransaction[],
   cryptoTxs: CryptoTransaction[],
+  proposals: ActionProposal[],
 ): UnifiedTransaction[] {
   const unified: UnifiedTransaction[] = [];
   const usedCryptoHashes = new Set<string>();
@@ -258,6 +310,8 @@ function mergeBankAndCryptoTransactions(
       agentProposalMessage: bankTx.agentProposalMessage || undefined,
       needsAction,
       alignTransferId: bankTx.alignTransferId,
+      proposalId: needsAction ? bankTx.alignTransferId : undefined,
+      proposalType: needsAction ? 'bank_transfer' : undefined,
     });
   }
 
@@ -320,6 +374,70 @@ function mergeBankAndCryptoTransactions(
 
       sweptPercentage: cryptoTx.sweptPercentage,
       sweptTxHash: cryptoTx.sweptTxHash,
+    });
+  }
+
+  for (const proposal of proposals) {
+    const payload = normalizeProposalPayload(proposal.payload);
+    const proposalType = proposal.proposalType;
+    const status = mapProposalStatus(proposal.status);
+    const needsAction = proposal.status === 'pending';
+
+    const amountValue = payload.amount ? String(payload.amount) : '0';
+    const tokenSymbol =
+      (payload.tokenSymbol as string | undefined) ??
+      (payload.assetSymbol as string | undefined) ??
+      'USDC';
+    const amountLabel =
+      tokenSymbol === 'USDC'
+        ? `$${formatAmount(amountValue)}`
+        : `${formatAmount(amountValue)} ${tokenSymbol}`;
+
+    let subtitle = 'Proposed by agent';
+    let title = needsAction ? 'Pending Approval' : 'Proposal';
+    let amountPrefix: UnifiedTransaction['amountPrefix'] = '-';
+
+    if (proposalType === 'crypto_transfer') {
+      const toAddress = payload.toAddress as string | undefined;
+      subtitle = toAddress
+        ? `crypto transfer to ${truncateAddress(toAddress)}`
+        : 'crypto transfer';
+      title = needsAction ? 'Pending Approval' : 'Crypto Transfer';
+    } else if (proposalType === 'savings_deposit') {
+      const vaultName =
+        (payload.vaultDisplayName as string | undefined) ??
+        (payload.vaultName as string | undefined);
+      subtitle = vaultName
+        ? `deposit to ${vaultName}`
+        : 'deposit to savings vault';
+      title = needsAction ? 'Pending Approval' : 'Savings Deposit';
+      amountPrefix = '-';
+    } else if (proposalType === 'savings_withdraw') {
+      const vaultName =
+        (payload.vaultDisplayName as string | undefined) ??
+        (payload.vaultName as string | undefined);
+      subtitle = vaultName
+        ? `withdraw from ${vaultName}`
+        : 'withdraw from savings vault';
+      title = needsAction ? 'Pending Approval' : 'Savings Withdrawal';
+      amountPrefix = '+';
+    }
+
+    unified.push({
+      id: proposal.id,
+      category: 'agent_proposal',
+      title,
+      subtitle,
+      amount: amountLabel,
+      amountPrefix,
+      timestamp: proposal.createdAt ? new Date(proposal.createdAt) : new Date(),
+      status,
+      proposedByAgent: proposal.proposedByAgent ?? true,
+      agentProposalMessage: proposal.proposalMessage ?? undefined,
+      needsAction,
+      proposalId: proposal.id,
+      proposalType,
+      proposalPayload: payload,
     });
   }
 
@@ -440,6 +558,14 @@ function TransactionRow({
 }) {
   const amountColor =
     tx.amountPrefix === '+' ? 'text-emerald-600' : 'text-[#101010]';
+  const proposalPayload = tx.proposalPayload ?? {};
+  const proposalRecipient = proposalPayload.toAddress as string | undefined;
+  const proposalTokenSymbol =
+    (proposalPayload.tokenSymbol as string | undefined) ??
+    (proposalPayload.assetSymbol as string | undefined);
+  const proposalVaultName =
+    (proposalPayload.vaultDisplayName as string | undefined) ??
+    (proposalPayload.vaultName as string | undefined);
 
   return (
     <AccordionItem
@@ -545,45 +671,89 @@ function TransactionRow({
                 </div>
               )}
 
-              {/* Bank account details */}
-              {tx.recipientName && (
-                <DetailRow label="Recipient" value={tx.recipientName} />
-              )}
-              {tx.bankName && <DetailRow label="Bank" value={tx.bankName} />}
-              {tx.accountMask && (
-                <DetailRow label="Account" value={tx.accountMask} />
-              )}
-              {tx.accountType && (
-                <DetailRow
-                  label="Account Type"
-                  value={
-                    tx.accountType === 'iban'
-                      ? 'IBAN (International)'
-                      : tx.accountType === 'us'
-                        ? 'US Bank Account'
-                        : tx.accountType.toUpperCase()
-                  }
-                />
-              )}
-              {tx.paymentRails && (
-                <DetailRow label="Method" value={tx.paymentRails} />
-              )}
+              {tx.proposalType && tx.proposalType !== 'bank_transfer' ? (
+                <>
+                  {tx.proposalType === 'crypto_transfer' && (
+                    <>
+                      {proposalRecipient && (
+                        <DetailRow
+                          label="Recipient"
+                          value={truncateAddress(proposalRecipient)}
+                        />
+                      )}
+                      {proposalTokenSymbol && (
+                        <DetailRow label="Token" value={proposalTokenSymbol} />
+                      )}
+                      <DetailRow label="Amount" value={tx.amount} />
+                    </>
+                  )}
 
-              <div className="border-t border-[#101010]/10 my-3" />
+                  {(tx.proposalType === 'savings_deposit' ||
+                    tx.proposalType === 'savings_withdraw') && (
+                    <>
+                      <DetailRow
+                        label="Action"
+                        value={
+                          tx.proposalType === 'savings_deposit'
+                            ? 'Deposit'
+                            : 'Withdraw'
+                        }
+                      />
+                      {proposalVaultName && (
+                        <DetailRow label="Vault" value={proposalVaultName} />
+                      )}
+                      {proposalTokenSymbol && (
+                        <DetailRow label="Token" value={proposalTokenSymbol} />
+                      )}
+                      <DetailRow label="Amount" value={tx.amount} />
+                    </>
+                  )}
+                </>
+              ) : (
+                <>
+                  {/* Bank account details */}
+                  {tx.recipientName && (
+                    <DetailRow label="Recipient" value={tx.recipientName} />
+                  )}
+                  {tx.bankName && (
+                    <DetailRow label="Bank" value={tx.bankName} />
+                  )}
+                  {tx.accountMask && (
+                    <DetailRow label="Account" value={tx.accountMask} />
+                  )}
+                  {tx.accountType && (
+                    <DetailRow
+                      label="Account Type"
+                      value={
+                        tx.accountType === 'iban'
+                          ? 'IBAN (International)'
+                          : tx.accountType === 'us'
+                            ? 'US Bank Account'
+                            : tx.accountType.toUpperCase()
+                      }
+                    />
+                  )}
+                  {tx.paymentRails && (
+                    <DetailRow label="Method" value={tx.paymentRails} />
+                  )}
 
-              {/* Amount details */}
-              <DetailRow
-                label="Amount to send"
-                value={`${tx.amount.replace('$', '')} USDC`}
-              />
-              {tx.fiatAmount && tx.fiatCurrency && (
-                <DetailRow
-                  label="They will receive"
-                  value={`${formatCurrencySymbol(tx.fiatCurrency)}${formatAmount(tx.fiatAmount)} ${tx.fiatCurrency}`}
-                />
-              )}
-              {tx.fee && (
-                <DetailRow label="Fee" value={`$${formatAmount(tx.fee)}`} />
+                  <div className="border-t border-[#101010]/10 my-3" />
+
+                  {/* Amount details */}
+                  <DetailRow
+                    label="Amount to send"
+                    value={`${tx.amount.replace('$', '')} USDC`}
+                  />
+                  {tx.fiatAmount && tx.fiatCurrency && (
+                    <DetailRow
+                      label="They will receive"
+                      value={`${formatCurrencySymbol(tx.fiatCurrency)}${formatAmount(tx.fiatAmount)} ${tx.fiatCurrency}`}
+                    />
+                  )}
+                  {tx.fee && (
+                    <DetailRow label="Fee" value={`$${formatAmount(tx.fee)}`} />
+                  )}
+                </>
               )}
             </>
           )}
@@ -779,7 +949,9 @@ export function UnifiedActivity() {
   const { isTechnical } = useBimodal();
   const utils = trpc.useUtils();
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [dismissingIds, setDismissingIds] = useState<Set<string>>(new Set());
+  const [actionPendingIds, setActionPendingIds] = useState<Set<string>>(
+    new Set(),
+  );
   const [resumeTransferId, setResumeTransferId] = useState<string | null>(null);
   const hasSyncedBankRef = React.useRef(false);
   const hasSyncedSafeRef = React.useRef(false);
@@ -795,6 +967,9 @@ export function UnifiedActivity() {
   const primarySafeAddress = positions?.safes.find(
     (s) => s.chainId === SUPPORTED_CHAINS.BASE,
   )?.address as Address | undefined;
+
+  const { ready: relayReady, send: sendWithRelay } =
+    useSafeRelay(primarySafeAddress);
 
   // Fetch bank transactions
   const {
@@ -815,6 +990,8 @@ export function UnifiedActivity() {
       { enabled: !!primarySafeAddress && !!workspaceId },
     );
 
+  const { data: actionProposalsData } = trpc.actionProposals.list.useQuery();
+
   // Sync mutations
   const syncVAHistory = trpc.align.syncVirtualAccountHistory.useMutation({
     onSettled: () => utils.align.getBankingHistory.invalidate(),
@@ -827,6 +1004,15 @@ export function UnifiedActivity() {
   });
   const dismissTransfer = trpc.align.dismissOfframpTransfer.useMutation({
     onSuccess: () => utils.align.getBankingHistory.invalidate(),
+  });
+  const dismissActionProposal = trpc.actionProposals.dismiss.useMutation({
+    onSuccess: () => utils.actionProposals.list.invalidate(),
+  });
+  const markProposalExecuted = trpc.actionProposals.markExecuted.useMutation({
+    onSuccess: () => utils.actionProposals.list.invalidate(),
+  });
+  const markProposalFailed = trpc.actionProposals.markFailed.useMutation({
+    onSuccess: () => utils.actionProposals.list.invalidate(),
   });
 
   // Initial sync - sync bank data sources on component mount (once only)
@@ -861,8 +1047,9 @@ export function UnifiedActivity() {
   const unifiedTransactions = useMemo(() => {
     const bankTxs = bankingHistory?.transactions ?? [];
     const crypto = (cryptoTxs ?? []) as CryptoTransaction[];
-    return mergeBankAndCryptoTransactions(bankTxs, crypto);
-  }, [bankingHistory?.transactions, cryptoTxs]);
+    const proposals = (actionProposalsData ?? []) as ActionProposal[];
+    return mergeBankAndCryptoTransactions(bankTxs, crypto, proposals);
+  }, [bankingHistory?.transactions, cryptoTxs, actionProposalsData]);
 
   // Group by date
   const groupedTransactions = useMemo(() => {
@@ -892,27 +1079,174 @@ export function UnifiedActivity() {
           })
         : Promise.resolve(),
     ]);
+    await utils.actionProposals.list.invalidate();
     setIsRefreshing(false);
   };
 
-  const handleDismiss = async (alignTransferId: string) => {
-    setDismissingIds((prev) => new Set(prev).add(alignTransferId));
+  const executeActionProposal = async (tx: UnifiedTransaction) => {
+    if (!tx.proposalId || !tx.proposalType) {
+      return;
+    }
+
+    if (!relayReady || !primarySafeAddress) {
+      toast.error('Smart wallet not ready. Please try again.');
+      return;
+    }
+
+    const payload = tx.proposalPayload ?? {};
+    const amountBaseUnits = payload.amountBaseUnits as string | undefined;
+
+    if (!amountBaseUnits) {
+      toast.error('Proposal is missing amount data.');
+      return;
+    }
+
+    const actionId = tx.proposalId;
+    setActionPendingIds((prev) => new Set(prev).add(actionId));
+
     try {
-      await dismissTransfer.mutateAsync({ alignTransferId });
-      toast.success('Transfer dismissed');
+      const amount = BigInt(amountBaseUnits);
+      const transactions: MetaTransactionData[] = [];
+
+      if (tx.proposalType === 'crypto_transfer') {
+        const toAddress = payload.toAddress as Address | undefined;
+        const tokenAddress = payload.tokenAddress as Address | undefined;
+
+        if (!toAddress || !tokenAddress) {
+          throw new Error('Proposal missing transfer addresses.');
+        }
+
+        const transferData = encodeFunctionData({
+          abi: erc20Abi,
+          functionName: 'transfer',
+          args: [toAddress, amount],
+        });
+
+        transactions.push({
+          to: tokenAddress,
+          value: '0',
+          data: transferData,
+          operation: 0,
+        });
+      }
+
+      if (tx.proposalType === 'savings_deposit') {
+        const vaultAddress = payload.vaultAddress as Address | undefined;
+        const assetAddress = payload.assetAddress as Address | undefined;
+
+        if (!vaultAddress || !assetAddress) {
+          throw new Error('Proposal missing vault information.');
+        }
+
+        const approveData = encodeFunctionData({
+          abi: erc20Abi,
+          functionName: 'approve',
+          args: [vaultAddress, amount],
+        });
+        const depositData = encodeFunctionData({
+          abi: ERC4626_ABI,
+          functionName: 'deposit',
+          args: [amount, primarySafeAddress],
+        });
+
+        transactions.push(
+          {
+            to: assetAddress,
+            value: '0',
+            data: approveData,
+            operation: 0,
+          },
+          {
+            to: vaultAddress,
+            value: '0',
+            data: depositData,
+            operation: 0,
+          },
+        );
+      }
+
+      if (tx.proposalType === 'savings_withdraw') {
+        const vaultAddress = payload.vaultAddress as Address | undefined;
+        if (!vaultAddress) {
+          throw new Error('Proposal missing vault information.');
+        }
+
+        const withdrawData = encodeFunctionData({
+          abi: ERC4626_ABI,
+          functionName: 'withdraw',
+          args: [amount, primarySafeAddress, primarySafeAddress],
+        });
+
+        transactions.push({
+          to: vaultAddress,
+          value: '0',
+          data: withdrawData,
+          operation: 0,
+        });
+      }
+
+      if (transactions.length === 0) {
+        throw new Error('No executable transactions built for proposal.');
+      }
+
+      const txHash = await sendWithRelay(transactions);
+      await markProposalExecuted.mutateAsync({
+        id: tx.proposalId,
+        txHash,
+      });
+      toast.success('Proposal executed');
     } catch (err) {
-      toast.error('Failed to dismiss transfer');
+      const message =
+        err instanceof Error ? err.message : 'Failed to execute proposal';
+      toast.error(message);
+      await markProposalFailed.mutateAsync({
+        id: tx.proposalId,
+        reason: message,
+      });
     } finally {
-      setDismissingIds((prev) => {
+      setActionPendingIds((prev) => {
         const next = new Set(prev);
-        next.delete(alignTransferId);
+        next.delete(actionId);
         return next;
       });
     }
   };
 
-  const handleApprove = (alignTransferId: string) => {
-    setResumeTransferId(alignTransferId);
+  const handleDismiss = async (tx: UnifiedTransaction) => {
+    const actionId = tx.proposalId ?? tx.alignTransferId;
+    if (!actionId) return;
+
+    setActionPendingIds((prev) => new Set(prev).add(actionId));
+    try {
+      if (tx.proposalType && tx.proposalType !== 'bank_transfer') {
+        await dismissActionProposal.mutateAsync({ id: actionId });
+        toast.success('Proposal dismissed');
+      } else if (tx.alignTransferId) {
+        await dismissTransfer.mutateAsync({
+          alignTransferId: tx.alignTransferId,
+        });
+        toast.success('Transfer dismissed');
+      }
+    } catch (err) {
+      toast.error('Failed to dismiss proposal');
+    } finally {
+      setActionPendingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(actionId);
+        return next;
+      });
+    }
+  };
+
+  const handleApprove = (tx: UnifiedTransaction) => {
+    if (tx.proposalType && tx.proposalType !== 'bank_transfer') {
+      executeActionProposal(tx);
+      return;
+    }
+
+    if (tx.alignTransferId) {
+      setResumeTransferId(tx.alignTransferId);
+    }
   };
 
   const handleResumeSuccess = () => {
@@ -1022,17 +1356,13 @@ export function UnifiedActivity() {
                       tx={tx}
                       isTechnical={isTechnical}
                       onApprove={
-                        tx.needsAction
-                          ? () => handleApprove(tx.alignTransferId!)
-                          : undefined
+                        tx.needsAction ? () => handleApprove(tx) : undefined
                       }
                       onDismiss={
-                        tx.needsAction
-                          ? () => handleDismiss(tx.alignTransferId!)
-                          : undefined
+                        tx.needsAction ? () => handleDismiss(tx) : undefined
                       }
-                      isActionPending={dismissingIds.has(
-                        tx.alignTransferId || '',
+                      isActionPending={actionPendingIds.has(
+                        tx.proposalId || tx.alignTransferId || '',
                       )}
                     />
                   ))}

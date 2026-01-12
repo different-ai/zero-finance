@@ -890,6 +890,57 @@ export const outgoingTransfers = pgTable(
 export type OutgoingTransfer = typeof outgoingTransfers.$inferSelect;
 export type NewOutgoingTransfer = typeof outgoingTransfers.$inferInsert;
 
+// --- ACTION PROPOSALS (CLI + UI approvals) -----------------------------------
+export const actionProposals = pgTable(
+  'action_proposals',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userDid: text('user_did')
+      .notNull()
+      .references(() => users.privyDid, { onDelete: 'cascade' }),
+    workspaceId: uuid('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'cascade' }),
+    proposalType: text('proposal_type', {
+      enum: ['crypto_transfer', 'savings_deposit', 'savings_withdraw'],
+    }).notNull(),
+    status: text('status', {
+      enum: [
+        'pending',
+        'approved',
+        'executed',
+        'rejected',
+        'canceled',
+        'failed',
+      ],
+    })
+      .notNull()
+      .default('pending'),
+    proposedByAgent: boolean('proposed_by_agent').default(true).notNull(),
+    proposalMessage: text('proposal_message'),
+    payload: jsonb('payload').notNull(),
+    txHash: text('tx_hash'),
+    dismissed: boolean('dismissed').default(false).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => ({
+    workspaceIdx: index('action_proposals_workspace_idx').on(table.workspaceId),
+    userIdx: index('action_proposals_user_idx').on(table.userDid),
+    statusIdx: index('action_proposals_status_idx').on(table.status),
+    typeIdx: index('action_proposals_type_idx').on(table.proposalType),
+    dismissedIdx: index('action_proposals_dismissed_idx').on(table.dismissed),
+  }),
+);
+
+export type ActionProposal = typeof actionProposals.$inferSelect;
+export type NewActionProposal = typeof actionProposals.$inferInsert;
+
 // --- AUTO-EARN CONFIGS ------------------------------------------------------
 export const autoEarnConfigs = pgTable(
   'auto_earn_configs',
