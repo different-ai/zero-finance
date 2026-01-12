@@ -1,5 +1,5 @@
 {
-  "name": "@zero-finance/cli",
+  "name": "agent-bank",
   "version": "0.1.0",
   "type": "module",
   "bin": {
