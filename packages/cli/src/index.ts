@@ -28,7 +28,7 @@ async function readFileBase64(path: string) {
   return content.toString('base64');
 }
 
-program.name('finance').description('0 Finance CLI').version('0.1.0');
+program.name('finance').description('0 Finance CLI').version('0.1.1');
 
 const auth = program.command('auth').description('Authentication');
 

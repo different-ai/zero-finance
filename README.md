@@ -18,6 +18,20 @@
 - **Spend Anywhere** - Use a debit card worldwide with 0% conversion fees
 - **Optimize Yield** - AI automatically allocates idle funds to highest-yielding opportunities
 
+## CLI Quick Start
+
+```bash
+curl -fsSL https://zerofinance.ai/install | bash
+
+# Authenticate
+finance auth login --api-key sk_live_xxx
+
+# Check balance
+finance balance
+```
+
+The CLI package is `agent-bank`, and the binary is `finance`.
+
 ## Current Status
 
 - [x] Phase 0: invoicing

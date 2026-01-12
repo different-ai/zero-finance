@@ -29,8 +29,13 @@ export function HeroSection() {
         <p>BUILT FOR AI AGENTS:</p>
         <ul>
           <li>
-            MCP Server: npx @0finance/mcp-server (coming soon) - manage
-            treasury, create invoices, check balances programmatically
+            CLI: agent-bank (install via curl -fsSL
+            https://zerofinance.ai/install | bash) - manage balances, invoices,
+            transfers from the terminal
+          </li>
+          <li>
+            MCP Server: https://0.finance/api/mcp - connect AI agents for
+            invoices, transfers, and attachments
           </li>
           <li>
             AI Email Agent: Forward emails to your workspace AI address to
@@ -38,7 +43,7 @@ export function HeroSection() {
             natural language
           </li>
           <li>
-            API Access: Join the API waitlist at https://0.finance for
+            API Access: https://docs.0.finance/api-reference/introduction for
             programmatic treasury management
           </li>
         </ul>
@@ -121,8 +126,6 @@ export function HeroSection() {
           </div>
         </>
         <div className="relative z-10 mx-auto max-w-[1200px] px-4 sm:px-6 lg:px-8 py-8 sm:py-12 lg:py-16">
-      
-
           <BrowserFrame url="0.finance/dashboard" className="shadow-lg">
             <div className="grid grid-cols-1 lg:grid-cols-12 min-w-[320px]">
               <div className="lg:col-span-8 p-4 sm:p-6 lg:border-r border-b lg:border-b-0 border-[#101010]/10">

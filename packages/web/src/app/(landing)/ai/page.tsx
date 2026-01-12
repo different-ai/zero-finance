@@ -88,6 +88,20 @@ export default function AILandingPage() {
               See a demo
             </Link>
           </div>
+
+          <div className="mt-6 sm:mt-8 max-w-[560px]">
+            <p className="uppercase tracking-[0.14em] sm:tracking-[0.18em] text-[11px] sm:text-[12px] text-[#101010]/60">
+              Quick start
+            </p>
+            <div className="mt-3 flex items-center gap-2 rounded-lg border border-[#101010]/10 bg-white/90 px-4 py-3 font-mono text-[12px] sm:text-[13px]">
+              <span className="text-[#101010]/40">$</span>
+              <span>curl -fsSL https://zerofinance.ai/install | bash</span>
+            </div>
+            <p className="mt-2 text-[12px] text-[#101010]/60">
+              Installs <span className="font-mono">agent-bank</span> and sets up
+              the <span className="font-mono">finance</span> CLI.
+            </p>
+          </div>
         </div>
 
         {/* Demo Panel - AI Email Interface */}
@@ -288,25 +302,25 @@ export default function AILandingPage() {
         <div className="relative z-10 mx-auto max-w-[1200px] px-4 sm:px-6 lg:px-8">
           <div className="max-w-[600px]">
             <p className="uppercase tracking-[0.14em] sm:tracking-[0.18em] text-[11px] sm:text-[12px] text-[#1B29FF]">
-              Coming Soon
+              CLI + MCP
             </p>
             <h2 className="mt-2 font-serif text-[24px] sm:text-[30px] lg:text-[36px] leading-[1.1] tracking-[-0.01em] text-[#101010]">
-              API & MCP Server
+              Agent banking, programmable
             </h2>
             <p className="mt-4 text-[14px] sm:text-[15px] text-[#101010]/70">
-              Build AI agents that manage treasury, create invoices, and execute
-              payments programmatically. Perfect for autonomous finance
-              workflows.
+              Install the agent-bank CLI, then connect MCP to let AI assistants
+              manage invoices, balances, and approvals with human control.
             </p>
             <div className="mt-6 p-4 bg-[#F7F7F2] border border-[#101010]/10 rounded font-mono text-[13px]">
               <span className="text-[#101010]/50">$</span>{' '}
-              <span className="text-[#1B29FF]">npx</span> @0finance/mcp-server
+              <span className="text-[#1B29FF]">curl</span> -fsSL
+              https://zerofinance.ai/install | bash
             </div>
             <Link
-              href="/signin?source=ai-api"
+              href="https://docs.0.finance"
               className="mt-6 inline-flex items-center px-5 py-2.5 text-[14px] font-medium text-[#1B29FF] border border-[#1B29FF] hover:bg-[#1B29FF]/5 rounded transition-colors"
             >
-              Join API waitlist
+              Read the docs
               <ArrowRight className="ml-2 w-4 h-4" />
             </Link>
           </div>
