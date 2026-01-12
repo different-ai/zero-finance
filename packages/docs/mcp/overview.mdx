@@ -1,0 +1,200 @@
+---
+title: 'MCP for AI Agents'
+description: 'Let AI agents manage your finances with human approval'
+---
+
+## What is MCP?
+
+The Model Context Protocol (MCP) lets AI assistants connect to external tools and services. The 0 Finance MCP server gives your AI agent access to:
+
+- Check balances and transaction history
+- Create and send invoices
+- Propose bank and crypto transfers
+- Manage savings positions
+
+<Info>
+  All transfers require human approval in the dashboard. Your AI agent can
+  propose actions, but you stay in control.
+</Info>
+
+---
+
+## Quick setup
+
+Add this to your MCP client configuration:
+
+<Tabs>
+  <Tab title="Cursor">
+    Add to `~/.cursor/mcp.json`:
+    ```json
+    {
+      "mcpServers": {
+        "zero-finance": {
+          "command": "npx",
+          "args": ["-y", "mcp-remote", "https://0.finance/api/mcp"],
+          "env": {
+            "API_KEY": "sk_live_xxx"
+          }
+        }
+      }
+    }
+    ```
+  </Tab>
+  <Tab title="Claude Code">
+    Add to `~/.claude/claude_desktop_config.json`:
+    ```json
+    {
+      "mcpServers": {
+        "zero-finance": {
+          "command": "npx",
+          "args": ["-y", "mcp-remote", "https://0.finance/api/mcp"],
+          "env": {
+            "API_KEY": "sk_live_xxx"
+          }
+        }
+      }
+    }
+    ```
+  </Tab>
+  <Tab title="Windsurf">
+    Add to `~/.codeium/windsurf/mcp_config.json`:
+    ```json
+    {
+      "mcpServers": {
+        "zero-finance": {
+          "command": "npx",
+          "args": ["-y", "mcp-remote", "https://0.finance/api/mcp"],
+          "env": {
+            "API_KEY": "sk_live_xxx"
+          }
+        }
+      }
+    }
+    ```
+  </Tab>
+</Tabs>
+
+Replace `sk_live_xxx` with your API key from [Settings → API Keys](https://0.finance/settings).
+
+---
+
+## Available tools
+
+| Tool                       | Description                    |
+| -------------------------- | ------------------------------ |
+| `get_balance`              | Get spendable USDC balance     |
+| `list_saved_bank_accounts` | List saved bank accounts       |
+| `create_bank_account`      | Save a new bank account        |
+| `propose_bank_transfer`    | Propose an outbound transfer   |
+| `list_proposals`           | List pending proposals         |
+| `dismiss_proposal`         | Dismiss a proposal             |
+| `create_invoice`           | Create a new invoice           |
+| `update_invoice`           | Update an invoice              |
+| `list_invoices`            | List invoices                  |
+| `get_invoice`              | Get invoice details            |
+| `send_invoice`             | Send invoice to recipient      |
+| `list_transactions`        | List transaction history       |
+| `get_transaction`          | Get transaction details        |
+| `attach_document`          | Attach a file to a transaction |
+| `list_attachments`         | List attachments               |
+| `remove_attachment`        | Remove an attachment           |
+| `get_payment_details`      | Get IBAN/ACH receiving details |
+| `share_payment_details`    | Email payment details          |
+| `list_vaults`              | List yield vaults              |
+| `propose_deposit`          | Propose a vault deposit        |
+| `propose_withdrawal`       | Propose a vault withdrawal     |
+| `get_positions`            | Get vault positions            |
+
+---
+
+## Starter prompt
+
+Add this to your AI client's system prompt for best results:
+
+```text
+You are an assistant connected to the 0 Finance MCP server.
+
+## Before proposing transfers
+1. Call `get_balance` to check available USDC.
+2. Call `list_saved_bank_accounts` to see destination options.
+
+## Transfers
+- Use `propose_bank_transfer` to create a transfer proposal.
+- Never claim funds have moved—transfers require user approval in the dashboard.
+- Use `attach_document` to link invoices or receipts to proposals.
+
+## Invoices
+- Use `create_invoice` to draft an invoice.
+- Use `send_invoice` to email it to the recipient.
+- Use `list_invoices` and `get_invoice` to check status.
+
+## Receiving payments
+- Use `get_payment_details` to retrieve the user's IBAN/ACH info.
+- Use `share_payment_details` to email those details to a third party.
+
+## Style
+- Summarize results clearly.
+- Ask before taking destructive or high-value actions.
+- Always confirm amounts and recipients before proposing transfers.
+```
+
+---
+
+## Example conversation
+
+**You:** Check my balance and pending invoices
+
+**Agent:**
+
+> I'll check your balance and invoices.
+>
+> **Balance:** 5,420.50 USDC spendable
+>
+> **Pending invoices:**
+>
+> - INV-001: $2,500 from Acme Corp (due Jan 20)
+> - INV-002: $1,000 from Beta Inc (overdue)
+
+**You:** Send a reminder to Beta Inc
+
+**Agent:**
+
+> I've sent a reminder email to Beta Inc for invoice INV-002 ($1,000).
+
+**You:** Once that's paid, move $3,000 to my EUR account
+
+**Agent:**
+
+> I'll propose a transfer of $3,000 to your EUR account (ending in ...4521).
+>
+> ⚠️ This transfer requires your approval in the dashboard before it executes. Would you like me to create the proposal?
+
+---
+
+## Security model
+
+1. **Read operations** — Balance, invoices, transactions execute immediately
+2. **Write operations** — Transfers and withdrawals create proposals
+3. **Human approval** — All outbound fund movements require dashboard approval
+4. **Audit trail** — Every action is logged with the API key used
+
+<Warning>
+  Never share your API key. It provides full read access and can create
+  proposals on your behalf.
+</Warning>
+
+---
+
+## Client-specific guides
+
+<CardGroup cols={3}>
+  <Card title="Cursor" icon="code" href="/mcp/cursor">
+    Detailed Cursor setup
+  </Card>
+  <Card title="Claude Code" icon="message-bot" href="/mcp/claude-code">
+    Claude Desktop setup
+  </Card>
+  <Card title="Windsurf" icon="wind" href="/mcp/windsurf">
+    Windsurf setup
+  </Card>
+</CardGroup>

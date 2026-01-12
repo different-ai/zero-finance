@@ -1,43 +1,140 @@
 ---
-title: 'Development'
-description: 'Local workflows for the 0 Finance app'
+title: 'Contributing'
+description: 'Guidelines for contributing to 0 Finance'
 ---
 
-## Local development
+## Project structure
 
-```bash
-pnpm dev
+```
+zero-finance/
+├── packages/
+│   ├── web/          # Next.js application
+│   ├── cli/          # @zero-finance/cli package
+│   └── docs/         # This documentation (Mintlify)
+├── scripts/          # Build and deployment scripts
+└── deployments/      # Contract deployment manifests
 ```
 
-The app runs on `http://localhost:3050`.
+---
 
-## Lite stack
+## Development workflow
 
-If you want a lighter local stack:
+### 1. Create a feature branch
 
 ```bash
-pnpm dev:lite
+git checkout -b feat/your-feature-name
 ```
 
-## Common checks
+### 2. Make changes
+
+Follow the existing code style:
+
+- TypeScript for all code
+- Prettier formatting (2 spaces, single quotes)
+- ESLint rules from `next/core-web-vitals`
+
+### 3. Run quality checks
 
 ```bash
-pnpm lint
 pnpm typecheck
+pnpm lint
 pnpm --filter @zero-finance/web test
 ```
 
-## Build
+### 4. Commit and push
 
 ```bash
-pnpm --filter @zero-finance/web build
+git add .
+git commit -m "feat: add your feature"
+git push -u origin feat/your-feature-name
 ```
 
-## Environment variables
+### 5. Create a pull request
 
-Most features require environment variables (Privy, Align, PostHog, etc.). Load them from your team’s shared secrets before running the app.
+PRs should include:
 
-<Info>
-  If a feature is failing locally, double-check `pnpm dev` logs for missing env
-  vars.
-</Info>
+- Summary of changes
+- Testing notes
+- Screenshots (for UI changes)
+
+---
+
+## Code style
+
+### TypeScript
+
+- Prefer `const` over `let`
+- Use explicit return types for exported functions
+- Document complex logic with comments
+
+### React
+
+- Functional components with hooks
+- PascalCase for components
+- camelCase for hooks and utilities
+
+### Tailwind
+
+Order classes: layout → spacing → colors
+
+```tsx
+// Good
+<div className="flex items-center gap-4 p-4 bg-white text-gray-900">
+
+// Avoid
+<div className="bg-white p-4 flex text-gray-900 gap-4 items-center">
+```
+
+---
+
+## Database changes
+
+Use Drizzle migrations:
+
+```bash
+# Generate migration
+pnpm --filter @zero-finance/web db:generate
+
+# Apply migration
+pnpm --filter @zero-finance/web db:migrate
+```
+
+---
+
+## Testing the CLI locally
+
+Build and link the CLI:
+
+```bash
+cd packages/cli
+pnpm build
+pnpm link --global
+```
+
+Point to your local server:
+
+```bash
+zero auth login --api-key sk_test_xxx --base-url http://localhost:3050
+```
+
+---
+
+## Useful scripts
+
+| Script            | Description                  |
+| ----------------- | ---------------------------- |
+| `pnpm dev`        | Start all dev servers        |
+| `pnpm dev:lite`   | Start with lite Docker stack |
+| `pnpm build`      | Build all packages           |
+| `pnpm lint`       | Run ESLint                   |
+| `pnpm typecheck`  | Run TypeScript checks        |
+| `pnpm format`     | Check Prettier formatting    |
+| `pnpm format:fix` | Fix formatting issues        |
+
+---
+
+## Getting help
+
+- Check existing issues on [GitHub](https://github.com/different-ai/zero-finance/issues)
+- Ask in the team Slack/Discord
+- Review the codebase — most patterns are self-documenting

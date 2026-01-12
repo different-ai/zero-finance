@@ -1,29 +1,147 @@
 ---
-title: 'API overview'
-description: 'HTTP endpoints and authentication for 0 Finance'
+title: 'API Overview'
+description: 'Direct HTTP access to 0 Finance'
 ---
 
-## Base URLs
+<Info>
+  Most users should use the [CLI](/cli/installation) or [MCP
+  server](/mcp/overview) instead of calling the API directly.
+</Info>
 
-- Production: `https://www.0.finance`
-- Local dev: `http://localhost:3050`
+## Base URL
+
+```
+https://0.finance/api/cli
+```
+
+For local development:
+
+```
+http://localhost:3050/api/cli
+```
+
+---
 
 ## Authentication
 
-- **Dashboard APIs** use session auth (Privy). Most `/api/*` routes expect a logged-in user.
-- **MCP server** uses API keys (Bearer token). Create keys in **Settings → API Keys**.
+Include your API key in the `Authorization` header:
+
+```bash
+curl https://0.finance/api/cli/balance \
+  -H "Authorization: Bearer sk_live_xxx"
+```
+
+Get your API key from [Settings → API Keys](https://0.finance/settings).
+
+---
+
+## Response format
+
+All endpoints return JSON:
+
+```json
+{
+  "data": { ... },
+  "error": null
+}
+```
+
+Or on error:
+
+```json
+{
+  "data": null,
+  "error": "Error message"
+}
+```
+
+---
 
 ## Core endpoints
 
-| Endpoint                           | Method | Purpose                               |
-| ---------------------------------- | ------ | ------------------------------------- |
-| `/api/health`                      | GET    | Health check for uptime verification. |
-| `/api/upload`                      | POST   | Upload attachments to Vercel Blob.    |
-| `/api/user/safes/register-primary` | POST   | Register a primary Safe for a user.   |
-| `/api/webhooks/auth`               | POST   | Privy webhook receiver (HMAC signed). |
-| `/api/trpc`                        | POST   | tRPC router used by the web app.      |
-| `/api/mcp`                         | POST   | MCP JSON-RPC server for AI agents.    |
+| Method | Endpoint                            | Description               |
+| ------ | ----------------------------------- | ------------------------- |
+| GET    | `/api/cli/whoami`                   | Current workspace context |
+| GET    | `/api/cli/balance`                  | Spendable balance         |
+| GET    | `/api/cli/bank-accounts`            | List saved bank accounts  |
+| POST   | `/api/cli/bank-accounts`            | Create bank account       |
+| POST   | `/api/cli/bank-transfers/proposals` | Propose transfer          |
+| GET    | `/api/cli/bank-transfers/proposals` | List proposals            |
+| POST   | `/api/cli/invoices`                 | Create invoice            |
+| GET    | `/api/cli/invoices`                 | List invoices             |
+| GET    | `/api/cli/invoices/:id`             | Get invoice               |
+| POST   | `/api/cli/invoices/:id/send`        | Send invoice              |
+| GET    | `/api/cli/transactions`             | List transactions         |
+| GET    | `/api/cli/payment-details`          | Get receiving details     |
+| POST   | `/api/cli/payment-details/share`    | Share payment details     |
 
-## MCP server in one line
+---
 
-`POST /api/mcp` with `Authorization: Bearer <api_key>` and a JSON-RPC body.
+## Example: Check balance
+
+```bash
+curl https://0.finance/api/cli/balance \
+  -H "Authorization: Bearer sk_live_xxx"
+```
+
+Response:
+
+```json
+{
+  "spendable_usdc": "5420.50",
+  "pending_usdc": "0.00",
+  "earning_usdc": "2000.00",
+  "total_usdc": "7420.50"
+}
+```
+
+---
+
+## Example: Create invoice
+
+```bash
+curl https://0.finance/api/cli/invoices \
+  -X POST \
+  -H "Authorization: Bearer sk_live_xxx" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "recipient_email": "client@example.com",
+    "amount": 1000,
+    "currency": "USD",
+    "description": "Consulting services"
+  }'
+```
+
+---
+
+## Example: Propose transfer
+
+```bash
+curl https://0.finance/api/cli/bank-transfers/proposals \
+  -X POST \
+  -H "Authorization: Bearer sk_live_xxx" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "amount_usdc": "1000",
+    "destination_currency": "usd",
+    "saved_bank_account_id": "ba_xxx",
+    "reason": "Contractor payment"
+  }'
+```
+
+<Warning>
+  Transfers create proposals that require dashboard approval before executing.
+</Warning>
+
+---
+
+## Rate limits
+
+- 100 requests per minute per API key
+- Exceeded limits return `429 Too Many Requests`
+
+---
+
+## MCP server
+
+The MCP server at `/api/mcp` wraps these endpoints for AI agents. See [MCP Overview](/mcp/overview) for details.

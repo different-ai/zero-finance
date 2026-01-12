@@ -1,0 +1,491 @@
+---
+title: 'CLI Reference'
+description: 'Complete reference for all zero CLI commands'
+---
+
+## Overview
+
+The `zero` CLI provides full access to 0 Finance from your terminal. All commands output JSON for easy scripting and piping.
+
+```bash
+zero <command> [subcommand] [options]
+```
+
+---
+
+## Authentication
+
+### `zero auth login`
+
+Store your API key and configure the CLI.
+
+```bash
+zero auth login --api-key sk_live_xxx
+zero auth login --api-key sk_live_xxx --base-url https://custom.0.finance
+```
+
+| Option       | Required | Description                                 |
+| ------------ | -------- | ------------------------------------------- |
+| `--api-key`  | Yes      | Your workspace API key                      |
+| `--base-url` | No       | API base URL (default: `https://0.finance`) |
+
+### `zero auth whoami`
+
+Show the current workspace context.
+
+```bash
+zero auth whoami
+```
+
+### `zero auth logout`
+
+Remove stored credentials.
+
+```bash
+zero auth logout
+```
+
+---
+
+## Balance
+
+### `zero balance`
+
+Show your spendable balance breakdown.
+
+```bash
+zero balance
+```
+
+**Output:**
+
+```json
+{
+  "spendable_usdc": "5420.50",
+  "pending_usdc": "0.00",
+  "earning_usdc": "2000.00",
+  "total_usdc": "7420.50"
+}
+```
+
+---
+
+## Bank Accounts
+
+### `zero bank accounts list`
+
+List all saved bank accounts.
+
+```bash
+zero bank accounts list
+```
+
+### `zero bank accounts create`
+
+Create a saved bank account from a JSON file.
+
+```bash
+zero bank accounts create --json ./account.json
+```
+
+**account.json:**
+
+```json
+{
+  "account_holder_name": "Acme Corp",
+  "iban": "DE89370400440532013000",
+  "bic": "COBADEFFXXX",
+  "currency": "EUR",
+  "nickname": "Acme EUR"
+}
+```
+
+---
+
+## Bank Transfers
+
+### `zero bank transfers propose`
+
+Propose a bank transfer for approval.
+
+```bash
+zero bank transfers propose \
+  --amount 1000 \
+  --currency usd \
+  --bank-account-id ba_xxx \
+  --reason "Contractor payment for January"
+```
+
+| Option              | Required | Description                           |
+| ------------------- | -------- | ------------------------------------- |
+| `--amount`          | Yes      | Amount in USDC                        |
+| `--currency`        | Yes      | Destination currency (`usd` or `eur`) |
+| `--bank-account-id` | Yes      | Saved bank account ID                 |
+| `--reason`          | No       | Reason for the transfer               |
+
+<Info>
+  Transfers create proposals that require approval in the dashboard before
+  executing.
+</Info>
+
+### `zero bank proposals list`
+
+List pending transfer proposals.
+
+```bash
+zero bank proposals list
+zero bank proposals list --include-completed
+```
+
+### `zero bank proposals dismiss`
+
+Dismiss a transfer proposal.
+
+```bash
+zero bank proposals dismiss --proposal-id prop_xxx
+```
+
+---
+
+## Invoices
+
+### `zero invoices create`
+
+Create a new invoice.
+
+```bash
+zero invoices create \
+  --recipient-email client@example.com \
+  --recipient-name "Acme Corp" \
+  --amount 2500 \
+  --currency USD \
+  --description "Q1 consulting services" \
+  --due-date 2026-02-15 \
+  --notes "Payment terms: Net 30"
+```
+
+| Option              | Required | Description                    |
+| ------------------- | -------- | ------------------------------ |
+| `--recipient-email` | Yes      | Client's email address         |
+| `--recipient-name`  | No       | Client's name                  |
+| `--amount`          | Yes      | Invoice amount                 |
+| `--currency`        | Yes      | Currency code (USD, EUR, etc.) |
+| `--description`     | Yes      | Line item description          |
+| `--due-date`        | No       | Due date (YYYY-MM-DD)          |
+| `--notes`           | No       | Additional notes               |
+
+### `zero invoices list`
+
+List invoices with optional filters.
+
+```bash
+zero invoices list
+zero invoices list --status pending --limit 10
+```
+
+| Option     | Description                                      |
+| ---------- | ------------------------------------------------ |
+| `--status` | Filter by status (draft, pending, paid, overdue) |
+| `--limit`  | Maximum number of results                        |
+
+### `zero invoices get`
+
+Get a specific invoice.
+
+```bash
+zero invoices get --invoice-id inv_xxx
+```
+
+### `zero invoices update`
+
+Update an existing invoice.
+
+```bash
+zero invoices update \
+  --invoice-id inv_xxx \
+  --amount 3000 \
+  --description "Updated scope"
+```
+
+### `zero invoices send`
+
+Send an invoice to the recipient.
+
+```bash
+zero invoices send --invoice-id inv_xxx
+```
+
+---
+
+## Transactions
+
+### `zero transactions list`
+
+List transaction history.
+
+```bash
+zero transactions list
+zero transactions list --status completed --limit 50
+```
+
+### `zero transactions get`
+
+Get transaction details.
+
+```bash
+zero transactions get --transaction-id tx_xxx
+```
+
+---
+
+## Attachments
+
+### `zero attachments add`
+
+Attach a file to a transaction.
+
+```bash
+zero attachments add \
+  --transaction-id tx_xxx \
+  --type offramp \
+  --file ./receipt.pdf
+```
+
+| Option             | Required | Description                               |
+| ------------------ | -------- | ----------------------------------------- |
+| `--transaction-id` | Yes      | Transaction ID                            |
+| `--type`           | Yes      | Transaction type (`offramp` or `invoice`) |
+| `--file`           | Yes      | Path to file                              |
+| `--content-type`   | No       | MIME type (auto-detected if omitted)      |
+
+### `zero attachments list`
+
+List attachments.
+
+```bash
+zero attachments list
+zero attachments list --transaction-id tx_xxx
+```
+
+### `zero attachments remove`
+
+Remove an attachment.
+
+```bash
+zero attachments remove --attachment-id att_xxx
+```
+
+---
+
+## Payment Details
+
+### `zero payment-details show`
+
+Show your IBAN/ACH payment details for receiving funds.
+
+```bash
+zero payment-details show
+```
+
+**Output:**
+
+```json
+{
+  "iban": "DE89370400440532013000",
+  "bic": "COBADEFFXXX",
+  "account_holder": "0 Finance GmbH FBO Your Name",
+  "reference": "WS-xxx"
+}
+```
+
+### `zero payment-details share`
+
+Email your payment details to someone.
+
+```bash
+zero payment-details share \
+  --recipient-email accountant@example.com \
+  --recipient-name "Jane Smith"
+```
+
+---
+
+## Crypto Transfers
+
+### `zero crypto transfers propose`
+
+Propose a crypto transfer.
+
+```bash
+zero crypto transfers propose \
+  --to 0x742d35Cc6634C0532925a3b844Bc9e7595f... \
+  --token-address 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913 \
+  --amount 100 \
+  --token-symbol USDC \
+  --token-decimals 6 \
+  --chain-id 8453 \
+  --reason "Partner payment"
+```
+
+| Option             | Required | Description                       |
+| ------------------ | -------- | --------------------------------- |
+| `--to`             | Yes      | Recipient wallet address          |
+| `--token-address`  | Yes      | Token contract address            |
+| `--amount`         | Yes      | Token amount                      |
+| `--token-symbol`   | No       | Token symbol (e.g., USDC)         |
+| `--token-decimals` | No       | Token decimals                    |
+| `--chain-id`       | No       | Chain ID (default: 8453 for Base) |
+| `--reason`         | No       | Reason for transfer               |
+
+### `zero crypto proposals list`
+
+List crypto transfer proposals.
+
+```bash
+zero crypto proposals list
+zero crypto proposals list --include-completed
+```
+
+### `zero crypto proposals dismiss`
+
+Dismiss a crypto proposal.
+
+```bash
+zero crypto proposals dismiss --proposal-id prop_xxx
+```
+
+---
+
+## Savings
+
+### `zero vaults list`
+
+List supported yield vaults.
+
+```bash
+zero vaults list
+```
+
+### `zero savings deposits propose`
+
+Propose a deposit into a yield vault.
+
+```bash
+zero savings deposits propose \
+  --vault-address 0x... \
+  --amount 1000 \
+  --reason "Earning yield on idle funds"
+```
+
+### `zero savings withdrawals propose`
+
+Propose a withdrawal from a yield vault.
+
+```bash
+zero savings withdrawals propose \
+  --vault-address 0x... \
+  --amount 500 \
+  --reason "Need funds for payment"
+```
+
+### `zero savings proposals list`
+
+List savings proposals.
+
+```bash
+zero savings proposals list
+zero savings proposals list --include-completed
+```
+
+### `zero savings positions`
+
+Show your current vault positions.
+
+```bash
+zero savings positions
+```
+
+---
+
+## Admin Commands
+
+<Warning>
+  Admin commands require an admin token. Set `ZERO_FINANCE_ADMIN_TOKEN` or use
+  `--admin-token`.
+</Warning>
+
+### `zero users create`
+
+Provision a new user.
+
+```bash
+zero users create \
+  --email user@example.com \
+  --admin-token adm_xxx
+```
+
+### `zero users show`
+
+Get user details.
+
+```bash
+zero users show --user-id did:privy:xxx --admin-token adm_xxx
+```
+
+### `zero users wallets pregenerate`
+
+Pregenerate wallets for a user.
+
+```bash
+zero users wallets pregenerate \
+  --user-id did:privy:xxx \
+  --wallets-json ./wallets.json \
+  --admin-token adm_xxx
+```
+
+### `zero api-keys create`
+
+Create an API key for a workspace.
+
+```bash
+zero api-keys create \
+  --workspace-id ws_xxx \
+  --created-by did:privy:xxx \
+  --name "Production API Key" \
+  --admin-token adm_xxx
+```
+
+---
+
+## Tips
+
+### JSON output
+
+All commands output JSON. Pipe to `jq` for formatting:
+
+```bash
+zero balance | jq .spendable_usdc
+```
+
+### Scripting
+
+Use the CLI in scripts:
+
+```bash
+#!/bin/bash
+BALANCE=$(zero balance | jq -r .spendable_usdc)
+if (( $(echo "$BALANCE > 10000" | bc -l) )); then
+  zero savings deposits propose \
+    --vault-address 0x... \
+    --amount 5000 \
+    --reason "Auto-deposit excess funds"
+fi
+```
+
+### Error handling
+
+Non-zero exit codes indicate errors. Error messages are printed to stderr:
+
+```bash
+zero invoices get --invoice-id invalid_id || echo "Invoice not found"
+```

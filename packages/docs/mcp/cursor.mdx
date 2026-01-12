@@ -1,0 +1,103 @@
+---
+title: 'Cursor'
+description: 'Connect Cursor to the 0 Finance MCP server'
+---
+
+## Prerequisites
+
+- [Cursor](https://cursor.sh) installed
+- 0 Finance API key from [Settings → API Keys](https://0.finance/settings)
+
+---
+
+## Step 1: Create the config file
+
+Create or edit `~/.cursor/mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "zero-finance": {
+      "command": "npx",
+      "args": ["-y", "mcp-remote", "https://0.finance/api/mcp"],
+      "env": {
+        "API_KEY": "sk_live_your_api_key_here"
+      }
+    }
+  }
+}
+```
+
+---
+
+## Step 2: Restart Cursor
+
+Quit and reopen Cursor to load the new MCP server.
+
+---
+
+## Step 3: Verify
+
+In a new chat, ask Cursor to check your balance:
+
+```
+Check my 0 Finance balance
+```
+
+Cursor should call `get_balance` and show your USDC balance.
+
+---
+
+## Add the starter prompt
+
+For best results, add this to your Cursor rules (`.cursorrules` or project settings):
+
+```text
+When using 0 Finance tools:
+- Always call get_balance before proposing transfers
+- Never claim funds have moved—transfers require dashboard approval
+- Confirm amounts and recipients before creating proposals
+```
+
+---
+
+## Available tools
+
+Once connected, Cursor has access to these tools:
+
+| Tool                       | Description                    |
+| -------------------------- | ------------------------------ |
+| `get_balance`              | Get spendable USDC balance     |
+| `list_saved_bank_accounts` | List saved bank accounts       |
+| `propose_bank_transfer`    | Propose an outbound transfer   |
+| `create_invoice`           | Create a new invoice           |
+| `send_invoice`             | Send invoice to recipient      |
+| `list_invoices`            | List invoices                  |
+| `get_payment_details`      | Get IBAN/ACH receiving details |
+| `share_payment_details`    | Email payment details          |
+
+See the [full tool list](/mcp/overview#available-tools) for all available tools.
+
+---
+
+## Troubleshooting
+
+### "MCP server not found"
+
+1. Check that `~/.cursor/mcp.json` exists and is valid JSON
+2. Verify `npx` is available in your PATH
+3. Restart Cursor
+
+### "Authentication failed"
+
+1. Verify your API key is correct
+2. Check the key hasn't expired in [Settings → API Keys](https://0.finance/settings)
+3. Ensure there are no extra spaces in the key
+
+### "Tool call failed"
+
+Check the Cursor output panel for error messages. Common issues:
+
+- Rate limiting (wait and retry)
+- Invalid parameters (check the tool documentation)
+- Network issues (verify internet connection)

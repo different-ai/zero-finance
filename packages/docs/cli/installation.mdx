@@ -1,0 +1,111 @@
+---
+title: 'Installation'
+description: 'Install and configure the 0 Finance CLI'
+---
+
+## Install the CLI
+
+<Tabs>
+  <Tab title="npm">```bash npm install -g @zero-finance/cli ```</Tab>
+  <Tab title="pnpm">```bash pnpm add -g @zero-finance/cli ```</Tab>
+  <Tab title="From source">
+    ```bash git clone https://github.com/different-ai/zero-finance.git cd
+    zero-finance/packages/cli pnpm install pnpm build pnpm link --global ```
+  </Tab>
+</Tabs>
+
+Verify the installation:
+
+```bash
+zero --version
+```
+
+---
+
+## Authenticate
+
+### Step 1: Get your API key
+
+1. Log in to [0.finance](https://0.finance)
+2. Go to **Settings → API Keys**
+3. Click **Create API Key**
+4. Copy the key (it starts with `sk_live_` or `sk_test_`)
+
+<Warning>
+  Store your API key securely. It provides full access to your workspace.
+</Warning>
+
+### Step 2: Log in
+
+```bash
+zero auth login --api-key sk_live_your_api_key_here
+```
+
+This stores your credentials in `~/.zero-finance/config.json`.
+
+### Step 3: Verify
+
+```bash
+zero auth whoami
+```
+
+```json
+{
+  "workspace_id": "ws_xxx",
+  "workspace_name": "My Company",
+  "user_id": "did:privy:xxx"
+}
+```
+
+---
+
+## Configuration
+
+The CLI stores configuration in `~/.zero-finance/config.json`:
+
+```json
+{
+  "apiKey": "sk_live_xxx",
+  "baseUrl": "https://0.finance"
+}
+```
+
+### Custom base URL
+
+For self-hosted deployments or local development:
+
+```bash
+zero auth login --api-key sk_test_xxx --base-url http://localhost:3050
+```
+
+### Environment variables
+
+You can also use environment variables instead of the config file:
+
+```bash
+export ZERO_FINANCE_API_KEY=sk_live_xxx
+export ZERO_FINANCE_BASE_URL=https://0.finance
+```
+
+---
+
+## Log out
+
+Remove stored credentials:
+
+```bash
+zero auth logout
+```
+
+---
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="CLI Reference" icon="book" href="/cli/reference">
+    Complete command reference with examples.
+  </Card>
+  <Card title="Check balance" icon="wallet" href="/cli/reference#balance">
+    Your first CLI command.
+  </Card>
+</CardGroup>

@@ -1,15 +1,22 @@
 ---
-title: 'Quickstart'
-description: 'Run 0 Finance locally and make your first API call'
+title: 'Development Setup'
+description: 'Run 0 Finance locally for development'
 ---
+
+<Info>
+  This guide is for developers contributing to 0 Finance. If you just want to
+  use the CLI, see [Installation](/cli/installation).
+</Info>
 
 ## Prerequisites
 
 - Node.js v22.11+
 - pnpm
-- Access to required environment variables
+- Docker (for local database)
 
-## Step 1: Clone and bootstrap
+---
+
+## Clone and bootstrap
 
 ```bash
 git clone https://github.com/different-ai/zero-finance.git
@@ -17,21 +24,42 @@ cd zero-finance
 ./scripts/bootstrap.sh
 ```
 
-If you prefer manual setup:
+The bootstrap script:
+
+1. Installs Node.js and pnpm if missing
+2. Runs `pnpm install`
+3. Sets up required tooling
+
+---
+
+## Environment setup
+
+Copy the example environment file:
 
 ```bash
-pnpm install
+cp packages/web/.env.example packages/web/.env.local
 ```
 
-## Step 2: Start the app
+Ask the team for the required secrets:
+
+- `DATABASE_URL` — Postgres connection string
+- `PRIVY_APP_ID` and `PRIVY_APP_SECRET` — Auth provider
+- `BRIDGE_API_KEY` — Payment rails
+- Other service credentials
+
+---
+
+## Start the dev server
 
 ```bash
 pnpm dev
 ```
 
-The web app runs on `http://localhost:3050`.
+The web app runs on [http://localhost:3050](http://localhost:3050).
 
-## Step 3: Verify the API
+---
+
+## Verify the setup
 
 ```bash
 curl http://localhost:3050/api/health
@@ -47,27 +75,45 @@ Expected response:
 }
 ```
 
-## Step 4: Create an API key (for MCP)
+---
 
-1. Open the 0 Finance dashboard.
-2. Go to **Settings → API Keys**.
-3. Create a key and store it securely.
+## Alternative: Lite stack
 
-You’ll use this key to authenticate MCP requests with a `Bearer` token.
+For a minimal Docker-based setup:
+
+```bash
+pnpm dev:lite
+```
+
+This uses `docker-compose.lite.yml` with local Postgres and mock services.
+
+---
+
+## Quality checks
+
+```bash
+# Type checking
+pnpm typecheck
+
+# Linting
+pnpm lint
+
+# Tests
+pnpm --filter @zero-finance/web test
+
+# Build
+pnpm --filter @zero-finance/web build
+```
+
+---
 
 ## Next steps
 
 <CardGroup cols={2}>
-  <Card title="CLI workflows" icon="terminal" href="/installation/cli">
-    Common commands for bootstrap, dev, and tests.
+  <Card title="CLI Reference" icon="terminal" href="/cli/reference">
+    Test the CLI against your local server.
   </Card>
-  <Card title="API overview" icon="code" href="/api-reference/introduction">
-    Base URLs, auth modes, and core endpoints.
-  </Card>
-  <Card title="MCP server" icon="bolt" href="/ai-tools/cursor">
-    Connect AI clients to the MCP endpoint.
-  </Card>
-  <Card title="Development" icon="wrench" href="/development">
-    Local environment, linting, and testing.
+  <Card title="API Reference" icon="code" href="/api-reference/introduction">
+    Understand the HTTP API.
   </Card>
 </CardGroup>

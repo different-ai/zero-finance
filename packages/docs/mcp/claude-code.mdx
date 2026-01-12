@@ -1,0 +1,107 @@
+---
+title: 'Claude Code'
+description: 'Connect Claude Code to the 0 Finance MCP server'
+---
+
+## Prerequisites
+
+- [Claude Code](https://claude.ai/code) or Claude Desktop installed
+- 0 Finance API key from [Settings → API Keys](https://0.finance/settings)
+
+---
+
+## Step 1: Create the config file
+
+Create or edit `~/.claude/claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "zero-finance": {
+      "command": "npx",
+      "args": ["-y", "mcp-remote", "https://0.finance/api/mcp"],
+      "env": {
+        "API_KEY": "sk_live_your_api_key_here"
+      }
+    }
+  }
+}
+```
+
+---
+
+## Step 2: Restart Claude
+
+Quit and reopen Claude to load the new MCP server.
+
+---
+
+## Step 3: Verify
+
+Ask Claude to check your balance:
+
+```
+Check my 0 Finance balance
+```
+
+Claude should call `get_balance` and display your USDC balance.
+
+---
+
+## Add to CLAUDE.md
+
+For project-specific context, add this to your `CLAUDE.md`:
+
+```markdown
+## 0 Finance Integration
+
+This project uses 0 Finance for payments. When working with finances:
+
+- Use `get_balance` before proposing transfers
+- Transfers require dashboard approval—never claim funds moved
+- Use `create_invoice` for billing clients
+- Use `get_payment_details` to share receiving info
+```
+
+---
+
+## Available tools
+
+Once connected, Claude has access to all 0 Finance tools:
+
+| Tool                       | Description                    |
+| -------------------------- | ------------------------------ |
+| `get_balance`              | Get spendable USDC balance     |
+| `list_saved_bank_accounts` | List saved bank accounts       |
+| `propose_bank_transfer`    | Propose an outbound transfer   |
+| `create_invoice`           | Create a new invoice           |
+| `send_invoice`             | Send invoice to recipient      |
+| `list_invoices`            | List invoices                  |
+| `get_payment_details`      | Get IBAN/ACH receiving details |
+| `share_payment_details`    | Email payment details          |
+
+See the [full tool list](/mcp/overview#available-tools) for all available tools.
+
+---
+
+## Troubleshooting
+
+### "MCP server not found"
+
+1. Check that `~/.claude/claude_desktop_config.json` exists
+2. Verify the JSON is valid (no trailing commas)
+3. Restart Claude completely (quit and reopen)
+
+### "Tool execution failed"
+
+1. Verify your API key is valid
+2. Check the Claude output for specific error messages
+3. Ensure you have network connectivity
+
+### Slow responses
+
+The MCP server connects over HTTPS. If responses are slow:
+
+1. Check your internet connection
+2. Try a different network
+3. The first request may be slower due to npx package download

@@ -1,6 +1,6 @@
 ---
 title: 'Introduction'
-description: 'How to use the 0 Finance CLI, API, and MCP server'
+description: 'Manage your finances from the command line with the 0 Finance CLI'
 ---
 
 ## What is 0 Finance?
@@ -11,80 +11,150 @@ description: 'How to use the 0 Finance CLI, API, and MCP server'
 - **Spend anywhere** — Use a debit card worldwide with 0% conversion fees.
 - **Optimize yield** — AI automatically allocates idle funds to the highest-yielding opportunities.
 
-Everything is programmable. The MCP server lets your AI agent propose transfers, create invoices, and fetch balances—while you stay in control with human approval for every outbound payment.
+Everything is programmable through the **`zero` CLI** — check balances, send invoices, propose transfers, and manage savings from your terminal.
 
 ---
 
 ## Quick start
 
+```bash
+# Install the CLI
+pnpm add -g @zero-finance/cli
+
+# Authenticate with your API key
+zero auth login --api-key sk_live_xxx
+
+# Check your balance
+zero balance
+
+# Create and send an invoice
+zero invoices create \
+  --recipient-email client@example.com \
+  --amount 1000 \
+  --currency USD \
+  --description "Consulting services"
+```
+
 <CardGroup cols={2}>
-  <Card title="Get started" icon="rocket" href="/quickstart">
-    Set up the repo, start the dev server, and verify your environment.
+  <Card title="Install the CLI" icon="terminal" href="/cli/installation">
+    Get up and running with the `zero` CLI in under a minute.
   </Card>
-  <Card title="CLI workflows" icon="terminal" href="/installation/cli">
-    Common commands for bootstrap, dev, and testing.
+  <Card title="CLI Reference" icon="book" href="/cli/reference">
+    Complete command reference with examples.
   </Card>
-  <Card title="API overview" icon="code" href="/api-reference/introduction">
-    Base URLs, auth modes, and core endpoints.
+  <Card title="MCP for AI agents" icon="bolt" href="/mcp/overview">
+    Let AI agents manage your finances with human approval.
   </Card>
-  <Card title="MCP server" icon="bolt" href="/ai-tools/cursor">
-    Connect AI clients to the 0 Finance MCP server.
+  <Card title="API Reference" icon="code" href="/api-reference/introduction">
+    Direct HTTP API access for custom integrations.
   </Card>
 </CardGroup>
 
 ---
 
-## AI-native starter prompt
+## What you can do
 
-Copy this prompt into your AI client (Cursor, Claude Code, Windsurf, or any MCP-compatible agent) to get started immediately:
+### Check your balance
 
-```text
-You are an assistant connected to the 0 Finance MCP server.
-
-## Before proposing transfers
-1. Call `get_balance` to check available USDC.
-2. Call `list_saved_bank_accounts` to see destination options.
-
-## Transfers
-- Use `propose_bank_transfer` to create a transfer proposal.
-- Never claim funds have moved—transfers require user approval in the dashboard.
-- Use `attach_document` to link invoices or receipts to proposals.
-
-## Invoices
-- Use `create_invoice` to draft an invoice.
-- Use `send_invoice` to email it to the recipient.
-- Use `list_invoices` and `get_invoice` to check status.
-
-## Receiving payments
-- Use `get_payment_details` to retrieve the user's IBAN/ACH info.
-- Use `share_payment_details` to email those details to a third party.
-
-## Style
-- Summarize results clearly.
-- Ask before taking destructive or high-value actions.
-- Always confirm amounts and recipients before proposing transfers.
+```bash
+zero balance
 ```
 
-<Tip>
-  Paste this into your AI client's system prompt or rules file. It teaches the
-  agent the correct tool-calling sequence and safety guardrails.
-</Tip>
+```json
+{
+  "spendable_usdc": "5420.50",
+  "pending_usdc": "0.00",
+  "earning_usdc": "2000.00",
+  "total_usdc": "7420.50"
+}
+```
+
+### Create and send invoices
+
+```bash
+# Create an invoice
+zero invoices create \
+  --recipient-email client@acme.com \
+  --recipient-name "Acme Corp" \
+  --amount 2500 \
+  --currency USD \
+  --description "Q1 consulting"
+
+# Send it
+zero invoices send --invoice-id inv_xxx
+```
+
+### Propose a bank transfer
+
+```bash
+# List your saved bank accounts
+zero bank accounts list
+
+# Propose a transfer (requires dashboard approval)
+zero bank transfers propose \
+  --amount 1000 \
+  --currency usd \
+  --bank-account-id ba_xxx \
+  --reason "Contractor payment"
+```
+
+### Manage savings
+
+```bash
+# View available vaults
+zero vaults list
+
+# Deposit into a yield vault
+zero savings deposits propose \
+  --vault-address 0x... \
+  --amount 500 \
+  --reason "Earning yield on idle funds"
+
+# Check your positions
+zero savings positions
+```
 
 ---
 
-## What you can build
+## How it works
 
-- Automate outbound transfers with human approval.
-- Generate and send invoices programmatically.
-- Fetch payment details for inbound wires/ACH.
-- Drive workflows with MCP tools from your agent.
+1. **Authenticate** — Use `zero auth login` with your API key from the dashboard.
+2. **Execute commands** — All read operations happen instantly. Write operations (transfers, withdrawals) create proposals.
+3. **Approve in dashboard** — Proposals require human approval before executing. This keeps you in control.
+
+<Info>
+  The CLI never moves money without your explicit approval in the 0 Finance
+  dashboard.
+</Info>
+
+---
+
+## For AI agents
+
+Connect your AI assistant to 0 Finance using the MCP server. Your agent can check balances, create invoices, and propose transfers — but all outbound payments still require your approval.
+
+```json
+{
+  "mcpServers": {
+    "zero-finance": {
+      "command": "npx",
+      "args": ["-y", "mcp-remote", "https://0.finance/api/mcp"],
+      "env": {
+        "API_KEY": "sk_live_xxx"
+      }
+    }
+  }
+}
+```
+
+See [MCP setup](/mcp/overview) for detailed instructions.
 
 ---
 
 ## Documentation map
 
-| Section         | What's inside                           |
-| --------------- | --------------------------------------- |
-| **Guides**      | Repo setup, local dev, CLI commands     |
-| **API & MCP**   | HTTP endpoints, MCP server reference    |
-| **MCP clients** | Setup for Cursor, Claude Code, Windsurf |
+| Section           | What's inside                                    |
+| ----------------- | ------------------------------------------------ |
+| **CLI**           | Installation, authentication, command reference  |
+| **MCP**           | AI agent setup for Cursor, Claude Code, Windsurf |
+| **API Reference** | HTTP endpoints for custom integrations           |

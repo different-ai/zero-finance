@@ -11,27 +11,33 @@
   "navigation": {
     "tabs": [
       {
-        "tab": "Guides",
+        "tab": "CLI",
         "groups": [
           {
             "group": "Getting started",
-            "pages": ["index", "quickstart", "development", "installation/cli"]
-          },
+            "pages": ["index", "cli/installation", "cli/reference"]
+          }
+        ]
+      },
+      {
+        "tab": "MCP",
+        "groups": [
           {
-            "group": "MCP clients",
+            "group": "AI Agents",
             "pages": [
-              "ai-tools/cursor",
-              "ai-tools/claude-code",
-              "ai-tools/windsurf"
+              "mcp/overview",
+              "mcp/cursor",
+              "mcp/claude-code",
+              "mcp/windsurf"
             ]
           }
         ]
       },
       {
-        "tab": "API & MCP",
+        "tab": "API",
         "groups": [
           {
-            "group": "API overview",
+            "group": "HTTP API",
             "pages": [
               "api-reference/introduction",
               "api-reference/endpoint/get",
@@ -39,6 +45,15 @@
               "api-reference/endpoint/delete",
               "api-reference/endpoint/webhook"
             ]
+          }
+        ]
+      },
+      {
+        "tab": "Development",
+        "groups": [
+          {
+            "group": "Contributing",
+            "pages": ["development", "quickstart"]
           }
         ]
       }
@@ -71,7 +86,7 @@
     ],
     "primary": {
       "type": "button",
-      "label": "0.finance",
+      "label": "Dashboard",
       "href": "https://0.finance"
     }
   },

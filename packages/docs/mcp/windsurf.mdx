@@ -1,0 +1,87 @@
+---
+title: 'Windsurf'
+description: 'Connect Windsurf to the 0 Finance MCP server'
+---
+
+## Prerequisites
+
+- [Windsurf](https://codeium.com/windsurf) installed
+- 0 Finance API key from [Settings → API Keys](https://0.finance/settings)
+
+---
+
+## Step 1: Create the config file
+
+Create or edit `~/.codeium/windsurf/mcp_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "zero-finance": {
+      "command": "npx",
+      "args": ["-y", "mcp-remote", "https://0.finance/api/mcp"],
+      "env": {
+        "API_KEY": "sk_live_your_api_key_here"
+      }
+    }
+  }
+}
+```
+
+---
+
+## Step 2: Restart Windsurf
+
+Quit and reopen Windsurf to load the new MCP server.
+
+---
+
+## Step 3: Verify
+
+In Cascade, ask Windsurf to check your balance:
+
+```
+Check my 0 Finance balance
+```
+
+Windsurf should call `get_balance` and display your USDC balance.
+
+---
+
+## Available tools
+
+Once connected, Windsurf has access to all 0 Finance tools:
+
+| Tool                       | Description                    |
+| -------------------------- | ------------------------------ |
+| `get_balance`              | Get spendable USDC balance     |
+| `list_saved_bank_accounts` | List saved bank accounts       |
+| `propose_bank_transfer`    | Propose an outbound transfer   |
+| `create_invoice`           | Create a new invoice           |
+| `send_invoice`             | Send invoice to recipient      |
+| `list_invoices`            | List invoices                  |
+| `get_payment_details`      | Get IBAN/ACH receiving details |
+| `share_payment_details`    | Email payment details          |
+
+See the [full tool list](/mcp/overview#available-tools) for all available tools.
+
+---
+
+## Troubleshooting
+
+### "MCP server not found"
+
+1. Check that `~/.codeium/windsurf/mcp_config.json` exists
+2. Verify the JSON is valid
+3. Restart Windsurf
+
+### "Authentication error"
+
+1. Verify your API key in the config
+2. Check the key is active in [Settings → API Keys](https://0.finance/settings)
+
+### Cascade not finding tools
+
+1. Make sure you're using Cascade (the AI assistant)
+2. Try explicitly asking "Use the 0 Finance tools to check my balance"
+3. Restart Windsurf if tools aren't appearing
