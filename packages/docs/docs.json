@@ -18,20 +18,7 @@
             "pages": ["index", "quickstart", "development", "installation/cli"]
           },
           {
-            "group": "Customization",
-            "pages": ["essentials/settings", "essentials/navigation"]
-          },
-          {
-            "group": "Writing content",
-            "pages": [
-              "essentials/markdown",
-              "essentials/code",
-              "essentials/images",
-              "essentials/reusable-snippets"
-            ]
-          },
-          {
-            "group": "AI tools",
+            "group": "MCP clients",
             "pages": [
               "ai-tools/cursor",
               "ai-tools/claude-code",
@@ -41,15 +28,12 @@
         ]
       },
       {
-        "tab": "API reference",
+        "tab": "API & MCP",
         "groups": [
           {
-            "group": "API documentation",
-            "pages": ["api-reference/introduction"]
-          },
-          {
-            "group": "Endpoint examples",
+            "group": "API overview",
             "pages": [
+              "api-reference/introduction",
               "api-reference/endpoint/get",
               "api-reference/endpoint/create",
               "api-reference/endpoint/delete",
@@ -62,14 +46,14 @@
     "global": {
       "anchors": [
         {
-          "anchor": "Documentation",
-          "href": "https://mintlify.com/docs",
-          "icon": "book-open-cover"
+          "anchor": "0 Finance",
+          "href": "https://0.finance",
+          "icon": "building-columns"
         },
         {
-          "anchor": "Blog",
-          "href": "https://mintlify.com/blog",
-          "icon": "newspaper"
+          "anchor": "GitHub",
+          "href": "https://github.com/different-ai/zero-finance",
+          "icon": "github"
         }
       ]
     }
@@ -81,14 +65,14 @@
   "navbar": {
     "links": [
       {
-        "label": "Support",
-        "href": "mailto:hi@mintlify.com"
+        "label": "0.finance",
+        "href": "https://0.finance"
       }
     ],
     "primary": {
       "type": "button",
-      "label": "Dashboard",
-      "href": "https://dashboard.mintlify.com"
+      "label": "0.finance",
+      "href": "https://0.finance"
     }
   },
   "contextual": {
@@ -105,9 +89,7 @@
   },
   "footer": {
     "socials": {
-      "x": "https://x.com/mintlify",
-      "github": "https://github.com/mintlify",
-      "linkedin": "https://linkedin.com/company/mintlify"
+      "github": "https://github.com/different-ai/zero-finance"
     }
   }
 }

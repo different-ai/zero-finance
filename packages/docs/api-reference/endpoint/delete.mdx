@@ -1,4 +1,35 @@
 ---
-title: 'Delete Plant'
-openapi: 'DELETE /plants/{id}'
+title: 'Register primary Safe'
+description: 'Attach a Safe to a user after onboarding'
 ---
+
+## POST `/api/user/safes/register-primary`
+
+Registers a user’s primary Safe after Privy authentication. Requires a Privy access token in the `Authorization` header.
+
+<RequestExample>
+```bash cURL
+curl -X POST "https://www.0.finance/api/user/safes/register-primary" \
+  -H "Authorization: Bearer <privy_jwt>" \
+  -H "Content-Type: application/json" \
+  -d '{"safeAddress":"0x..."}'
+```
+</RequestExample>
+
+<ResponseExample>
+```json Success
+{
+  "message": "Primary safe registered successfully.",
+  "data": {
+    "id": "uuid",
+    "safeAddress": "0x...",
+    "safeType": "primary"
+  }
+}
+```
+</ResponseExample>
+
+<Info>
+  This endpoint is used during onboarding to link the user’s primary Safe on
+  Base.
+</Info>

@@ -287,3 +287,7 @@ Example:
 ❌ "I'll note this for later"
 ✅ *immediately edits skill file*
 ```
+
+## Learnings Log
+
+- 2026-01-12: Bulk remote branch cleanup can hit stale refs and timeouts; run `git fetch --prune origin` first, delete with a loop that tolerates missing refs, then prune again to verify only `origin/main` remains.

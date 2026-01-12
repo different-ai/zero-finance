@@ -1,4 +1,24 @@
 ---
-title: 'Get Plants'
-openapi: 'GET /plants'
+title: 'Health check'
+description: 'Verify the API is up'
 ---
+
+## GET `/api/health`
+
+Use this endpoint for uptime checks and local verification.
+
+### Request
+
+```bash
+curl https://www.0.finance/api/health
+```
+
+### Response
+
+```json
+{
+  "status": "ok",
+  "timestamp": "2026-01-12T00:00:00.000Z",
+  "message": "Server is running"
+}
+```

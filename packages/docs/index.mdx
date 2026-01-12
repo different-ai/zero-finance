@@ -1,97 +1,36 @@
 ---
-title: "Introduction"
-description: "Welcome to the new home for your documentation"
+title: 'Introduction'
+description: 'How to use the 0 Finance CLI, API, and MCP server'
 ---
 
-## Setting up
+0 Finance is a bank account that automates how money moves, earns yield, and pays invoices. This docs site focuses on developer workflows: the CLI commands you’ll run locally, the HTTP API surface, and the MCP server for AI agents.
 
-Get your documentation site up and running in minutes.
+## Quick start
 
-<Card
-  title="Start here"
-  icon="rocket"
-  href="/quickstart"
-  horizontal
->
-  Follow our three step quickstart guide.
-</Card>
-
-## Make it yours
-
-Design a docs site that looks great and empowers your users.
-
-<Columns cols={2}>
-  <Card
-    title="Edit locally"
-    icon="pen-to-square"
-    href="/development"
-  >
-    Edit your docs locally and preview them in real time.
+<CardGroup cols={2}>
+  <Card title="Get started" icon="rocket" href="/quickstart">
+    Set up the repo, start the dev server, and verify your environment.
   </Card>
-  <Card
-    title="Customize your site"
-    icon="palette"
-    href="/essentials/settings"
-  >
-    Customize the design and colors of your site to match your brand.
+  <Card title="CLI workflows" icon="terminal" href="/installation/cli">
+    Common commands for bootstrap, dev, and testing.
   </Card>
-    <Card
-    title="Set up navigation"
-    icon="map"
-    href="/essentials/navigation"
-  >
-    Organize your docs to help users find what they need and succeed with your product.
+  <Card title="API overview" icon="code" href="/api-reference/introduction">
+    Base URLs, auth modes, and core endpoints.
   </Card>
-  <Card
-    title="API documentation"
-    icon="terminal"
-    href="/api-reference/introduction"
-  >
-    Auto-generate API documentation from OpenAPI specifications.
+  <Card title="MCP server" icon="bolt" href="/ai-tools/cursor">
+    Connect AI clients to the 0 Finance MCP server.
   </Card>
-</Columns>
+</CardGroup>
 
-## Create beautiful pages
+## What you can build
 
-Everything you need to create world-class documentation.
+- Automate outbound transfers with human approval.
+- Generate and send invoices programmatically.
+- Fetch payment details for inbound wires/ACH.
+- Drive workflows with MCP tools from your agent.
 
-<Columns cols={2}>
-  <Card
-    title="Write with MDX"
-    icon="pen-fancy"
-    href="/essentials/markdown"
-  >
-    Use MDX to style your docs pages.
-  </Card>
-  <Card
-    title="Code samples"
-    icon="code"
-    href="/essentials/code"
-  >
-    Add sample code to demonstrate how to use your product.
-  </Card>
-  <Card
-    title="Images"
-    icon="image"
-    href="/essentials/images"
-  >
-    Display images and other media.
-  </Card>
-  <Card
-    title="Reusable snippets"
-    icon="recycle"
-    href="/essentials/reusable-snippets"
-  >
-    Write once and reuse across your docs.
-  </Card>
-</Columns>
+## Documentation map
 
-## Need inspiration?
-
-<Card
-  title="See complete examples"
-  icon="stars"
-  href="https://mintlify.com/customers"
->
-  Browse our showcase of exceptional documentation sites.
-</Card>
+- **Guides**: repo setup, local dev, CLI commands.
+- **API & MCP**: HTTP endpoints plus MCP server usage.
+- **MCP clients**: setup instructions for Cursor, Claude Code, and Windsurf.

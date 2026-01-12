@@ -1,4 +1,38 @@
 ---
-title: 'Create Plant'
-openapi: 'POST /plants'
+title: 'Upload attachment'
+description: 'Upload files to Vercel Blob for transactions'
 ---
+
+## POST `/api/upload`
+
+Uploads a file and returns a public blob URL. Requires a signed-in user session.
+
+<ParamField query="transactionType" type="string">
+  Optional type for attachments (e.g. `offramp`).
+</ParamField>
+<ParamField query="transactionId" type="string">
+  Optional transaction ID for attachment scoping.
+</ParamField>
+
+### Request
+
+```bash
+curl -X POST "https://www.0.finance/api/upload?transactionType=offramp&transactionId=uuid" \
+  -H "Cookie: your-session-cookie" \
+  -F "file=@invoice.pdf"
+```
+
+### Response
+
+```json
+{
+  "url": "https://.../invoice.pdf",
+  "filename": "invoice.pdf",
+  "contentType": "application/pdf",
+  "fileSize": 83921
+}
+```
+
+<Info>
+  File size limit is 10MB. Allowed types: PDF, images, and text files.
+</Info>
