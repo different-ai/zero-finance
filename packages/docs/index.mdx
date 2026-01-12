@@ -3,7 +3,17 @@ title: 'Introduction'
 description: 'How to use the 0 Finance CLI, API, and MCP server'
 ---
 
-0 Finance is a bank account that automates how money moves, earns yield, and pays invoices. This docs site focuses on developer workflows: the CLI commands you’ll run locally, the HTTP API surface, and the MCP server for AI agents.
+## What is 0 Finance?
+
+0 Finance is a bank account built for the AI era:
+
+- **Get paid easily** — Create invoices in seconds and receive payments to your personal IBAN or ACH account.
+- **Spend anywhere** — Use a debit card worldwide with 0% conversion fees.
+- **Optimize yield** — AI automatically allocates idle funds to the highest-yielding opportunities.
+
+Everything is programmable. The MCP server lets your AI agent propose transfers, create invoices, and fetch balances—while you stay in control with human approval for every outbound payment.
+
+---
 
 ## Quick start
 
@@ -22,6 +32,46 @@ description: 'How to use the 0 Finance CLI, API, and MCP server'
   </Card>
 </CardGroup>
 
+---
+
+## AI-native starter prompt
+
+Copy this prompt into your AI client (Cursor, Claude Code, Windsurf, or any MCP-compatible agent) to get started immediately:
+
+```text
+You are an assistant connected to the 0 Finance MCP server.
+
+## Before proposing transfers
+1. Call `get_balance` to check available USDC.
+2. Call `list_saved_bank_accounts` to see destination options.
+
+## Transfers
+- Use `propose_bank_transfer` to create a transfer proposal.
+- Never claim funds have moved—transfers require user approval in the dashboard.
+- Use `attach_document` to link invoices or receipts to proposals.
+
+## Invoices
+- Use `create_invoice` to draft an invoice.
+- Use `send_invoice` to email it to the recipient.
+- Use `list_invoices` and `get_invoice` to check status.
+
+## Receiving payments
+- Use `get_payment_details` to retrieve the user's IBAN/ACH info.
+- Use `share_payment_details` to email those details to a third party.
+
+## Style
+- Summarize results clearly.
+- Ask before taking destructive or high-value actions.
+- Always confirm amounts and recipients before proposing transfers.
+```
+
+<Tip>
+  Paste this into your AI client's system prompt or rules file. It teaches the
+  agent the correct tool-calling sequence and safety guardrails.
+</Tip>
+
+---
+
 ## What you can build
 
 - Automate outbound transfers with human approval.
@@ -29,8 +79,12 @@ description: 'How to use the 0 Finance CLI, API, and MCP server'
 - Fetch payment details for inbound wires/ACH.
 - Drive workflows with MCP tools from your agent.
 
+---
+
 ## Documentation map
 
-- **Guides**: repo setup, local dev, CLI commands.
-- **API & MCP**: HTTP endpoints plus MCP server usage.
-- **MCP clients**: setup instructions for Cursor, Claude Code, and Windsurf.
+| Section         | What's inside                           |
+| --------------- | --------------------------------------- |
+| **Guides**      | Repo setup, local dev, CLI commands     |
+| **API & MCP**   | HTTP endpoints, MCP server reference    |
+| **MCP clients** | Setup for Cursor, Claude Code, Windsurf |
