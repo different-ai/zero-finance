@@ -1,0 +1,27 @@
+---
+title: 'Privy webhook'
+description: 'User lifecycle events from Privy'
+---
+
+## POST `/api/webhooks/auth`
+
+Receives Privy webhook events. This endpoint expects an HMAC signature in `x-privy-signature`.
+
+<RequestExample>
+```bash cURL
+curl -X POST "https://www.0.finance/api/webhooks/auth" \
+  -H "x-privy-signature: <hex_signature>" \
+  -H "Content-Type: application/json" \
+  -d '{"type":"user.created","data":{"email":"user@example.com"}}'
+```
+</RequestExample>
+
+<ResponseExample>
+```json Success
+{
+  "received": true
+}
+```
+</ResponseExample>
+
+<Info>The signature is verified against `PRIVY_WEBHOOK_SECRET`.</Info>

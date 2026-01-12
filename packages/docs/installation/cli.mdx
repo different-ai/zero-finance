@@ -1,0 +1,48 @@
+---
+title: 'CLI workflows'
+description: 'Commands for bootstrapping, running, and testing 0 Finance'
+---
+
+## Bootstrap
+
+```bash
+./scripts/bootstrap.sh
+```
+
+This installs dependencies, sets up required tooling, and prepares the repo.
+
+## Run the app
+
+```bash
+pnpm dev
+```
+
+## Run the lite stack
+
+```bash
+pnpm dev:lite
+```
+
+## Quality checks
+
+```bash
+pnpm lint
+pnpm typecheck
+pnpm --filter @zero-finance/web test
+```
+
+## Build
+
+```bash
+pnpm --filter @zero-finance/web build
+```
+
+## Useful scripts
+
+- `./scripts/start-lite.sh` — start the lite Docker stack.
+- `./scripts/dev-docker.sh` — launch the full Docker stack.
+
+<Info>
+  Need environment variables? Ask the team for the shared secrets bundle before
+  running the app locally.
+</Info>

@@ -1,7 +1,6 @@
 ---
 description: Primary development agent for 0 Finance. Use this for all feature development, debugging, and testing workflows. Relies heavily on skills and updates them after each task.
 mode: primary
-model: anthropic/claude-opus-4-5-20251101
 temperature: 0.2
 tools:
   read: true

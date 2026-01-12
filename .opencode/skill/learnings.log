@@ -1,0 +1,18 @@
+# Skill Learnings Log
+
+This file is automatically populated by the skill-reinforcement plugin.
+When an agent outputs an `<update-skills>` block, it gets logged here.
+
+Review this file periodically to update skill files with accumulated learnings.
+
+---
+
+
+## 2026-01-11T18:05:39-08:00
+- **Learned**: Manual test entry
+- **Skill**: test
+- **Improvement**: Verify logging works
+- **Session**: manual-test
+
+---
+

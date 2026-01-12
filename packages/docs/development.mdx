@@ -1,0 +1,43 @@
+---
+title: 'Development'
+description: 'Local workflows for the 0 Finance app'
+---
+
+## Local development
+
+```bash
+pnpm dev
+```
+
+The app runs on `http://localhost:3050`.
+
+## Lite stack
+
+If you want a lighter local stack:
+
+```bash
+pnpm dev:lite
+```
+
+## Common checks
+
+```bash
+pnpm lint
+pnpm typecheck
+pnpm --filter @zero-finance/web test
+```
+
+## Build
+
+```bash
+pnpm --filter @zero-finance/web build
+```
+
+## Environment variables
+
+Most features require environment variables (Privy, Align, PostHog, etc.). Load them from your team’s shared secrets before running the app.
+
+<Info>
+  If a feature is failing locally, double-check `pnpm dev` logs for missing env
+  vars.
+</Info>

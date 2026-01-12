@@ -1,0 +1,37 @@
+---
+title: 'Windsurf MCP setup'
+description: 'Connect Windsurf to the 0 Finance MCP server'
+icon: 'water'
+---
+
+Windsurf’s Cascade assistant can use MCP to access 0 Finance tools with your permission.
+
+## MCP endpoint
+
+- URL: `https://www.0.finance/api/mcp`
+- Auth: `Authorization: Bearer <api_key>`
+
+## Configure Windsurf
+
+Add a remote MCP server in Windsurf with the URL and auth header above.
+
+Example configuration (adapt to your MCP settings format):
+
+```json
+{
+  "mcpServers": {
+    "0-finance": {
+      "url": "https://www.0.finance/api/mcp",
+      "headers": {
+        "Authorization": "Bearer YOUR_API_KEY"
+      }
+    }
+  }
+}
+```
+
+## Suggested flows
+
+- Fetch balances before proposing transfers.
+- Create invoices, then `send_invoice` to email them.
+- Attach documents using `attach_document` after proposals are created.

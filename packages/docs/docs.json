@@ -1,0 +1,95 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "mint",
+  "name": "0 Finance Docs",
+  "colors": {
+    "primary": "#1B29FF",
+    "light": "#1B29FF",
+    "dark": "#1B29FF"
+  },
+  "favicon": "/favicon.svg",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Guides",
+        "groups": [
+          {
+            "group": "Getting started",
+            "pages": ["index", "quickstart", "development", "installation/cli"]
+          },
+          {
+            "group": "MCP clients",
+            "pages": [
+              "ai-tools/cursor",
+              "ai-tools/claude-code",
+              "ai-tools/windsurf"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API & MCP",
+        "groups": [
+          {
+            "group": "API overview",
+            "pages": [
+              "api-reference/introduction",
+              "api-reference/endpoint/get",
+              "api-reference/endpoint/create",
+              "api-reference/endpoint/delete",
+              "api-reference/endpoint/webhook"
+            ]
+          }
+        ]
+      }
+    ],
+    "global": {
+      "anchors": [
+        {
+          "anchor": "0 Finance",
+          "href": "https://0.finance",
+          "icon": "building-columns"
+        },
+        {
+          "anchor": "GitHub",
+          "href": "https://github.com/different-ai/zero-finance",
+          "icon": "github"
+        }
+      ]
+    }
+  },
+  "logo": {
+    "light": "/logo/light.svg",
+    "dark": "/logo/dark.svg"
+  },
+  "navbar": {
+    "links": [
+      {
+        "label": "0.finance",
+        "href": "https://0.finance"
+      }
+    ],
+    "primary": {
+      "type": "button",
+      "label": "0.finance",
+      "href": "https://0.finance"
+    }
+  },
+  "contextual": {
+    "options": [
+      "copy",
+      "view",
+      "chatgpt",
+      "claude",
+      "perplexity",
+      "mcp",
+      "cursor",
+      "vscode"
+    ]
+  },
+  "footer": {
+    "socials": {
+      "github": "https://github.com/different-ai/zero-finance"
+    }
+  }
+}

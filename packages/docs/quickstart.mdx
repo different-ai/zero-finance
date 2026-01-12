@@ -1,0 +1,73 @@
+---
+title: 'Quickstart'
+description: 'Run 0 Finance locally and make your first API call'
+---
+
+## Prerequisites
+
+- Node.js v22.11+
+- pnpm
+- Access to required environment variables
+
+## Step 1: Clone and bootstrap
+
+```bash
+git clone https://github.com/different-ai/zero-finance.git
+cd zero-finance
+./scripts/bootstrap.sh
+```
+
+If you prefer manual setup:
+
+```bash
+pnpm install
+```
+
+## Step 2: Start the app
+
+```bash
+pnpm dev
+```
+
+The web app runs on `http://localhost:3050`.
+
+## Step 3: Verify the API
+
+```bash
+curl http://localhost:3050/api/health
+```
+
+Expected response:
+
+```json
+{
+  "status": "ok",
+  "timestamp": "2026-01-12T00:00:00.000Z",
+  "message": "Server is running"
+}
+```
+
+## Step 4: Create an API key (for MCP)
+
+1. Open the 0 Finance dashboard.
+2. Go to **Settings → API Keys**.
+3. Create a key and store it securely.
+
+You’ll use this key to authenticate MCP requests with a `Bearer` token.
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="CLI workflows" icon="terminal" href="/installation/cli">
+    Common commands for bootstrap, dev, and tests.
+  </Card>
+  <Card title="API overview" icon="code" href="/api-reference/introduction">
+    Base URLs, auth modes, and core endpoints.
+  </Card>
+  <Card title="MCP server" icon="bolt" href="/ai-tools/cursor">
+    Connect AI clients to the MCP endpoint.
+  </Card>
+  <Card title="Development" icon="wrench" href="/development">
+    Local environment, linting, and testing.
+  </Card>
+</CardGroup>

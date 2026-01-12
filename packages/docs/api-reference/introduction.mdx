@@ -1,0 +1,29 @@
+---
+title: 'API overview'
+description: 'HTTP endpoints and authentication for 0 Finance'
+---
+
+## Base URLs
+
+- Production: `https://www.0.finance`
+- Local dev: `http://localhost:3050`
+
+## Authentication
+
+- **Dashboard APIs** use session auth (Privy). Most `/api/*` routes expect a logged-in user.
+- **MCP server** uses API keys (Bearer token). Create keys in **Settings → API Keys**.
+
+## Core endpoints
+
+| Endpoint                           | Method | Purpose                               |
+| ---------------------------------- | ------ | ------------------------------------- |
+| `/api/health`                      | GET    | Health check for uptime verification. |
+| `/api/upload`                      | POST   | Upload attachments to Vercel Blob.    |
+| `/api/user/safes/register-primary` | POST   | Register a primary Safe for a user.   |
+| `/api/webhooks/auth`               | POST   | Privy webhook receiver (HMAC signed). |
+| `/api/trpc`                        | POST   | tRPC router used by the web app.      |
+| `/api/mcp`                         | POST   | MCP JSON-RPC server for AI agents.    |
+
+## MCP server in one line
+
+`POST /api/mcp` with `Authorization: Bearer <api_key>` and a JSON-RPC body.
