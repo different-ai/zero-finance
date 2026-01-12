@@ -8,7 +8,18 @@ description: 'Direct HTTP access to 0 Finance'
   server](/mcp/overview) instead of calling the API directly.
 </Info>
 
-## Base URL
+## API surfaces
+
+0 Finance exposes two API surfaces:
+
+1. **CLI API** — API-key authenticated endpoints at `/api/cli`
+2. **Dashboard API** — Session/webhook authenticated endpoints at `/api/*`
+
+---
+
+## CLI API (API keys)
+
+### Base URL
 
 ```
 https://0.finance/api/cli
@@ -20,9 +31,7 @@ For local development:
 http://localhost:3050/api/cli
 ```
 
----
-
-## Authentication
+### Authentication
 
 Include your API key in the `Authorization` header:
 
@@ -33,51 +42,139 @@ curl https://0.finance/api/cli/balance \
 
 Get your API key from [Settings → API Keys](https://0.finance/settings).
 
----
+### Admin authentication
 
-## Response format
+Admin-only endpoints require the `x-admin-token` header:
 
-All endpoints return JSON:
+```bash
+curl https://0.finance/api/cli/users \
+  -X POST \
+  -H "Authorization: Bearer sk_live_xxx" \
+  -H "x-admin-token: adm_xxx" \
+  -H "Content-Type: application/json" \
+  -d '{ "email": "user@example.com" }'
+```
+
+### Response format
+
+Endpoints return JSON objects. Errors return `{ "error": "..." }`.
+
+Example error:
 
 ```json
 {
-  "data": { ... },
-  "error": null
-}
-```
-
-Or on error:
-
-```json
-{
-  "data": null,
-  "error": "Error message"
+  "error": "Unauthorized: invalid or missing API key"
 }
 ```
 
 ---
 
-## Core endpoints
+## CLI endpoint map
 
-| Method | Endpoint                            | Description               |
-| ------ | ----------------------------------- | ------------------------- |
-| GET    | `/api/cli/whoami`                   | Current workspace context |
-| GET    | `/api/cli/balance`                  | Spendable balance         |
-| GET    | `/api/cli/bank-accounts`            | List saved bank accounts  |
-| POST   | `/api/cli/bank-accounts`            | Create bank account       |
-| POST   | `/api/cli/bank-transfers/proposals` | Propose transfer          |
-| GET    | `/api/cli/bank-transfers/proposals` | List proposals            |
-| POST   | `/api/cli/invoices`                 | Create invoice            |
-| GET    | `/api/cli/invoices`                 | List invoices             |
-| GET    | `/api/cli/invoices/:id`             | Get invoice               |
-| POST   | `/api/cli/invoices/:id/send`        | Send invoice              |
-| GET    | `/api/cli/transactions`             | List transactions         |
-| GET    | `/api/cli/payment-details`          | Get receiving details     |
-| POST   | `/api/cli/payment-details/share`    | Share payment details     |
+### Auth & balance
+
+| Method | Endpoint           | Description                        |
+| ------ | ------------------ | ---------------------------------- |
+| GET    | `/api/cli/whoami`  | Workspace metadata for the API key |
+| GET    | `/api/cli/balance` | USDC balance on Base Safe          |
+
+### Bank accounts
+
+| Method | Endpoint                 | Description              |
+| ------ | ------------------------ | ------------------------ |
+| GET    | `/api/cli/bank-accounts` | List saved bank accounts |
+| POST   | `/api/cli/bank-accounts` | Create a bank account    |
+
+### Bank transfers
+
+| Method | Endpoint                                        | Description                               |
+| ------ | ----------------------------------------------- | ----------------------------------------- |
+| POST   | `/api/cli/bank-transfers/proposals`             | Propose a bank transfer                   |
+| GET    | `/api/cli/bank-transfers/proposals`             | List proposals (`include_completed=true`) |
+| POST   | `/api/cli/bank-transfers/proposals/:id/dismiss` | Dismiss a proposal                        |
+
+### Invoices
+
+| Method | Endpoint                     | Description                       |
+| ------ | ---------------------------- | --------------------------------- |
+| POST   | `/api/cli/invoices`          | Create an invoice                 |
+| GET    | `/api/cli/invoices`          | List invoices (`status`, `limit`) |
+| GET    | `/api/cli/invoices/:id`      | Get invoice details               |
+| PATCH  | `/api/cli/invoices/:id`      | Update an invoice                 |
+| POST   | `/api/cli/invoices/:id/send` | Send an invoice                   |
+
+### Transactions
+
+| Method | Endpoint                    | Description                           |
+| ------ | --------------------------- | ------------------------------------- |
+| GET    | `/api/cli/transactions`     | List transactions (`status`, `limit`) |
+| GET    | `/api/cli/transactions/:id` | Get transaction details               |
+
+### Attachments
+
+| Method | Endpoint                   | Description                                                      |
+| ------ | -------------------------- | ---------------------------------------------------------------- |
+| POST   | `/api/cli/attachments`     | Upload an attachment                                             |
+| GET    | `/api/cli/attachments`     | List attachments (`transaction_id`, `transaction_type`, `limit`) |
+| DELETE | `/api/cli/attachments/:id` | Remove an attachment                                             |
+
+### Payment details
+
+| Method | Endpoint                         | Description                    |
+| ------ | -------------------------------- | ------------------------------ |
+| GET    | `/api/cli/payment-details`       | Get IBAN/ACH receiving details |
+| POST   | `/api/cli/payment-details/share` | Email receiving details        |
+
+### Crypto transfers
+
+| Method | Endpoint                                          | Description                                      |
+| ------ | ------------------------------------------------- | ------------------------------------------------ |
+| POST   | `/api/cli/crypto-transfers/proposals`             | Propose a crypto transfer                        |
+| GET    | `/api/cli/crypto-transfers/proposals`             | List crypto proposals (`include_completed=true`) |
+| POST   | `/api/cli/crypto-transfers/proposals/:id/dismiss` | Dismiss a crypto proposal                        |
+
+### Savings & vaults
+
+| Method | Endpoint                       | Description                                       |
+| ------ | ------------------------------ | ------------------------------------------------- |
+| GET    | `/api/cli/vaults`              | List supported vaults                             |
+| POST   | `/api/cli/savings/deposits`    | Propose a vault deposit                           |
+| POST   | `/api/cli/savings/withdrawals` | Propose a vault withdrawal                        |
+| GET    | `/api/cli/savings/proposals`   | List savings proposals (`include_completed=true`) |
+| GET    | `/api/cli/savings/positions`   | Idle/earning balance and vault positions          |
+
+### Admin endpoints
+
+| Method | Endpoint                     | Description                                    |
+| ------ | ---------------------------- | ---------------------------------------------- |
+| POST   | `/api/cli/users`             | Provision a user (creates workspace + API key) |
+| GET    | `/api/cli/users/:id`         | Fetch user + profile by Privy DID              |
+| POST   | `/api/cli/users/:id/wallets` | Pregenerate wallets for a user                 |
+| POST   | `/api/cli/api-keys`          | Create an API key for a workspace              |
 
 ---
 
-## Example: Check balance
+## CLI query parameters
+
+### Invoices
+
+- `status`: `db_pending`, `pending`, `paid`, `canceled`
+- `limit`: number
+
+### Transactions
+
+- `status`: `pending`, `completed`, `failed`
+- `limit`: number
+
+### Proposals
+
+- `include_completed`: `true` or `false`
+
+---
+
+## CLI examples
+
+### Check balance
 
 ```bash
 curl https://0.finance/api/cli/balance \
@@ -88,16 +185,13 @@ Response:
 
 ```json
 {
-  "spendable_usdc": "5420.50",
-  "pending_usdc": "0.00",
-  "earning_usdc": "2000.00",
-  "total_usdc": "7420.50"
+  "usdc_balance": "7420.50",
+  "safe_address": "0x954A329e1e59101DF529CC54A54666A0b36Cae22",
+  "chain": "base"
 }
 ```
 
----
-
-## Example: Create invoice
+### Create invoice
 
 ```bash
 curl https://0.finance/api/cli/invoices \
@@ -112,9 +206,7 @@ curl https://0.finance/api/cli/invoices \
   }'
 ```
 
----
-
-## Example: Propose transfer
+### Propose transfer
 
 ```bash
 curl https://0.finance/api/cli/bank-transfers/proposals \
@@ -135,13 +227,19 @@ curl https://0.finance/api/cli/bank-transfers/proposals \
 
 ---
 
-## Rate limits
+## Dashboard endpoints (session/webhook)
 
-- 100 requests per minute per API key
-- Exceeded limits return `429 Too Many Requests`
+These endpoints are used by the web app and internal services:
+
+- **Health check:** `/api/health`
+- **Upload:** `/api/upload` (requires a signed-in user session)
+- **Register primary Safe:** `/api/user/safes/register-primary`
+- **Privy webhooks:** `/api/webhooks/auth` (HMAC signed)
+
+See the endpoint pages in the API sidebar for request/response details.
 
 ---
 
 ## MCP server
 
-The MCP server at `/api/mcp` wraps these endpoints for AI agents. See [MCP Overview](/mcp/overview) for details.
+The MCP server at `/api/mcp` wraps the CLI API for AI agents. See [MCP Overview](/mcp/overview) for details.

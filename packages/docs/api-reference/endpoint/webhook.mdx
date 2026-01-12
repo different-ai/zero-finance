@@ -9,7 +9,7 @@ Receives Privy webhook events. This endpoint expects an HMAC signature in `x-pri
 
 <RequestExample>
 ```bash cURL
-curl -X POST "https://www.0.finance/api/webhooks/auth" \
+curl -X POST "https://0.finance/api/webhooks/auth" \
   -H "x-privy-signature: <hex_signature>" \
   -H "Content-Type: application/json" \
   -d '{"type":"user.created","data":{"email":"user@example.com"}}'

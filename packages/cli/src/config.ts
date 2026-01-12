@@ -40,7 +40,9 @@ export function resolveBaseUrl(baseUrl?: string) {
 export async function requireConfig() {
   const config = await loadConfig();
   if (!config.apiKey) {
-    throw new Error('Missing API key. Run `zero auth login --api-key <key>`');
+    throw new Error(
+      'Missing API key. Run `finance auth login --api-key <key>`',
+    );
   }
   return {
     apiKey: config.apiKey,

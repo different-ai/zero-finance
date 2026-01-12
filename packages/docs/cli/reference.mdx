@@ -1,27 +1,29 @@
 ---
 title: 'CLI Reference'
-description: 'Complete reference for all zero CLI commands'
+description: 'Complete reference for all finance CLI commands'
 ---
 
 ## Overview
 
-The `zero` CLI provides full access to 0 Finance from your terminal. All commands output JSON for easy scripting and piping.
+The `finance` CLI provides full access to 0 Finance from your terminal. All commands output JSON for easy scripting and piping.
 
 ```bash
-zero <command> [subcommand] [options]
+finance <command> [subcommand] [options]
 ```
+
+<Tip>You can also use the aliases `0` or `zero`.</Tip>
 
 ---
 
 ## Authentication
 
-### `zero auth login`
+### `finance auth login`
 
 Store your API key and configure the CLI.
 
 ```bash
-zero auth login --api-key sk_live_xxx
-zero auth login --api-key sk_live_xxx --base-url https://custom.0.finance
+finance auth login --api-key sk_live_xxx
+finance auth login --api-key sk_live_xxx --base-url https://custom.0.finance
 ```
 
 | Option       | Required | Description                                 |
@@ -29,87 +31,103 @@ zero auth login --api-key sk_live_xxx --base-url https://custom.0.finance
 | `--api-key`  | Yes      | Your workspace API key                      |
 | `--base-url` | No       | API base URL (default: `https://0.finance`) |
 
-### `zero auth whoami`
+### `finance auth whoami`
 
 Show the current workspace context.
 
 ```bash
-zero auth whoami
+finance auth whoami
 ```
 
-### `zero auth logout`
+### `finance auth logout`
 
 Remove stored credentials.
 
 ```bash
-zero auth logout
+finance auth logout
 ```
 
 ---
 
 ## Balance
 
-### `zero balance`
+### `finance balance`
 
-Show your spendable balance breakdown.
+Show your current USDC balance on Base.
 
 ```bash
-zero balance
+finance balance
 ```
 
 **Output:**
 
 ```json
 {
-  "spendable_usdc": "5420.50",
-  "pending_usdc": "0.00",
-  "earning_usdc": "2000.00",
-  "total_usdc": "7420.50"
+  "usdc_balance": "7420.50",
+  "safe_address": "0x954A329e1e59101DF529CC54A54666A0b36Cae22",
+  "chain": "base"
 }
 ```
+
+<Tip>
+  Use `finance savings positions` for idle/earning breakdown and vault balances.
+</Tip>
 
 ---
 
 ## Bank Accounts
 
-### `zero bank accounts list`
+### `finance bank accounts list`
 
 List all saved bank accounts.
 
 ```bash
-zero bank accounts list
+finance bank accounts list
 ```
 
-### `zero bank accounts create`
+### `finance bank accounts create`
 
 Create a saved bank account from a JSON file.
 
 ```bash
-zero bank accounts create --json ./account.json
+finance bank accounts create --json ./account.json
 ```
 
-**account.json:**
+**account.json (IBAN example):**
 
 ```json
 {
-  "account_holder_name": "Acme Corp",
-  "iban": "DE89370400440532013000",
-  "bic": "COBADEFFXXX",
-  "currency": "EUR",
-  "nickname": "Acme EUR"
+  "account_name": "Acme EUR",
+  "bank_name": "Commerzbank",
+  "account_holder_type": "business",
+  "account_holder_business_name": "Acme Corp",
+  "country": "DE",
+  "city": "Berlin",
+  "street_line_1": "Friedrichstr. 1",
+  "postal_code": "10117",
+  "account_type": "iban",
+  "iban_number": "DE89370400440532013000",
+  "bic_swift": "COBADEFFXXX",
+  "is_default": true
 }
 ```
+
+<Tip>
+  For US accounts, set `account_type` to `"us"` and include `account_number` and
+  `routing_number`. For individual accounts, provide `account_holder_first_name`
+  and `account_holder_last_name`.
+</Tip>
 
 ---
 
 ## Bank Transfers
 
-### `zero bank transfers propose`
+### `finance bank transfers propose`
 
 Propose a bank transfer for approval.
 
 ```bash
-zero bank transfers propose \
+finance bank transfers propose \
   --amount 1000 \
   --currency usd \
   --bank-account-id ba_xxx \
@@ -128,33 +146,42 @@ zero bank transfers propose \
   executing.
 </Info>
 
-### `zero bank proposals list`
+<Warning>
+  Transfers require completed KYC. If KYC is missing, the command returns an
+  error asking the user to complete verification.
+</Warning>
+
+### `finance bank proposals list`
 
 List pending transfer proposals.
 
 ```bash
-zero bank proposals list
-zero bank proposals list --include-completed
+finance bank proposals list
+finance bank proposals list --include-completed
 ```
 
-### `zero bank proposals dismiss`
+| Option                | Description                 |
+| --------------------- | --------------------------- |
+| `--include-completed` | Include completed proposals |
+
+### `finance bank proposals dismiss`
 
 Dismiss a transfer proposal.
 
 ```bash
-zero bank proposals dismiss --proposal-id prop_xxx
+finance bank proposals dismiss --proposal-id prop_xxx
 ```
 
 ---
 
 ## Invoices
 
-### `zero invoices create`
+### `finance invoices create`
 
 Create a new invoice.
 
 ```bash
-zero invoices create \
+finance invoices create \
   --recipient-email client@example.com \
   --recipient-name "Acme Corp" \
   --amount 2500 \
@@ -174,136 +201,180 @@ zero invoices create \
 | `--due-date`        | No       | Due date (YYYY-MM-DD)          |
 | `--notes`           | No       | Additional notes               |
 
-### `zero invoices list`
+### `finance invoices list`
 
 List invoices with optional filters.
 
 ```bash
-zero invoices list
-zero invoices list --status pending --limit 10
+finance invoices list
+finance invoices list --status pending --limit 10
 ```
 
-| Option     | Description                                      |
-| ---------- | ------------------------------------------------ |
-| `--status` | Filter by status (draft, pending, paid, overdue) |
-| `--limit`  | Maximum number of results                        |
+| Option     | Description                                                    |
+| ---------- | -------------------------------------------------------------- |
+| `--status` | Filter by status (`db_pending`, `pending`, `paid`, `canceled`) |
+| `--limit`  | Maximum number of results                                      |
 
-### `zero invoices get`
+### `finance invoices get`
 
 Get a specific invoice.
 
 ```bash
-zero invoices get --invoice-id inv_xxx
+finance invoices get --invoice-id inv_xxx
 ```
 
-### `zero invoices update`
+### `finance invoices update`
 
 Update an existing invoice.
 
 ```bash
-zero invoices update \
+finance invoices update \
   --invoice-id inv_xxx \
   --amount 3000 \
   --description "Updated scope"
 ```
 
-### `zero invoices send`
+| Option              | Required | Description            |
+| ------------------- | -------- | ---------------------- |
+| `--invoice-id`      | Yes      | Invoice ID             |
+| `--recipient-email` | No       | Update recipient email |
+| `--recipient-name`  | No       | Update recipient name  |
+| `--amount`          | No       | Update amount          |
+| `--currency`        | No       | Update currency        |
+| `--description`     | No       | Update description     |
+
+### `finance invoices send`
 
 Send an invoice to the recipient.
 
 ```bash
-zero invoices send --invoice-id inv_xxx
+finance invoices send --invoice-id inv_xxx
 ```
 
 ---
 
 ## Transactions
 
-### `zero transactions list`
+### `finance transactions list`
 
 List transaction history.
 
 ```bash
-zero transactions list
-zero transactions list --status completed --limit 50
+finance transactions list
+finance transactions list --status completed --limit 50
 ```
 
-### `zero transactions get`
+| Option     | Description                                         |
+| ---------- | --------------------------------------------------- |
+| `--status` | Filter by status (`pending`, `completed`, `failed`) |
+| `--limit`  | Maximum number of results                           |
+
+### `finance transactions get`
 
 Get transaction details.
 
 ```bash
-zero transactions get --transaction-id tx_xxx
+finance transactions get --transaction-id tx_xxx
 ```
 
 ---
 
 ## Attachments
 
-### `zero attachments add`
+### `finance attachments add`
 
 Attach a file to a transaction.
 
 ```bash
-zero attachments add \
+finance attachments add \
   --transaction-id tx_xxx \
-  --type offramp \
+  --transaction-type offramp \
   --file ./receipt.pdf
 ```
 
-| Option             | Required | Description                               |
-| ------------------ | -------- | ----------------------------------------- |
-| `--transaction-id` | Yes      | Transaction ID                            |
-| `--type`           | Yes      | Transaction type (`offramp` or `invoice`) |
-| `--file`           | Yes      | Path to file                              |
-| `--content-type`   | No       | MIME type (auto-detected if omitted)      |
+| Option               | Required | Description                               |
+| -------------------- | -------- | ----------------------------------------- |
+| `--transaction-id`   | Yes      | Transaction ID                            |
+| `--transaction-type` | Yes      | Transaction type (`offramp` or `invoice`) |
+| `--type`             | No       | Alias for `--transaction-type`            |
+| `--file`             | Yes      | Path to file                              |
+| `--content-type`     | No       | MIME type (auto-detected if omitted)      |
 
-### `zero attachments list`
+### `finance attachments list`
 
 List attachments.
 
 ```bash
-zero attachments list
-zero attachments list --transaction-id tx_xxx
+finance attachments list
+finance attachments list --transaction-id tx_xxx
 ```
 
-### `zero attachments remove`
+| Option               | Description                             |
+| -------------------- | --------------------------------------- |
+| `--transaction-id`   | Filter by transaction ID                |
+| `--transaction-type` | Filter by type (`offramp` or `invoice`) |
+| `--limit`            | Maximum number of results               |
+
+### `finance attachments remove`
 
 Remove an attachment.
 
 ```bash
-zero attachments remove --attachment-id att_xxx
+finance attachments remove --attachment-id att_xxx
 ```
 
 ---
 
 ## Payment Details
 
-### `zero payment-details show`
+### `finance payment-details show`
 
-Show your IBAN/ACH payment details for receiving funds.
+Show payment details for receiving funds (USD ACH + EUR IBAN).
 
 ```bash
-zero payment-details show
+finance payment-details show
 ```
 
 **Output:**
 
 ```json
 {
-  "iban": "DE89370400440532013000",
-  "bic": "COBADEFFXXX",
-  "account_holder": "0 Finance GmbH FBO Your Name",
-  "reference": "WS-xxx"
+  "payment_details": {
+    "hasAccounts": true,
+    "accountTier": "full",
+    "hasCompletedKyc": true,
+    "usdAccount": {
+      "type": "us_ach",
+      "currency": "USD",
+      "bankName": "Mercury",
+      "routingNumber": "123456789",
+      "accountNumber": "000123456789",
+      "beneficiaryName": "0 Finance FBO Jane Doe"
+    },
+    "eurAccount": {
+      "type": "iban",
+      "currency": "EUR",
+      "bankName": "Commerzbank",
+      "iban": "DE89370400440532013000",
+      "bicSwift": "COBADEFFXXX",
+      "beneficiaryName": "0 Finance FBO Jane Doe"
+    },
+    "workspaceInfo": {
+      "companyName": "Acme Corp",
+      "firstName": "Jane",
+      "lastName": "Doe"
+    }
+  },
+  "message": "These are the bank account details for receiving payments."
 }
 ```
 
-### `zero payment-details share`
+### `finance payment-details share`
 
 Email your payment details to someone.
 
 ```bash
-zero payment-details share \
+finance payment-details share \
   --recipient-email accountant@example.com \
   --recipient-name "Jane Smith"
 ```
@@ -312,12 +383,12 @@ zero payment-details share \
 
 ## Crypto Transfers
 
-### `zero crypto transfers propose`
+### `finance crypto transfers propose`
 
 Propose a crypto transfer.
 
 ```bash
-zero crypto transfers propose \
+finance crypto transfers propose \
   --to 0x742d35Cc6634C0532925a3b844Bc9e7595f... \
   --token-address 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913 \
   --amount 100 \
@@ -327,82 +398,118 @@ zero crypto transfers propose \
   --reason "Partner payment"
 ```
 
-| Option             | Required | Description                       |
-| ------------------ | -------- | --------------------------------- |
-| `--to`             | Yes      | Recipient wallet address          |
-| `--token-address`  | Yes      | Token contract address            |
-| `--amount`         | Yes      | Token amount                      |
-| `--token-symbol`   | No       | Token symbol (e.g., USDC)         |
-| `--token-decimals` | No       | Token decimals                    |
-| `--chain-id`       | No       | Chain ID (default: 8453 for Base) |
-| `--reason`         | No       | Reason for transfer               |
+| Option             | Required | Description                                   |
+| ------------------ | -------- | --------------------------------------------- |
+| `--to`             | Yes      | Recipient wallet address                      |
+| `--token-address`  | Yes      | Token contract address                        |
+| `--amount`         | Yes      | Token amount                                  |
+| `--token-symbol`   | No       | Token symbol (e.g., USDC)                     |
+| `--token-decimals` | No\*     | Token decimals (required for non-USDC tokens) |
+| `--chain-id`       | No       | Chain ID (defaults to 8453/Base if omitted)   |
+| `--reason`         | No       | Reason for transfer                           |
 
-### `zero crypto proposals list`
+<Tip>
+  If `--token-address` is the Base USDC contract, you can omit
+  `--token-decimals` and it will default to 6.
+</Tip>
+
+### `finance crypto proposals list`
 
 List crypto transfer proposals.
 
 ```bash
-zero crypto proposals list
-zero crypto proposals list --include-completed
+finance crypto proposals list
+finance crypto proposals list --include-completed
 ```
 
-### `zero crypto proposals dismiss`
+| Option                | Description                 |
+| --------------------- | --------------------------- |
+| `--include-completed` | Include completed proposals |
+
+### `finance crypto proposals dismiss`
 
 Dismiss a crypto proposal.
 
 ```bash
-zero crypto proposals dismiss --proposal-id prop_xxx
+finance crypto proposals dismiss --proposal-id prop_xxx
 ```
 
 ---
 
 ## Savings
 
-### `zero vaults list`
+### `finance vaults list`
 
 List supported yield vaults.
 
 ```bash
-zero vaults list
+finance vaults list
 ```
 
-### `zero savings deposits propose`
+### `finance savings deposits propose`
 
 Propose a deposit into a yield vault.
 
 ```bash
-zero savings deposits propose \
+finance savings deposits propose \
   --vault-address 0x... \
   --amount 1000 \
   --reason "Earning yield on idle funds"
 ```
 
-### `zero savings withdrawals propose`
+### `finance savings withdrawals propose`
 
 Propose a withdrawal from a yield vault.
 
 ```bash
-zero savings withdrawals propose \
+finance savings withdrawals propose \
   --vault-address 0x... \
   --amount 500 \
   --reason "Need funds for payment"
 ```
 
-### `zero savings proposals list`
+<Info>
+  Vault addresses must come from `finance vaults list` (Base USDC vaults).
+</Info>
+
+### `finance savings proposals list`
 
 List savings proposals.
 
 ```bash
-zero savings proposals list
-zero savings proposals list --include-completed
+finance savings proposals list
+finance savings proposals list --include-completed
 ```
 
-### `zero savings positions`
+| Option                | Description                 |
+| --------------------- | --------------------------- |
+| `--include-completed` | Include completed proposals |
 
-Show your current vault positions.
+### `finance savings positions`
+
+Show idle balance, earning balance, and vault positions.
 
 ```bash
-zero savings positions
+finance savings positions
+```
+
+**Output:**
+
+```json
+{
+  "idle_balance": "420.50",
+  "earning_balance": "2000.00",
+  "spendable_balance": "2420.50",
+  "safe_address": "0x954A329e1e59101DF529CC54A54666A0b36Cae22",
+  "chain": "base",
+  "vault_positions": [
+    {
+      "vault_address": "0x...",
+      "vault_name": "Morpho USDC",
+      "balance_usd": 2000
+    }
+  ]
+}
 ```
 
 ---
@@ -414,46 +521,67 @@ zero savings positions
   `--admin-token`.
 </Warning>
 
-### `zero users create`
+### `finance users create`
 
 Provision a new user.
 
 ```bash
-zero users create \
+finance users create \
   --email user@example.com \
   --admin-token adm_xxx
 ```
 
-### `zero users show`
+| Option           | Required | Description                                     |
+| ---------------- | -------- | ----------------------------------------------- |
+| `--email`        | Yes\*    | User email (required if no phone)               |
+| `--phone`        | Yes\*    | User phone (required if no email)               |
+| `--wallets-json` | No       | Path to wallets JSON array                      |
+| `--admin-token`  | No       | Admin token (or set `ZERO_FINANCE_ADMIN_TOKEN`) |
+
+### `finance users show`
 
 Get user details.
 
 ```bash
-zero users show --user-id did:privy:xxx --admin-token adm_xxx
+finance users show --user-id did:privy:xxx --admin-token adm_xxx
 ```
 
-### `zero users wallets pregenerate`
+### `finance users wallets pregenerate`
 
 Pregenerate wallets for a user.
 
 ```bash
-zero users wallets pregenerate \
+finance users wallets pregenerate \
   --user-id did:privy:xxx \
   --wallets-json ./wallets.json \
   --admin-token adm_xxx
 ```
 
-### `zero api-keys create`
+| Option           | Required | Description                                     |
+| ---------------- | -------- | ----------------------------------------------- |
+| `--user-id`      | Yes      | Privy user DID                                  |
+| `--wallets-json` | No       | Path to wallets JSON array                      |
+| `--admin-token`  | No       | Admin token (or set `ZERO_FINANCE_ADMIN_TOKEN`) |
+
+### `finance api-keys create`
 
 Create an API key for a workspace.
 
 ```bash
-zero api-keys create \
+finance api-keys create \
   --workspace-id ws_xxx \
   --created-by did:privy:xxx \
   --name "Production API Key" \
   --admin-token adm_xxx
 ```
+
+| Option           | Required | Description                                     |
+| ---------------- | -------- | ----------------------------------------------- |
+| `--workspace-id` | Yes      | Workspace ID                                    |
+| `--created-by`   | Yes      | Privy user DID that owns the key                |
+| `--name`         | No       | Friendly name for the key                       |
+| `--expires-at`   | No       | ISO expiration date (e.g. `2026-12-31`)         |
+| `--admin-token`  | No       | Admin token (or set `ZERO_FINANCE_ADMIN_TOKEN`) |
 
 ---
 
@@ -464,7 +592,7 @@ zero api-keys create \
 All commands output JSON. Pipe to `jq` for formatting:
 
 ```bash
-zero balance | jq .spendable_usdc
+finance balance | jq .usdc_balance
 ```
 
 ### Scripting
@@ -473,9 +601,9 @@ Use the CLI in scripts:
 
 ```bash
 #!/bin/bash
-BALANCE=$(zero balance | jq -r .spendable_usdc)
+BALANCE=$(finance balance | jq -r .usdc_balance)
 if (( $(echo "$BALANCE > 10000" | bc -l) )); then
-  zero savings deposits propose \
+  finance savings deposits propose \
     --vault-address 0x... \
     --amount 5000 \
     --reason "Auto-deposit excess funds"
@@ -487,5 +615,5 @@ fi
 Non-zero exit codes indicate errors. Error messages are printed to stderr:
 
 ```bash
-zero invoices get --invoice-id invalid_id || echo "Invoice not found"
+finance invoices get --invoice-id invalid_id || echo "Invoice not found"
 ```

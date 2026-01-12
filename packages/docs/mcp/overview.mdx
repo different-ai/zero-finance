@@ -8,9 +8,9 @@ description: 'Let AI agents manage your finances with human approval'
 The Model Context Protocol (MCP) lets AI assistants connect to external tools and services. The 0 Finance MCP server gives your AI agent access to:
 
 - Check balances and transaction history
-- Create and send invoices
-- Propose bank and crypto transfers
-- Manage savings positions
+- Manage invoices (create, update, send)
+- Propose bank transfers for approval
+- Attach receipts and share payment details
 
 <Info>
   All transfers require human approval in the dashboard. Your AI agent can
@@ -82,12 +82,12 @@ Replace `sk_live_xxx` with your API key from [Settings → API Keys](https://0.f
 
 | Tool                       | Description                    |
 | -------------------------- | ------------------------------ |
-| `get_balance`              | Get spendable USDC balance     |
 | `list_saved_bank_accounts` | List saved bank accounts       |
-| `create_bank_account`      | Save a new bank account        |
+| `get_balance`              | Get spendable USDC balance     |
 | `propose_bank_transfer`    | Propose an outbound transfer   |
-| `list_proposals`           | List pending proposals         |
+| `list_proposals`           | List transfer proposals        |
 | `dismiss_proposal`         | Dismiss a proposal             |
+| `create_bank_account`      | Save a new bank account        |
 | `create_invoice`           | Create a new invoice           |
 | `update_invoice`           | Update an invoice              |
 | `list_invoices`            | List invoices                  |
@@ -100,10 +100,11 @@ Replace `sk_live_xxx` with your API key from [Settings → API Keys](https://0.f
 | `remove_attachment`        | Remove an attachment           |
 | `get_payment_details`      | Get IBAN/ACH receiving details |
 | `share_payment_details`    | Email payment details          |
-| `list_vaults`              | List yield vaults              |
-| `propose_deposit`          | Propose a vault deposit        |
-| `propose_withdrawal`       | Propose a vault withdrawal     |
-| `get_positions`            | Get vault positions            |
+
+<Info>
+  MCP currently focuses on bank transfers and invoices. For crypto transfers and
+  savings actions, use the CLI or HTTP API.
+</Info>
 
 ---
 
@@ -174,8 +175,8 @@ You are an assistant connected to the 0 Finance MCP server.
 ## Security model
 
 1. **Read operations** — Balance, invoices, transactions execute immediately
-2. **Write operations** — Transfers and withdrawals create proposals
-3. **Human approval** — All outbound fund movements require dashboard approval
+2. **Transfer proposals** — Bank transfers require dashboard approval
+3. **Immediate actions** — Invoice creation and sending happen instantly
 4. **Audit trail** — Every action is logged with the API key used
 
 <Warning>

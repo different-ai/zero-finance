@@ -11,7 +11,7 @@ description: 'Manage your finances from the command line with the 0 Finance CLI'
 - **Spend anywhere** — Use a debit card worldwide with 0% conversion fees.
 - **Optimize yield** — AI automatically allocates idle funds to the highest-yielding opportunities.
 
-Everything is programmable through the **`zero` CLI** — check balances, send invoices, propose transfers, and manage savings from your terminal.
+Everything is programmable through the **`finance` CLI** (aliases: `0`, `zero`) — check balances, send invoices, propose transfers, and manage savings from your terminal.
 
 ---
 
@@ -19,25 +19,26 @@ Everything is programmable through the **`zero` CLI** — check balances, send i
 
 ```bash
 # Install the CLI
-pnpm add -g @zero-finance/cli
+bun add -g @zero-finance/cli
 
 # Authenticate with your API key
-zero auth login --api-key sk_live_xxx
+finance auth login --api-key sk_live_xxx
 
 # Check your balance
-zero balance
+finance balance
 
 # Create and send an invoice
-zero invoices create \
+finance invoices create \
   --recipient-email client@example.com \
   --amount 1000 \
   --currency USD \
   --description "Consulting services"
+finance invoices send --invoice-id inv_xxx
 ```
 
 <CardGroup cols={2}>
   <Card title="Install the CLI" icon="terminal" href="/cli/installation">
-    Get up and running with the `zero` CLI in under a minute.
+    Get up and running with the `finance` CLI in under a minute.
   </Card>
   <Card title="CLI Reference" icon="book" href="/cli/reference">
     Complete command reference with examples.
@@ -57,15 +58,14 @@ zero invoices create \
 ### Check your balance
 
 ```bash
-zero balance
+finance balance
 ```
 
 ```json
 {
-  "spendable_usdc": "5420.50",
-  "pending_usdc": "0.00",
-  "earning_usdc": "2000.00",
-  "total_usdc": "7420.50"
+  "usdc_balance": "7420.50",
+  "safe_address": "0x954A329e1e59101DF529CC54A54666A0b36Cae22",
+  "chain": "base"
 }
 ```
 
@@ -73,7 +73,7 @@ zero balance
 
 ```bash
 # Create an invoice
-zero invoices create \
+finance invoices create \
   --recipient-email client@acme.com \
   --recipient-name "Acme Corp" \
   --amount 2500 \
@@ -81,17 +81,17 @@ zero invoices create \
   --description "Q1 consulting"
 
 # Send it
-zero invoices send --invoice-id inv_xxx
+finance invoices send --invoice-id inv_xxx
 ```
 
 ### Propose a bank transfer
 
 ```bash
 # List your saved bank accounts
-zero bank accounts list
+finance bank accounts list
 
 # Propose a transfer (requires dashboard approval)
-zero bank transfers propose \
+finance bank transfers propose \
   --amount 1000 \
   --currency usd \
   --bank-account-id ba_xxx \
@@ -102,24 +102,24 @@ zero bank transfers propose \
 
 ```bash
 # View available vaults
-zero vaults list
+finance vaults list
 
 # Deposit into a yield vault
-zero savings deposits propose \
+finance savings deposits propose \
   --vault-address 0x... \
   --amount 500 \
   --reason "Earning yield on idle funds"
 
 # Check your positions
-zero savings positions
+finance savings positions
 ```
 
 ---
 
 ## How it works
 
-1. **Authenticate** — Use `zero auth login` with your API key from the dashboard.
-2. **Execute commands** — All read operations happen instantly. Write operations (transfers, withdrawals) create proposals.
+1. **Authenticate** — Use `finance auth login` with your API key from the dashboard.
+2. **Execute commands** — Read operations happen instantly. Transfers and withdrawals create proposals.
 3. **Approve in dashboard** — Proposals require human approval before executing. This keeps you in control.
 
 <Info>
@@ -146,6 +146,11 @@ Connect your AI assistant to 0 Finance using the MCP server. Your agent can chec
   }
 }
 ```
+
+<Info>
+  MCP currently supports bank transfers, invoices, attachments, and payment
+  details. For crypto transfers and savings, use the CLI or HTTP API.
+</Info>
 
 See [MCP setup](/mcp/overview) for detailed instructions.
 

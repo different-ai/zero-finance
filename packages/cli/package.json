@@ -1,11 +1,18 @@
 {
   "name": "@zero-finance/cli",
   "version": "0.1.0",
-  "private": true,
   "type": "module",
   "bin": {
+    "finance": "dist/index.js",
+    "0": "dist/index.js",
     "zero": "dist/index.js"
   },
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "dev": "tsx src/index.ts",
     "start": "tsx src/index.ts",

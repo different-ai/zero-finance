@@ -7,7 +7,7 @@
     "light": "#1B29FF",
     "dark": "#1B29FF"
   },
-  "favicon": "/favicon.svg",
+  "favicon": "https://0.finance/new-logo-bluer.png",
   "navigation": {
     "tabs": [
       {
@@ -74,8 +74,8 @@
     }
   },
   "logo": {
-    "light": "/logo/light.svg",
-    "dark": "/logo/dark.svg"
+    "light": "https://0.finance/new-logo-bluer.png",
+    "dark": "https://0.finance/new-logo-bluer.png"
   },
   "navbar": {
     "links": [

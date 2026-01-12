@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 import { Command } from 'commander';
 import fs from 'fs/promises';
-import { apiRequest } from './client';
-import { clearConfig, saveConfig } from './config';
+import { apiRequest } from './client.js';
+import { clearConfig, saveConfig } from './config.js';
 
 const program = new Command();
 
@@ -28,7 +28,7 @@ async function readFileBase64(path: string) {
   return content.toString('base64');
 }
 
-program.name('zero').description('0 Finance CLI').version('0.1.0');
+program.name('finance').description('0 Finance CLI').version('0.1.0');
 
 const auth = program.command('auth').description('Authentication');
 

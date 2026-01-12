@@ -3,21 +3,32 @@ title: 'Installation'
 description: 'Install and configure the 0 Finance CLI'
 ---
 
-## Install the CLI
+## Install with Bun
 
-<Tabs>
-  <Tab title="npm">```bash npm install -g @zero-finance/cli ```</Tab>
-  <Tab title="pnpm">```bash pnpm add -g @zero-finance/cli ```</Tab>
-  <Tab title="From source">
-    ```bash git clone https://github.com/different-ai/zero-finance.git cd
-    zero-finance/packages/cli pnpm install pnpm build pnpm link --global ```
-  </Tab>
-</Tabs>
+```bash
+bun add -g @zero-finance/cli
+```
 
 Verify the installation:
 
 ```bash
-zero --version
+finance --version
+```
+
+<Tip>
+  The CLI binary is `finance`. You can also use the shorter aliases `0` or
+  `zero`.
+</Tip>
+
+---
+
+## Run from the repo
+
+The CLI lives in `packages/cli` and can be run directly from source:
+
+```bash
+bun install
+bun --cwd packages/cli run dev -- auth whoami
 ```
 
 ---
@@ -38,7 +49,7 @@ zero --version
 ### Step 2: Log in
 
 ```bash
-zero auth login --api-key sk_live_your_api_key_here
+finance auth login --api-key sk_live_your_api_key_here
 ```
 
 This stores your credentials in `~/.zero-finance/config.json`.
@@ -46,14 +57,16 @@ This stores your credentials in `~/.zero-finance/config.json`.
 ### Step 3: Verify
 
 ```bash
-zero auth whoami
+finance auth whoami
 ```
 
 ```json
 {
   "workspace_id": "ws_xxx",
   "workspace_name": "My Company",
-  "user_id": "did:privy:xxx"
+  "key_id": "key_xxx",
+  "key_name": "Production Key",
+  "align_customer_id": "align_xxx"
 }
 ```
 
@@ -75,16 +88,7 @@ The CLI stores configuration in `~/.zero-finance/config.json`:
 For self-hosted deployments or local development:
 
 ```bash
-zero auth login --api-key sk_test_xxx --base-url http://localhost:3050
-```
-
-### Environment variables
-
-You can also use environment variables instead of the config file:
-
-```bash
-export ZERO_FINANCE_API_KEY=sk_live_xxx
-export ZERO_FINANCE_BASE_URL=https://0.finance
+finance auth login --api-key sk_test_xxx --base-url http://localhost:3050
 ```
 
 ---
@@ -94,7 +98,7 @@ export ZERO_FINANCE_BASE_URL=https://0.finance
 Remove stored credentials:
 
 ```bash
-zero auth logout
+finance auth logout
 ```
 
 ---

@@ -1,4 +1,4 @@
-import { loadConfig, resolveBaseUrl } from './config';
+import { loadConfig, resolveBaseUrl } from './config.js';
 
 type RequestOptions = {
   method?: string;
@@ -17,7 +17,9 @@ export async function apiRequest<T>(
   const apiKey = options.apiKey ?? storedConfig.apiKey;
 
   if (!apiKey && !options.adminToken) {
-    throw new Error('Missing API key. Run `zero auth login --api-key <key>`');
+    throw new Error(
+      'Missing API key. Run `finance auth login --api-key <key>`',
+    );
   }
 
   const url = new URL(path, baseUrl);
