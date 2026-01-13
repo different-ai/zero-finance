@@ -223,7 +223,7 @@ async function readFileBase64(path: string) {
   return content.toString('base64');
 }
 
-program.name('finance').description('0 Finance CLI').version('0.1.5');
+program.name('finance').description('0 Finance CLI').version('0.1.6');
 
 const auth = program.command('auth').description('Authentication');
 
