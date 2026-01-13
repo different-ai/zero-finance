@@ -36,19 +36,19 @@ Tests target `https://www.0.finance` using the provided workspace API key.
 | Bank            | `zero bank accounts create --json <file>`              | Passed  | Created `cd1b0df5-0d72-4c4f-908e-e69f0df106f4`.                                                            |
 | Bank            | `zero bank transfers propose`                          | Passed  | `transaction_id` 3a460ea9-57de-496d-af41-f95c11def575, `proposal_id` 149baf8d-15e2-40b0-90f4-4940ce9ed309. |
 | Bank            | `zero bank proposals list`                             | Passed  | Pending proposal `149baf8d-15e2-40b0-90f4-4940ce9ed309`.                                                   |
-| Bank            | `zero bank proposals dismiss --proposal-id <id>`       | Failed  | Prod returns JSON parse error; route guard fix added.                                                      |
-| Invoices        | `zero invoices create`                                 | Passed  | `invoice_id` 1c5ba4ae-3258-42ad-9804-ea196718d3bc.                                                         |
+| Bank            | `zero bank proposals dismiss --proposal-id <id>`       | Passed  | Dismissed proposal `149baf8d-15e2-40b0-90f4-4940ce9ed309`.                                                 |
+| Invoices        | `zero invoices create`                                 | Passed  | `invoice_id` 5daa9bc5-ce96-4cf2-b8c2-21372f9af27c.                                                         |
 | Invoices        | `zero invoices update --invoice-id <id>`               | Passed  | Updated description.                                                                                       |
 | Invoices        | `zero invoices get --invoice-id <id>`                  | Passed  | Returned invoice payload.                                                                                  |
 | Invoices        | `zero invoices list`                                   | Passed  | Returned list (limit 5).                                                                                   |
-| Invoices        | `zero invoices send --invoice-id <id>`                 | Failed  | Prod returns JSON parse error; route guard + sender domain update added.                                   |
-| Transactions    | `zero transactions list`                               | Failed  | Prod error `[object Object] is not valid JSON`; bank snapshot parse fix added.                             |
-| Transactions    | `zero transactions get --transaction-id <id>`          | Failed  | Same bank snapshot parsing bug.                                                                            |
+| Invoices        | `zero invoices send --invoice-id <id>`                 | Passed  | Sent invoice to benjamin.shafii@gmail.com.                                                                 |
+| Transactions    | `zero transactions list`                               | Passed  | Returned recent bank transfers.                                                                            |
+| Transactions    | `zero transactions get --transaction-id <id>`          | Passed  | Returned transfer detail payload.                                                                          |
 | Attachments     | `zero attachments add --transaction-id <id>`           | Passed  | `attachment_id` d8bc9918-f3c3-47c0-a380-d0c3a27c019b.                                                      |
 | Attachments     | `zero attachments list --transaction-id <id>`          | Passed  | Listed invoice attachment.                                                                                 |
 | Attachments     | `zero attachments remove --attachment-id <id>`         | Passed  | Removed attachment.                                                                                        |
 | Payment details | `zero payment-details show`                            | Passed  | Returned USD + EUR account details.                                                                        |
-| Payment details | `zero payment-details share --recipient-email <email>` | Failed  | Resend domain not verified; updated sender to `payments@${AI_EMAIL_INBOUND_DOMAIN}`.                       |
+| Payment details | `zero payment-details share --recipient-email <email>` | Passed  | Sent payment details to benjamin.shafii@gmail.com.                                                         |
 | Crypto          | `zero crypto transfers propose`                        | Failed  | `action_proposals` table missing in prod (migration 0128).                                                 |
 | Crypto          | `zero crypto proposals list`                           | Failed  | `action_proposals` table missing in prod.                                                                  |
 | Crypto          | `zero crypto proposals dismiss --proposal-id <id>`     | Blocked | Requires `action_proposals` table.                                                                         |
@@ -59,3 +59,7 @@ Tests target `https://www.0.finance` using the provided workspace API key.
 | Admin           | `zero users show`                                      | Blocked | Requires admin token.                                                                                      |
 | Admin           | `zero users wallets pregenerate`                       | Blocked | Requires admin token.                                                                                      |
 | Admin           | `zero api-keys create`                                 | Blocked | Requires admin token.                                                                                      |
+
+## Known issues
+
+- Crypto + savings proposals require the `action_proposals` table in production; migration `0128` is not applied, so these commands return `relation "action_proposals" does not exist`.

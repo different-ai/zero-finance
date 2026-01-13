@@ -52,10 +52,23 @@ export async function apiRequest<T>(
 
   const text = await response.text();
   const trimmed = text.trim();
-  const payload = trimmed ? JSON.parse(trimmed) : null;
+  let payload: unknown = null;
+
+  if (trimmed) {
+    try {
+      payload = JSON.parse(trimmed);
+    } catch (error) {
+      payload = trimmed;
+    }
+  }
 
   if (!response.ok) {
-    const message = payload?.error || response.statusText;
+    const message =
+      payload && typeof payload === 'object' && 'error' in payload
+        ? String((payload as { error?: string }).error)
+        : typeof payload === 'string'
+          ? payload
+          : response.statusText;
     const hint =
       message === 'Not found'
         ? ' Check that your base URL is https://www.0.finance (not /api/cli).'
