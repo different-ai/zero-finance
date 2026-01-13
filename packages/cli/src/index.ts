@@ -242,7 +242,7 @@ async function readFileBase64(path: string) {
 program
   .name('finance')
   .description('0 Finance CLI')
-  .version('0.1.6')
+  .version('0.1.8')
   .option('--debug', 'Enable debug logging');
 
 program.hook('preAction', (thisCommand) => {
