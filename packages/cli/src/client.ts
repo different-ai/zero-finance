@@ -57,7 +57,7 @@ export async function apiRequest<T>(
     const message = payload?.error || response.statusText;
     const hint =
       message === 'Not found'
-        ? ' Check that your base URL is https://0.finance (not /api/cli).'
+        ? ' Check that your base URL is https://www.0.finance (not /api/cli).'
         : '';
     throw new Error(`${message}${hint}`);
   }

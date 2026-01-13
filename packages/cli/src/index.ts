@@ -33,7 +33,7 @@ function enableDebug(debug?: boolean) {
 }
 
 const execFileAsync = promisify(execFile);
-const DEFAULT_BASE_URL = 'https://0.finance';
+const DEFAULT_BASE_URL = 'https://www.0.finance';
 const CONNECT_TIMEOUT_MS = 120_000;
 
 function createStateToken() {

@@ -47,7 +47,7 @@ bun --cwd packages/cli run dev -- auth connect --no-browser
 
 ### Step 1: Get your API key
 
-1. Log in to [0.finance](https://0.finance)
+1. Log in to [0.finance](https://www.0.finance)
 2. Go to **Settings → API Keys**
 3. Click **Create API Key**
 4. Copy the key (it starts with `sk_live_` or `sk_test_`)
@@ -64,7 +64,7 @@ bun --cwd packages/cli run dev -- auth connect --no-browser
 finance auth connect
 ```
 
-This opens a secure connection page on 0.finance and stores the API key for you. If the automatic handoff fails, the page shows a copyable key for manual paste.
+This opens a secure connection page on www.0.finance and stores the API key for you. If the automatic handoff fails, the page shows a copyable key for manual paste.
 
 **Option B: API key**
 
@@ -99,7 +99,7 @@ The CLI stores configuration in `~/.zero-finance/config.json`:
 ```json
 {
   "apiKey": "sk_live_xxx",
-  "baseUrl": "https://0.finance"
+  "baseUrl": "https://www.0.finance"
 }
 ```
 
@@ -112,8 +112,8 @@ finance auth login --api-key sk_test_xxx --base-url http://localhost:3050
 ```
 
 <Tip>
-  The base URL should be the root (e.g. `https://0.finance`), not `.../api/cli`.
-  The CLI will normalize if you include `/api/cli`.
+  The base URL should be the root (e.g. `https://www.0.finance`), not
+  `.../api/cli`. The CLI will normalize if you include `/api/cli`.
 </Tip>
 
 ---

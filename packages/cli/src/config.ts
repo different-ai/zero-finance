@@ -33,14 +33,18 @@ export async function clearConfig() {
 }
 
 export function resolveBaseUrl(baseUrl?: string) {
-  const value = baseUrl?.trim() || 'https://0.finance';
+  const value = baseUrl?.trim() || 'https://www.0.finance';
   const trimmed = value.endsWith('/') ? value.slice(0, -1) : value;
+  const normalized = trimmed.replace(
+    /^https?:\/\/0\.finance(?=\/|$)/,
+    'https://www.0.finance',
+  );
 
-  if (trimmed.endsWith('/api/cli')) {
-    return trimmed.replace(/\/api\/cli$/, '');
+  if (normalized.endsWith('/api/cli')) {
+    return normalized.replace(/\/api\/cli$/, '');
   }
 
-  return trimmed;
+  return normalized;
 }
 
 export async function requireConfig() {
