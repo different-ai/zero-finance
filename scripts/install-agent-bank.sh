@@ -14,7 +14,7 @@ if ! command -v bun >/dev/null 2>&1; then
 fi
 
 echo "Installing agent-bank..."
-bun add -g agent-bank
+bun add -g agent-bank@latest
 
 echo "agent-bank installed."
 echo "Run: finance --version"
