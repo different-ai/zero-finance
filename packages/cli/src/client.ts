@@ -8,6 +8,72 @@ type RequestOptions = {
   baseUrl?: string;
 };
 
+function stringifyUnknown(value: unknown): string | null {
+  if (value === null || value === undefined) {
+    return null;
+  }
+
+  if (typeof value === 'string') {
+    return value;
+  }
+
+  try {
+    const text = JSON.stringify(value);
+    return text ?? String(value);
+  } catch (error) {
+    return String(value);
+  }
+}
+
+function extractMessage(value: unknown): string | null {
+  if (value === null || value === undefined) {
+    return null;
+  }
+
+  if (typeof value === 'string') {
+    return value;
+  }
+
+  if (typeof value === 'object' && 'message' in value) {
+    const messageValue = (value as { message?: unknown }).message;
+    if (typeof messageValue === 'string') {
+      return messageValue;
+    }
+  }
+
+  return stringifyUnknown(value);
+}
+
+function coerceErrorMessage(payload: unknown): string | null {
+  if (payload === null || payload === undefined) {
+    return null;
+  }
+
+  if (typeof payload === 'string') {
+    return payload;
+  }
+
+  if (typeof payload === 'object') {
+    if ('error' in payload) {
+      const errorValue = (payload as { error?: unknown }).error;
+      const message = extractMessage(errorValue);
+      if (message) {
+        return message;
+      }
+    }
+
+    if ('message' in payload) {
+      const messageValue = (payload as { message?: unknown }).message;
+      const message = extractMessage(messageValue);
+      if (message) {
+        return message;
+      }
+    }
+  }
+
+  return extractMessage(payload);
+}
+
 export async function apiRequest<T>(
   path: string,
   options: RequestOptions = {},
@@ -63,12 +129,7 @@ export async function apiRequest<T>(
   }
 
   if (!response.ok) {
-    const message =
-      payload && typeof payload === 'object' && 'error' in payload
-        ? String((payload as { error?: string }).error)
-        : typeof payload === 'string'
-          ? payload
-          : response.statusText;
+    const message = coerceErrorMessage(payload) ?? response.statusText;
     const hint =
       message === 'Not found'
         ? ' Check that your base URL is https://www.0.finance (not /api/cli).'

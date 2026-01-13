@@ -19,6 +19,10 @@ import {
 const program = new Command();
 
 function output(data: unknown) {
+  if (data === undefined) {
+    return;
+  }
+
   if (typeof data === 'string') {
     console.log(data);
     return;
@@ -885,7 +889,32 @@ apiKeys
     output(data);
   });
 
+function formatCliError(error: unknown) {
+  if (error instanceof Error) {
+    return error.message || 'Unknown error';
+  }
+
+  if (typeof error === 'string') {
+    return error;
+  }
+
+  try {
+    return JSON.stringify(error);
+  } catch (serializeError) {
+    return String(error);
+  }
+}
+
 program.parseAsync(process.argv).catch((error) => {
-  console.error(error instanceof Error ? error.message : error);
+  const rawMessage = formatCliError(error);
+  const message = rawMessage
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => line && line.toLowerCase() !== 'undefined')
+    .join('\n');
+
+  if (message) {
+    console.error(message);
+  }
   process.exit(1);
 });
