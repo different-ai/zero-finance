@@ -121,11 +121,17 @@ async function waitForToken(
   tokenPromise: Promise<string>,
   timeoutMs = CONNECT_TIMEOUT_MS,
 ) {
+  let timeoutId: NodeJS.Timeout | null = null;
   const timeoutPromise = new Promise<null>((resolve) => {
-    setTimeout(() => resolve(null), timeoutMs);
+    timeoutId = setTimeout(() => resolve(null), timeoutMs);
   });
 
   const token = await Promise.race([tokenPromise, timeoutPromise]);
+
+  if (timeoutId) {
+    clearTimeout(timeoutId);
+  }
+
   return token ?? null;
 }
 
@@ -196,7 +202,11 @@ async function runAuthConnect(options: {
   }
 
   await saveConfig({ apiKey, baseUrl });
-  output({ success: true, method: 'browser' });
+  output({
+    success: true,
+    method: 'browser',
+    next: 'Run `finance auth whoami` to verify the connection.',
+  });
 }
 
 function resolveAdminToken(token?: string) {
@@ -213,7 +223,7 @@ async function readFileBase64(path: string) {
   return content.toString('base64');
 }
 
-program.name('finance').description('0 Finance CLI').version('0.1.4');
+program.name('finance').description('0 Finance CLI').version('0.1.5');
 
 const auth = program.command('auth').description('Authentication');
 
