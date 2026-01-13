@@ -24,6 +24,7 @@ import { getFormattedPaymentDetailsByWorkspace } from '@/server/services/bank-ac
 import { AI_EMAIL_INBOUND_DOMAIN } from '@/lib/ai-email/workspace-mapping';
 import { put } from '@vercel/blob';
 import { getEmailProviderSingleton } from '@/lib/email-provider';
+import { handleYieldTool, yieldTools } from './tools/yield-tools';
 
 // USDC on Base
 const USDC_ADDRESS = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913';
@@ -568,6 +569,7 @@ export async function POST(request: NextRequest) {
                 required: ['proposal_id'],
               },
             },
+            ...yieldTools,
           ],
         };
         break;
@@ -612,6 +614,158 @@ export async function POST(request: NextRequest) {
 /**
  * Handle tool calls
  */
+
+type ToolHandler = (
+  context: NonNullable<Awaited<ReturnType<typeof validateApiKey>>>,
+  args: Record<string, unknown>,
+) => Promise<unknown>;
+
+const toolHandlers: Record<string, ToolHandler> = {
+  list_saved_bank_accounts: (context) => listSavedBankAccounts(context),
+  get_balance: (context) => getBalance(context),
+  propose_bank_transfer: (context, args) =>
+    proposeBankTransfer(
+      context,
+      args as {
+        amount_usdc: string;
+        destination_currency: 'usd' | 'eur';
+        saved_bank_account_id: string;
+        reason?: string;
+      },
+    ),
+  list_proposals: (context, args) =>
+    listProposals(context, args as { include_completed?: boolean }),
+  create_bank_account: (context, args) =>
+    createBankAccount(
+      context,
+      args as {
+        account_name: string;
+        bank_name: string;
+        account_holder_type: 'individual' | 'business';
+        account_holder_first_name?: string;
+        account_holder_last_name?: string;
+        account_holder_business_name?: string;
+        country: string;
+        city: string;
+        street_line_1: string;
+        street_line_2?: string;
+        postal_code: string;
+        account_type: 'us' | 'iban';
+        account_number?: string;
+        routing_number?: string;
+        iban_number?: string;
+        bic_swift?: string;
+        is_default?: boolean;
+      },
+    ),
+  create_invoice: (context, args) =>
+    createInvoice(
+      context,
+      args as {
+        recipient_email: string;
+        recipient_name?: string;
+        amount: number;
+        currency: string;
+        description: string;
+        due_date?: string;
+        notes?: string;
+      },
+    ),
+  update_invoice: (context, args) =>
+    updateInvoice(
+      context,
+      args as {
+        invoice_id: string;
+        recipient_email?: string;
+        recipient_name?: string;
+        amount?: number;
+        currency?: string;
+        description?: string;
+      },
+    ),
+  list_invoices: (context, args) =>
+    listInvoices(
+      context,
+      args as {
+        status?: 'db_pending' | 'pending' | 'paid' | 'canceled';
+        limit?: number;
+      },
+    ),
+  get_invoice: (context, args) =>
+    getInvoice(
+      context,
+      args as {
+        invoice_id: string;
+      },
+    ),
+  send_invoice: (context, args) =>
+    sendInvoice(
+      context,
+      args as {
+        invoice_id: string;
+      },
+    ),
+  list_transactions: (context, args) =>
+    listTransactions(
+      context,
+      args as {
+        status?: 'pending' | 'completed' | 'failed';
+        limit?: number;
+      },
+    ),
+  get_transaction: (context, args) =>
+    getTransaction(
+      context,
+      args as {
+        transaction_id: string;
+      },
+    ),
+  attach_document: (context, args) =>
+    attachDocument(
+      context,
+      args as {
+        transaction_id: string;
+        transaction_type: 'offramp' | 'invoice';
+        filename: string;
+        file_base64?: string;
+        file_url?: string;
+        content_type?: string;
+      },
+    ),
+  list_attachments: (context, args) =>
+    listAttachments(
+      context,
+      args as {
+        transaction_id?: string;
+        transaction_type?: 'offramp' | 'invoice';
+        limit?: number;
+      },
+    ),
+  remove_attachment: (context, args) =>
+    removeAttachment(
+      context,
+      args as {
+        attachment_id: string;
+      },
+    ),
+  get_payment_details: (context) => getPaymentDetails(context),
+  share_payment_details: (context, args) =>
+    sharePaymentDetails(
+      context,
+      args as {
+        recipient_email: string;
+        recipient_name?: string;
+      },
+    ),
+  dismiss_proposal: (context, args) =>
+    dismissProposal(
+      context,
+      args as {
+        proposal_id: string;
+      },
+    ),
+};
+
 async function handleToolCall(
   context: NonNullable<Awaited<ReturnType<typeof validateApiKey>>>,
   params: { name: string; arguments?: Record<string, unknown> },
@@ -619,178 +773,18 @@ async function handleToolCall(
   const { name, arguments: args = {} } = params;
 
   try {
-    switch (name) {
-      case 'list_saved_bank_accounts':
-        return await listSavedBankAccounts(context);
-
-      case 'get_balance':
-        return await getBalance(context);
-
-      case 'propose_bank_transfer':
-        return await proposeBankTransfer(
-          context,
-          args as {
-            amount_usdc: string;
-            destination_currency: 'usd' | 'eur';
-            saved_bank_account_id: string;
-            reason?: string;
-          },
-        );
-
-      case 'list_proposals':
-        return await listProposals(
-          context,
-          args as { include_completed?: boolean },
-        );
-
-      case 'create_bank_account':
-        return await createBankAccount(
-          context,
-          args as {
-            account_name: string;
-            bank_name: string;
-            account_holder_type: 'individual' | 'business';
-            account_holder_first_name?: string;
-            account_holder_last_name?: string;
-            account_holder_business_name?: string;
-            country: string;
-            city: string;
-            street_line_1: string;
-            street_line_2?: string;
-            postal_code: string;
-            account_type: 'us' | 'iban';
-            account_number?: string;
-            routing_number?: string;
-            iban_number?: string;
-            bic_swift?: string;
-            is_default?: boolean;
-          },
-        );
-
-      // =========================================================================
-      // Invoice Tools
-      // =========================================================================
-      case 'create_invoice':
-        return await createInvoice(
-          context,
-          args as {
-            recipient_email: string;
-            recipient_name?: string;
-            amount: number;
-            currency: string;
-            description: string;
-            due_date?: string;
-            notes?: string;
-          },
-        );
-
-      case 'update_invoice':
-        return await updateInvoice(
-          context,
-          args as {
-            invoice_id: string;
-            recipient_email?: string;
-            recipient_name?: string;
-            amount?: number;
-            currency?: string;
-            description?: string;
-          },
-        );
-
-      case 'list_invoices':
-        return await listInvoices(
-          context,
-          args as {
-            status?: 'db_pending' | 'pending' | 'paid' | 'canceled';
-            limit?: number;
-          },
-        );
-
-      case 'get_invoice':
-        return await getInvoice(context, args as { invoice_id: string });
-
-      case 'send_invoice':
-        return await sendInvoice(context, args as { invoice_id: string });
-
-      // =========================================================================
-      // Transaction Tools
-      // =========================================================================
-      case 'list_transactions':
-        return await listTransactions(
-          context,
-          args as {
-            status?: 'pending' | 'completed' | 'failed';
-            limit?: number;
-          },
-        );
-
-      case 'get_transaction':
-        return await getTransaction(
-          context,
-          args as { transaction_id: string },
-        );
-
-      // =========================================================================
-      // Attachment Tools
-      // =========================================================================
-      case 'attach_document':
-        return await attachDocument(
-          context,
-          args as {
-            transaction_id: string;
-            transaction_type: 'offramp' | 'invoice';
-            filename: string;
-            file_base64?: string;
-            file_url?: string;
-            content_type?: string;
-          },
-        );
-
-      case 'list_attachments':
-        return await listAttachments(
-          context,
-          args as {
-            transaction_id?: string;
-            transaction_type?: 'offramp' | 'invoice';
-            limit?: number;
-          },
-        );
-
-      case 'remove_attachment':
-        return await removeAttachment(
-          context,
-          args as { attachment_id: string },
-        );
-
-      // =========================================================================
-      // Payment Details Tools
-      // =========================================================================
-      case 'get_payment_details':
-        return await getPaymentDetails(context);
-
-      case 'share_payment_details':
-        return await sharePaymentDetails(
-          context,
-          args as { recipient_email: string; recipient_name?: string },
-        );
-
-      // =========================================================================
-      // Proposal Management Tools
-      // =========================================================================
-      case 'dismiss_proposal':
-        return await dismissProposal(context, args as { proposal_id: string });
-
-      default:
-        return {
-          content: [
-            {
-              type: 'text',
-              text: JSON.stringify({ error: `Unknown tool: ${name}` }),
-            },
-          ],
-        };
+    if (yieldTools.some((tool) => tool.name === name)) {
+      return await handleYieldTool(context, params);
     }
+
+    const handler = toolHandlers[name];
+    if (!handler) {
+      throw new Error(`Unknown tool: ${name}`);
+    }
+
+    return await handler(context, args);
   } catch (error) {
+    console.error('[MCP] Error in tool call:', error);
     return {
       content: [
         {

@@ -12,11 +12,7 @@ import {
   CHAIN_NAMES,
   MORPHO_CHAIN_IDS,
 } from '../earn/morpho-analytics-service';
-import {
-  TRACKED_VAULTS,
-  getTrackedVault,
-  type TrackedVault,
-} from '../earn/tracked-vaults-config';
+import { getVaultByAddress, listVaults } from '../earn/vault-registry';
 
 // Check admin status
 async function checkIsUserAdmin(privyDid: string): Promise<boolean> {
@@ -47,11 +43,6 @@ async function requireAdmin(privyDid: string | null | undefined) {
   }
 }
 
-// Get all tracked vaults from centralized config
-function getTrackedVaultsConfig(): TrackedVault[] {
-  return TRACKED_VAULTS;
-}
-
 export const vaultAnalyticsRouter = router({
   /**
    * Get all tracked vaults with current metrics
@@ -59,7 +50,7 @@ export const vaultAnalyticsRouter = router({
   getTrackedVaults: protectedProcedure.query(async ({ ctx }) => {
     await requireAdmin(ctx.userId);
 
-    const trackedVaults = getTrackedVaultsConfig();
+    const trackedVaults = await listVaults({ status: 'active' });
 
     // Fetch live metrics for all vaults in parallel
     const vaultsWithMetrics = await Promise.all(
@@ -86,18 +77,24 @@ export const vaultAnalyticsRouter = router({
           // Config from centralized tracked vaults
           id: vault.id,
           name: vault.name,
-          displayName: vault.displayName,
+          displayName: vault.displayName ?? vault.name,
           address: vault.address,
           chainId: vault.chainId,
           chainName: CHAIN_NAMES[vault.chainId] || 'Unknown',
-          risk: vault.risk,
+          risk: vault.riskTier,
           curator: vault.curator,
           appUrl: vault.appUrl,
           // Insurance status
           isInsured: vault.isInsured,
-          insuranceCoverage: vault.insuranceCoverage,
+          insuranceCoverage: vault.insurance
+            ? {
+                provider: vault.insurance.provider,
+                amount: vault.insurance.coverageUsd,
+                currency: vault.insurance.coverageCurrency,
+              }
+            : null,
           isPrimary: vault.isPrimary,
-          isActive: vault.isActive,
+          isActive: vault.status === 'active',
           notes: vault.notes,
           // Vault age
           vaultAge,
@@ -159,7 +156,10 @@ export const vaultAnalyticsRouter = router({
       }
 
       // Get tracked vault info for insurance status
-      const trackedVault = getTrackedVault(input.address, input.chainId);
+      const trackedVault = await getVaultByAddress(
+        input.address as `0x${string}`,
+        input.chainId,
+      );
 
       // Calculate APY stats from historical data
       let apyStats = null;
@@ -198,9 +198,15 @@ export const vaultAnalyticsRouter = router({
         deployment,
         apyStats,
         vaultAge,
-        // Insurance info from tracked vault config
+        // Insurance info from vault registry
         isInsured: trackedVault?.isInsured || false,
-        insuranceCoverage: trackedVault?.insuranceCoverage,
+        insuranceCoverage: trackedVault?.insurance
+          ? {
+              provider: trackedVault.insurance.provider,
+              amount: trackedVault.insurance.coverageUsd,
+              currency: trackedVault.insurance.coverageCurrency,
+            }
+          : null,
         isPrimary: trackedVault?.isPrimary,
         notes: trackedVault?.notes,
       };
@@ -273,8 +279,8 @@ export const vaultAnalyticsRouter = router({
       }
 
       // Check if this vault is already tracked
-      const existingVault = getTrackedVault(
-        parsed.vaultAddress,
+      const existingVault = await getVaultByAddress(
+        parsed.vaultAddress as `0x${string}`,
         parsed.chainId,
       );
       const isTracked = !!existingVault;

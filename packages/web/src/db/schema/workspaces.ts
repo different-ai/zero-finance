@@ -58,6 +58,17 @@ export const workspaces = pgTable(
       enum: ['personal', 'business'],
     }).default('business'),
 
+    // Insurance status (sandbox-first yield access)
+    insuranceStatus: text('insurance_status', {
+      enum: ['sandbox', 'pending', 'active', 'suspended'],
+    })
+      .default('sandbox')
+      .notNull(),
+    insuranceActivatedAt: timestamp('insurance_activated_at', {
+      withTimezone: true,
+    }),
+    insuranceActivatedBy: varchar('insurance_activated_by', { length: 255 }),
+
     // AI Email Handle - human-readable email address for AI agent
     // Format: ai-{firstname}.{lastname} (e.g., ai-clara.mitchell)
     // Full email: {handle}@zerofinance.ai
@@ -69,6 +80,9 @@ export const workspaces = pgTable(
       table.alignCustomerId,
     ),
     kycStatusIdx: index('workspaces_kyc_status_idx').on(table.kycStatus),
+    insuranceStatusIdx: index('workspaces_insurance_status_idx').on(
+      table.insuranceStatus,
+    ),
     alignVirtualAccountIdx: index('workspaces_align_virtual_account_idx').on(
       table.alignVirtualAccountId,
     ),
