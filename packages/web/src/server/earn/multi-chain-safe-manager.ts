@@ -94,6 +94,26 @@ export async function getUserSafes(
 }
 
 /**
+ * Get all Safes for a workspace (no orphan migration).
+ * Intended for API-key based access where no user DID is available.
+ */
+export async function getWorkspaceSafes(
+  workspaceId: string,
+  safeType?: 'primary' | 'tax' | 'liquidity' | 'yield',
+): Promise<UserSafe[]> {
+  const conditions = [eq(userSafes.workspaceId, workspaceId)];
+
+  if (safeType) {
+    conditions.push(eq(userSafes.safeType, safeType));
+  }
+
+  return db.query.userSafes.findMany({
+    where: and(...conditions),
+    orderBy: (safes, { asc }) => [asc(safes.createdAt)],
+  });
+}
+
+/**
  * Get Safe on a specific chain within a workspace.
  * In a shared workspace, all members can access the workspace's Safes.
  *

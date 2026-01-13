@@ -4,6 +4,14 @@ import { router, protectedProcedure } from '../create-router';
 import { db } from '@/db';
 import { actionProposals } from '@/db/schema';
 import { and, eq, inArray } from 'drizzle-orm';
+import { type Address } from 'viem';
+import {
+  dispatchWebhookEvent,
+  logAuditEvent,
+} from '@/server/services/webhook-service';
+import { getVaultPositions } from '@/server/earn/yield-positions';
+import { getWorkspaceSafes } from '@/server/earn/multi-chain-safe-manager';
+import { getVaultByAddress } from '@/server/earn/vault-registry';
 
 const proposalTypeSchema = z.enum([
   'crypto_transfer',
@@ -19,6 +27,54 @@ function requireWorkspaceId(workspaceId: string | null | undefined): string {
     });
   }
   return workspaceId;
+}
+
+type SavingsDirection = 'deposit' | 'withdraw';
+
+type VaultPayload = Record<string, unknown>;
+
+function resolveSavingsDirection(
+  proposalType: string,
+): SavingsDirection | null {
+  if (proposalType === 'savings_deposit') return 'deposit';
+  if (proposalType === 'savings_withdraw') return 'withdraw';
+  return null;
+}
+
+function resolvePayloadAmount(payload: VaultPayload): string | undefined {
+  const amount = payload.amount;
+  if (typeof amount === 'string') return amount;
+  if (typeof amount === 'number') return amount.toString();
+  return undefined;
+}
+
+async function resolveVaultId(payload: VaultPayload) {
+  const directId =
+    (typeof payload.vault_id === 'string' && payload.vault_id) ||
+    (typeof payload.vaultId === 'string' && payload.vaultId) ||
+    null;
+
+  if (directId) return directId;
+
+  const address =
+    (typeof payload.vaultAddress === 'string' && payload.vaultAddress) ||
+    (typeof payload.vault_address === 'string' && payload.vault_address) ||
+    null;
+
+  const chainIdRaw =
+    (payload.chainId as number | string | undefined) ??
+    (payload.chain_id as number | string | undefined);
+  const chainId =
+    typeof chainIdRaw === 'number'
+      ? chainIdRaw
+      : typeof chainIdRaw === 'string'
+        ? Number(chainIdRaw)
+        : null;
+
+  if (!address || !chainId) return null;
+
+  const vault = await getVaultByAddress(address as Address, chainId);
+  return vault?.id ?? null;
 }
 
 export const actionProposalsRouter = router({
@@ -113,6 +169,74 @@ export const actionProposalsRouter = router({
         .set({ status: 'executed', txHash: input.txHash })
         .where(eq(actionProposals.id, proposal.id));
 
+      const direction = resolveSavingsDirection(proposal.proposalType);
+      if (direction) {
+        const payload = proposal.payload as VaultPayload;
+        const vaultId = await resolveVaultId(payload);
+        const amount = resolvePayloadAmount(payload);
+
+        await logAuditEvent({
+          workspaceId,
+          actor: ctx.userId ?? undefined,
+          eventType: 'vault.action.completed',
+          metadata: {
+            proposal_id: proposal.id,
+            vault_id: vaultId,
+            amount,
+            direction,
+            status: 'executed',
+            tx_hash: input.txHash,
+          },
+        });
+
+        await dispatchWebhookEvent({
+          workspaceId,
+          eventType: 'vault.action.completed',
+          payload: {
+            proposal_id: proposal.id,
+            vault_id: vaultId,
+            amount,
+            direction,
+            status: 'executed',
+            tx_hash: input.txHash,
+          },
+        });
+
+        if (vaultId) {
+          const safes = await getWorkspaceSafes(workspaceId);
+          const ownerAddresses = safes.map(
+            (safe) => safe.safeAddress as Address,
+          );
+
+          if (ownerAddresses.length > 0) {
+            const positions = await getVaultPositions({ ownerAddresses });
+            const filtered = positions.filter(
+              (position) => position.vaultId === vaultId,
+            );
+
+            await logAuditEvent({
+              workspaceId,
+              actor: ctx.userId ?? undefined,
+              eventType: 'vault.position.updated',
+              metadata: {
+                vault_id: vaultId,
+                positions: filtered,
+              },
+            });
+
+            await dispatchWebhookEvent({
+              workspaceId,
+              eventType: 'vault.position.updated',
+              payload: {
+                vault_id: vaultId,
+                positions: filtered,
+                count: filtered.length,
+              },
+            });
+          }
+        }
+      }
+
       return { success: true };
     }),
 
@@ -142,6 +266,74 @@ export const actionProposalsRouter = router({
           proposalMessage: input.reason ?? proposal.proposalMessage,
         })
         .where(eq(actionProposals.id, proposal.id));
+
+      const direction = resolveSavingsDirection(proposal.proposalType);
+      if (direction) {
+        const payload = proposal.payload as VaultPayload;
+        const vaultId = await resolveVaultId(payload);
+        const amount = resolvePayloadAmount(payload);
+
+        await logAuditEvent({
+          workspaceId,
+          actor: ctx.userId ?? undefined,
+          eventType: 'vault.action.completed',
+          metadata: {
+            proposal_id: proposal.id,
+            vault_id: vaultId,
+            amount,
+            direction,
+            status: 'failed',
+            reason: input.reason,
+          },
+        });
+
+        await dispatchWebhookEvent({
+          workspaceId,
+          eventType: 'vault.action.completed',
+          payload: {
+            proposal_id: proposal.id,
+            vault_id: vaultId,
+            amount,
+            direction,
+            status: 'failed',
+            reason: input.reason,
+          },
+        });
+
+        if (vaultId) {
+          const safes = await getWorkspaceSafes(workspaceId);
+          const ownerAddresses = safes.map(
+            (safe) => safe.safeAddress as Address,
+          );
+
+          if (ownerAddresses.length > 0) {
+            const positions = await getVaultPositions({ ownerAddresses });
+            const filtered = positions.filter(
+              (position) => position.vaultId === vaultId,
+            );
+
+            await logAuditEvent({
+              workspaceId,
+              actor: ctx.userId ?? undefined,
+              eventType: 'vault.position.updated',
+              metadata: {
+                vault_id: vaultId,
+                positions: filtered,
+              },
+            });
+
+            await dispatchWebhookEvent({
+              workspaceId,
+              eventType: 'vault.position.updated',
+              payload: {
+                vault_id: vaultId,
+                positions: filtered,
+                count: filtered.length,
+              },
+            });
+          }
+        }
+      }
 
       return { success: true };
     }),

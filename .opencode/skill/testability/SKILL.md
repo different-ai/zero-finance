@@ -88,9 +88,10 @@ describe('calculateFee', () => {
 
 ```bash
 cd packages/web
-pnpm test                    # Run all tests
-pnpm test:watch              # Watch mode
-pnpm test -- --grep "fee"    # Filter by name
+pnpm test                           # Run all tests (watch mode)
+pnpm test -- --run                  # Run once and exit
+pnpm test:watch                     # Watch mode
+pnpm test -- --run --grep "fee"     # Filter by name
 ```
 
 ---

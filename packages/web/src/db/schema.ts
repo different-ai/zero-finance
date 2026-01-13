@@ -48,6 +48,42 @@ export {
   type NewWorkspaceApiKey,
 } from './schema/workspace-api-keys';
 
+// Yield infrastructure tables
+export {
+  vaultAssets,
+  vaults,
+  vaultInsurance,
+  sandboxTokens,
+  sandboxFaucetEvents,
+  webhookEndpoints,
+  webhookDeliveries,
+  auditEvents,
+  vaultAssetsRelations,
+  vaultsRelations,
+  vaultInsuranceRelations,
+  sandboxTokensRelations,
+  sandboxFaucetEventsRelations,
+  webhookEndpointsRelations,
+  webhookDeliveriesRelations,
+  auditEventsRelations,
+  type VaultAsset,
+  type NewVaultAsset,
+  type Vault,
+  type NewVault,
+  type VaultInsurance,
+  type NewVaultInsurance,
+  type SandboxToken,
+  type NewSandboxToken,
+  type SandboxFaucetEvent,
+  type NewSandboxFaucetEvent,
+  type WebhookEndpoint,
+  type NewWebhookEndpoint,
+  type WebhookDelivery,
+  type NewWebhookDelivery,
+  type AuditEvent,
+  type NewAuditEvent,
+} from './schema/yield-infra';
+
 // User Safes - modular schema with architecture documentation
 export {
   userSafes,

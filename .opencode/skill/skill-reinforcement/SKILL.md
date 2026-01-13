@@ -292,3 +292,5 @@ Example:
 
 - 2026-01-12: Bulk remote branch cleanup can hit stale refs and timeouts; run `git fetch --prune origin` first, delete with a loop that tolerates missing refs, then prune again to verify only `origin/main` remains.
 - 2026-01-13: When extending agent policy docs, renumber numbered headings after inserts and place testing tools + real-funds protocol near the Testability section for clarity.
+- 2026-01-13: When refactoring MCP tool handlers into a registry, remove the legacy switch and align handler arg types with tool schemas to avoid type errors.
+- 2026-01-13: When adding a new Next.js route handler export, ensure it sits outside existing handler functions to avoid "Modifiers cannot appear here" errors.
