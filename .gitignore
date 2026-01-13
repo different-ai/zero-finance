@@ -78,6 +78,7 @@ research/
 
 # OpenCode workspace config (contains user-specific Notion IDs)
 .opencode/config/
+.opencode/skill/**/.skill.config
 .env*.local
 **/.env.skill
 *.tsbuildinfo
