@@ -1,6 +1,6 @@
 {
   "name": "agent-bank",
-  "version": "0.1.8",
+  "version": "0.1.9",
   "description": "0 Finance CLI for automated banking workflows.",
   "homepage": "https://docs.0.finance/cli/installation",
   "repository": {
