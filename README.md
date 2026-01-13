@@ -6,19 +6,24 @@
 
 # 0 Finance
 
-> Your business savings account is now open source. 0 finance is a stablecoin bank that works like a regular bank. You can send & receive money out via ACH, earn 2-3x the yield compared to regular savings accounts, and fork it!
+> CLI-first banking for AI agents. Give your agents access to a bank account to create invoices, propose bank transfers, and match receipts purely from the CLI. Forkable and self-hostable.
 
 <img width="1840" height="1195" alt="Screenshot 2025-12-28 at 18 06 16" src="https://github.com/user-attachments/assets/c0b68eb2-1c53-4af5-b452-d78836f10cc3" />
 
-## What Zero Finance Does
+## Agent Capabilities
 
-0 Finance is a bank account that automates your finances:
+0 Finance gives agents a real bank account with a CLI-first workflow:
 
-- **Get Paid Easily** - Create invoices in seconds and get paid directly to your personal IBAN
-- **Spend Anywhere** - Use a debit card worldwide with 0% conversion fees
-- **Optimize Yield** - AI automatically allocates idle funds to highest-yielding opportunities
+- **CLI-first banking** - Every workflow is scriptable via the `zero` CLI.
+- **Invoices** - Create and send invoices from the terminal.
+- **Bank transfers** - Propose ACH/IBAN transfers with approval gates.
+- **Receipt matching** - Attach receipts to transactions and reconcile via CLI.
+- **Optimize yield** - Idle funds auto-earn higher yield.
+- **Forkable** - Run your own instance or customize workflows.
 
 ## CLI Quick Start
+
+CLI-first banking for agents starts with the `zero` CLI.
 
 ```bash
 curl -fsSL https://zerofinance.ai/install | bash
@@ -32,7 +37,7 @@ zero auth connect
 zero balance
 ```
 
-The CLI package is `agent-bank`, and the binary is `zero` (alias: `zero-bank`).
+The CLI package is `agent-bank`, and the binary is `zero` (alias: `zero-bank`) for agent workflows.
 
 ## Current Status
 
@@ -124,8 +129,9 @@ Want to migrate from hosted to self-hosted?
 
 This monorepo contains multiple packages:
 
+- **packages/cli**: The `zero` CLI built for agents
 - **packages/web**: The bank web app
-- **packages/fluidkey-earn-module/**: The smart contract that help with securely automating savings.
+- **packages/fluidkey-earn-module/**: The smart contract that helps with securely automating savings.
 
 ## 🌐 Join Us
 
