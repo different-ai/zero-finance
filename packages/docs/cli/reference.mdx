@@ -17,9 +17,25 @@ finance <command> [subcommand] [options]
 
 ## Authentication
 
+### `finance auth connect`
+
+Open the browser to connect the CLI and store the API key automatically.
+
+```bash
+finance auth
+finance auth connect
+finance login
+```
+
+| Option         | Required | Description                                  |
+| -------------- | -------- | -------------------------------------------- |
+| `--base-url`   | No       | Base URL (default: `https://0.finance`)      |
+| `--no-browser` | No       | Print URL instead of opening a browser       |
+| `--manual`     | No       | Skip callback and paste the API key manually |
+
 ### `finance auth login`
 
-Store your API key and configure the CLI.
+Store your API key and configure the CLI manually.
 
 ```bash
 finance auth login --api-key sk_live_xxx

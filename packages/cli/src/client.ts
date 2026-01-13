@@ -18,7 +18,7 @@ export async function apiRequest<T>(
 
   if (!apiKey && !options.adminToken) {
     throw new Error(
-      'Missing API key. Run `finance auth login --api-key <key>`',
+      'Missing API key. Run `finance auth connect` or `finance auth login --api-key <key>`',
     );
   }
 

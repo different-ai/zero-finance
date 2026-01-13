@@ -24,7 +24,9 @@
 curl -fsSL https://zerofinance.ai/install | bash
 
 # Authenticate
-finance auth login --api-key sk_live_xxx
+finance auth connect
+
+# Or: finance auth login --api-key sk_live_xxx
 
 # Check balance
 finance balance

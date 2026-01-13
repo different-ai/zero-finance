@@ -1,6 +1,12 @@
 #!/usr/bin/env node
+import { execFile } from 'child_process';
+import { randomBytes } from 'crypto';
+import http from 'http';
 import { Command } from 'commander';
 import fs from 'fs/promises';
+import { stdin as stdinStream, stdout as stdoutStream } from 'process';
+import readline from 'readline/promises';
+import { promisify } from 'util';
 import { apiRequest } from './client.js';
 import { clearConfig, saveConfig } from './config.js';
 
@@ -12,6 +18,185 @@ function output(data: unknown) {
     return;
   }
   console.log(JSON.stringify(data, null, 2));
+}
+
+const execFileAsync = promisify(execFile);
+const DEFAULT_BASE_URL = 'https://0.finance';
+const CONNECT_TIMEOUT_MS = 120_000;
+
+function createStateToken() {
+  return randomBytes(16).toString('hex');
+}
+
+async function openBrowser(url: string) {
+  const platform = process.platform;
+  let command = 'xdg-open';
+  let args = [url];
+
+  if (platform === 'darwin') {
+    command = 'open';
+  } else if (platform === 'win32') {
+    command = 'cmd';
+    args = ['/c', 'start', '', url];
+  }
+
+  try {
+    await execFileAsync(command, args, { windowsHide: true });
+    return true;
+  } catch (error) {
+    return false;
+  }
+}
+
+async function startCallbackServer(state: string) {
+  let resolveToken: (token: string) => void;
+  let resolved = false;
+
+  const tokenPromise = new Promise<string>((resolve) => {
+    resolveToken = resolve;
+  });
+
+  const server = http.createServer((req, res) => {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+    if (req.method === 'OPTIONS') {
+      res.statusCode = 204;
+      res.end();
+      return;
+    }
+
+    const url = new URL(req.url ?? '/', `http://${req.headers.host}`);
+    if (url.pathname !== '/callback') {
+      res.statusCode = 404;
+      res.end('Not found');
+      return;
+    }
+
+    const token = url.searchParams.get('token');
+    const requestState = url.searchParams.get('state');
+
+    if (!token) {
+      res.statusCode = 400;
+      res.end('Missing token');
+      return;
+    }
+
+    if (requestState && requestState !== state) {
+      res.statusCode = 400;
+      res.end('Invalid state');
+      return;
+    }
+
+    if (!resolved) {
+      resolved = true;
+      resolveToken(token);
+    }
+
+    res.statusCode = 200;
+    res.end('CLI connected. You can close this tab.');
+  });
+
+  await new Promise<void>((resolve) => {
+    server.listen(0, '127.0.0.1', resolve);
+  });
+
+  const address = server.address();
+  if (!address || typeof address === 'string') {
+    server.close();
+    throw new Error('Failed to start callback server');
+  }
+
+  const redirectUri = `http://127.0.0.1:${address.port}/callback`;
+
+  return {
+    redirectUri,
+    tokenPromise,
+    close: () => server.close(),
+  };
+}
+
+async function waitForToken(
+  tokenPromise: Promise<string>,
+  timeoutMs = CONNECT_TIMEOUT_MS,
+) {
+  const timeoutPromise = new Promise<null>((resolve) => {
+    setTimeout(() => resolve(null), timeoutMs);
+  });
+
+  const token = await Promise.race([tokenPromise, timeoutPromise]);
+  return token ?? null;
+}
+
+async function promptForApiKey() {
+  const prompt = readline.createInterface({
+    input: stdinStream,
+    output: stdoutStream,
+  });
+
+  const answer = await prompt.question('Paste your API key: ');
+  prompt.close();
+  return answer.trim();
+}
+
+async function runAuthConnect(options: {
+  baseUrl?: string;
+  browser?: boolean;
+  manual?: boolean;
+}) {
+  const baseUrl = options.baseUrl || DEFAULT_BASE_URL;
+  const state = createStateToken();
+
+  let redirectUri: string | null = null;
+  let tokenPromise: Promise<string> | null = null;
+  let closeServer: (() => void) | null = null;
+
+  if (!options.manual) {
+    const callback = await startCallbackServer(state);
+    redirectUri = callback.redirectUri;
+    tokenPromise = callback.tokenPromise;
+    closeServer = callback.close;
+  }
+
+  const connectUrl = new URL('/cli/connect', baseUrl);
+  connectUrl.searchParams.set('state', state);
+  if (redirectUri) {
+    connectUrl.searchParams.set('redirect_uri', redirectUri);
+  }
+
+  const targetUrl = connectUrl.toString();
+  let opened = false;
+
+  if (options.browser !== false) {
+    opened = await openBrowser(targetUrl);
+  }
+
+  if (!opened) {
+    console.log(`Open this URL in your browser:\n${targetUrl}`);
+  }
+
+  let apiKey: string | null = null;
+
+  if (tokenPromise) {
+    apiKey = await waitForToken(tokenPromise);
+  }
+
+  if (!apiKey) {
+    console.log('If the browser flow did not complete, paste your API key.');
+    apiKey = await promptForApiKey();
+  }
+
+  if (!apiKey) {
+    throw new Error('API key is required to continue.');
+  }
+
+  if (closeServer) {
+    closeServer();
+  }
+
+  await saveConfig({ apiKey, baseUrl });
+  output({ success: true, method: 'browser' });
 }
 
 function resolveAdminToken(token?: string) {
@@ -28,15 +213,41 @@ async function readFileBase64(path: string) {
   return content.toString('base64');
 }
 
-program.name('finance').description('0 Finance CLI').version('0.1.1');
+program.name('finance').description('0 Finance CLI').version('0.1.2');
 
 const auth = program.command('auth').description('Authentication');
+
+auth
+  .option('--base-url <url>', 'Base URL for the API', DEFAULT_BASE_URL)
+  .option('--no-browser', 'Do not open browser automatically')
+  .option('--manual', 'Paste API key manually instead of callback')
+  .action(async (opts) => {
+    await runAuthConnect({
+      baseUrl: opts.baseUrl,
+      browser: opts.browser,
+      manual: opts.manual,
+    });
+  });
+
+auth
+  .command('connect')
+  .description('Open the browser and connect the CLI')
+  .option('--base-url <url>', 'Base URL for the API', DEFAULT_BASE_URL)
+  .option('--no-browser', 'Do not open browser automatically')
+  .option('--manual', 'Paste API key manually instead of callback')
+  .action(async (opts) => {
+    await runAuthConnect({
+      baseUrl: opts.baseUrl,
+      browser: opts.browser,
+      manual: opts.manual,
+    });
+  });
 
 auth
   .command('login')
   .description('Store API key and base URL')
   .requiredOption('--api-key <key>', 'Workspace API key')
-  .option('--base-url <url>', 'Base URL for the API', 'https://0.finance')
+  .option('--base-url <url>', 'Base URL for the API', DEFAULT_BASE_URL)
   .action(async (opts) => {
     await saveConfig({ apiKey: opts.apiKey, baseUrl: opts.baseUrl });
     output({ success: true });
@@ -56,6 +267,20 @@ auth
   .action(async () => {
     await clearConfig();
     output({ success: true });
+  });
+
+program
+  .command('login')
+  .description('Open the browser and connect the CLI')
+  .option('--base-url <url>', 'Base URL for the API', DEFAULT_BASE_URL)
+  .option('--no-browser', 'Do not open browser automatically')
+  .option('--manual', 'Paste API key manually instead of callback')
+  .action(async (opts) => {
+    await runAuthConnect({
+      baseUrl: opts.baseUrl,
+      browser: opts.browser,
+      manual: opts.manual,
+    });
   });
 
 const bank = program.command('bank').description('Bank operations');

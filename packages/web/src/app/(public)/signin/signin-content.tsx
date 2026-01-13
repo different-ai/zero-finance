@@ -49,8 +49,7 @@ const SIGNIN_CONTENT: SigninContent = {
     highlight: 'idle treasury',
     suffix: '',
   },
-  description:
-    'Earn more on your idle treasury. No minimums, no lock-ups. ',
+  description: 'Earn more on your idle treasury. No minimums, no lock-ups. ',
   features: [
     'Insurance included — up to $1M coverage',
     'Instant withdrawals — no lockups',
@@ -89,9 +88,15 @@ export default function SignInContent() {
   // Redirect to dashboard if already authenticated
   useEffect(() => {
     if (authenticated) {
+      const redirectParam = searchParams.get('redirect');
+      const safeRedirect =
+        redirectParam && redirectParam.startsWith('/') ? redirectParam : null;
+
       let redirectUrl;
 
-      if (inviteToken) {
+      if (safeRedirect) {
+        redirectUrl = safeRedirect;
+      } else if (inviteToken) {
         // Handle invite flow
         redirectUrl = `/dashboard?invite=${inviteToken}`;
       } else {
@@ -102,7 +107,7 @@ export default function SignInContent() {
 
       window.location.href = redirectUrl;
     }
-  }, [authenticated, inviteToken]);
+  }, [authenticated, inviteToken, searchParams]);
 
   // Track page view with source
   useEffect(() => {
@@ -228,9 +233,7 @@ export default function SignInContent() {
       <div className="relative z-10 max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-8 sm:pt-24 sm:pb-12 lg:pt-28 lg:pb-20">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-0 max-w-5xl mx-auto rounded-xl overflow-hidden border border-[#101010]/10 shadow-[0_2px_8px_rgba(16,16,16,0.04)]">
           {/* Left side - Value Proposition - Hidden on mobile */}
-          <div
-            className="hidden lg:block backdrop-blur-sm p-8 lg:p-12 relative overflow-hidden bg-white/95"
-          >
+          <div className="hidden lg:block backdrop-blur-sm p-8 lg:p-12 relative overflow-hidden bg-white/95">
             <div className="relative z-10 mb-8">
               {/* Badge/Label */}
               <p className="uppercase tracking-[0.14em] text-[12px] mb-3 text-[#101010]/60">
@@ -242,7 +245,9 @@ export default function SignInContent() {
                 {content.headline.prefix && (
                   <span>{content.headline.prefix} </span>
                 )}
-                <span className="text-[#1B29FF]">{content.headline.highlight}</span>
+                <span className="text-[#1B29FF]">
+                  {content.headline.highlight}
+                </span>
                 {content.headline.suffix && (
                   <span> {content.headline.suffix}</span>
                 )}
@@ -376,93 +381,94 @@ export default function SignInContent() {
                   )}
 
                   {/* Step 2: Code Sent Confirmation */}
-                  {!forceEmailStep && state.status === 'awaiting-code-input' && (
-                    <div className="space-y-4">
-                      <div className="p-4 bg-[#EAF0FF] border border-[#1B29FF]/20 rounded-md">
-                        <div className="flex items-start gap-3">
-                          <CheckCircle className="h-5 w-5 text-[#1B29FF] flex-shrink-0 mt-0.5" />
-                          <div className="flex-1">
-                            <p className="text-[14px] font-medium text-[#101010] mb-1">
-                              Check your email
-                            </p>
-                            <p className="text-[13px] text-[#101010]/70">
-                              We sent a 6-digit code to{' '}
-                              <span className="font-medium">{email}</span>
-                            </p>
+                  {!forceEmailStep &&
+                    state.status === 'awaiting-code-input' && (
+                      <div className="space-y-4">
+                        <div className="p-4 bg-[#EAF0FF] border border-[#1B29FF]/20 rounded-md">
+                          <div className="flex items-start gap-3">
+                            <CheckCircle className="h-5 w-5 text-[#1B29FF] flex-shrink-0 mt-0.5" />
+                            <div className="flex-1">
+                              <p className="text-[14px] font-medium text-[#101010] mb-1">
+                                Check your email
+                              </p>
+                              <p className="text-[13px] text-[#101010]/70">
+                                We sent a 6-digit code to{' '}
+                                <span className="font-medium">{email}</span>
+                              </p>
+                            </div>
                           </div>
                         </div>
-                      </div>
 
-                      <form
-                        onSubmit={handleLoginWithCode}
-                        className="space-y-2"
-                      >
-                        <label
-                          htmlFor="code"
-                          className="text-[13px] font-medium text-[#101010] block mb-3"
+                        <form
+                          onSubmit={handleLoginWithCode}
+                          className="space-y-2"
                         >
-                          Verification Code
-                        </label>
-                        <div className="flex justify-center">
-                          <InputOTP
-                            maxLength={6}
-                            value={code}
-                            onChange={(value) => {
-                              setCode(value);
-                              // Auto-submit when 6 digits entered (cancelable so
-                              // "Change email" is reliable).
-                              if (autoSubmitTimeoutRef.current) {
-                                window.clearTimeout(autoSubmitTimeoutRef.current);
-                                autoSubmitTimeoutRef.current = null;
-                              }
-                              if (value.length === 6) {
-                                autoSubmitTimeoutRef.current = window.setTimeout(
-                                  () => {
-                                    if (
-                                      !forceEmailStep &&
-                                      state.status === 'awaiting-code-input'
-                                    ) {
-                                      loginWithCode({ code: value.trim() });
-                                    }
-                                  },
-                                  100,
-                                );
-                              }
-                            }}
-                            inputMode="numeric"
-                            pattern="[0-9]*"
+                          <label
+                            htmlFor="code"
+                            className="text-[13px] font-medium text-[#101010] block mb-3"
                           >
-                            <InputOTPGroup>
-                              <InputOTPSlot index={0} />
-                              <InputOTPSlot index={1} />
-                              <InputOTPSlot index={2} />
-                              <InputOTPSlot index={3} />
-                              <InputOTPSlot index={4} />
-                              <InputOTPSlot index={5} />
-                            </InputOTPGroup>
-                          </InputOTP>
-                        </div>
-                      </form>
+                            Verification Code
+                          </label>
+                          <div className="flex justify-center">
+                            <InputOTP
+                              maxLength={6}
+                              value={code}
+                              onChange={(value) => {
+                                setCode(value);
+                                // Auto-submit when 6 digits entered (cancelable so
+                                // "Change email" is reliable).
+                                if (autoSubmitTimeoutRef.current) {
+                                  window.clearTimeout(
+                                    autoSubmitTimeoutRef.current,
+                                  );
+                                  autoSubmitTimeoutRef.current = null;
+                                }
+                                if (value.length === 6) {
+                                  autoSubmitTimeoutRef.current =
+                                    window.setTimeout(() => {
+                                      if (
+                                        !forceEmailStep &&
+                                        state.status === 'awaiting-code-input'
+                                      ) {
+                                        loginWithCode({ code: value.trim() });
+                                      }
+                                    }, 100);
+                                }
+                              }}
+                              inputMode="numeric"
+                              pattern="[0-9]*"
+                            >
+                              <InputOTPGroup>
+                                <InputOTPSlot index={0} />
+                                <InputOTPSlot index={1} />
+                                <InputOTPSlot index={2} />
+                                <InputOTPSlot index={3} />
+                                <InputOTPSlot index={4} />
+                                <InputOTPSlot index={5} />
+                              </InputOTPGroup>
+                            </InputOTP>
+                          </div>
+                        </form>
 
-                      <div className="flex items-center justify-between pt-2">
-                        <button
-                          type="button"
-                          onClick={handleBackToEmail}
-                          className="text-[13px] text-[#101010]/70 hover:text-[#1B29FF] transition-colors flex items-center gap-1"
-                        >
-                          <ArrowLeft className="h-3 w-3" />
-                          Change email
-                        </button>
-                        <button
-                          type="button"
-                          onClick={handleResendCode}
-                          className="text-[13px] text-[#101010]/70 hover:text-[#1B29FF] transition-colors"
-                        >
-                          Resend code
-                        </button>
+                        <div className="flex items-center justify-between pt-2">
+                          <button
+                            type="button"
+                            onClick={handleBackToEmail}
+                            className="text-[13px] text-[#101010]/70 hover:text-[#1B29FF] transition-colors flex items-center gap-1"
+                          >
+                            <ArrowLeft className="h-3 w-3" />
+                            Change email
+                          </button>
+                          <button
+                            type="button"
+                            onClick={handleResendCode}
+                            className="text-[13px] text-[#101010]/70 hover:text-[#1B29FF] transition-colors"
+                          >
+                            Resend code
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    )}
 
                   {/* Step 3: Submitting Code */}
                   {!forceEmailStep && state.status === 'submitting-code' && (

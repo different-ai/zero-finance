@@ -20,7 +20,9 @@ The CLI binary is `finance` (aliases: `0`, `zero`).
 
 ```bash
 # Authenticate
-finance auth login --api-key sk_live_xxx
+finance auth connect
+
+# Or: finance auth login --api-key sk_live_xxx
 
 # Check balance
 finance balance

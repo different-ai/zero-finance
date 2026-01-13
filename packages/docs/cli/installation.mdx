@@ -54,7 +54,17 @@ bun --cwd packages/cli run dev -- auth whoami
   Store your API key securely. It provides full access to your workspace.
 </Warning>
 
-### Step 2: Log in
+### Step 2: Connect the CLI
+
+**Option A: Browser connect (recommended)**
+
+```bash
+finance auth connect
+```
+
+This opens a secure connection page on 0.finance and stores the API key for you. If the automatic handoff fails, the page shows a copyable key for manual paste.
+
+**Option B: API key**
 
 ```bash
 finance auth login --api-key sk_live_your_api_key_here

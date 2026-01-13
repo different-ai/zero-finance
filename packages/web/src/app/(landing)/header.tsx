@@ -22,11 +22,17 @@ export function Header() {
           <nav className="flex items-center gap-3 sm:gap-4">
             <Link
               className="hidden sm:inline-flex px-3 sm:px-4 py-1.5 sm:py-2 text-[#101010] hover:text-[#0050ff] text-[12px] sm:text-[13px] font-medium transition-colors"
+              href="https://docs.0.finance"
+            >
+              Docs
+            </Link>
+            <Link
+              className="hidden sm:inline-flex px-3 sm:px-4 py-1.5 sm:py-2 text-[#101010] hover:text-[#0050ff] text-[12px] sm:text-[13px] font-medium transition-colors"
               href="#api-access"
             >
               API
             </Link>
-     
+
             <Link
               className="px-3 sm:px-4 py-1.5 sm:py-2 bg-[#1B29FF] hover:bg-[#1420CC] text-white text-[12px] sm:text-[13px] font-medium rounded-md transition-all"
               href="/signin"
