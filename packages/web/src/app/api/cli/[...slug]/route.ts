@@ -141,10 +141,10 @@ function parseLimit(searchParams: URLSearchParams) {
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { slug?: string[] } },
+  { params }: { params: Promise<{ slug?: string[] }> },
 ) {
   try {
-    const slug = params.slug ?? [];
+    const { slug = [] } = await params;
     if (slug.length === 0) {
       return errorResponse('Not found', 404);
     }
@@ -387,10 +387,10 @@ export async function GET(
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { slug?: string[] } },
+  { params }: { params: Promise<{ slug?: string[] }> },
 ) {
   try {
-    const slug = params.slug ?? [];
+    const { slug = [] } = await params;
     if (slug.length === 0) {
       return errorResponse('Not found', 404);
     }
@@ -660,14 +660,13 @@ export async function POST(
 
       const privyUser = await createPrivyUser({
         linked_accounts: linkedAccounts,
-        wallets: body.wallets ?? [
-          {
-            chain_type: 'ethereum',
-            wallet_index: 0,
-          },
-        ],
-        create_direct_signer: body.create_direct_signer ?? true,
-        custom_metadata: body.custom_metadata,
+        ...(body.wallets ? { wallets: body.wallets } : {}),
+        ...(body.create_direct_signer !== undefined
+          ? { create_direct_signer: body.create_direct_signer }
+          : {}),
+        ...(body.custom_metadata
+          ? { custom_metadata: body.custom_metadata }
+          : {}),
       });
 
       const privyDid = privyUser?.id ?? privyUser?.user?.id;
@@ -717,15 +716,17 @@ export async function POST(
     if (slug[0] === 'users' && slug[1] && slug[2] === 'wallets') {
       requireAdmin(request);
       const body = await request.json();
+      const wallets = body.wallets ?? [
+        {
+          chain_type: 'ethereum',
+        },
+      ];
       const privyUser = await pregeneratePrivyWallets({
         user_id: slug[1],
-        wallets: body.wallets ?? [
-          {
-            chain_type: 'ethereum',
-            wallet_index: 0,
-          },
-        ],
-        create_direct_signer: body.create_direct_signer ?? true,
+        wallets,
+        ...(body.create_direct_signer !== undefined
+          ? { create_direct_signer: body.create_direct_signer }
+          : {}),
       });
 
       return jsonResponse({ privy_user: privyUser });
@@ -761,10 +762,10 @@ export async function POST(
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { slug?: string[] } },
+  { params }: { params: Promise<{ slug?: string[] }> },
 ) {
   try {
-    const slug = params.slug ?? [];
+    const { slug = [] } = await params;
     if (slug[0] === 'invoices' && slug[1]) {
       const context = await requireApiContext(request);
       const body = await request.json();
@@ -791,10 +792,10 @@ export async function PATCH(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { slug?: string[] } },
+  { params }: { params: Promise<{ slug?: string[] }> },
 ) {
   try {
-    const slug = params.slug ?? [];
+    const { slug = [] } = await params;
     if (slug[0] === 'attachments' && slug[1]) {
       const context = await requireApiContext(request);
       const result = await removeAttachment(context, {

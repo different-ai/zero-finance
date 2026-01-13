@@ -450,6 +450,14 @@ test('user can complete payment flow', async ({ page }) => {
 - Created patterns for dependency injection and pure function extraction
 - Added integration with other skills
 
+### 2026-01-12: Next.js 16 async route params
+
+- Dynamic API routes now receive `params` as a Promise; `await params` before reading `slug` to avoid 404s in local CLI testing.
+
+### 2026-01-12: Privy user provisioning defaults
+
+- Privy create-user rejects `wallet_index` and `create_direct_signer`; omit defaults and only send those fields when explicitly provided.
+
 ---
 
 ## Quick Reference
