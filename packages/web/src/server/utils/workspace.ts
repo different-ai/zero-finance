@@ -108,6 +108,7 @@ async function upsertPrimaryMembership(
         and(
           eq(workspaceMembers.userId, userId),
           ne(workspaceMembers.id, membership.id),
+          eq(workspaceMembers.isPrimary, true),
         ),
       );
 
@@ -126,6 +127,7 @@ async function upsertPrimaryMembership(
         and(
           eq(workspaceMembers.userId, userId),
           ne(workspaceMembers.id, membership.id),
+          eq(workspaceMembers.isPrimary, true),
         ),
       );
   }
