@@ -5,7 +5,6 @@ import {
 } from '@/server/cli/auth';
 import {
   listSavedBankAccounts,
-  getBalance,
   proposeBankTransfer,
   listProposals,
   createBankAccount,
@@ -162,8 +161,7 @@ export async function GET(
 
     if (slug[0] === 'balance') {
       const context = await requireApiContext(request);
-      const result = await getBalance(context);
-      const payload = unwrapMcpResult(result);
+      const payload = await getSpendableBalanceByWorkspace(context.workspaceId);
       if (payload && typeof payload === 'object' && 'error' in payload) {
         return jsonResponse(payload, 400);
       }
@@ -406,7 +404,7 @@ export async function POST(
       return jsonResponse(payload, 201);
     }
 
-    if (slug[0] === 'bank-transfers' && slug[1] === 'proposals') {
+    if (slug[0] === 'bank-transfers' && slug[1] === 'proposals' && !slug[2]) {
       const context = await requireApiContext(request);
       const body = await request.json();
       const result = await proposeBankTransfer(context, body);
@@ -432,7 +430,7 @@ export async function POST(
       return jsonResponse(payload);
     }
 
-    if (slug[0] === 'invoices') {
+    if (slug[0] === 'invoices' && !slug[1]) {
       const context = await requireApiContext(request);
       const body = await request.json();
       const result = await createInvoice(context, body);

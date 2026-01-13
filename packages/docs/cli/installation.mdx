@@ -20,13 +20,10 @@ bun add -g agent-bank
 Verify the installation:
 
 ```bash
-finance --version
+zero --version
 ```
 
-<Tip>
-  The CLI binary is `finance`. You can also use the shorter aliases `0` or
-  `zero`.
-</Tip>
+<Tip>The CLI binary is `zero` (alias: `zero-bank`).</Tip>
 
 ---
 
@@ -39,7 +36,7 @@ bun install
 bun --cwd packages/cli run dev -- auth connect --no-browser
 ```
 
-<Tip>Use `finance --debug auth whoami` to print the resolved base URL.</Tip>
+<Tip>Use `zero --debug auth whoami` to print the resolved base URL.</Tip>
 
 ---
 
@@ -61,7 +58,7 @@ bun --cwd packages/cli run dev -- auth connect --no-browser
 **Option A: Browser connect (recommended)**
 
 ```bash
-finance auth connect
+zero auth connect
 ```
 
 This opens a secure connection page on www.0.finance and stores the API key for you. If the automatic handoff fails, the page shows a copyable key for manual paste.
@@ -69,7 +66,7 @@ This opens a secure connection page on www.0.finance and stores the API key for 
 **Option B: API key**
 
 ```bash
-finance auth login --api-key sk_live_your_api_key_here
+zero auth login --api-key sk_live_your_api_key_here
 ```
 
 This stores your credentials in `~/.zero-finance/config.json`.
@@ -77,7 +74,7 @@ This stores your credentials in `~/.zero-finance/config.json`.
 ### Step 3: Verify
 
 ```bash
-finance auth whoami
+zero auth whoami
 ```
 
 ```json
@@ -108,7 +105,7 @@ The CLI stores configuration in `~/.zero-finance/config.json`:
 For self-hosted deployments or local development:
 
 ```bash
-finance auth login --api-key sk_test_xxx --base-url http://localhost:3050
+zero auth login --api-key sk_test_xxx --base-url http://localhost:3050
 ```
 
 <Tip>
@@ -123,18 +120,21 @@ finance auth login --api-key sk_test_xxx --base-url http://localhost:3050
 Remove stored credentials:
 
 ```bash
-finance auth logout
+zero auth logout
 ```
 
 ---
 
 ## Next steps
 
-<CardGroup cols={2}>
+<CardGroup cols={3}>
   <Card title="CLI Reference" icon="book" href="/cli/reference">
     Complete command reference with examples.
   </Card>
   <Card title="Check balance" icon="wallet" href="/cli/reference#balance">
     Your first CLI command.
+  </Card>
+  <Card title="CLI QA" icon="check-circle" href="/cli/testing">
+    Functionality coverage and smoke-test results.
   </Card>
 </CardGroup>

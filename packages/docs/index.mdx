@@ -11,7 +11,7 @@ description: 'Manage your finances from the command line with the 0 Finance CLI'
 - **Spend anywhere** — Use a debit card worldwide with 0% conversion fees.
 - **Optimize yield** — AI automatically allocates idle funds to the highest-yielding opportunities.
 
-Everything is programmable through the **`finance` CLI** (aliases: `0`, `zero`) — check balances, send invoices, propose transfers, and manage savings from your terminal.
+Everything is programmable through the **`zero` CLI** (alias: `zero-bank`) — check balances, send invoices, propose transfers, and manage savings from your terminal.
 
 ---
 
@@ -24,27 +24,27 @@ curl -fsSL https://zerofinance.ai/install | bash
 # Or: bun add -g agent-bank
 
 # Connect the CLI (opens a browser)
-finance auth connect
+zero auth connect
 
-# Or: finance auth login --api-key sk_live_xxx
+# Or: zero auth login --api-key sk_live_xxx
 # Debug request URLs:
-# finance --debug auth whoami
+# zero --debug auth whoami
 
 # Check your balance
-finance balance
+zero balance
 
 # Create and send an invoice
-finance invoices create \
+zero invoices create \
   --recipient-email client@example.com \
   --amount 1000 \
   --currency USD \
   --description "Consulting services"
-finance invoices send --invoice-id inv_xxx
+zero invoices send --invoice-id inv_xxx
 ```
 
 <CardGroup cols={2}>
   <Card title="Install the CLI" icon="terminal" href="/cli/installation">
-    Get up and running with the `finance` CLI in under a minute.
+    Get up and running with the `zero` CLI in under a minute.
   </Card>
   <Card title="CLI Reference" icon="book" href="/cli/reference">
     Complete command reference with examples.
@@ -64,12 +64,14 @@ finance invoices send --invoice-id inv_xxx
 ### Check your balance
 
 ```bash
-finance balance
+zero balance
 ```
 
 ```json
 {
-  "usdc_balance": "7420.50",
+  "idle_balance": "3200.00",
+  "earning_balance": "4220.50",
+  "spendable_balance": "7420.50",
   "safe_address": "0x954A329e1e59101DF529CC54A54666A0b36Cae22",
   "chain": "base"
 }
@@ -79,7 +81,7 @@ finance balance
 
 ```bash
 # Create an invoice
-finance invoices create \
+zero invoices create \
   --recipient-email client@acme.com \
   --recipient-name "Acme Corp" \
   --amount 2500 \
@@ -87,17 +89,17 @@ finance invoices create \
   --description "Q1 consulting"
 
 # Send it
-finance invoices send --invoice-id inv_xxx
+zero invoices send --invoice-id inv_xxx
 ```
 
 ### Propose a bank transfer
 
 ```bash
 # List your saved bank accounts
-finance bank accounts list
+zero bank accounts list
 
 # Propose a transfer (requires dashboard approval)
-finance bank transfers propose \
+zero bank transfers propose \
   --amount 1000 \
   --currency usd \
   --bank-account-id ba_xxx \
@@ -108,23 +110,23 @@ finance bank transfers propose \
 
 ```bash
 # View available vaults
-finance vaults list
+zero vaults list
 
 # Deposit into a yield vault
-finance savings deposits propose \
+zero savings deposits propose \
   --vault-address 0x... \
   --amount 500 \
   --reason "Earning yield on idle funds"
 
 # Check your positions
-finance savings positions
+zero savings positions
 ```
 
 ---
 
 ## How it works
 
-1. **Authenticate** — Use `finance auth connect` (or `finance auth login` with an API key).
+1. **Authenticate** — Use `zero auth connect` (or `zero auth login` with an API key).
 2. **Execute commands** — Read operations happen instantly. Transfers and withdrawals create proposals.
 3. **Approve in dashboard** — Proposals require human approval before executing. This keeps you in control.
 

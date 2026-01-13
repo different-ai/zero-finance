@@ -1,6 +1,6 @@
 {
   "name": "agent-bank",
-  "version": "0.1.9",
+  "version": "0.1.10",
   "description": "0 Finance CLI for automated banking workflows.",
   "homepage": "https://docs.0.finance/cli/installation",
   "repository": {
@@ -10,9 +10,8 @@
   },
   "type": "module",
   "bin": {
-    "finance": "dist/index.js",
-    "0": "dist/index.js",
-    "zero": "dist/index.js"
+    "zero": "dist/index.js",
+    "zero-bank": "dist/index.js"
   },
   "publishConfig": {
     "access": "public"

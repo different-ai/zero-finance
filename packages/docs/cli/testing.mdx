@@ -1,0 +1,61 @@
+title: 'CLI Functionality & QA'
+description: 'Capabilities overview and production smoke test log for the zero CLI'
+
+---
+
+## Capabilities overview
+
+The zero CLI exposes the same workflows as the dashboard and MCP server:
+
+- **Authentication & config**: connect, login, whoami, logout, config show/set.
+- **Balances & savings**: spendable balance, vault positions, supported vaults.
+- **Banking**: saved bank accounts, bank transfer proposals.
+- **Invoices & transactions**: create, update, send, and list invoices; list transactions.
+- **Attachments**: add/list/remove attachments for invoices or offramps.
+- **Payment details**: view and share payment details.
+- **Crypto transfers**: propose and dismiss token transfers.
+- **Savings proposals**: propose deposits/withdrawals and list proposals.
+- **Admin provisioning**: users, wallets, and API keys (admin token required).
+
+## Production smoke test (2026-01-13)
+
+Tests target `https://www.0.finance` using the provided workspace API key.
+
+| Area            | Command                                                | Status  | Notes                                                                                                      |
+| --------------- | ------------------------------------------------------ | ------- | ---------------------------------------------------------------------------------------------------------- |
+| Auth            | `zero auth login --api-key <key>`                      | Passed  | Stored key and base URL set to `https://www.0.finance`.                                                    |
+| Auth            | `zero auth connect`                                    | Blocked | Browser flow requires interactive callback.                                                                |
+| Auth            | `zero auth whoami`                                     | Passed  | Workspace: Different AI Inc.                                                                               |
+| Auth            | `zero auth logout`                                     | Passed  | Re-authenticated after test.                                                                               |
+| Config          | `zero config show`                                     | Passed  | Shows config path + base URL.                                                                              |
+| Config          | `zero config set --base-url https://www.0.finance`     | Passed  | Confirmed success.                                                                                         |
+| Balance         | `zero balance`                                         | Passed  | idle 500.31, earning 15037.38, spendable 15537.69.                                                         |
+| Savings         | `zero savings positions`                               | Passed  | Vault: Stable Savings ~15037.38.                                                                           |
+| Vaults          | `zero vaults list`                                     | Passed  | 4 vaults returned.                                                                                         |
+| Bank            | `zero bank accounts list`                              | Passed  | 8 accounts listed.                                                                                         |
+| Bank            | `zero bank accounts create --json <file>`              | Passed  | Created `cd1b0df5-0d72-4c4f-908e-e69f0df106f4`.                                                            |
+| Bank            | `zero bank transfers propose`                          | Passed  | `transaction_id` 3a460ea9-57de-496d-af41-f95c11def575, `proposal_id` 149baf8d-15e2-40b0-90f4-4940ce9ed309. |
+| Bank            | `zero bank proposals list`                             | Passed  | Pending proposal `149baf8d-15e2-40b0-90f4-4940ce9ed309`.                                                   |
+| Bank            | `zero bank proposals dismiss --proposal-id <id>`       | Failed  | Prod returns JSON parse error; route guard fix added.                                                      |
+| Invoices        | `zero invoices create`                                 | Passed  | `invoice_id` 1c5ba4ae-3258-42ad-9804-ea196718d3bc.                                                         |
+| Invoices        | `zero invoices update --invoice-id <id>`               | Passed  | Updated description.                                                                                       |
+| Invoices        | `zero invoices get --invoice-id <id>`                  | Passed  | Returned invoice payload.                                                                                  |
+| Invoices        | `zero invoices list`                                   | Passed  | Returned list (limit 5).                                                                                   |
+| Invoices        | `zero invoices send --invoice-id <id>`                 | Failed  | Prod returns JSON parse error; route guard + sender domain update added.                                   |
+| Transactions    | `zero transactions list`                               | Failed  | Prod error `[object Object] is not valid JSON`; bank snapshot parse fix added.                             |
+| Transactions    | `zero transactions get --transaction-id <id>`          | Failed  | Same bank snapshot parsing bug.                                                                            |
+| Attachments     | `zero attachments add --transaction-id <id>`           | Passed  | `attachment_id` d8bc9918-f3c3-47c0-a380-d0c3a27c019b.                                                      |
+| Attachments     | `zero attachments list --transaction-id <id>`          | Passed  | Listed invoice attachment.                                                                                 |
+| Attachments     | `zero attachments remove --attachment-id <id>`         | Passed  | Removed attachment.                                                                                        |
+| Payment details | `zero payment-details show`                            | Passed  | Returned USD + EUR account details.                                                                        |
+| Payment details | `zero payment-details share --recipient-email <email>` | Failed  | Resend domain not verified; updated sender to `payments@${AI_EMAIL_INBOUND_DOMAIN}`.                       |
+| Crypto          | `zero crypto transfers propose`                        | Failed  | `action_proposals` table missing in prod (migration 0128).                                                 |
+| Crypto          | `zero crypto proposals list`                           | Failed  | `action_proposals` table missing in prod.                                                                  |
+| Crypto          | `zero crypto proposals dismiss --proposal-id <id>`     | Blocked | Requires `action_proposals` table.                                                                         |
+| Savings         | `zero savings deposits propose`                        | Failed  | `action_proposals` table missing in prod.                                                                  |
+| Savings         | `zero savings withdrawals propose`                     | Failed  | `action_proposals` table missing in prod.                                                                  |
+| Savings         | `zero savings proposals list`                          | Failed  | `action_proposals` table missing in prod.                                                                  |
+| Admin           | `zero users create`                                    | Blocked | Requires admin token.                                                                                      |
+| Admin           | `zero users show`                                      | Blocked | Requires admin token.                                                                                      |
+| Admin           | `zero users wallets pregenerate`                       | Blocked | Requires admin token.                                                                                      |
+| Admin           | `zero api-keys create`                                 | Blocked | Requires admin token.                                                                                      |

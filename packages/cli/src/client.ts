@@ -17,13 +17,13 @@ export async function apiRequest<T>(
   const apiKey = options.apiKey ?? storedConfig.apiKey;
 
   if (process.env.ZERO_FINANCE_DEBUG === 'true') {
-    console.error('[finance] baseUrl:', baseUrl);
-    console.error('[finance] path:', path);
+    console.error('[zero] baseUrl:', baseUrl);
+    console.error('[zero] path:', path);
   }
 
   if (!apiKey && !options.adminToken) {
     throw new Error(
-      'Missing API key. Run `finance auth connect` or `finance auth login --api-key <key>`',
+      'Missing API key. Run `zero auth connect` or `zero auth login --api-key <key>`',
     );
   }
 
@@ -51,7 +51,8 @@ export async function apiRequest<T>(
   });
 
   const text = await response.text();
-  const payload = text ? JSON.parse(text) : null;
+  const trimmed = text.trim();
+  const payload = trimmed ? JSON.parse(trimmed) : null;
 
   if (!response.ok) {
     const message = payload?.error || response.statusText;

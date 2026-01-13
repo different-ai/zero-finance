@@ -14,36 +14,36 @@ Or with Bun:
 bun add -g agent-bank
 ```
 
-The CLI binary is `finance` (aliases: `0`, `zero`).
+The CLI binary is `zero` (alias: `zero-bank`).
 
 ## Quick start
 
 ```bash
 # Authenticate
-finance auth connect
+zero auth connect
 
-# Or: finance auth login --api-key sk_live_xxx
+# Or: zero auth login --api-key sk_live_xxx
 
 # Check balance
-finance balance
+zero balance
 
 # Create and send an invoice
-finance invoices create \
+zero invoices create \
   --recipient-email client@example.com \
   --amount 1000 \
   --currency USD \
   --description "Consulting services"
-finance invoices send --invoice-id inv_xxx
+zero invoices send --invoice-id inv_xxx
 ```
 
 ## Common commands
 
-- `finance auth connect` — browser-based login
-- `finance auth login` — store API key manually
-- `finance balance` — check USDC balance
-- `finance bank transfers propose` — propose a bank transfer
-- `finance invoices create` — create an invoice
-- `finance savings positions` — idle + earning balance breakdown
+- `zero auth connect` — browser-based login
+- `zero auth login` — store API key manually
+- `zero balance` — spendable, earning, and idle balances
+- `zero bank transfers propose` — propose a bank transfer
+- `zero invoices create` — create an invoice
+- `zero savings positions` — vault positions + balances
 
 ## Local development
 
@@ -57,7 +57,7 @@ bun --cwd packages/cli run dev -- auth connect --no-browser
 To see the resolved base URL and request path:
 
 ```bash
-finance --debug auth whoami
+zero --debug auth whoami
 ```
 
 ## Docs

@@ -24,15 +24,15 @@
 curl -fsSL https://zerofinance.ai/install | bash
 
 # Authenticate
-finance auth connect
+zero auth connect
 
-# Or: finance auth login --api-key sk_live_xxx
+# Or: zero auth login --api-key sk_live_xxx
 
 # Check balance
-finance balance
+zero balance
 ```
 
-The CLI package is `agent-bank`, and the binary is `finance`.
+The CLI package is `agent-bank`, and the binary is `zero` (alias: `zero-bank`).
 
 ## Current Status
 

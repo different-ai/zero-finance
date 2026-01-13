@@ -21,6 +21,7 @@ import {
 } from '@/lib/ai-email/invoice-service';
 // Note: getSpendableBalanceByWorkspace available if needed for balance checks
 import { getFormattedPaymentDetailsByWorkspace } from '@/server/services/bank-accounts';
+import { AI_EMAIL_INBOUND_DOMAIN } from '@/lib/ai-email/workspace-mapping';
 import { put } from '@vercel/blob';
 import { getEmailProviderSingleton } from '@/lib/email-provider';
 
@@ -1042,6 +1043,32 @@ export async function proposeBankTransfer(
     };
   }
 
+  if (bankAccount.accountType === 'iban' && destination_currency !== 'eur') {
+    return {
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify({
+            error: 'IBAN accounts require destination_currency="eur".',
+          }),
+        },
+      ],
+    };
+  }
+
+  if (bankAccount.accountType === 'us' && destination_currency !== 'usd') {
+    return {
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify({
+            error: 'US bank accounts require destination_currency="usd".',
+          }),
+        },
+      ],
+    };
+  }
+
   const paymentRails = destination_currency === 'eur' ? 'sepa' : 'ach';
 
   // Mock Mode: Skip Align API
@@ -1852,7 +1879,7 @@ export async function sendInvoice(
     const currency = (data?.currency as string) || 'USD';
 
     await emailProvider.send({
-      from: 'invoices@0.finance',
+      from: `invoices@${AI_EMAIL_INBOUND_DOMAIN}`,
       to: recipientEmail,
       subject: `Invoice ${data?.invoiceNumber || invoice_id} from 0 Finance`,
       text: `You have received an invoice for ${amount.toLocaleString()} ${currency}. View at: ${publicLink}`,
@@ -1926,7 +1953,19 @@ export async function listTransactions(
     .limit(limit);
 
   const formatted = transfers.map((t) => {
-    const bank = t.bankSnapshot ? JSON.parse(t.bankSnapshot as string) : null;
+    let bank: Record<string, unknown> | null = null;
+    if (t.bankSnapshot) {
+      if (typeof t.bankSnapshot === 'string') {
+        try {
+          bank = JSON.parse(t.bankSnapshot);
+        } catch (error) {
+          bank = null;
+        }
+      } else {
+        bank = t.bankSnapshot as Record<string, unknown>;
+      }
+    }
+
     return {
       id: t.id,
       align_transfer_id: t.alignTransferId,
@@ -1979,9 +2018,18 @@ export async function getTransaction(
     };
   }
 
-  const bank = transfer.destinationBankAccountSnapshot
-    ? JSON.parse(transfer.destinationBankAccountSnapshot as string)
-    : null;
+  let bank: Record<string, unknown> | null = null;
+  if (transfer.destinationBankAccountSnapshot) {
+    if (typeof transfer.destinationBankAccountSnapshot === 'string') {
+      try {
+        bank = JSON.parse(transfer.destinationBankAccountSnapshot);
+      } catch (error) {
+        bank = null;
+      }
+    } else {
+      bank = transfer.destinationBankAccountSnapshot as Record<string, unknown>;
+    }
+  }
 
   return {
     content: [
@@ -2402,7 +2450,7 @@ export async function sharePaymentDetails(
       .join('<br>');
 
     await emailProvider.send({
-      from: 'payments@0.finance',
+      from: `payments@${AI_EMAIL_INBOUND_DOMAIN}`,
       to: recipient_email,
       subject: 'Payment Details from 0 Finance',
       text: `Here are the payment details you requested: ${JSON.stringify(details)}`,

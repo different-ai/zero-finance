@@ -195,7 +195,7 @@ async function runAuthConnect(options: {
   }
 
   if (process.env.ZERO_FINANCE_DEBUG === 'true') {
-    console.error('[finance] connectUrl:', targetUrl);
+    console.error('[zero] connectUrl:', targetUrl);
   }
 
   let apiKey: string | null = null;
@@ -221,7 +221,7 @@ async function runAuthConnect(options: {
   output({
     success: true,
     method: 'browser',
-    next: 'Run `finance auth whoami` to verify the connection.',
+    next: 'Run `zero auth whoami` to verify the connection.',
   });
 }
 
@@ -240,9 +240,9 @@ async function readFileBase64(path: string) {
 }
 
 program
-  .name('finance')
+  .name('zero')
   .description('0 Finance CLI')
-  .version('0.1.8')
+  .version('0.1.10')
   .option('--debug', 'Enable debug logging');
 
 program.hook('preAction', (thisCommand) => {
@@ -431,9 +431,9 @@ bankProposals
 
 program
   .command('balance')
-  .description('Show spendable balance breakdown')
+  .description('Show spendable, earning, and idle balances')
   .action(async () => {
-    const data = await apiRequest('/api/cli/balance');
+    const data = await apiRequest('/api/cli/savings/positions');
     output(data);
   });
 

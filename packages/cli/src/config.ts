@@ -51,7 +51,7 @@ export async function requireConfig() {
   const config = await loadConfig();
   if (!config.apiKey) {
     throw new Error(
-      'Missing API key. Run `finance auth connect` or `finance auth login --api-key <key>`',
+      'Missing API key. Run `zero auth connect` or `zero auth login --api-key <key>`',
     );
   }
   return {

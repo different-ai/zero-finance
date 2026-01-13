@@ -15,7 +15,12 @@
         "groups": [
           {
             "group": "Getting started",
-            "pages": ["index", "cli/installation", "cli/reference"]
+            "pages": [
+              "index",
+              "cli/installation",
+              "cli/reference",
+              "cli/testing"
+            ]
           }
         ]
       },
