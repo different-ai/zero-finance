@@ -65,6 +65,37 @@ finance auth logout
 
 ---
 
+## Configuration
+
+### `finance config show`
+
+Show the current config path, base URL, and key prefix.
+
+```bash
+finance config show
+```
+
+### `finance config set`
+
+Update stored configuration values.
+
+```bash
+finance config set --base-url http://localhost:3050
+finance config set --api-key sk_live_xxx
+```
+
+---
+
+## Debugging
+
+Use `--debug` to see request URLs and the base URL being used.
+
+```bash
+finance --debug auth whoami
+```
+
+---
+
 ## Balance
 
 ### `finance balance`

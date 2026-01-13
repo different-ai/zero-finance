@@ -8,7 +8,7 @@ export type CliConfig = {
 };
 
 const CONFIG_DIR = path.join(os.homedir(), '.zero-finance');
-const CONFIG_PATH = path.join(CONFIG_DIR, 'config.json');
+export const CONFIG_PATH = path.join(CONFIG_DIR, 'config.json');
 
 export async function loadConfig(): Promise<CliConfig> {
   try {

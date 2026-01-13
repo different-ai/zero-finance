@@ -16,6 +16,11 @@ export async function apiRequest<T>(
   const baseUrl = resolveBaseUrl(options.baseUrl ?? storedConfig.baseUrl);
   const apiKey = options.apiKey ?? storedConfig.apiKey;
 
+  if (process.env.ZERO_FINANCE_DEBUG === 'true') {
+    console.error('[finance] baseUrl:', baseUrl);
+    console.error('[finance] path:', path);
+  }
+
   if (!apiKey && !options.adminToken) {
     throw new Error(
       'Missing API key. Run `finance auth connect` or `finance auth login --api-key <key>`',

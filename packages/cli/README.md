@@ -38,11 +38,27 @@ finance invoices send --invoice-id inv_xxx
 
 ## Common commands
 
-- `finance auth login` — store API key
+- `finance auth connect` — browser-based login
+- `finance auth login` — store API key manually
 - `finance balance` — check USDC balance
 - `finance bank transfers propose` — propose a bank transfer
 - `finance invoices create` — create an invoice
 - `finance savings positions` — idle + earning balance breakdown
+
+## Local development
+
+Run the CLI without publishing:
+
+```bash
+bun install
+bun --cwd packages/cli run dev -- auth connect --no-browser
+```
+
+To see the resolved base URL and request path:
+
+```bash
+finance --debug auth whoami
+```
 
 ## Docs
 

@@ -36,8 +36,10 @@ The CLI lives in `packages/cli` and can be run directly from source:
 
 ```bash
 bun install
-bun --cwd packages/cli run dev -- auth whoami
+bun --cwd packages/cli run dev -- auth connect --no-browser
 ```
+
+<Tip>Use `finance --debug auth whoami` to print the resolved base URL.</Tip>
 
 ---
 

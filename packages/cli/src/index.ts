@@ -8,7 +8,13 @@ import { stdin as stdinStream, stdout as stdoutStream } from 'process';
 import readline from 'readline/promises';
 import { promisify } from 'util';
 import { apiRequest } from './client.js';
-import { clearConfig, saveConfig } from './config.js';
+import {
+  CONFIG_PATH,
+  clearConfig,
+  loadConfig,
+  resolveBaseUrl,
+  saveConfig,
+} from './config.js';
 
 const program = new Command();
 
@@ -18,6 +24,12 @@ function output(data: unknown) {
     return;
   }
   console.log(JSON.stringify(data, null, 2));
+}
+
+function enableDebug(debug?: boolean) {
+  if (debug) {
+    process.env.ZERO_FINANCE_DEBUG = 'true';
+  }
 }
 
 const execFileAsync = promisify(execFile);
@@ -182,6 +194,10 @@ async function runAuthConnect(options: {
     console.log(`Open this URL in your browser:\n${targetUrl}`);
   }
 
+  if (process.env.ZERO_FINANCE_DEBUG === 'true') {
+    console.error('[finance] connectUrl:', targetUrl);
+  }
+
   let apiKey: string | null = null;
 
   if (tokenPromise) {
@@ -223,7 +239,46 @@ async function readFileBase64(path: string) {
   return content.toString('base64');
 }
 
-program.name('finance').description('0 Finance CLI').version('0.1.6');
+program
+  .name('finance')
+  .description('0 Finance CLI')
+  .version('0.1.6')
+  .option('--debug', 'Enable debug logging');
+
+program.hook('preAction', (thisCommand) => {
+  enableDebug(thisCommand.opts().debug);
+});
+
+const configCmd = program.command('config').description('CLI config');
+
+configCmd
+  .command('show')
+  .description('Show current CLI configuration')
+  .action(async () => {
+    const config = await loadConfig();
+    output({
+      path: CONFIG_PATH,
+      apiKey: config.apiKey ? `${config.apiKey.slice(0, 8)}...` : null,
+      baseUrl: resolveBaseUrl(config.baseUrl),
+    });
+  });
+
+configCmd
+  .command('set')
+  .description('Update CLI configuration')
+  .option('--api-key <key>', 'Workspace API key')
+  .option('--base-url <url>', 'Base URL for the API')
+  .action(async (opts) => {
+    const current = await loadConfig();
+    const next = {
+      ...current,
+      ...(opts.apiKey ? { apiKey: opts.apiKey } : null),
+      ...(opts.baseUrl ? { baseUrl: opts.baseUrl } : null),
+    };
+
+    await saveConfig(next);
+    output({ success: true });
+  });
 
 const auth = program.command('auth').description('Authentication');
 
