@@ -40,7 +40,7 @@ function getChainForId(chainId: number): Chain {
  *             are both present and well‑formed.
  *   • send  — async (txs, gas?, opts?) => userOperationHash
  *             ‑ txs  : array of MetaTransactionData to include in the SafeTx
- *             ‑ gas  : override for safeTxGas if you want manual control
+ *             ‑ gas  : optional override for safeTxGas (omit to auto-estimate)
  *             ‑ opts : { skipPreSig?: boolean } — forward to relaySafeTx.
  */
 export function useSafeRelay(
@@ -102,11 +102,11 @@ export function useSafeRelay(
       const safeAddr = safeAddress as Address;
       const signerAddr = smartClient.account.address as Address;
 
-      // Use provided gas or default to 200_000n
-      const gasToUse = gas || 200_000n;
+      // If gas is omitted, buildSafeTx will auto-estimate safeTxGas.
+      const safeTxGasOverride = gas;
 
       console.log('[useSafeRelay] Building Safe transaction:', {
-        gas: gasToUse.toString(),
+        safeTxGas: safeTxGasOverride ? safeTxGasOverride.toString() : 'auto',
         chainId,
         isCrossChain,
         safeAddress: safeAddr,
@@ -117,7 +117,7 @@ export function useSafeRelay(
       const safeTx = await buildSafeTx(txs, {
         safeAddress: safeAddr,
         chainId,
-        gas: gasToUse,
+        gas: safeTxGasOverride,
       });
       console.log('safeTx', safeTx);
 

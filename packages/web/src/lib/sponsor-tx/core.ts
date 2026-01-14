@@ -1,6 +1,9 @@
 'use client';
 
-import Safe, { EthSafeTransaction } from '@safe-global/protocol-kit';
+import Safe, {
+  EthSafeTransaction,
+  estimateSafeTxGas,
+} from '@safe-global/protocol-kit';
 import type { MetaTransactionData } from '@safe-global/safe-core-sdk-types';
 import { Address, Hex, encodeFunctionData } from 'viem';
 import { base, arbitrum, gnosis, optimism } from 'viem/chains';
@@ -76,7 +79,7 @@ type BuildOpts = {
 /** create a SafeTx with optional overridden safeTxGas */
 export async function buildSafeTx(
   txs: MetaTransactionData[],
-  { safeAddress, chainId, gas = 200_000n }: BuildOpts,
+  { safeAddress, chainId, gas }: BuildOpts,
 ): Promise<EthSafeTransaction> {
   console.log(
     `building safe tx for ${safeAddress} on chain ${chainId || 'default(base)'}`,
@@ -87,28 +90,64 @@ export async function buildSafeTx(
 
   const sdk = await Safe.init({ provider: providerUrl, safeAddress });
 
-  // If only one transaction, create it directly without MultiSend
-  // This avoids any delegatecall issues
-  if (txs.length === 1) {
-    const safeTx = await sdk.createTransaction({
+  const createSafeTransaction = async (
+    safeTxGasOverride?: string,
+  ): Promise<EthSafeTransaction> => {
+    const options = safeTxGasOverride
+      ? { safeTxGas: safeTxGasOverride }
+      : undefined;
+
+    // If only one transaction, create it directly without MultiSend.
+    // This avoids any delegatecall issues.
+    if (txs.length === 1) {
+      return sdk.createTransaction({
+        transactions: txs,
+        options,
+      });
+    }
+
+    // For multiple transactions, use MultiSendCallOnly with onlyCalls: true.
+    return sdk.createTransaction({
       transactions: txs,
-      options: {
-        safeTxGas: gas.toString(),
-      },
+      onlyCalls: true, // Use regular calls instead of delegatecall to MultiSend
+      options,
     });
-    return safeTx;
+  };
+
+  // Manual override if provided.
+  if (gas !== undefined) {
+    const safeTxGasOverride = typeof gas === 'bigint' ? gas.toString() : gas;
+    return createSafeTransaction(safeTxGasOverride);
   }
 
-  // For multiple transactions, use MultiSendCallOnly with onlyCalls: true
-  const safeTx = await sdk.createTransaction({
-    transactions: txs,
-    onlyCalls: true, // Use regular calls instead of delegatecall to MultiSend
-    options: {
-      safeTxGas: gas.toString(),
-    },
-  });
+  // Auto-estimate safeTxGas (with buffer) for reliability, especially for batched MultiSend.
+  try {
+    const txForEstimation = await createSafeTransaction();
+    const estimated = await estimateSafeTxGas(sdk, txForEstimation);
+    const estimatedGas = BigInt(estimated);
 
-  return safeTx;
+    const bufferBps = txs.length > 1 ? 30n : 20n;
+    const bufferedGas =
+      estimatedGas + (estimatedGas * bufferBps) / 100n + 5_000n;
+
+    const minGas = txs.length > 1 ? 250_000n : 120_000n;
+    const maxGas = 2_000_000n;
+    const safeTxGas =
+      bufferedGas < minGas
+        ? minGas
+        : bufferedGas > maxGas
+          ? maxGas
+          : bufferedGas;
+
+    return createSafeTransaction(safeTxGas.toString());
+  } catch (error) {
+    const fallbackGas = txs.length > 1 ? 600_000n : 250_000n;
+    console.warn(
+      `[buildSafeTx] safeTxGas estimation failed, using fallback ${fallbackGas}`,
+      error,
+    );
+    return createSafeTransaction(fallbackGas.toString());
+  }
 }
 
 /* -------------------------------------------------------------------------- */
