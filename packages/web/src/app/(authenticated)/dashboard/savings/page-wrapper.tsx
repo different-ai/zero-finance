@@ -138,7 +138,9 @@ export default function SavingsPageWrapper({
     },
     {
       enabled: !!safeAddress && !isDemoMode,
-      refetchInterval: 10000,
+      staleTime: 30000,
+      refetchInterval: 30000,
+      refetchIntervalInBackground: false,
       initialData: initialCheckingBalance ?? undefined,
     },
   );
@@ -198,7 +200,9 @@ export default function SavingsPageWrapper({
     { safeAddress: safeAddress!, vaultAddresses: baseVaultAddresses },
     {
       enabled: !!safeAddress && !isDemoMode,
-      refetchInterval: 10000,
+      staleTime: 60000,
+      refetchInterval: 60000,
+      refetchIntervalInBackground: false,
     },
   );
 
@@ -207,7 +211,9 @@ export default function SavingsPageWrapper({
     { vaultAddresses: baseVaultAddresses },
     {
       enabled: !isDemoMode,
-      refetchInterval: 10000,
+      staleTime: 30000,
+      refetchInterval: 30000,
+      refetchIntervalInBackground: false,
     },
   );
 

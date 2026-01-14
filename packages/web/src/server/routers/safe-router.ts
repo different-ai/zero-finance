@@ -2,15 +2,7 @@ import { z } from 'zod';
 import { router, protectedProcedure } from '../create-router';
 import { TRPCError } from '@trpc/server';
 // import axios from 'axios'; // Use fetch instead
-import { type Address } from 'viem';
-import {
-  createPublicClient,
-  http,
-  isAddress,
-  erc20Abi,
-  getAddress,
-} from 'viem';
-import { base } from 'viem/chains';
+import { isAddress, erc20Abi, getAddress } from 'viem';
 import { db } from '@/db';
 import {
   incomingDeposits,
@@ -22,6 +14,7 @@ import type { UserSafe } from '@/db/schema';
 import { eq, and, desc, or, isNull, sql } from 'drizzle-orm';
 import { formatUnits } from 'viem';
 import { USDC_ADDRESS, USDC_DECIMALS } from '@/lib/constants';
+import { getSafeBalance } from '@/server/services/safe.service';
 import { ALL_VAULT_ADDRESSES } from '../earn/all-vault-addresses';
 
 // Base Sepolia URL (Use Base Mainnet URL for production)
@@ -623,33 +616,34 @@ export const safeRouter = router({
     .query(async ({ input }) => {
       const { safeAddress, tokenAddress } = input;
 
-      const publicClient = createPublicClient({
-        chain: base,
-        transport: http(process.env.NEXT_PUBLIC_BASE_RPC_URL),
-      });
-
       try {
-        const balance = await publicClient.readContract({
-          address: tokenAddress as Address,
-          abi: erc20Abi,
-          functionName: 'balanceOf',
-          args: [safeAddress as Address],
+        const result = await getSafeBalance({
+          safeAddress: safeAddress as `0x${string}`,
+          tokenAddress: tokenAddress as `0x${string}`,
         });
+
+        if (!result) {
+          throw new TRPCError({
+            code: 'INTERNAL_SERVER_ERROR',
+            message: 'Failed to fetch balance',
+          });
+        }
 
         return {
           safeAddress,
           tokenAddress,
-          balance, // Returns BigInt
+          balance: result.raw,
         };
       } catch (error: any) {
         console.error(
-          `Error fetching balance for ${tokenAddress} at ${safeAddress} on ${base.name}:`,
+          `Error fetching balance for ${tokenAddress} at ${safeAddress} on Base:`,
           error,
         );
-        // Consider re-throwing a TRPCError for client handling
-        throw new Error(
-          `Failed to fetch balance: ${error.shortMessage || error.message}`,
-        );
+
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: `Failed to fetch balance: ${error.shortMessage || error.message}`,
+        });
       }
     }),
 

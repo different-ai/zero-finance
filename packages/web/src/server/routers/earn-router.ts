@@ -94,6 +94,27 @@ type EarningsEventsCacheEntry = {
 const earningsEventsCache = new Map<string, EarningsEventsCacheEntry>();
 const EARNINGS_EVENTS_CACHE_TTL_MS = 5 * 60 * 1000;
 
+type UserPositionPayload = {
+  vaultAddress: string;
+  shares: string;
+  assets: string;
+  assetsUsd: number;
+  chainId: SupportedChainId;
+};
+
+type UserPositionsCacheEntry = {
+  data: UserPositionPayload[];
+  expiresAt: number;
+};
+
+const userPositionsCache = new Map<string, UserPositionsCacheEntry>();
+const USER_POSITIONS_CACHE_TTL_MS = 15 * 1000;
+
+const ERC4626_POSITION_ABI = parseAbi([
+  'function balanceOf(address owner) view returns (uint256)',
+  'function convertToAssets(uint256 shares) view returns (uint256)',
+]);
+
 const AUTO_EARN_MODULE_ADDRESS = process.env.AUTO_EARN_MODULE_ADDRESS as
   | Hex
   | undefined;
@@ -2296,93 +2317,165 @@ export const earnRouter = router({
         safesByChain.set(safe.chainId, safe.safeAddress);
       }
 
-      // Fetch positions directly from on-chain
-      // This is more reliable than GraphQL and gives us real-time data
-      const positions = await Promise.all(
-        vaultAddresses.map(async (vaultAddress) => {
-          const chainId = getChainIdForVault(vaultAddress);
-          const client = getPublicClientForChain(chainId);
-          const { decimals: assetDecimals, isNative: isNativeAsset } =
-            getVaultAssetConfig(vaultAddress);
+      const cacheKey = `${privyDid}:${workspaceId}:${vaultAddresses.join(',')}`;
+      const cached = userPositionsCache.get(cacheKey);
+      if (cached && cached.expiresAt > Date.now()) {
+        return cached.data;
+      }
 
-          // Get the Safe address for this vault's chain
-          const safeAddress = safesByChain.get(chainId);
-          if (!safeAddress) {
-            // No Safe on this chain, return zero balance
-            return {
-              vaultAddress,
-              shares: '0',
-              assets: '0',
-              assetsUsd: 0,
-              chainId,
-            };
-          }
+      type VaultMeta = {
+        index: number;
+        vaultAddress: Address;
+        chainId: SupportedChainId;
+        safeAddress: Address | null;
+        assetDecimals: number;
+        isNativeAsset: boolean;
+      };
 
-          try {
-            // Get shares balance
-            const shares = await client.readContract({
-              address: vaultAddress as Address,
-              abi: parseAbi([
-                'function balanceOf(address) view returns (uint256)',
-              ]),
-              functionName: 'balanceOf',
-              args: [safeAddress as Address],
-            });
+      const metas: VaultMeta[] = vaultAddresses.map((vaultAddress, index) => {
+        const chainId = getChainIdForVault(vaultAddress) as SupportedChainId;
+        const { decimals: assetDecimals, isNative: isNativeAsset } =
+          getVaultAssetConfig(vaultAddress);
+        const safeAddress = safesByChain.get(chainId);
 
-            if (shares > 0n) {
-              // Convert shares to assets
-              const assets = await client.readContract({
-                address: vaultAddress as Address,
-                abi: parseAbi([
-                  'function convertToAssets(uint256) view returns (uint256)',
-                ]),
-                functionName: 'convertToAssets',
-                args: [shares],
+        return {
+          index,
+          vaultAddress: vaultAddress as Address,
+          chainId,
+          safeAddress: safeAddress ? (safeAddress as Address) : null,
+          assetDecimals,
+          isNativeAsset,
+        };
+      });
+
+      const positions: UserPositionPayload[] = metas.map((meta) => ({
+        vaultAddress: meta.vaultAddress,
+        shares: '0',
+        assets: '0',
+        assetsUsd: 0,
+        chainId: meta.chainId,
+      }));
+
+      const metasByChain = new Map<SupportedChainId, VaultMeta[]>();
+      for (const meta of metas) {
+        if (!meta.safeAddress) continue;
+        const existing = metasByChain.get(meta.chainId) ?? [];
+        existing.push(meta);
+        metasByChain.set(meta.chainId, existing);
+      }
+
+      await Promise.all(
+        Array.from(metasByChain.entries()).map(
+          async ([chainId, chainMetas]) => {
+            const client = getPublicClientForChain(chainId);
+            const safeAddress = chainMetas[0]?.safeAddress;
+
+            if (!safeAddress) return;
+
+            try {
+              const shareCalls = chainMetas.map((meta) => ({
+                address: meta.vaultAddress,
+                abi: ERC4626_POSITION_ABI,
+                functionName: 'balanceOf' as const,
+                args: [safeAddress],
+              }));
+
+              const sharesResults = await client.multicall({
+                contracts: shareCalls,
               });
 
-              // Convert to USD based on asset type
-              let assetsUsd: number;
-              if (isNativeAsset) {
-                // For ETH-based vaults, convert ETH to USD
-                const ethPrice = await getEthPriceUsd();
-                const assetsEth = Number(assets) / Math.pow(10, assetDecimals);
-                assetsUsd = assetsEth * ethPrice;
-              } else {
-                // For stablecoins, assets = USD value
-                assetsUsd = Number(assets) / Math.pow(10, assetDecimals);
-              }
+              const convertCalls: Array<{
+                meta: VaultMeta;
+                shares: bigint;
+                call: {
+                  address: Address;
+                  abi: typeof ERC4626_POSITION_ABI;
+                  functionName: 'convertToAssets';
+                  args: [bigint];
+                };
+              }> = [];
 
-              return {
-                vaultAddress,
-                shares: shares.toString(),
-                assets: assets.toString(),
-                assetsUsd,
-                chainId,
-              };
+              sharesResults.forEach((result: any, idx: number) => {
+                const meta = chainMetas[idx];
+                if (result.status !== 'success') return;
+                if (typeof result.result !== 'bigint') return;
+                if (result.result <= 0n) return;
+
+                convertCalls.push({
+                  meta,
+                  shares: result.result,
+                  call: {
+                    address: meta.vaultAddress,
+                    abi: ERC4626_POSITION_ABI,
+                    functionName: 'convertToAssets',
+                    args: [result.result],
+                  },
+                });
+              });
+
+              // Fill shares for all vaults in this chain group
+              sharesResults.forEach((result: any, idx: number) => {
+                const meta = chainMetas[idx];
+                const shares =
+                  result.status === 'success' &&
+                  typeof result.result === 'bigint'
+                    ? result.result
+                    : 0n;
+                positions[meta.index].shares = shares.toString();
+              });
+
+              const assetsResults =
+                convertCalls.length > 0
+                  ? await client.multicall({
+                      contracts: convertCalls.map((c) => c.call),
+                    })
+                  : [];
+
+              const needsEthPrice = convertCalls.some(
+                (c) => c.meta.isNativeAsset,
+              );
+              const ethPrice = needsEthPrice ? await getEthPriceUsd() : 0;
+
+              assetsResults.forEach((result: any, idx: number) => {
+                const meta = convertCalls[idx]?.meta;
+                if (!meta) return;
+
+                const assets =
+                  result.status === 'success' &&
+                  typeof result.result === 'bigint'
+                    ? result.result
+                    : 0n;
+
+                positions[meta.index].assets = assets.toString();
+
+                if (assets <= 0n) {
+                  positions[meta.index].assetsUsd = 0;
+                  return;
+                }
+
+                if (meta.isNativeAsset) {
+                  const assetsEth =
+                    Number(assets) / Math.pow(10, meta.assetDecimals);
+                  positions[meta.index].assetsUsd = assetsEth * ethPrice;
+                } else {
+                  positions[meta.index].assetsUsd =
+                    Number(assets) / Math.pow(10, meta.assetDecimals);
+                }
+              });
+            } catch (error) {
+              console.error(
+                `Error fetching user positions via multicall for chain ${chainId}:`,
+                error,
+              );
             }
-
-            return {
-              vaultAddress,
-              shares: '0',
-              assets: '0',
-              assetsUsd: 0,
-              chainId,
-            };
-          } catch (error) {
-            console.error(
-              `Error fetching position for vault ${vaultAddress}:`,
-              error,
-            );
-            return {
-              vaultAddress,
-              shares: '0',
-              assets: '0',
-              assetsUsd: 0,
-              chainId,
-            };
-          }
-        }),
+          },
+        ),
       );
+
+      userPositionsCache.set(cacheKey, {
+        data: positions,
+        expiresAt: Date.now() + USER_POSITIONS_CACHE_TTL_MS,
+      });
 
       return positions;
     }),

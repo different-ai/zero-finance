@@ -19,7 +19,7 @@ import {
   earnWithdrawals,
 } from '../../db/schema';
 import type { WorkspaceFeatureName } from '../../db/schema/workspace-features';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, inArray } from 'drizzle-orm';
 import { customAlphabet } from 'nanoid';
 import { alignApi, AlignCustomer } from '@/server/services/align-api';
 import {
@@ -302,43 +302,56 @@ export const adminRouter = router({
       // Execute all balanceOf calls in parallel with multicall
       const sharesResults = await publicClient.multicall({
         contracts: vaultCalls,
+        batchSize: 250,
       });
 
-      // Now convert shares to assets
-      const assetCalls: any[] = [];
+      // Sum shares per vault (cheaper than converting per-safe)
+      const sharesByVault = Array.from(
+        { length: BASE_USDC_VAULTS.length },
+        () => 0n,
+      );
+
       for (let i = 0; i < sharesResults.length; i++) {
         const result = sharesResults[i];
-        if (
-          result.status === 'success' &&
-          result.result &&
-          typeof result.result === 'bigint' &&
-          result.result > 0n
-        ) {
-          const vaultIndex = Math.floor(i / uniqueSafeAddresses.length);
-          const vaultAddress = BASE_USDC_VAULTS[vaultIndex]
-            .address as `0x${string}`;
-          assetCalls.push({
-            vaultAddress,
-            shares: result.result,
-            callData: {
-              address: vaultAddress,
-              abi: ERC4626_VAULT_ABI,
-              functionName: 'convertToAssets' as const,
-              args: [result.result],
-            },
-          });
-        }
+        if (result.status !== 'success') continue;
+        if (typeof result.result !== 'bigint') continue;
+        if (result.result <= 0n) continue;
+
+        const vaultIndex = Math.floor(i / uniqueSafeAddresses.length);
+        sharesByVault[vaultIndex] += result.result;
       }
 
-      // Execute all convertToAssets calls
-      if (assetCalls.length > 0) {
+      const convertCalls: any[] = [];
+      for (
+        let vaultIndex = 0;
+        vaultIndex < sharesByVault.length;
+        vaultIndex++
+      ) {
+        const shares = sharesByVault[vaultIndex];
+        if (shares <= 0n) continue;
+
+        const vaultAddress = BASE_USDC_VAULTS[vaultIndex]
+          .address as `0x${string}`;
+
+        convertCalls.push({
+          address: vaultAddress,
+          abi: ERC4626_VAULT_ABI,
+          functionName: 'convertToAssets' as const,
+          args: [shares],
+        });
+      }
+
+      if (convertCalls.length > 0) {
         const assetsResults = await publicClient.multicall({
-          contracts: assetCalls.map((c) => c.callData),
+          contracts: convertCalls,
         });
 
         for (const result of assetsResults) {
-          if (result.status === 'success' && result.result) {
-            totalInVaults += result.result as bigint;
+          if (
+            result.status === 'success' &&
+            typeof result.result === 'bigint'
+          ) {
+            totalInVaults += result.result;
           }
         }
       }
@@ -1315,6 +1328,51 @@ export const adminRouter = router({
         .from(workspaces)
         .orderBy(workspaces.createdAt);
 
+      // Batch Safe balance reads across ALL workspaces to avoid N multicalls.
+      const workspaceIds = allWorkspaces.map((w) => w.id);
+
+      const safesForAllWorkspaces =
+        workspaceIds.length > 0
+          ? await db
+              .select({
+                workspaceId: userSafes.workspaceId,
+                safeAddress: userSafes.safeAddress,
+                safeType: userSafes.safeType,
+              })
+              .from(userSafes)
+              .where(inArray(userSafes.workspaceId, workspaceIds))
+          : [];
+
+      const safesByWorkspace = new Map<
+        string,
+        { safeAddress: `0x${string}` | null; safeType: string | null }[]
+      >();
+
+      const allSafeAddresses: `0x${string}`[] = [];
+
+      for (const safe of safesForAllWorkspaces) {
+        if (!safe.workspaceId) continue;
+
+        const list = safesByWorkspace.get(safe.workspaceId) ?? [];
+        list.push({
+          safeAddress: safe.safeAddress as `0x${string}` | null,
+          safeType: safe.safeType ?? null,
+        });
+        safesByWorkspace.set(safe.workspaceId, list);
+
+        if (safe.safeAddress) {
+          allSafeAddresses.push(safe.safeAddress as `0x${string}`);
+        }
+      }
+
+      const uniqueSafeAddresses = Array.from(
+        new Set(allSafeAddresses.map((addr) => addr.toLowerCase())),
+      ) as `0x${string}`[];
+
+      const balanceMap = await getBatchSafeBalances({
+        safeAddresses: uniqueSafeAddresses,
+      });
+
       const workspacesWithData = await Promise.all(
         allWorkspaces.map(async (workspace) => {
           const members = await db
@@ -1333,26 +1391,13 @@ export const adminRouter = router({
             )
             .where(eq(workspaceMembers.workspaceId, workspace.id));
 
-          const safes = await db
-            .select({
-              safeAddress: userSafes.safeAddress,
-              safeType: userSafes.safeType,
-            })
-            .from(userSafes)
-            .where(eq(userSafes.workspaceId, workspace.id));
+          const safes = safesByWorkspace.get(workspace.id) ?? [];
 
           let totalSafeBalance = 0n;
-          if (safes.length > 0) {
-            const safeAddresses = safes
-              .map((s) => s.safeAddress)
-              .filter(Boolean) as `0x${string}`[];
-            const balanceMap = await getBatchSafeBalances({
-              safeAddresses,
-            });
-            totalSafeBalance = Object.values(balanceMap).reduce(
-              (sum, balance) => sum + (balance?.raw ?? 0n),
-              0n,
-            );
+          for (const safe of safes) {
+            if (!safe.safeAddress) continue;
+            totalSafeBalance +=
+              balanceMap[safe.safeAddress.toLowerCase()]?.raw ?? 0n;
           }
 
           const deposits = await db
@@ -1481,59 +1526,95 @@ export const adminRouter = router({
           } else {
             // Solution 1A: Read actual on-chain vault positions
             // This works even if database tracking is incomplete/missing
-            const vaultStats = await Promise.all(
-              BASE_USDC_VAULTS.map(async (vaultInfo: any) => {
-                try {
-                  const vaultAddress = vaultInfo.address as `0x${string}`;
+            const validSafeAddresses = safeAddresses.filter(
+              Boolean,
+            ) as `0x${string}`[];
 
-                  // Read vault positions for all safes in this workspace
-                  let totalAssets = 0n;
+            if (validSafeAddresses.length === 0) {
+              vaultBreakdown = [];
+            } else {
+              // Batch all balanceOf calls (vaults × safes) via multicall.
+              const vaultCalls = BASE_USDC_VAULTS.flatMap((vaultInfo: any) => {
+                const vaultAddress = vaultInfo.address as `0x${string}`;
+                return validSafeAddresses.map((safeAddress) => ({
+                  address: vaultAddress,
+                  abi: ERC4626_VAULT_ABI,
+                  functionName: 'balanceOf' as const,
+                  args: [safeAddress],
+                }));
+              });
 
-                  for (const safeAddress of safeAddresses) {
-                    // Read ERC4626 vault shares for this Safe
-                    const shares = await publicClient.readContract({
-                      address: vaultAddress,
-                      abi: ERC4626_VAULT_ABI,
-                      functionName: 'balanceOf',
-                      args: [safeAddress as `0x${string}`],
-                    });
+              const sharesResults = await publicClient.multicall({
+                contracts: vaultCalls,
+                batchSize: 250,
+              });
 
-                    // Convert shares to assets (USDC)
-                    if (shares > 0n) {
-                      const assets = await publicClient.readContract({
-                        address: vaultAddress,
-                        abi: ERC4626_VAULT_ABI,
-                        functionName: 'convertToAssets',
-                        args: [shares],
-                      });
-                      totalAssets += assets;
-                    }
-                  }
+              // Sum shares per vault so we only call convertToAssets once per vault.
+              const sharesByVault = Array.from(
+                { length: BASE_USDC_VAULTS.length },
+                () => 0n,
+              );
 
-                  // Only include vaults with non-zero balances
-                  if (totalAssets === 0n) {
-                    return null;
-                  }
+              for (let i = 0; i < sharesResults.length; i++) {
+                const result = sharesResults[i];
+                if (result.status !== 'success') continue;
+                if (typeof result.result !== 'bigint') continue;
+                if (result.result <= 0n) continue;
 
-                  return {
-                    vaultAddress: vaultInfo.address,
-                    vaultName: vaultInfo.name || 'Unknown Vault',
-                    displayName: vaultInfo.displayName || vaultInfo.address,
-                    balance: totalAssets.toString(),
-                    balanceUsd: Number(totalAssets) / 1_000_000,
-                  };
-                } catch (error) {
-                  console.error(
-                    `Error reading on-chain balance for ${vaultInfo.address}:`,
-                    error,
-                  );
-                  return null;
-                }
-              }),
-            );
+                const vaultIndex = Math.floor(i / validSafeAddresses.length);
+                sharesByVault[vaultIndex] += result.result;
+              }
 
-            // Filter out null values (vaults with zero balance or errors)
-            vaultBreakdown = vaultStats.filter((v) => v !== null);
+              const convertMetas: any[] = [];
+              const convertCalls: any[] = [];
+
+              for (
+                let vaultIndex = 0;
+                vaultIndex < sharesByVault.length;
+                vaultIndex++
+              ) {
+                const shares = sharesByVault[vaultIndex];
+                if (shares <= 0n) continue;
+
+                const vaultInfo = BASE_USDC_VAULTS[vaultIndex];
+                const vaultAddress = vaultInfo.address as `0x${string}`;
+
+                convertMetas.push(vaultInfo);
+                convertCalls.push({
+                  address: vaultAddress,
+                  abi: ERC4626_VAULT_ABI,
+                  functionName: 'convertToAssets' as const,
+                  args: [shares],
+                });
+              }
+
+              if (convertCalls.length === 0) {
+                vaultBreakdown = [];
+              } else {
+                const assetsResults = await publicClient.multicall({
+                  contracts: convertCalls,
+                });
+
+                vaultBreakdown = assetsResults
+                  .map((result, idx) => {
+                    if (result.status !== 'success') return null;
+                    if (typeof result.result !== 'bigint') return null;
+
+                    const totalAssets = result.result;
+                    if (totalAssets === 0n) return null;
+
+                    const vaultInfo = convertMetas[idx];
+                    return {
+                      vaultAddress: vaultInfo.address,
+                      vaultName: vaultInfo.name || 'Unknown Vault',
+                      displayName: vaultInfo.displayName || vaultInfo.address,
+                      balance: totalAssets.toString(),
+                      balanceUsd: Number(totalAssets) / 1_000_000,
+                    };
+                  })
+                  .filter((v) => v !== null);
+              }
+            }
           }
         } catch (error) {
           console.error('Error getting vault breakdown:', error);
