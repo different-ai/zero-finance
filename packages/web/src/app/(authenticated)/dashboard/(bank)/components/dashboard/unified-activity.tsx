@@ -1103,6 +1103,7 @@ export function UnifiedActivity() {
 
     const actionId = tx.proposalId;
     setActionPendingIds((prev) => new Set(prev).add(actionId));
+    let relayTxHash: string | undefined;
 
     try {
       const amount = BigInt(amountBaseUnits);
@@ -1189,12 +1190,30 @@ export function UnifiedActivity() {
         throw new Error('No executable transactions built for proposal.');
       }
 
-      const txHash = await sendWithRelay(transactions);
-      await markProposalExecuted.mutateAsync({
+      relayTxHash = await sendWithRelay(transactions);
+
+      let result = await markProposalExecuted.mutateAsync({
         id: tx.proposalId,
-        txHash,
+        txHash: relayTxHash,
       });
-      toast.success('Proposal executed');
+
+      let attempts = 0;
+      while ('pending' in result && result.pending && attempts < 10) {
+        await new Promise((resolve) => setTimeout(resolve, 3_000));
+        result = await markProposalExecuted.mutateAsync({
+          id: tx.proposalId,
+          txHash: relayTxHash,
+        });
+        attempts += 1;
+      }
+
+      if (result.status === 'executed') {
+        toast.success('Proposal executed');
+      } else if (result.status === 'failed') {
+        toast.error(result.reason ?? 'Proposal failed');
+      } else {
+        toast('Transaction submitted; awaiting confirmation.');
+      }
     } catch (err) {
       const message =
         err instanceof Error ? err.message : 'Failed to execute proposal';
@@ -1202,6 +1221,7 @@ export function UnifiedActivity() {
       await markProposalFailed.mutateAsync({
         id: tx.proposalId,
         reason: message,
+        ...(relayTxHash ? { txHash: relayTxHash } : null),
       });
     } finally {
       setActionPendingIds((prev) => {
