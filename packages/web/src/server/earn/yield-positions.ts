@@ -3,6 +3,9 @@ import { getRPCManager } from '@/lib/multi-chain-rpc';
 import { isSupportedChain } from '@/lib/constants/chains';
 import { type Address } from 'viem';
 
+const NATIVE_ASSET_PLACEHOLDER =
+  '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE' as const;
+
 const ERC20_ABI = [
   {
     name: 'balanceOf',
@@ -42,6 +45,7 @@ export async function getVaultPositions(params: { ownerAddresses: Address[] }) {
   for (const vault of vaults) {
     if (!vault.asset) continue;
     if (!isSupportedChain(vault.chainId)) continue;
+    if (vault.address === NATIVE_ASSET_PLACEHOLDER) continue;
 
     const client = rpcManager.getClient(vault.chainId as never);
 

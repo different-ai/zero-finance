@@ -305,6 +305,13 @@ This skill is part of the **testing pyramid**. Use it when:
 
 > Append new discoveries here
 
+### 2026-01-13: prod DB script must load env before db import
+
+**Symptom**: POSTGRES_URL missing or wrong host while using `.env.production.local`.
+**Root Cause**: `packages/web/src/db/index.ts` loads `.env.local` on import, which can run before dotenv config.
+**Fix**: In one-off scripts, call `dotenv.config({ path: '.env.production.local' })` first and dynamically import `./src/db` afterward.
+**Prevention**: Avoid static imports of `./src/db` in CLI scripts; use dynamic import after dotenv setup.
+
 ### Template for New Learnings
 
 ```markdown

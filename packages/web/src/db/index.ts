@@ -3,9 +3,6 @@ import { Pool } from 'pg';
 import * as dotenv from 'dotenv';
 import * as schema from './schema';
 
-// Load environment variables from .env.local
-dotenv.config({ path: '.env.local' });
-
 // Ensure POSTGRES_URL is set
 if (!process.env.POSTGRES_URL) {
   throw new Error('POSTGRES_URL environment variable is not set');
