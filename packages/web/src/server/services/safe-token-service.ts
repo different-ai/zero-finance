@@ -8,6 +8,7 @@ import {
 } from 'viem';
 import { base, polygon, mainnet } from 'viem/chains'; // Import chain definitions
 import { USDC_ADDRESS } from '@/lib/constants';
+import { getBaseRpcUrl } from '@/lib/base-rpc-url';
 // Removed imports related to backend signing and Safe SDK initialization
 // import { submitSignedSafeOp } from '../relayer/relaykitSponsor';
 import type { MetaTransactionData } from '@safe-global/safe-core-sdk-types'; // Use imported type
@@ -52,9 +53,15 @@ const CHAIN_CONFIGS = {
 };
 
 const RPC_URLS: Record<string, string> = {
-    base: process.env.NEXT_PUBLIC_BASE_RPC_URL || '',
-    ethereum: process.env.NEXT_PUBLIC_ETHEREUM_RPC_URL || '',
-    polygon: process.env.NEXT_PUBLIC_POLYGON_RPC_URL || '',
+  base: getBaseRpcUrl(),
+  ethereum:
+    process.env.ETHEREUM_RPC_URL ||
+    process.env.NEXT_PUBLIC_ETHEREUM_RPC_URL ||
+    '',
+  polygon:
+    process.env.POLYGON_RPC_URL ||
+    process.env.NEXT_PUBLIC_POLYGON_RPC_URL ||
+    '',
 };
 
 // Helper to get token decimals (defaulting to 6 for USDC/USDT)
@@ -81,7 +88,9 @@ export function prepareTokenTransferData({
   const lowerCaseSymbol = tokenSymbol.toLowerCase();
   const tokenAddress = TOKEN_ADDRESSES[tokenNetwork]?.[lowerCaseSymbol];
   if (!tokenAddress) {
-    throw new Error(`Unsupported token ${tokenSymbol} on network ${tokenNetwork}`);
+    throw new Error(
+      `Unsupported token ${tokenSymbol} on network ${tokenNetwork}`,
+    );
   }
 
   const decimals = getTokenDecimals(lowerCaseSymbol);
@@ -110,7 +119,7 @@ export function prepareTokenTransferData({
  */
 export async function checkTransactionConfirmation(
   userOpHash: string,
-  network: keyof typeof CHAIN_CONFIGS
+  network: keyof typeof CHAIN_CONFIGS,
 ): Promise<boolean> {
   try {
     const chainConfig = CHAIN_CONFIGS[network];
@@ -125,19 +134,20 @@ export async function checkTransactionConfirmation(
     });
 
     // TODO: Implement actual check using the userOpHash
-    // This likely involves querying an ERC-4337 bundler or using a service 
+    // This likely involves querying an ERC-4337 bundler or using a service
     // like Pimlico to check the status of the UserOperation.
     // For now, placeholder returns false.
-    console.warn(`Placeholder: checkTransactionConfirmation for ${userOpHash} on ${network} not fully implemented.`);
-    
+    console.warn(
+      `Placeholder: checkTransactionConfirmation for ${userOpHash} on ${network} not fully implemented.`,
+    );
+
     // Example using hypothetical function (replace with actual implementation)
     // const receipt = await publicClient.getUserOperationReceipt({ hash: userOpHash as Hex });
     // return !!receipt && receipt.success;
 
     return false; // Placeholder
-
   } catch (error) {
     console.error('Error checking transaction confirmation:', error);
     return false; // Return false on error
   }
-} 
+}

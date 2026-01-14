@@ -12,6 +12,7 @@ import { userSafes } from '@/db/schema/user-safes';
 import { eq, and, desc, isNull, inArray } from 'drizzle-orm';
 import { createPublicClient, http, formatUnits } from 'viem';
 import { base } from 'viem/chains';
+import { getBaseRpcUrl } from '@/lib/base-rpc-url';
 import { alignApi } from '@/server/services/align-api';
 import type { AlignDestinationBankAccount } from '@/server/services/align-api';
 import {
@@ -951,7 +952,7 @@ export async function getBalance(
 
   const publicClient = createPublicClient({
     chain: base,
-    transport: http(process.env.NEXT_PUBLIC_BASE_RPC_URL),
+    transport: http(getBaseRpcUrl()),
   });
 
   const balance = await publicClient.readContract({

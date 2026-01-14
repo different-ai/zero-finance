@@ -434,7 +434,9 @@ export default function CardDemoPage() {
     },
     {
       enabled: !!safeAddress,
-      refetchInterval: 10000,
+      staleTime: 30000,
+      refetchInterval: 30000,
+      refetchIntervalInBackground: false,
     },
   );
 
@@ -452,7 +454,9 @@ export default function CardDemoPage() {
     trpc.earn.userPositions.useQuery(
       { vaultAddresses: baseVaultAddresses },
       {
-        refetchInterval: 10000,
+        staleTime: 30000,
+        refetchInterval: 30000,
+        refetchIntervalInBackground: false,
       },
     );
 

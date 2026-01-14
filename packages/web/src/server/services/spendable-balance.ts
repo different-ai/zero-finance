@@ -26,6 +26,7 @@ import {
 import { base } from 'viem/chains';
 import { BASE_USDC_VAULTS } from '@/server/earn/base-vaults';
 import { SUPPORTED_CHAINS } from '@/lib/constants/chains';
+import { getBaseRpcUrl } from '@/lib/base-rpc-url';
 
 // USDC on Base
 const USDC_ADDRESS = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913' as Address;
@@ -39,6 +40,27 @@ const VAULT_ABI = parseAbi([
   'function balanceOf(address owner) view returns (uint256)',
   'function convertToAssets(uint256 shares) view returns (uint256)',
 ]);
+
+const publicClient = createPublicClient({
+  chain: base,
+  transport: http(getBaseRpcUrl(), {
+    batch: {
+      batchSize: 100,
+      wait: 16,
+    },
+  }),
+  batch: {
+    multicall: true,
+  },
+});
+
+type SpendableBalanceCacheEntry = {
+  data: SpendableBalanceResult;
+  expiresAt: number;
+};
+
+const spendableBalanceCache = new Map<string, SpendableBalanceCacheEntry>();
+const SPENDABLE_BALANCE_CACHE_TTL_MS = 15_000;
 
 export type SpendableBalanceResult = {
   idle_balance: string;
@@ -126,77 +148,110 @@ export async function getSpendableBalanceByWorkspace(
 export async function getSpendableBalanceBySafeAddress(
   safeAddress: string,
 ): Promise<SpendableBalanceResult | BalanceError> {
+  const cacheKey = safeAddress.toLowerCase();
+  const cached = spendableBalanceCache.get(cacheKey);
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.data;
+  }
+
   try {
-    const publicClient = createPublicClient({
-      chain: base,
-      transport: http(process.env.NEXT_PUBLIC_BASE_RPC_URL),
+    const safe = safeAddress as Address;
+
+    // 1) Fetch USDC balance and vault shares in a single multicall
+    const shareCalls = BASE_USDC_VAULTS.map((vault) => ({
+      address: vault.address,
+      abi: VAULT_ABI,
+      functionName: 'balanceOf' as const,
+      args: [safe],
+    }));
+
+    // viem's multicall types don't handle mixed ABI arrays well; each call
+    // still includes its own ABI+args, so casting here is safe.
+    const firstBatch = await publicClient.multicall({
+      contracts: [
+        {
+          address: USDC_ADDRESS,
+          abi: ERC20_BALANCE_ABI,
+          functionName: 'balanceOf' as const,
+          args: [safe],
+        },
+        ...shareCalls,
+      ] as any,
     });
 
-    // 1. Fetch idle USDC balance in Safe
-    const usdcBalance = await publicClient.readContract({
-      address: USDC_ADDRESS,
-      abi: ERC20_BALANCE_ABI,
-      functionName: 'balanceOf',
-      args: [safeAddress as Address],
-    });
+    const usdcBalanceResult = firstBatch[0];
+    const usdcBalance =
+      usdcBalanceResult?.status === 'success' &&
+      typeof usdcBalanceResult.result === 'bigint'
+        ? usdcBalanceResult.result
+        : 0n;
 
     const idleBalance = Number(formatUnits(usdcBalance, USDC_DECIMALS));
 
-    // 2. Fetch vault positions (only USDC vaults for now)
+    // 2) Convert only non-zero shares to assets (second multicall)
+    const vaultShares = firstBatch.slice(1);
+    const convertCalls: Array<{
+      vaultAddress: Address;
+      vaultName: string;
+      shares: bigint;
+      call: {
+        address: Address;
+        abi: typeof VAULT_ABI;
+        functionName: 'convertToAssets';
+        args: [bigint];
+      };
+    }> = [];
+
+    vaultShares.forEach((result, idx) => {
+      if (result.status !== 'success') return;
+      if (typeof result.result !== 'bigint') return;
+      if (result.result <= 0n) return;
+
+      const vault = BASE_USDC_VAULTS[idx];
+      convertCalls.push({
+        vaultAddress: vault.address,
+        vaultName: vault.displayName || vault.name,
+        shares: result.result,
+        call: {
+          address: vault.address,
+          abi: VAULT_ABI,
+          functionName: 'convertToAssets',
+          args: [result.result],
+        },
+      });
+    });
+
+    const assetsResults =
+      convertCalls.length > 0
+        ? await publicClient.multicall({
+            contracts: convertCalls.map((c) => c.call),
+          })
+        : [];
+
     const vaultPositions: SpendableBalanceResult['vault_positions'] = [];
     let earningBalance = 0;
 
-    // Query each USDC vault in parallel
-    const vaultResults = await Promise.all(
-      BASE_USDC_VAULTS.map(async (vault) => {
-        try {
-          // Get shares balance
-          const shares = await publicClient.readContract({
-            address: vault.address,
-            abi: VAULT_ABI,
-            functionName: 'balanceOf',
-            args: [safeAddress as Address],
-          });
+    assetsResults.forEach((result, idx) => {
+      if (result.status !== 'success') return;
+      if (typeof result.result !== 'bigint') return;
+      if (result.result <= 0n) return;
 
-          if (shares > 0n) {
-            // Convert shares to assets (USDC)
-            const assets = await publicClient.readContract({
-              address: vault.address,
-              abi: VAULT_ABI,
-              functionName: 'convertToAssets',
-              args: [shares],
-            });
+      const meta = convertCalls[idx];
+      const balanceUsd = Number(formatUnits(result.result, USDC_DECIMALS));
 
-            const balanceUsd = Number(formatUnits(assets, USDC_DECIMALS));
-
-            return {
-              vault_address: vault.address,
-              vault_name: vault.displayName || vault.name,
-              balance_usd: balanceUsd,
-            };
-          }
-          return null;
-        } catch (error) {
-          console.error(
-            `[SpendableBalance] Error fetching vault ${vault.address}:`,
-            error,
-          );
-          return null;
-        }
-      }),
-    );
-
-    // Aggregate vault results
-    for (const result of vaultResults) {
-      if (result && result.balance_usd > 0) {
-        vaultPositions.push(result);
-        earningBalance += result.balance_usd;
+      if (balanceUsd > 0) {
+        vaultPositions.push({
+          vault_address: meta.vaultAddress,
+          vault_name: meta.vaultName,
+          balance_usd: balanceUsd,
+        });
+        earningBalance += balanceUsd;
       }
-    }
+    });
 
     const spendableBalance = idleBalance + earningBalance;
 
-    return {
+    const result: SpendableBalanceResult = {
       idle_balance: idleBalance.toFixed(2),
       earning_balance: earningBalance.toFixed(2),
       spendable_balance: spendableBalance.toFixed(2),
@@ -204,6 +259,13 @@ export async function getSpendableBalanceBySafeAddress(
       chain: 'base',
       vault_positions: vaultPositions.length > 0 ? vaultPositions : undefined,
     };
+
+    spendableBalanceCache.set(cacheKey, {
+      data: result,
+      expiresAt: Date.now() + SPENDABLE_BALANCE_CACHE_TTL_MS,
+    });
+
+    return result;
   } catch (error) {
     return {
       error: error instanceof Error ? error.message : 'Unknown error',

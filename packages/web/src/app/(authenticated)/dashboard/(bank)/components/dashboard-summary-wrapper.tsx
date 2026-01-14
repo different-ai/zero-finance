@@ -46,7 +46,9 @@ export function DashboardSummaryWrapper({
     },
     {
       enabled: !!safeAddress && !isDemoMode,
-      refetchInterval: 10000,
+      staleTime: 30000,
+      refetchInterval: 30000,
+      refetchIntervalInBackground: false,
     },
   );
 
@@ -65,7 +67,9 @@ export function DashboardSummaryWrapper({
       { vaultAddresses: baseVaultAddresses },
       {
         enabled: !isDemoMode,
-        refetchInterval: 10000,
+        staleTime: 30000,
+        refetchInterval: 30000,
+        refetchIntervalInBackground: false,
       },
     );
 

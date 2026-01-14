@@ -16,6 +16,7 @@ import {
   type Hex,
 } from 'viem'; // Import isAddress, viem client utils, and Hex type
 import { base } from 'viem/chains'; // Assuming Base network for Safes
+import { getBaseRpcUrl } from '@/lib/base-rpc-url';
 
 // Define allowed secondary safe types
 const ALLOWED_SECONDARY_SAFE_TYPES = ['liquidity', 'yield'] as const;
@@ -320,7 +321,7 @@ export const userSafesRouter = router({
         try {
           const publicClient = createPublicClient({
             chain: base, // Assuming Base network
-            transport: http(process.env.NEXT_PUBLIC_BASE_RPC_URL),
+            transport: http(getBaseRpcUrl()),
           });
 
           const isOwnerResult = await publicClient.readContract({
@@ -427,7 +428,7 @@ export const userSafesRouter = router({
         try {
           const publicClient = createPublicClient({
             chain: base, // Assuming Base network
-            transport: http(process.env.NEXT_PUBLIC_BASE_RPC_URL),
+            transport: http(getBaseRpcUrl()),
           });
 
           const receipt = await publicClient.waitForTransactionReceipt({
