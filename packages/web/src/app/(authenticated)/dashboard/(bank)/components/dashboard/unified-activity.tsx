@@ -1104,6 +1104,8 @@ export function UnifiedActivity() {
     const actionId = tx.proposalId;
     setActionPendingIds((prev) => new Set(prev).add(actionId));
 
+    let submittedTxHash: string | null = null;
+
     try {
       const amount = BigInt(amountBaseUnits);
       const transactions: MetaTransactionData[] = [];
@@ -1189,20 +1191,55 @@ export function UnifiedActivity() {
         throw new Error('No executable transactions built for proposal.');
       }
 
-      const txHash = await sendWithRelay(transactions);
-      await markProposalExecuted.mutateAsync({
+      submittedTxHash = await sendWithRelay(transactions);
+
+      const chainIdRaw =
+        (payload.chainId as number | string | undefined) ??
+        (payload.chain_id as number | string | undefined);
+      const parsedChainId =
+        typeof chainIdRaw === 'number'
+          ? chainIdRaw
+          : typeof chainIdRaw === 'string'
+            ? Number(chainIdRaw)
+            : undefined;
+      const chainId =
+        typeof parsedChainId === 'number' && Number.isFinite(parsedChainId)
+          ? parsedChainId
+          : undefined;
+
+      const result = await markProposalExecuted.mutateAsync({
         id: tx.proposalId,
-        txHash,
+        txHash: submittedTxHash,
+        chainId,
+        safeAddress: primarySafeAddress,
       });
-      toast.success('Proposal executed');
+
+      if (result.status === 'executed') {
+        toast.success('Proposal executed');
+      } else if (result.status === 'approved') {
+        toast.success(
+          result.pending
+            ? 'Transaction submitted. Confirming on-chain…'
+            : 'Transaction submitted',
+        );
+      } else {
+        toast.error('Safe execution failed');
+      }
     } catch (err) {
       const message =
         err instanceof Error ? err.message : 'Failed to execute proposal';
-      toast.error(message);
-      await markProposalFailed.mutateAsync({
-        id: tx.proposalId,
-        reason: message,
-      });
+
+      if (!submittedTxHash) {
+        toast.error(message);
+        await markProposalFailed.mutateAsync({
+          id: tx.proposalId,
+          reason: message,
+        });
+      } else {
+        toast.error(
+          'Transaction submitted, but status update failed. Refresh shortly.',
+        );
+      }
     } finally {
       setActionPendingIds((prev) => {
         const next = new Set(prev);

@@ -4,14 +4,22 @@ import { router, protectedProcedure } from '../create-router';
 import { db } from '@/db';
 import { actionProposals } from '@/db/schema';
 import { and, eq, inArray } from 'drizzle-orm';
-import { type Address } from 'viem';
+import { type Address, isAddress, parseEventLogs } from 'viem';
+import {
+  SUPPORTED_CHAINS,
+  type SupportedChainId,
+} from '@/lib/constants/chains';
+import { getRPCManager } from '@/lib/multi-chain-rpc';
 import {
   dispatchWebhookEvent,
   logAuditEvent,
 } from '@/server/services/webhook-service';
 import { getVaultPositions } from '@/server/earn/yield-positions';
-import { getWorkspaceSafes } from '@/server/earn/multi-chain-safe-manager';
-import { getVaultByAddress } from '@/server/earn/vault-registry';
+import {
+  getSafeOnChain,
+  getWorkspaceSafes,
+} from '@/server/earn/multi-chain-safe-manager';
+import { getVaultByAddress, getVaultById } from '@/server/earn/vault-registry';
 
 const proposalTypeSchema = z.enum([
   'crypto_transfer',
@@ -75,6 +83,45 @@ async function resolveVaultId(payload: VaultPayload) {
 
   const vault = await getVaultByAddress(address as Address, chainId);
   return vault?.id ?? null;
+}
+
+const SAFE_EXECUTION_EVENTS_ABI = [
+  {
+    type: 'event',
+    name: 'ExecutionSuccess',
+    inputs: [
+      { name: 'txHash', type: 'bytes32', indexed: true },
+      { name: 'payment', type: 'uint256', indexed: false },
+    ],
+    anonymous: false,
+  },
+  {
+    type: 'event',
+    name: 'ExecutionFailure',
+    inputs: [
+      { name: 'txHash', type: 'bytes32', indexed: true },
+      { name: 'payment', type: 'uint256', indexed: false },
+    ],
+    anonymous: false,
+  },
+] as const;
+
+function isSupportedChainId(chainId: number): chainId is SupportedChainId {
+  return Object.values(SUPPORTED_CHAINS).includes(chainId as SupportedChainId);
+}
+
+function resolveChainIdFromPayload(payload: VaultPayload): number | null {
+  const chainIdRaw =
+    (payload.chainId as number | string | undefined) ??
+    (payload.chain_id as number | string | undefined);
+
+  if (typeof chainIdRaw === 'number') return chainIdRaw;
+  if (typeof chainIdRaw === 'string') {
+    const parsed = Number(chainIdRaw);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+
+  return null;
 }
 
 export const actionProposalsRouter = router({
@@ -146,7 +193,14 @@ export const actionProposalsRouter = router({
     }),
 
   markExecuted: protectedProcedure
-    .input(z.object({ id: z.string().uuid(), txHash: z.string().min(1) }))
+    .input(
+      z.object({
+        id: z.string().uuid(),
+        txHash: z.string().regex(/^0x[a-fA-F0-9]{64}$/),
+        chainId: z.number().int().optional(),
+        safeAddress: z.string().optional(),
+      }),
+    )
     .mutation(async ({ ctx, input }) => {
       const workspaceId = requireWorkspaceId(ctx.workspaceId);
 
@@ -164,14 +218,74 @@ export const actionProposalsRouter = router({
         });
       }
 
-      await db
-        .update(actionProposals)
-        .set({ status: 'executed', txHash: input.txHash })
-        .where(eq(actionProposals.id, proposal.id));
+      if (proposal.status === 'executed') {
+        return { success: true, status: 'executed' as const };
+      }
 
-      const direction = resolveSavingsDirection(proposal.proposalType);
-      if (direction) {
-        const payload = proposal.payload as VaultPayload;
+      if (proposal.status === 'failed') {
+        return { success: true, status: 'failed' as const };
+      }
+
+      const payload = proposal.payload as VaultPayload;
+
+      const vaultIdForChain = await resolveVaultId(payload);
+      const vaultChainId = vaultIdForChain
+        ? ((await getVaultById(vaultIdForChain))?.chainId ?? null)
+        : null;
+
+      const chainIdCandidate =
+        input.chainId ?? resolveChainIdFromPayload(payload) ?? vaultChainId;
+
+      const chainId: SupportedChainId =
+        typeof chainIdCandidate === 'number' &&
+        isSupportedChainId(chainIdCandidate)
+          ? chainIdCandidate
+          : SUPPORTED_CHAINS.BASE;
+
+      let safeAddress: Address | null = null;
+      if (input.safeAddress) {
+        if (!isAddress(input.safeAddress)) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'Invalid safeAddress',
+          });
+        }
+        safeAddress = input.safeAddress as Address;
+      } else if (ctx.userId) {
+        const safe = await getSafeOnChain(
+          ctx.userId,
+          workspaceId,
+          chainId,
+          'primary',
+        );
+        if (safe?.safeAddress && isAddress(safe.safeAddress)) {
+          safeAddress = safe.safeAddress as Address;
+        }
+      }
+
+      if (!safeAddress) {
+        const safes = await getWorkspaceSafes(workspaceId, 'primary');
+        const safeOnChain = safes.find((safe) => safe.chainId === chainId);
+        if (safeOnChain?.safeAddress && isAddress(safeOnChain.safeAddress)) {
+          safeAddress = safeOnChain.safeAddress as Address;
+        }
+      }
+
+      if (!safeAddress) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Could not resolve Safe address for execution verification.',
+        });
+      }
+
+      const notifySavingsCompletion = async (params: {
+        status: 'executed' | 'failed';
+        txHash: string;
+        reason?: string;
+      }) => {
+        const direction = resolveSavingsDirection(proposal.proposalType);
+        if (!direction) return;
+
         const vaultId = await resolveVaultId(payload);
         const amount = resolvePayloadAmount(payload);
 
@@ -184,8 +298,9 @@ export const actionProposalsRouter = router({
             vault_id: vaultId,
             amount,
             direction,
-            status: 'executed',
-            tx_hash: input.txHash,
+            status: params.status,
+            tx_hash: params.txHash,
+            ...(params.reason ? { reason: params.reason } : {}),
           },
         });
 
@@ -197,47 +312,134 @@ export const actionProposalsRouter = router({
             vault_id: vaultId,
             amount,
             direction,
-            status: 'executed',
-            tx_hash: input.txHash,
+            status: params.status,
+            tx_hash: params.txHash,
+            ...(params.reason ? { reason: params.reason } : {}),
           },
         });
 
-        if (vaultId) {
-          const safes = await getWorkspaceSafes(workspaceId);
-          const ownerAddresses = safes.map(
-            (safe) => safe.safeAddress as Address,
-          );
+        if (!vaultId) return;
 
-          if (ownerAddresses.length > 0) {
-            const positions = await getVaultPositions({ ownerAddresses });
-            const filtered = positions.filter(
-              (position) => position.vaultId === vaultId,
-            );
+        const safes = await getWorkspaceSafes(workspaceId);
+        const ownerAddresses = safes.map((safe) => safe.safeAddress as Address);
 
-            await logAuditEvent({
-              workspaceId,
-              actor: ctx.userId ?? undefined,
-              eventType: 'vault.position.updated',
-              metadata: {
-                vault_id: vaultId,
-                positions: filtered,
-              },
-            });
+        if (ownerAddresses.length === 0) return;
 
-            await dispatchWebhookEvent({
-              workspaceId,
-              eventType: 'vault.position.updated',
-              payload: {
-                vault_id: vaultId,
-                positions: filtered,
-                count: filtered.length,
-              },
-            });
-          }
-        }
+        const positions = await getVaultPositions({ ownerAddresses });
+        const filtered = positions.filter(
+          (position) => position.vaultId === vaultId,
+        );
+
+        await logAuditEvent({
+          workspaceId,
+          actor: ctx.userId ?? undefined,
+          eventType: 'vault.position.updated',
+          metadata: {
+            vault_id: vaultId,
+            positions: filtered,
+          },
+        });
+
+        await dispatchWebhookEvent({
+          workspaceId,
+          eventType: 'vault.position.updated',
+          payload: {
+            vault_id: vaultId,
+            positions: filtered,
+            count: filtered.length,
+          },
+        });
+      };
+
+      // Mark as approved (submitted) immediately so the UI stops showing it as actionable.
+      await db
+        .update(actionProposals)
+        .set({ status: 'approved', txHash: input.txHash })
+        .where(eq(actionProposals.id, proposal.id));
+
+      const rpcManager = getRPCManager();
+      const client = rpcManager.getClient(chainId);
+
+      let receipt;
+      try {
+        receipt = await client.waitForTransactionReceipt({
+          hash: input.txHash as `0x${string}`,
+          timeout: 20_000,
+          pollingInterval: 1_000,
+        });
+      } catch (error) {
+        return { success: true, status: 'approved' as const, pending: true };
       }
 
-      return { success: true };
+      const safeLogs = receipt.logs.filter(
+        (log) => log.address.toLowerCase() === safeAddress.toLowerCase(),
+      );
+
+      const parsed = parseEventLogs({
+        abi: SAFE_EXECUTION_EVENTS_ABI,
+        logs: safeLogs,
+        strict: false,
+      });
+
+      const hasFailure = parsed.some(
+        (event) => event.eventName === 'ExecutionFailure',
+      );
+      const hasSuccess = parsed.some(
+        (event) => event.eventName === 'ExecutionSuccess',
+      );
+
+      if (hasFailure && !hasSuccess) {
+        const reason = 'Safe execution failed (ExecutionFailure).';
+        await db
+          .update(actionProposals)
+          .set({
+            status: 'failed',
+            txHash: input.txHash,
+            proposalMessage: reason,
+          })
+          .where(eq(actionProposals.id, proposal.id));
+
+        await notifySavingsCompletion({
+          status: 'failed',
+          txHash: input.txHash,
+          reason,
+        });
+
+        return { success: true, status: 'failed' as const };
+      }
+
+      if (hasSuccess) {
+        await db
+          .update(actionProposals)
+          .set({ status: 'executed', txHash: input.txHash })
+          .where(eq(actionProposals.id, proposal.id));
+
+        await notifySavingsCompletion({
+          status: 'executed',
+          txHash: input.txHash,
+        });
+
+        return { success: true, status: 'executed' as const };
+      }
+
+      const reason =
+        'Could not verify Safe execution (missing ExecutionSuccess/ExecutionFailure logs).';
+      await db
+        .update(actionProposals)
+        .set({
+          status: 'failed',
+          txHash: input.txHash,
+          proposalMessage: reason,
+        })
+        .where(eq(actionProposals.id, proposal.id));
+
+      await notifySavingsCompletion({
+        status: 'failed',
+        txHash: input.txHash,
+        reason,
+      });
+
+      return { success: true, status: 'failed' as const };
     }),
 
   markFailed: protectedProcedure
