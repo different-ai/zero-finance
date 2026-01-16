@@ -15,7 +15,7 @@
     "@react-three/postprocessing": "^3.0.4",
     "clsx": "^2.1.1",
     "lucide-react": "^0.399.0",
-    "next": "catalog:",
+    "next": "15.5.8",
     "postprocessing": "^6.35.0",
     "react": "catalog:",
     "react-dom": "catalog:",
