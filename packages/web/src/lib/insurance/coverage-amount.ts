@@ -21,6 +21,10 @@ function normalizeAmountString(raw: string): string {
  * - Clamped to [0, 1_000_000].
  */
 export function parseCoverageAmountParam(value: unknown): number {
+  if (Array.isArray(value)) {
+    return parseCoverageAmountParam(value[0]);
+  }
+
   if (typeof value === 'number' && Number.isFinite(value)) {
     return clampCoverage(Math.round(value));
   }

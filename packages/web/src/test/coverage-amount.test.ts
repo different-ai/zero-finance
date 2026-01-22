@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   formatCoverageUsd,
   parseCoverageAmountParam,
-} from '@/lib/insurance/coverage-amount';
+} from '../lib/insurance/coverage-amount';
 
 describe('parseCoverageAmountParam', () => {
   it('defaults when missing', () => {
@@ -12,6 +12,10 @@ describe('parseCoverageAmountParam', () => {
 
   it('parses integers', () => {
     expect(parseCoverageAmountParam('250000')).toBe(250_000);
+  });
+
+  it('handles repeated query params', () => {
+    expect(parseCoverageAmountParam(['250000'])).toBe(250_000);
   });
 
   it('parses k and m suffixes', () => {
