@@ -72,7 +72,7 @@ export default function InsuranceActivatePage() {
     setCurrentLoadingStep(0);
 
     try {
-      await activateInsurance.mutateAsync(undefined);
+      await activateInsurance.mutateAsync({ coverageUsd });
 
       // Invalidate user profile to refresh insurance status
       await utils.user.getProfile.invalidate();
