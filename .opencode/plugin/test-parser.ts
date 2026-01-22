@@ -48,7 +48,7 @@ const testCases = [
   `Some text before
 <update-skills>
 - learned: Vercel logs require --scope prologe flag
-- skill: debug-prod-data
+- skill: debug-prod-issues
 - improvement: Add note about scope flag
 </update-skills>
 Some text after`,
