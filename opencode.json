@@ -2,23 +2,23 @@
   "$schema": "https://opencode.ai/config.json",
   "mcp": {
     "exa": {
+      "headers": {},
       "type": "remote",
-      "url": "https://mcp.exa.ai/mcp?tools=web_search_exa,get_code_context_exa,crawling_exa",
-      "headers": {}
+      "url": "https://mcp.exa.ai/mcp?tools=web_search_exa,get_code_context_exa,crawling_exa"
     },
     "notion": {
+      "enabled": true,
+      "oauth": {},
       "type": "remote",
-      "url": "https://mcp.notion.com/mcp",
-      "enabled": true
+      "url": "https://mcp.notion.com/mcp"
     },
     "zero-finance": {
-      "type": "remote",
-      "url": "https://www.0.finance/api/mcp",
       "headers": {
-        "Authorization": "Bearer "
+        "Authorization": "Bearer {env:ZERO_FINANCE_MCP_TOKEN}"
       },
-      "enabled": true
+      "type": "remote",
+      "url": "https://www.0.finance/api/mcp"
     }
   },
-  "plugin": ["@different-ai/opencode-browser"]
+  "plugin": ["opencode-scheduler"]
 }

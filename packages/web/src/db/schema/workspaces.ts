@@ -4,6 +4,7 @@ import {
   uuid,
   timestamp,
   boolean,
+  integer,
   uniqueIndex,
   index,
   text,
@@ -68,6 +69,9 @@ export const workspaces = pgTable(
       withTimezone: true,
     }),
     insuranceActivatedBy: varchar('insurance_activated_by', { length: 255 }),
+    insuranceCoverageUsd: integer('insurance_coverage_usd')
+      .default(100_000)
+      .notNull(),
 
     // AI Email Handle - human-readable email address for AI agent
     // Format: ai-{firstname}.{lastname} (e.g., ai-clara.mitchell)

@@ -7,6 +7,8 @@ import type { Context } from '@/server/context';
 import { protectedProcedure, router, publicProcedure } from '../create-router';
 import { TRPCError } from '@trpc/server';
 
+import { parseCoverageAmountParam } from '@/lib/insurance/coverage-amount';
+
 // Define input type explicitly for better clarity
 const SyncInputSchema = z.object({
   privyUserId: z.string(),
@@ -262,24 +264,52 @@ export const userRouter = router({
     }),
 
   // Activate insurance for user (removes all warnings)
-  activateInsurance: protectedProcedure.mutation(async ({ ctx }) => {
-    const privyDid = ctx.userId;
-    if (!privyDid) {
-      throw new TRPCError({ code: 'UNAUTHORIZED' });
-    }
+  activateInsurance: protectedProcedure
+    .input(
+      z
+        .object({
+          coverageUsd: z.number().int().min(0).max(1_000_000).optional(),
+        })
+        .optional(),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const privyDid = ctx.userId;
+      if (!privyDid) {
+        throw new TRPCError({ code: 'UNAUTHORIZED' });
+      }
 
-    // Update the user profile to set isInsured = true
-    await db
-      .update(userProfilesTable)
-      .set({
-        isInsured: true,
-        insuranceActivatedAt: new Date(),
-        updatedAt: new Date(),
-      })
-      .where(eq(userProfilesTable.privyDid, privyDid));
+      const workspaceId = ctx.workspaceId;
+      if (!workspaceId) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Workspace context is unavailable.',
+        });
+      }
 
-    return { success: true, message: 'Insurance activated successfully' };
-  }),
+      const coverageUsd = parseCoverageAmountParam(input?.coverageUsd);
+
+      // Update the user profile to set isInsured = true
+      await db
+        .update(userProfilesTable)
+        .set({
+          isInsured: true,
+          insuranceActivatedAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .where(eq(userProfilesTable.privyDid, privyDid));
+
+      await db
+        .update(workspaces)
+        .set({
+          insuranceCoverageUsd: coverageUsd,
+          insuranceActivatedAt: new Date(),
+          insuranceActivatedBy: privyDid,
+          updatedAt: new Date(),
+        })
+        .where(eq(workspaces.id, workspaceId));
+
+      return { success: true, message: 'Insurance activated successfully' };
+    }),
 
   // Update smart wallet address (called on login to store Privy smart wallet)
   updateSmartWalletAddress: protectedProcedure

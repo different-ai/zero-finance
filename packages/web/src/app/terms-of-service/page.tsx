@@ -1,5 +1,10 @@
 import type { Metadata } from 'next';
 
+import {
+  formatCoverageUsd,
+  getCoverageUsdFromSearchParams,
+} from '@/lib/insurance/coverage-amount';
+
 export const metadata: Metadata = {
   title: 'Terms and Conditions – DeFi Protection Security Guarantee',
   description:
@@ -7,7 +12,15 @@ export const metadata: Metadata = {
   robots: { index: true, follow: true },
 };
 
-export default function TermsOfServicePage() {
+export default function TermsOfServicePage({
+  searchParams,
+}: {
+  searchParams: Record<string, string | string[] | undefined>;
+}) {
+  const coverageUsd = getCoverageUsdFromSearchParams(searchParams);
+  const coverageCompact = formatCoverageUsd(coverageUsd, { style: 'compact' });
+  const coverageFull = formatCoverageUsd(coverageUsd, { style: 'full' });
+
   return (
     <main className="mx-auto max-w-3xl px-4 py-16 prose prose-slate dark:prose-invert">
       <h1>Terms and Conditions (DeFi Protection Security Guarantee)</h1>
@@ -49,9 +62,9 @@ export default function TermsOfServicePage() {
         ("Blockchain").
       </p>
       <p>
-        <strong>Insurance and Security:</strong> Insurance coverage (up to $1M)
-        is provided by Chainproof, a licensed insurer. Smart contract security
-        audits are performed by Quantstamp.{' '}
+        <strong>Insurance and Security:</strong> Insurance coverage (up to{' '}
+        {coverageCompact}) is provided by Chainproof, a licensed insurer. Smart
+        contract security audits are performed by Quantstamp.{' '}
         <a href="/legal/insurance-terms" className="text-[#1B29FF] underline">
           View full insurance terms
         </a>
@@ -64,8 +77,8 @@ export default function TermsOfServicePage() {
         accrued interest or yield, less any liabilities that you owe to the DeFi
         protocol or other users of the DeFi protocol, or (ii) your chosen
         Maximum Reimbursement amount (each in USD) ("Damages"). In no event will
-        our liability for Damages exceed $1,000,000 in the aggregate across any
-        one Protocol.
+        our liability for Damages exceed {coverageFull} in the aggregate across
+        any one Protocol.
       </p>
 
       <h3>Valuation Methodology</h3>
@@ -93,7 +106,7 @@ export default function TermsOfServicePage() {
       <p>
         You may only purchase a Security Services Guarantee through one Wallet
         per Protocol; however, you may increase your Wallet's Maximum
-        Reimbursement amount at any time, up to a maximum of $1,000,000. Any
+        Reimbursement amount at any time, up to a maximum of {coverageFull}. Any
         violation of these terms may result in the immediate cancellation of any
         or all of your Contracts, and any of our obligations of reimbursement
         will be void.

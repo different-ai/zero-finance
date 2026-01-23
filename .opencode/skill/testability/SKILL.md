@@ -94,6 +94,8 @@ pnpm test:watch                     # Watch mode
 pnpm test -- --run --grep "fee"     # Filter by name
 ```
 
+> Repo note: `@zero-finance/web` Vitest discovers tests under `packages/web/src/test/**/*.test.ts`. Put new tests there (or update Vitest config) so they get picked up.
+
 ---
 
 ## Layer 2: API/Integration Tests

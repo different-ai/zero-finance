@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { api } from '@/trpc/react';
 import {
@@ -15,8 +15,19 @@ import {
 import GeneratedComponent from '@/app/(landing)/welcome-gradient';
 import { toast } from 'sonner';
 
+import {
+  formatCoverageUsd,
+  parseCoverageAmountParam,
+} from '@/lib/insurance/coverage-amount';
+
 export default function InsuranceActivatePage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const coverageUsd = parseCoverageAmountParam(
+    searchParams.get('coverage') ?? searchParams.get('amount') ?? undefined,
+  );
+  const coverageDisplay = formatCoverageUsd(coverageUsd, { style: 'compact' });
   const [step, setStep] = useState<'initial' | 'loading' | 'success'>(
     'initial',
   );
@@ -61,7 +72,7 @@ export default function InsuranceActivatePage() {
     setCurrentLoadingStep(0);
 
     try {
-      await activateInsurance.mutateAsync(undefined);
+      await activateInsurance.mutateAsync({ coverageUsd });
 
       // Invalidate user profile to refresh insurance status
       await utils.user.getProfile.invalidate();
@@ -122,7 +133,7 @@ export default function InsuranceActivatePage() {
                   <span className="text-[13px] sm:text-[14px] text-[#101010]/80 leading-[1.5]">
                     I have read and agree to the{' '}
                     <Link
-                      href="/terms-of-service"
+                      href={`/terms-of-service?coverage=${coverageUsd}`}
                       target="_blank"
                       className="text-[#1B29FF] hover:underline font-medium"
                     >
@@ -130,9 +141,9 @@ export default function InsuranceActivatePage() {
                     </Link>{' '}
                     for the DeFi Protection Security Guarantee. I understand
                     that only Morpho vaults are covered through this interface,
-                    insurance (up to $1M) is provided by Chainproof (a licensed
-                    insurer), and smart contract audits are performed by
-                    Quantstamp.
+                    insurance (up to {coverageDisplay}) is provided by
+                    Chainproof (a licensed insurer), and smart contract audits
+                    are performed by Quantstamp.
                   </span>
                 </label>
               </div>

@@ -73,11 +73,12 @@ vercel dns add <domain> <subdomain> CNAME <target>
 vercel dns add <domain> <subdomain> TXT '<value>'
 
 # Add MX record with priority
-vercel dns add <domain> <subdomain> MX '<priority> <mail-server>'
+# NOTE: MX priority is a separate argument (not embedded in the value)
+vercel dns add <domain> <subdomain> MX <mail-server> <priority>
 
 # Add record at apex (root domain) - use empty string or @
 vercel dns add <domain> '' TXT '<value>'
-vercel dns add <domain> @ MX '10 mail.example.com'
+vercel dns add <domain> @ MX mail.example.com 10
 ```
 
 ### Remove DNS Records
@@ -99,7 +100,12 @@ vercel dns rm <record-id> --yes
 
 ```bash
 # Add MX record for receiving email
-vercel dns add example.com '' MX '10 inbound-smtp.us-east-1.amazonaws.com'
+# WARNING: Setting MX at the apex (root) will route *all* inbound mail for the domain.
+# If the domain already uses Google Workspace / Fastmail / etc, prefer a dedicated subdomain.
+vercel dns add example.com '' MX inbound-smtp.us-east-1.amazonaws.com 10
+
+# Safer: use a subdomain for inbound routing
+vercel dns add example.com inbound MX inbound-smtp.us-east-1.amazonaws.com 10
 
 # Add SPF record
 vercel dns add example.com '' TXT 'v=spf1 include:amazonses.com ~all'
@@ -148,8 +154,21 @@ vercel switch <correct-team-slug>
 ### Record Not Propagating
 
 - DNS propagation can take up to 48 hours (usually 5-30 minutes)
-- Check propagation: `dig <record-name> <record-type>` or use dnschecker.org
+- Check propagation: `dig +short <record-name> <record-type>` or use dnschecker.org
 - Verify record was added: `vercel dns ls <domain>`
+
+## Token Saving Tips
+
+### Fast Verification With `dig`
+
+When a third-party UI says "Looking for DNS records", verify what the public internet sees:
+
+```bash
+dig +short TXT resend._domainkey.example.com
+dig +short TXT send.example.com
+dig +short MX send.example.com
+dig +short TXT example.com
+```
 
 ## Tips
 

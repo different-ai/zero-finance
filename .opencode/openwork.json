@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "workspace": {
+    "name": "zerofinance",
+    "createdAt": 1768940142851,
+    "preset": "starter"
+  },
+  "authorizedRoots": [
+    "/Users/benjaminshafii/git/zerofinance"
+  ]
+}
