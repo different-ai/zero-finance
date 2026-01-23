@@ -21,7 +21,7 @@ import {
   getPaymentDetails,
   sharePaymentDetails,
   dismissProposal,
-} from '@/app/api/mcp/route';
+} from '@/server/mcp/tools';
 import { createApiKey } from '@/lib/mcp/api-key';
 import { createPrivyUser, pregeneratePrivyWallets } from '@/server/cli/privy';
 import { ensureUserWorkspace } from '@/server/utils/workspace';

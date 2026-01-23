@@ -12,12 +12,15 @@ export const metadata: Metadata = {
   robots: { index: true, follow: true },
 };
 
-export default function TermsOfServicePage({
+export default async function TermsOfServicePage({
   searchParams,
 }: {
-  searchParams: Record<string, string | string[] | undefined>;
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const coverageUsd = getCoverageUsdFromSearchParams(searchParams);
+  const resolvedSearchParams = await searchParams;
+  const coverageUsd = getCoverageUsdFromSearchParams(
+    resolvedSearchParams ?? {},
+  );
   const coverageCompact = formatCoverageUsd(coverageUsd, { style: 'compact' });
   const coverageFull = formatCoverageUsd(coverageUsd, { style: 'full' });
 

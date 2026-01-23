@@ -911,6 +911,13 @@
       "when": 1768290000000,
       "tag": "0129_yield_infra",
       "breakpoints": true
+    },
+    {
+      "idx": 130,
+      "version": "7",
+      "when": 1769127854160,
+      "tag": "0130_bitter_ultragirl",
+      "breakpoints": true
     }
   ]
 }

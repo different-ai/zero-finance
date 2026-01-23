@@ -1,5 +1,3 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { validateApiKey } from '@/lib/mcp/api-key';
 import { db } from '@/db';
 import {
   userDestinationBankAccounts,
@@ -20,12 +18,11 @@ import {
   updateInvoiceForUser,
   getInvoicePublicLink,
 } from '@/lib/ai-email/invoice-service';
-// Note: getSpendableBalanceByWorkspace available if needed for balance checks
 import { getFormattedPaymentDetailsByWorkspace } from '@/server/services/bank-accounts';
 import { AI_EMAIL_INBOUND_DOMAIN } from '@/lib/ai-email/workspace-mapping';
 import { put } from '@vercel/blob';
 import { getEmailProviderSingleton } from '@/lib/email-provider';
-import { handleYieldTool, yieldTools } from './tools/yield-tools';
+import type { ApiKeyContext } from '@/lib/mcp/api-key';
 
 // USDC on Base
 const USDC_ADDRESS = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913';
@@ -41,771 +38,7 @@ const ERC20_BALANCE_ABI = [
   },
 ] as const;
 
-/**
- * Extract and validate API key from request
- */
-async function authenticateRequest(request: NextRequest) {
-  const authHeader = request.headers.get('authorization');
-  if (!authHeader?.startsWith('Bearer ')) {
-    return null;
-  }
-  const apiKey = authHeader.slice(7);
-
-  // Dev-only magic key (explicitly configured) for local testing.
-  // Avoid hardcoded keys so this can't be abused in production.
-  const devMagicKey = process.env.MCP_DEV_MAGIC_KEY;
-  if (
-    process.env.NODE_ENV === 'development' &&
-    devMagicKey &&
-    apiKey === devMagicKey
-  ) {
-    const workspace = await db.query.workspaces.findFirst({
-      where: eq(workspaces.name, 'Demo Workspace'),
-    });
-    if (workspace) {
-      return {
-        workspaceId: workspace.id,
-        workspaceName: workspace.name || 'Test Workspace',
-        keyId: 'dev-magic-key',
-        keyName: 'Dev Magic Key',
-        alignCustomerId: workspace.alignCustomerId,
-        isMockMode: true,
-      };
-    }
-  }
-
-  return validateApiKey(apiKey);
-}
-
-/**
- * Simple JSON-RPC MCP handler
- * Implements the MCP protocol directly without the SDK transport layer
- */
-export async function POST(request: NextRequest) {
-  try {
-    // Authenticate
-    const context = await authenticateRequest(request);
-    if (!context) {
-      return NextResponse.json(
-        {
-          jsonrpc: '2.0',
-          error: {
-            code: -32001,
-            message: 'Unauthorized: Invalid or missing API key',
-          },
-          id: null,
-        },
-        { status: 401 },
-      );
-    }
-
-    const body = await request.json();
-    const { method, params, id } = body;
-
-    // Handle MCP methods
-    let result: unknown;
-
-    switch (method) {
-      case 'initialize':
-        result = {
-          protocolVersion: '2024-11-05',
-          capabilities: {
-            tools: {},
-          },
-          serverInfo: {
-            name: '0-finance',
-            version: '1.0.0',
-          },
-        };
-        break;
-
-      case 'tools/list':
-        result = {
-          tools: [
-            {
-              name: 'list_saved_bank_accounts',
-              description:
-                'List saved bank accounts for this workspace. Use these IDs when proposing transfers.',
-              inputSchema: {
-                type: 'object',
-                properties: {},
-                required: [],
-              },
-            },
-            {
-              name: 'get_balance',
-              description:
-                'Get the current USDC balance available for transfers.',
-              inputSchema: {
-                type: 'object',
-                properties: {},
-                required: [],
-              },
-            },
-            {
-              name: 'propose_bank_transfer',
-              description:
-                'Propose a bank transfer for user approval. The user must approve this in the UI before funds are sent.',
-              inputSchema: {
-                type: 'object',
-                properties: {
-                  amount_usdc: {
-                    type: 'string',
-                    description: 'Amount in USDC to send (e.g., "1000.00")',
-                  },
-                  destination_currency: {
-                    type: 'string',
-                    enum: ['usd', 'eur'],
-                    description: 'Target currency for the bank',
-                  },
-                  saved_bank_account_id: {
-                    type: 'string',
-                    description:
-                      'ID of a saved bank account (from list_saved_bank_accounts)',
-                  },
-                  reason: {
-                    type: 'string',
-                    description:
-                      'Why is this transfer being proposed? (shown to user)',
-                  },
-                },
-                required: [
-                  'amount_usdc',
-                  'destination_currency',
-                  'saved_bank_account_id',
-                ],
-              },
-            },
-            {
-              name: 'list_proposals',
-              description: 'List pending transfer proposals and their status.',
-              inputSchema: {
-                type: 'object',
-                properties: {
-                  include_completed: {
-                    type: 'boolean',
-                    description:
-                      'Include completed/processed transfers (default: false)',
-                  },
-                },
-                required: [],
-              },
-            },
-            {
-              name: 'create_bank_account',
-              description:
-                'Save a new bank account for future transfers. All fields are required - extract from invoice or ask user.',
-              inputSchema: {
-                type: 'object',
-                properties: {
-                  account_name: {
-                    type: 'string',
-                    description:
-                      'Nickname for the account (e.g., "Cyprien N26")',
-                  },
-                  bank_name: {
-                    type: 'string',
-                    description: 'Name of the bank (e.g., "N26", "Chase")',
-                  },
-                  account_holder_type: {
-                    type: 'string',
-                    enum: ['individual', 'business'],
-                    description: 'Type of account holder',
-                  },
-                  account_holder_first_name: {
-                    type: 'string',
-                    description:
-                      'First name (required for individual accounts)',
-                  },
-                  account_holder_last_name: {
-                    type: 'string',
-                    description: 'Last name (required for individual accounts)',
-                  },
-                  account_holder_business_name: {
-                    type: 'string',
-                    description:
-                      'Business name (required for business accounts)',
-                  },
-                  country: {
-                    type: 'string',
-                    description: 'Country code (e.g., "DE", "US")',
-                  },
-                  city: {
-                    type: 'string',
-                    description: 'City name',
-                  },
-                  street_line_1: {
-                    type: 'string',
-                    description: 'Street address line 1',
-                  },
-                  street_line_2: {
-                    type: 'string',
-                    description: 'Street address line 2 (optional)',
-                  },
-                  postal_code: {
-                    type: 'string',
-                    description: 'Postal/ZIP code',
-                  },
-                  account_type: {
-                    type: 'string',
-                    enum: ['us', 'iban'],
-                    description: 'Type of bank account',
-                  },
-                  account_number: {
-                    type: 'string',
-                    description: 'Account number (required for US accounts)',
-                  },
-                  routing_number: {
-                    type: 'string',
-                    description: 'Routing number (required for US accounts)',
-                  },
-                  iban_number: {
-                    type: 'string',
-                    description: 'IBAN (required for IBAN accounts)',
-                  },
-                  bic_swift: {
-                    type: 'string',
-                    description: 'BIC/SWIFT code (required for IBAN accounts)',
-                  },
-                  is_default: {
-                    type: 'boolean',
-                    description:
-                      'Set as default account for transfers (default: false)',
-                  },
-                },
-                required: [
-                  'account_name',
-                  'bank_name',
-                  'account_holder_type',
-                  'country',
-                  'city',
-                  'street_line_1',
-                  'postal_code',
-                  'account_type',
-                ],
-              },
-            },
-            // =========================================================================
-            // Invoice Tools
-            // =========================================================================
-            {
-              name: 'create_invoice',
-              description:
-                'Create a draft invoice. Returns invoice ID and public link. Invoice is created in pending status.',
-              inputSchema: {
-                type: 'object',
-                properties: {
-                  recipient_email: {
-                    type: 'string',
-                    description: 'Email address of the invoice recipient',
-                  },
-                  recipient_name: {
-                    type: 'string',
-                    description: 'Name of the recipient (person or company)',
-                  },
-                  amount: {
-                    type: 'number',
-                    description: 'Invoice amount (e.g., 2500.00)',
-                  },
-                  currency: {
-                    type: 'string',
-                    description: 'Currency code: USD, EUR, USDC, etc.',
-                  },
-                  description: {
-                    type: 'string',
-                    description: 'Description of work/services being invoiced',
-                  },
-                  due_date: {
-                    type: 'string',
-                    description:
-                      'Due date (ISO format or "Net 30", "Due on receipt")',
-                  },
-                  notes: {
-                    type: 'string',
-                    description: 'Additional notes for the invoice',
-                  },
-                },
-                required: [
-                  'recipient_email',
-                  'amount',
-                  'currency',
-                  'description',
-                ],
-              },
-            },
-            {
-              name: 'update_invoice',
-              description:
-                'Update a draft invoice. Only pending invoices can be updated.',
-              inputSchema: {
-                type: 'object',
-                properties: {
-                  invoice_id: {
-                    type: 'string',
-                    description: 'ID of the invoice to update',
-                  },
-                  recipient_email: { type: 'string' },
-                  recipient_name: { type: 'string' },
-                  amount: { type: 'number' },
-                  currency: { type: 'string' },
-                  description: { type: 'string' },
-                },
-                required: ['invoice_id'],
-              },
-            },
-            {
-              name: 'list_invoices',
-              description:
-                'List invoices with optional status filter. Returns invoice summaries.',
-              inputSchema: {
-                type: 'object',
-                properties: {
-                  status: {
-                    type: 'string',
-                    enum: ['db_pending', 'pending', 'paid', 'canceled'],
-                    description: 'Filter by status (optional)',
-                  },
-                  limit: {
-                    type: 'number',
-                    description: 'Max invoices to return (default 20)',
-                  },
-                },
-                required: [],
-              },
-            },
-            {
-              name: 'get_invoice',
-              description: 'Get detailed invoice information by ID.',
-              inputSchema: {
-                type: 'object',
-                properties: {
-                  invoice_id: {
-                    type: 'string',
-                    description: 'ID of the invoice',
-                  },
-                },
-                required: ['invoice_id'],
-              },
-            },
-            {
-              name: 'send_invoice',
-              description:
-                'Send an invoice to the recipient via email. Only pending invoices can be sent.',
-              inputSchema: {
-                type: 'object',
-                properties: {
-                  invoice_id: {
-                    type: 'string',
-                    description: 'ID of the invoice to send',
-                  },
-                },
-                required: ['invoice_id'],
-              },
-            },
-            // =========================================================================
-            // Transaction Tools
-            // =========================================================================
-            {
-              name: 'list_transactions',
-              description:
-                'List completed bank transfers with optional filters.',
-              inputSchema: {
-                type: 'object',
-                properties: {
-                  status: {
-                    type: 'string',
-                    enum: ['pending', 'completed', 'failed'],
-                    description: 'Filter by status (default: all)',
-                  },
-                  limit: {
-                    type: 'number',
-                    description: 'Max transactions to return (default 20)',
-                  },
-                },
-                required: [],
-              },
-            },
-            {
-              name: 'get_transaction',
-              description: 'Get detailed transaction information by ID.',
-              inputSchema: {
-                type: 'object',
-                properties: {
-                  transaction_id: {
-                    type: 'string',
-                    description: 'ID of the transaction',
-                  },
-                },
-                required: ['transaction_id'],
-              },
-            },
-            // =========================================================================
-            // Attachment Tools
-            // =========================================================================
-            {
-              name: 'attach_document',
-              description:
-                'Attach a document to a transaction. Accepts base64 file content or URL. IMPORTANT: Use the transaction_id (UUID) returned from propose_bank_transfer, NOT the proposal_id.',
-              inputSchema: {
-                type: 'object',
-                properties: {
-                  transaction_id: {
-                    type: 'string',
-                    description:
-                      'UUID of the transaction to attach to. Use the transaction_id from propose_bank_transfer response.',
-                  },
-                  transaction_type: {
-                    type: 'string',
-                    enum: ['offramp', 'invoice'],
-                    description: 'Type of transaction',
-                  },
-                  filename: {
-                    type: 'string',
-                    description:
-                      'Filename with extension (e.g., "invoice.pdf")',
-                  },
-                  file_base64: {
-                    type: 'string',
-                    description: 'Base64-encoded file content',
-                  },
-                  file_url: {
-                    type: 'string',
-                    description:
-                      'URL to fetch file from (alternative to base64)',
-                  },
-                  content_type: {
-                    type: 'string',
-                    description:
-                      'MIME type (e.g., "application/pdf"). Auto-detected from filename if not provided.',
-                  },
-                },
-                required: ['transaction_id', 'transaction_type', 'filename'],
-              },
-            },
-            {
-              name: 'list_attachments',
-              description: 'List attachments for a transaction or all recent.',
-              inputSchema: {
-                type: 'object',
-                properties: {
-                  transaction_id: {
-                    type: 'string',
-                    description: 'Filter by transaction ID (optional)',
-                  },
-                  transaction_type: {
-                    type: 'string',
-                    enum: ['offramp', 'invoice'],
-                    description: 'Filter by transaction type (optional)',
-                  },
-                  limit: {
-                    type: 'number',
-                    description: 'Max attachments to return (default 20)',
-                  },
-                },
-                required: [],
-              },
-            },
-            {
-              name: 'remove_attachment',
-              description:
-                'Remove an attachment from a transaction (soft delete).',
-              inputSchema: {
-                type: 'object',
-                properties: {
-                  attachment_id: {
-                    type: 'string',
-                    description: 'ID of the attachment to remove',
-                  },
-                },
-                required: ['attachment_id'],
-              },
-            },
-            // =========================================================================
-            // Payment Details Tools (for receiving money)
-            // =========================================================================
-            {
-              name: 'get_payment_details',
-              description:
-                "Get the user's bank account details for receiving payments (IBAN, ACH).",
-              inputSchema: {
-                type: 'object',
-                properties: {},
-                required: [],
-              },
-            },
-            {
-              name: 'share_payment_details',
-              description:
-                "Send the user's payment details to a third party via email.",
-              inputSchema: {
-                type: 'object',
-                properties: {
-                  recipient_email: {
-                    type: 'string',
-                    description: 'Email address to send payment details to',
-                  },
-                  recipient_name: {
-                    type: 'string',
-                    description: 'Name of the recipient (optional)',
-                  },
-                },
-                required: ['recipient_email'],
-              },
-            },
-            // =========================================================================
-            // Proposal Management Tools
-            // =========================================================================
-            {
-              name: 'dismiss_proposal',
-              description:
-                'Dismiss a pending transfer proposal (hide from UI without deleting).',
-              inputSchema: {
-                type: 'object',
-                properties: {
-                  proposal_id: {
-                    type: 'string',
-                    description: 'ID of the proposal to dismiss',
-                  },
-                },
-                required: ['proposal_id'],
-              },
-            },
-            ...yieldTools,
-          ],
-        };
-        break;
-
-      case 'tools/call':
-        result = await handleToolCall(context, params);
-        break;
-
-      default:
-        return NextResponse.json({
-          jsonrpc: '2.0',
-          error: {
-            code: -32601,
-            message: `Method not found: ${method}`,
-          },
-          id,
-        });
-    }
-
-    return NextResponse.json({
-      jsonrpc: '2.0',
-      result,
-      id,
-    });
-  } catch (error) {
-    console.error('[MCP] Error handling request:', error);
-    return NextResponse.json(
-      {
-        jsonrpc: '2.0',
-        error: {
-          code: -32603,
-          message:
-            error instanceof Error ? error.message : 'Internal server error',
-        },
-        id: null,
-      },
-      { status: 500 },
-    );
-  }
-}
-
-/**
- * Handle tool calls
- */
-
-type ToolHandler = (
-  context: NonNullable<Awaited<ReturnType<typeof validateApiKey>>>,
-  args: Record<string, unknown>,
-) => Promise<unknown>;
-
-const toolHandlers: Record<string, ToolHandler> = {
-  list_saved_bank_accounts: (context) => listSavedBankAccounts(context),
-  get_balance: (context) => getBalance(context),
-  propose_bank_transfer: (context, args) =>
-    proposeBankTransfer(
-      context,
-      args as {
-        amount_usdc: string;
-        destination_currency: 'usd' | 'eur';
-        saved_bank_account_id: string;
-        reason?: string;
-      },
-    ),
-  list_proposals: (context, args) =>
-    listProposals(context, args as { include_completed?: boolean }),
-  create_bank_account: (context, args) =>
-    createBankAccount(
-      context,
-      args as {
-        account_name: string;
-        bank_name: string;
-        account_holder_type: 'individual' | 'business';
-        account_holder_first_name?: string;
-        account_holder_last_name?: string;
-        account_holder_business_name?: string;
-        country: string;
-        city: string;
-        street_line_1: string;
-        street_line_2?: string;
-        postal_code: string;
-        account_type: 'us' | 'iban';
-        account_number?: string;
-        routing_number?: string;
-        iban_number?: string;
-        bic_swift?: string;
-        is_default?: boolean;
-      },
-    ),
-  create_invoice: (context, args) =>
-    createInvoice(
-      context,
-      args as {
-        recipient_email: string;
-        recipient_name?: string;
-        amount: number;
-        currency: string;
-        description: string;
-        due_date?: string;
-        notes?: string;
-      },
-    ),
-  update_invoice: (context, args) =>
-    updateInvoice(
-      context,
-      args as {
-        invoice_id: string;
-        recipient_email?: string;
-        recipient_name?: string;
-        amount?: number;
-        currency?: string;
-        description?: string;
-      },
-    ),
-  list_invoices: (context, args) =>
-    listInvoices(
-      context,
-      args as {
-        status?: 'db_pending' | 'pending' | 'paid' | 'canceled';
-        limit?: number;
-      },
-    ),
-  get_invoice: (context, args) =>
-    getInvoice(
-      context,
-      args as {
-        invoice_id: string;
-      },
-    ),
-  send_invoice: (context, args) =>
-    sendInvoice(
-      context,
-      args as {
-        invoice_id: string;
-      },
-    ),
-  list_transactions: (context, args) =>
-    listTransactions(
-      context,
-      args as {
-        status?: 'pending' | 'completed' | 'failed';
-        limit?: number;
-      },
-    ),
-  get_transaction: (context, args) =>
-    getTransaction(
-      context,
-      args as {
-        transaction_id: string;
-      },
-    ),
-  attach_document: (context, args) =>
-    attachDocument(
-      context,
-      args as {
-        transaction_id: string;
-        transaction_type: 'offramp' | 'invoice';
-        filename: string;
-        file_base64?: string;
-        file_url?: string;
-        content_type?: string;
-      },
-    ),
-  list_attachments: (context, args) =>
-    listAttachments(
-      context,
-      args as {
-        transaction_id?: string;
-        transaction_type?: 'offramp' | 'invoice';
-        limit?: number;
-      },
-    ),
-  remove_attachment: (context, args) =>
-    removeAttachment(
-      context,
-      args as {
-        attachment_id: string;
-      },
-    ),
-  get_payment_details: (context) => getPaymentDetails(context),
-  share_payment_details: (context, args) =>
-    sharePaymentDetails(
-      context,
-      args as {
-        recipient_email: string;
-        recipient_name?: string;
-      },
-    ),
-  dismiss_proposal: (context, args) =>
-    dismissProposal(
-      context,
-      args as {
-        proposal_id: string;
-      },
-    ),
-};
-
-async function handleToolCall(
-  context: NonNullable<Awaited<ReturnType<typeof validateApiKey>>>,
-  params: { name: string; arguments?: Record<string, unknown> },
-) {
-  const { name, arguments: args = {} } = params;
-
-  try {
-    if (yieldTools.some((tool) => tool.name === name)) {
-      return await handleYieldTool(context, params);
-    }
-
-    const handler = toolHandlers[name];
-    if (!handler) {
-      throw new Error(`Unknown tool: ${name}`);
-    }
-
-    return await handler(context, args);
-  } catch (error) {
-    console.error('[MCP] Error in tool call:', error);
-    return {
-      content: [
-        {
-          type: 'text',
-          text: JSON.stringify({
-            error: error instanceof Error ? error.message : 'Unknown error',
-          }),
-        },
-      ],
-    };
-  }
-}
-
-// =========================================================================
-// Tool implementations
-// =========================================================================
-
-async function listSavedBankAccounts(
-  context: NonNullable<Awaited<ReturnType<typeof validateApiKey>>>,
-) {
+export async function listSavedBankAccounts(context: ApiKeyContext) {
   const workspace = await db.query.workspaces.findFirst({
     where: eq(workspaces.id, context.workspaceId),
   });
@@ -855,9 +88,7 @@ async function listSavedBankAccounts(
   };
 }
 
-async function getBalance(
-  context: NonNullable<Awaited<ReturnType<typeof validateApiKey>>>,
-) {
+export async function getBalance(context: ApiKeyContext) {
   const workspace = await db.query.workspaces.findFirst({
     where: eq(workspaces.id, context.workspaceId),
   });
@@ -978,8 +209,8 @@ async function getBalance(
   };
 }
 
-async function proposeBankTransfer(
-  context: NonNullable<Awaited<ReturnType<typeof validateApiKey>>>,
+export async function proposeBankTransfer(
+  context: ApiKeyContext,
   args: {
     amount_usdc: string;
     destination_currency: 'usd' | 'eur';
@@ -1240,8 +471,8 @@ async function proposeBankTransfer(
   };
 }
 
-async function createBankAccount(
-  context: NonNullable<Awaited<ReturnType<typeof validateApiKey>>>,
+export async function createBankAccount(
+  context: ApiKeyContext,
   args: {
     account_name: string;
     bank_name: string;
@@ -1425,8 +656,8 @@ async function createBankAccount(
   };
 }
 
-async function listProposals(
-  context: NonNullable<Awaited<ReturnType<typeof validateApiKey>>>,
+export async function listProposals(
+  context: ApiKeyContext,
   args: { include_completed?: boolean },
 ) {
   const { include_completed } = args;
@@ -1486,12 +717,8 @@ async function listProposals(
   };
 }
 
-// =========================================================================
-// Invoice Tool Implementations
-// =========================================================================
-
-async function createInvoice(
-  context: NonNullable<Awaited<ReturnType<typeof validateApiKey>>>,
+export async function createInvoice(
+  context: ApiKeyContext,
   args: {
     recipient_email: string;
     recipient_name?: string;
@@ -1573,8 +800,8 @@ async function createInvoice(
   }
 }
 
-async function updateInvoice(
-  context: NonNullable<Awaited<ReturnType<typeof validateApiKey>>>,
+export async function updateInvoice(
+  context: ApiKeyContext,
   args: {
     invoice_id: string;
     recipient_email?: string;
@@ -1648,8 +875,8 @@ async function updateInvoice(
   }
 }
 
-async function listInvoices(
-  context: NonNullable<Awaited<ReturnType<typeof validateApiKey>>>,
+export async function listInvoices(
+  context: ApiKeyContext,
   args: {
     status?: 'db_pending' | 'pending' | 'paid' | 'canceled';
     limit?: number;
@@ -1720,8 +947,8 @@ async function listInvoices(
   };
 }
 
-async function getInvoice(
-  context: NonNullable<Awaited<ReturnType<typeof validateApiKey>>>,
+export async function getInvoice(
+  context: ApiKeyContext,
   args: { invoice_id: string },
 ) {
   const { invoice_id } = args;
@@ -1794,8 +1021,8 @@ async function getInvoice(
   };
 }
 
-async function sendInvoice(
-  context: NonNullable<Awaited<ReturnType<typeof validateApiKey>>>,
+export async function sendInvoice(
+  context: ApiKeyContext,
   args: { invoice_id: string },
 ) {
   const { invoice_id } = args;
@@ -1914,12 +1141,8 @@ async function sendInvoice(
   }
 }
 
-// =========================================================================
-// Transaction Tool Implementations
-// =========================================================================
-
-async function listTransactions(
-  context: NonNullable<Awaited<ReturnType<typeof validateApiKey>>>,
+export async function listTransactions(
+  context: ApiKeyContext,
   args: { status?: 'pending' | 'completed' | 'failed'; limit?: number },
 ) {
   const { status, limit = 20 } = args;
@@ -1989,8 +1212,8 @@ async function listTransactions(
   };
 }
 
-async function getTransaction(
-  context: NonNullable<Awaited<ReturnType<typeof validateApiKey>>>,
+export async function getTransaction(
+  context: ApiKeyContext,
   args: { transaction_id: string },
 ) {
   const { transaction_id } = args;
@@ -2054,10 +1277,6 @@ async function getTransaction(
   };
 }
 
-// =========================================================================
-// Attachment Tool Implementations
-// =========================================================================
-
 function getMimeType(filename: string): string {
   const ext = filename.split('.').pop()?.toLowerCase();
   const mimeTypes: Record<string, string> = {
@@ -2076,8 +1295,8 @@ function getMimeType(filename: string): string {
   return mimeTypes[ext || ''] || 'application/octet-stream';
 }
 
-async function attachDocument(
-  context: NonNullable<Awaited<ReturnType<typeof validateApiKey>>>,
+export async function attachDocument(
+  context: ApiKeyContext,
   args: {
     transaction_id: string;
     transaction_type: 'offramp' | 'invoice';
@@ -2253,8 +1472,8 @@ async function attachDocument(
   }
 }
 
-async function listAttachments(
-  context: NonNullable<Awaited<ReturnType<typeof validateApiKey>>>,
+export async function listAttachments(
+  context: ApiKeyContext,
   args: {
     transaction_id?: string;
     transaction_type?: 'offramp' | 'invoice';
@@ -2267,7 +1486,6 @@ async function listAttachments(
     eq(transactionAttachments.workspaceId, context.workspaceId),
     isNull(transactionAttachments.deletedAt),
   ];
-
   if (transaction_id) {
     conditions.push(eq(transactionAttachments.transactionId, transaction_id));
   }
@@ -2315,8 +1533,8 @@ async function listAttachments(
   };
 }
 
-async function removeAttachment(
-  context: NonNullable<Awaited<ReturnType<typeof validateApiKey>>>,
+export async function removeAttachment(
+  context: ApiKeyContext,
   args: { attachment_id: string },
 ) {
   const { attachment_id } = args;
@@ -2357,13 +1575,7 @@ async function removeAttachment(
   };
 }
 
-// =========================================================================
-// Payment Details Tool Implementations
-// =========================================================================
-
-async function getPaymentDetails(
-  context: NonNullable<Awaited<ReturnType<typeof validateApiKey>>>,
-) {
+export async function getPaymentDetails(context: ApiKeyContext) {
   try {
     const details = await getFormattedPaymentDetailsByWorkspace(
       context.workspaceId,
@@ -2412,8 +1624,8 @@ async function getPaymentDetails(
   }
 }
 
-async function sharePaymentDetails(
-  context: NonNullable<Awaited<ReturnType<typeof validateApiKey>>>,
+export async function sharePaymentDetails(
+  context: ApiKeyContext,
   args: { recipient_email: string; recipient_name?: string },
 ) {
   const { recipient_email, recipient_name } = args;
@@ -2488,12 +1700,8 @@ async function sharePaymentDetails(
   }
 }
 
-// =========================================================================
-// Proposal Management Tool Implementations
-// =========================================================================
-
-async function dismissProposal(
-  context: NonNullable<Awaited<ReturnType<typeof validateApiKey>>>,
+export async function dismissProposal(
+  context: ApiKeyContext,
   args: { proposal_id: string },
 ) {
   const { proposal_id } = args;
@@ -2532,34 +1740,4 @@ async function dismissProposal(
       },
     ],
   };
-}
-
-/**
- * OPTIONS /api/mcp - CORS preflight
- */
-export async function OPTIONS(request: NextRequest) {
-  const origin = request.headers.get('origin');
-  const allowlist = (process.env.MCP_ALLOWED_ORIGINS || '')
-    .split(',')
-    .map((v) => v.trim())
-    .filter(Boolean);
-
-  const allowedOrigin =
-    !origin || allowlist.length === 0
-      ? '*' // non-browser or not configured
-      : allowlist.includes(origin)
-        ? origin
-        : 'null';
-
-  return new NextResponse(null, {
-    status: 204,
-    headers: {
-      'Access-Control-Allow-Origin': allowedOrigin,
-      'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
-      'Access-Control-Allow-Headers':
-        'Content-Type, Authorization, mcp-session-id',
-      'Access-Control-Expose-Headers': 'Mcp-Session-Id',
-      Vary: 'Origin',
-    },
-  });
 }
