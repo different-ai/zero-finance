@@ -3,6 +3,7 @@ import { workspaces, workspaceMembers, users } from '@/db/schema';
 import { eq, and, ilike } from 'drizzle-orm';
 import { generateText } from 'ai';
 import { createOpenAI } from '@ai-sdk/openai';
+import { randomInt } from 'crypto';
 
 /**
  * Workspace Mapping for AI Email Agent
@@ -413,7 +414,7 @@ Generate a unique handle:`,
     }
   }
 
-  // Fallback: Generate a random handle
+  // Fallback: Generate a random handle using cryptographically secure randomness
   const fallbackNames = [
     'alex.morgan',
     'jordan.lee',
@@ -424,9 +425,9 @@ Generate a unique handle:`,
     'avery.wilson',
     'blake.thomas',
   ];
-  const randomName =
-    fallbackNames[Math.floor(Math.random() * fallbackNames.length)];
-  const randomSuffix = Math.floor(Math.random() * 1000);
+  // Use crypto.randomInt instead of Math.random() for secure randomness
+  const randomName = fallbackNames[randomInt(fallbackNames.length)];
+  const randomSuffix = randomInt(1000);
   const fallbackHandle = `ai-${randomName}${randomSuffix}`;
 
   if (!existingSet.has(fallbackHandle)) {

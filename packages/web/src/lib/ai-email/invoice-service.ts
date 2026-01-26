@@ -9,6 +9,7 @@ import {
 import { eq, and } from 'drizzle-orm';
 import { parseUnits } from 'viem';
 import Decimal from 'decimal.js';
+import { randomBytes } from 'crypto';
 
 /**
  * Invoice Service for AI Email Agent
@@ -98,11 +99,13 @@ function getCurrencyDecimals(currency: string): number {
 }
 
 /**
- * Generate a unique invoice number.
+ * Generate a unique invoice number using cryptographically secure random bytes.
+ * Uses crypto.randomBytes instead of Math.random() to prevent predictable invoice IDs.
  */
 function generateInvoiceNumber(): string {
   const timestamp = Date.now().toString(36).toUpperCase();
-  const random = Math.random().toString(36).substring(2, 6).toUpperCase();
+  // Use cryptographically secure random bytes instead of Math.random()
+  const random = randomBytes(3).toString('hex').toUpperCase();
   return `AI-${timestamp}-${random}`;
 }
 
